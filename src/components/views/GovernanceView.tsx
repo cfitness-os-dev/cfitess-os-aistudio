@@ -34,8 +34,10 @@ import { BackupFailoverPanel } from '../BackupFailoverPanel';
 import { SystemSecurityCompatibilityPanel } from '../SystemSecurityCompatibilityPanel';
 import dockerComposeRaw from '../../../docker-compose.yml?raw';
 import dockerfileRaw from '../../../Dockerfile?raw';
+import deployLinuxShRaw from '../../../deploy-linux.sh?raw';
 import cargoTomlRaw from '../../../Cargo.toml?raw';
-import mainRsRaw from '../../../src-rust/main.rs?raw';
+import mainRsRaw from '../../../src-rust/src/main.rs?raw';
+import routesRsRaw from '../../../src-rust/src/routes.rs?raw';
 
 const ARCHITECT_PIN = '0766';
 
@@ -263,13 +265,20 @@ const CLUB_HARDWARE_INVENTORY: HardwareNode[] = [
 ];
 
 const DEPLOYMENT_FILES: Record<
-  'docker-compose.yml' | 'Dockerfile' | 'Cargo.toml' | 'src-rust/main.rs',
+  | 'docker-compose.yml'
+  | 'Dockerfile'
+  | 'deploy-linux.sh'
+  | 'Cargo.toml'
+  | 'src-rust/src/main.rs'
+  | 'src-rust/src/routes.rs',
   string
 > = {
   'docker-compose.yml': dockerComposeRaw,
   Dockerfile: dockerfileRaw,
+  'deploy-linux.sh': deployLinuxShRaw,
   'Cargo.toml': cargoTomlRaw,
-  'src-rust/main.rs': mainRsRaw,
+  'src-rust/src/main.rs': mainRsRaw,
+  'src-rust/src/routes.rs': routesRsRaw,
 };
 
 const ENV_PRODUCTION_TEMPLATE = `# ============================================================================
@@ -277,29 +286,28 @@ const ENV_PRODUCTION_TEMPLATE = `# =============================================
 # Emplacement sur le serveur : /opt/cfitness-os/.env (chmod 600)
 # ============================================================================
 
-PORT=3000
-NODE_ENV=production
-DATABASE_URL=postgresql://cfitness_admin:MotDePasseFortLocal2026!@127.0.0.1:5432/cfitness_os
-REDIS_URL=redis://127.0.0.1:6379
+PORT=8080
+RUST_LOG=info,cfitness_os=debug
+CFITNESS_BIND_ADDR=0.0.0.0:8080
+CFITNESS_DATA_DIR=/var/lib/cfitness
+CFITNESS_FRONTEND_DIR=/app/dist
 
 # CONNEXION 100 % LOCALE AU SERVEUR HEITZ (10.10.0.20)
-HEITZ_WS_URL=http://10.10.0.20:8080
-HEITZ_WS_DEV_KEY=CLE_DEVELOPPEUR_GENEREE_DANS_CONFIGURATION_EXE
-HEITZ_ID_CENTER_CDS=5052
-HEITZ_ID_CENTER_BEY=5053
+HEITZ_WS_URL=http://10.10.0.20:8080/api/heitz-ws
+HEITZ_WS_TOKEN=CFITNESS-LOCAL-HZ-TOKEN
+TURNSTILE_MODBUS_RELAY_CDS=10.10.0.21:502
+TURNSTILE_MODBUS_RELAY_BEY=10.20.0.21:502
 
 # TÉLÉPHONIE OVHCLOUD (FIXES 04) & PASSERELLE 4G YEASTAR TG400 (MOBILES 07)
-OVH_SIP_HOST=sip.ovh.fr
-OVH_SIP_TRUNK_USER=0033426225530
-OVH_SIP_TRUNK_PASS=SecretSipOvh2026!
-YEASTAR_TG400_IP=http://10.10.0.14
-YEASTAR_API_USER=api_cfitness
-YEASTAR_API_PASS=SecretYeastar4G!
+SIP_TRUNK_PROVIDER=ovhcloud_sip
+OVH_SIP_TRUNK_HOST=sip.ovh.fr
+YEASTAR_TG400_SIP_GATEWAY=10.10.0.14:5060
 
-# PASSERELLE TECHNOGYM MYWELLNESS & SILAE PAIE
-MYWELLNESS_CDS_SLUG=cfitness-carre-de-soie
-MYWELLNESS_BEY_SLUG=cfitness-beynost
-SILAE_DOSSIER_ID=081865`;
+# INGESTION LOOKIN'BODY 120, RECRUTEMENT & RÉPLICATION MULTI-APPAREILS
+ATS_INBOUND_EMAIL=recrutement@c.fitness
+INBODY_LB120_CSV_DROP_DIR=/var/inbody-lb120-drop
+BACKUP_REPLICA_DIR=/var/backups/cfitness-os
+BACKUP_SECONDARY_NODES=10.20.0.15,10.10.0.12,10.10.0.31,10.20.0.31`;
 
 export interface OnsiteStep {
   id: string;
@@ -791,7 +799,7 @@ ${ONSITE_INSTALLATION_STEPS.map(
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = filename.replace('/', '-');
+    a.download = filename.replace(/\//g, '-');
     a.click();
     URL.revokeObjectURL(url);
   };

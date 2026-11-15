@@ -1,16 +1,40 @@
-@import "tailwindcss";
-@custom-variant dark (&:where(.dark, .dark *));
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@theme {
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+:root {
+  --cf-bg-canvas: #f1f5f9;
+  --cf-bg-sidebar: #ffffff;
+  --cf-bg-card: #ffffff;
+  --cf-bg-secondary: #f8fafc;
+  --cf-border: rgba(203, 213, 225, 0.9);
+  --cf-text-primary: #0f172a;
+  --cf-text-muted: #475569;
+  --cf-input-bg: #f8fafc;
+}
+
+html.dark {
+  --cf-bg-canvas: #0b0f1a;
+  --cf-bg-sidebar: #111522;
+  --cf-bg-card: #131826;
+  --cf-bg-secondary: #191f31;
+  --cf-border: rgba(51, 65, 85, 0.65);
+  --cf-text-primary: #f8fafc;
+  --cf-text-muted: #94a3b8;
+  --cf-input-bg: #0f1422;
 }
 
 @layer base {
   html {
-    font-family: var(--font-sans);
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--cf-bg-canvas);
+    color: var(--cf-text-primary);
+    font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
   }
 
   .tabular-nums {
@@ -18,12 +42,74 @@
   }
 }
 
+@layer utilities {
+  .outline-hidden {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+  }
+
+  .shadow-2xs {
+    box-shadow: 0 1px 0 0 rgba(0, 0, 0, 0.05);
+  }
+
+  .shadow-xs {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+
+  .rounded-xs {
+    border-radius: 0.125rem;
+  }
+}
+
+/* ============================================================================
+   TOKENS MODULE RH « MON COMPTE » V1.16
+   ============================================================================ */
+.cf-sidebar-surface {
+  background-color: var(--cf-bg-sidebar);
+  border-color: var(--cf-border);
+}
+
+.cf-card {
+  background-color: var(--cf-bg-card);
+  border: 1px solid var(--cf-border);
+  border-radius: 16px;
+}
+
+.cf-card-secondary {
+  background-color: var(--cf-bg-secondary);
+  border: 1px solid var(--cf-border);
+  border-radius: 14px;
+}
+
+.cf-input {
+  background-color: var(--cf-input-bg);
+  border: 1px solid var(--cf-border);
+  color: var(--cf-text-primary);
+  border-radius: 12px;
+}
+
+.cf-muted {
+  color: var(--cf-text-muted);
+}
+
+.cf-brand-gradient {
+  background: linear-gradient(
+    135deg,
+    oklch(0.541 0.281 293.009) 0%,
+    oklch(0.511 0.262 276.966) 100%
+  );
+}
+
+.cf-mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+}
+
 /* ============================================================================
    C.FITNESS OS — PALETTES DE COULEURS D'AFFICHAGE DYNAMIQUES (PC / TABLETTE / MOBILE)
    ============================================================================ */
 
 :root,
-[data-accent="violet"] {
+[data-accent='violet'] {
   --cfos-accent: #7c3aed;
   --cfos-accent-hover: #6d28d9;
   --cfos-accent-secondary: #4f46e5;
@@ -34,7 +120,7 @@
   --cfos-accent-text-dark: #c4b5fd;
 }
 
-[data-accent="blue"] {
+[data-accent='blue'] {
   --cfos-accent: #2563eb;
   --cfos-accent-hover: #1d4ed8;
   --cfos-accent-secondary: #0284c7;
@@ -45,7 +131,7 @@
   --cfos-accent-text-dark: #93c5fd;
 }
 
-[data-accent="emerald"] {
+[data-accent='emerald'] {
   --cfos-accent: #059669;
   --cfos-accent-hover: #047857;
   --cfos-accent-secondary: #0d9488;
@@ -56,7 +142,7 @@
   --cfos-accent-text-dark: #6ee7b7;
 }
 
-[data-accent="rose"] {
+[data-accent='rose'] {
   --cfos-accent: #e11d48;
   --cfos-accent-hover: #be123c;
   --cfos-accent-secondary: #db2777;
@@ -67,7 +153,7 @@
   --cfos-accent-text-dark: #fda4af;
 }
 
-[data-accent="amber"] {
+[data-accent='amber'] {
   --cfos-accent: #d97706;
   --cfos-accent-hover: #b45309;
   --cfos-accent-secondary: #ea580c;
@@ -78,7 +164,7 @@
   --cfos-accent-text-dark: #fcd34d;
 }
 
-[data-accent="cyan"] {
+[data-accent='cyan'] {
   --cfos-accent: #0891b2;
   --cfos-accent-hover: #0e7490;
   --cfos-accent-secondary: #2563eb;
@@ -90,58 +176,61 @@
 }
 
 /* Surcharge dynamique de la couleur principale d'affichage */
-[data-accent]:not([data-accent="violet"]) .bg-violet-600,
-[data-accent]:not([data-accent="violet"]) .bg-violet-500 {
+[data-accent]:not([data-accent='violet']) .bg-violet-600,
+[data-accent]:not([data-accent='violet']) .bg-violet-500 {
   background-color: var(--cfos-accent) !important;
 }
 
-[data-accent]:not([data-accent="violet"]) .hover\:bg-violet-700:hover,
-[data-accent]:not([data-accent="violet"]) .hover\:bg-violet-600:hover,
-[data-accent]:not([data-accent="violet"]) .hover\:bg-violet-500:hover {
+[data-accent]:not([data-accent='violet']) .hover\:bg-violet-700:hover,
+[data-accent]:not([data-accent='violet']) .hover\:bg-violet-600:hover,
+[data-accent]:not([data-accent='violet']) .hover\:bg-violet-500:hover {
   background-color: var(--cfos-accent-hover) !important;
 }
 
-[data-accent]:not([data-accent="violet"]) .from-violet-600 {
+[data-accent]:not([data-accent='violet']) .from-violet-600 {
   --tw-gradient-from: var(--cfos-accent) !important;
   --tw-gradient-to: var(--cfos-accent-secondary) !important;
-  background-image: linear-gradient(to right, var(--cfos-accent), var(--cfos-accent-secondary)) !important;
+  background-image: linear-gradient(
+    to right,
+    var(--cfos-accent),
+    var(--cfos-accent-secondary)
+  ) !important;
 }
 
-[data-accent]:not([data-accent="violet"]) .text-violet-600,
-[data-accent]:not([data-accent="violet"]) .text-violet-700,
-[data-accent]:not([data-accent="violet"]) .text-violet-500 {
+[data-accent]:not([data-accent='violet']) .text-violet-600,
+[data-accent]:not([data-accent='violet']) .text-violet-700,
+[data-accent]:not([data-accent='violet']) .text-violet-500 {
   color: var(--cfos-accent-text) !important;
 }
 
-.cfos-dark[data-accent]:not([data-accent="violet"]) .text-violet-400,
-.cfos-dark[data-accent]:not([data-accent="violet"]) .text-violet-300,
-.cfos-dark[data-accent]:not([data-accent="violet"]) .text-violet-500,
-.cfos-dark[data-accent]:not([data-accent="violet"]) .text-violet-600 {
+.cfos-dark[data-accent]:not([data-accent='violet']) .text-violet-400,
+.cfos-dark[data-accent]:not([data-accent='violet']) .text-violet-300,
+.cfos-dark[data-accent]:not([data-accent='violet']) .text-violet-500,
+.cfos-dark[data-accent]:not([data-accent='violet']) .text-violet-600 {
   color: var(--cfos-accent-text-dark) !important;
 }
 
-[data-accent]:not([data-accent="violet"]) .bg-violet-50 {
+[data-accent]:not([data-accent='violet']) .bg-violet-50 {
   background-color: var(--cfos-accent-soft-bg) !important;
 }
 
-.cfos-dark[data-accent]:not([data-accent="violet"]) .bg-violet-600\/25,
-.cfos-dark[data-accent]:not([data-accent="violet"]) .bg-violet-500\/20,
-.cfos-dark[data-accent]:not([data-accent="violet"]) .bg-violet-500\/15,
-.cfos-dark[data-accent]:not([data-accent="violet"]) .bg-violet-50 {
+.cfos-dark[data-accent]:not([data-accent='violet']) .bg-violet-600\/25,
+.cfos-dark[data-accent]:not([data-accent='violet']) .bg-violet-500\/20,
+.cfos-dark[data-accent]:not([data-accent='violet']) .bg-violet-500\/15,
+.cfos-dark[data-accent]:not([data-accent='violet']) .bg-violet-50 {
   background-color: var(--cfos-accent-soft-dark) !important;
 }
 
-[data-accent]:not([data-accent="violet"]) .border-violet-500,
-[data-accent]:not([data-accent="violet"]) .border-violet-500\/30,
-[data-accent]:not([data-accent="violet"]) .border-violet-500\/40,
-[data-accent]:not([data-accent="violet"]) .border-violet-200,
-[data-accent]:not([data-accent="violet"]) .border-violet-300 {
+[data-accent]:not([data-accent='violet']) .border-violet-500,
+[data-accent]:not([data-accent='violet']) .border-violet-500\/30,
+[data-accent]:not([data-accent='violet']) .border-violet-500\/40,
+[data-accent]:not([data-accent='violet']) .border-violet-200,
+[data-accent]:not([data-accent='violet']) .border-violet-300 {
   border-color: var(--cfos-accent-border) !important;
 }
 
 /* ============================================================================
    C.FITNESS OS — SYSTÈME DE DESIGN UNIFIÉ (MODE JOUR & MODE NUIT)
-   Garantit le même style sur PC, Tablettes et Téléphones
    ============================================================================ */
 
 .cfos-light main .rounded-xl.border,
@@ -154,7 +243,7 @@
 .cfos-dark .cfos-adaptive-shell .bg-white,
 .cfos-dark .fixed .bg-white {
   background-color: #131826;
-  color: #F8FAFC;
+  color: #f8fafc;
 }
 
 .cfos-dark main .bg-slate-50,
@@ -165,18 +254,18 @@
 .cfos-dark main .bg-slate-50\/80,
 .cfos-dark .cfos-adaptive-shell .bg-slate-50,
 .cfos-dark .fixed .bg-slate-50 {
-  background-color: #191F31;
+  background-color: #191f31;
 }
 
 .cfos-dark main .bg-slate-100,
 .cfos-dark main .bg-slate-100\/80,
 .cfos-dark .cfos-adaptive-shell .bg-slate-100 {
-  background-color: #1E263B;
-  color: #E2E8F0;
+  background-color: #1e263b;
+  color: #e2e8f0;
 }
 
 .cfos-dark main .bg-\[\#E2E8F0\] {
-  background-color: #0F1420;
+  background-color: #0f1420;
 }
 
 /* Bordures et séparateurs en Mode Nuit */
@@ -205,30 +294,30 @@
 .cfos-dark main .text-slate-950,
 .cfos-dark .cfos-adaptive-shell .text-slate-900,
 .cfos-dark .fixed .text-slate-900 {
-  color: #F8FAFC;
+  color: #f8fafc;
 }
 
 .cfos-dark main .text-slate-800,
 .cfos-dark .cfos-adaptive-shell .text-slate-800,
 .cfos-dark .fixed .text-slate-800 {
-  color: #E2E8F0;
+  color: #e2e8f0;
 }
 
 .cfos-dark main .text-slate-700,
 .cfos-dark .cfos-adaptive-shell .text-slate-700,
 .cfos-dark .fixed .text-slate-700 {
-  color: #CBD5E1;
+  color: #cbd5e1;
 }
 
 .cfos-dark main .text-slate-600,
 .cfos-dark .cfos-adaptive-shell .text-slate-600,
 .cfos-dark .fixed .text-slate-600 {
-  color: #94A3B8;
+  color: #94a3b8;
 }
 
 .cfos-dark main .text-slate-500,
 .cfos-dark .cfos-adaptive-shell .text-slate-500 {
-  color: #94A3B8;
+  color: #94a3b8;
 }
 
 /* Préserver le contraste sombre sur les badges clairs */
@@ -238,13 +327,13 @@
 .cfos-dark main .bg-amber-100 {
   background-color: rgba(245, 158, 11, 0.14);
   border-color: rgba(245, 158, 11, 0.35);
-  color: #FDE68A;
+  color: #fde68a;
 }
 
 .cfos-dark main .text-amber-950,
 .cfos-dark main .text-amber-900,
 .cfos-dark main .text-amber-800 {
-  color: #FDE68A;
+  color: #fde68a;
 }
 
 .cfos-dark main .bg-emerald-50,
@@ -253,14 +342,14 @@
 .cfos-dark main .bg-emerald-100 {
   background-color: rgba(16, 185, 129, 0.14);
   border-color: rgba(16, 185, 129, 0.35);
-  color: #A7F3D0;
+  color: #a7f3d0;
 }
 
 .cfos-dark main .text-emerald-950,
 .cfos-dark main .text-emerald-900,
 .cfos-dark main .text-emerald-800,
 .cfos-dark main .text-emerald-700 {
-  color: #6EE7B7;
+  color: #6ee7b7;
 }
 
 .cfos-dark main .bg-rose-50,
@@ -269,14 +358,14 @@
 .cfos-dark main .bg-rose-100 {
   background-color: rgba(244, 63, 94, 0.14);
   border-color: rgba(244, 63, 94, 0.35);
-  color: #FECDD3;
+  color: #fecdd3;
 }
 
 .cfos-dark main .text-rose-950,
 .cfos-dark main .text-rose-900,
 .cfos-dark main .text-rose-800,
 .cfos-dark main .text-rose-700 {
-  color: #FDA4AF;
+  color: #fda4af;
 }
 
 .cfos-dark main .bg-blue-50,
@@ -288,7 +377,7 @@
 .cfos-dark main .bg-teal-50\/70 {
   background-color: rgba(59, 130, 246, 0.14);
   border-color: rgba(59, 130, 246, 0.35);
-  color: #BFDBFE;
+  color: #bfdbfe;
 }
 
 .cfos-dark main .text-blue-950,
@@ -296,7 +385,7 @@
 .cfos-dark main .text-sky-950,
 .cfos-dark main .text-indigo-950,
 .cfos-dark main .text-indigo-900 {
-  color: #BFDBFE;
+  color: #bfdbfe;
 }
 
 .cfos-dark main .bg-violet-50,
@@ -315,29 +404,48 @@
 }
 
 /* Champs de formulaire, listes déroulantes et zones de saisie en Mode Nuit */
-.cfos-dark main input:not([type="checkbox"]):not([type="radio"]),
+.cfos-dark main input:not([type='checkbox']):not([type='radio']),
 .cfos-dark main select,
 .cfos-dark main textarea,
-.cfos-dark .cfos-adaptive-shell input:not([type="checkbox"]):not([type="radio"]),
+.cfos-dark .cfos-adaptive-shell input:not([type='checkbox']):not([type='radio']),
 .cfos-dark .cfos-adaptive-shell select,
 .cfos-dark .cfos-adaptive-shell textarea,
-.cfos-dark .fixed input:not([type="checkbox"]):not([type="radio"]),
+.cfos-dark .fixed input:not([type='checkbox']):not([type='radio']),
 .cfos-dark .fixed select,
 .cfos-dark .fixed textarea {
-  background-color: #191F31;
+  background-color: #191f31;
   border-color: rgba(71, 85, 105, 0.65);
-  color: #F8FAFC;
+  color: #f8fafc;
 }
 
 .cfos-dark main select option,
 .cfos-dark .cfos-adaptive-shell select option,
 .cfos-dark .fixed select option {
   background-color: #131826;
-  color: #F8FAFC;
+  color: #f8fafc;
 }
 
 /* Survols de lignes de tableaux et listes en Mode Nuit */
 .cfos-dark main .hover\:bg-slate-50:hover,
 .cfos-dark main .hover\:bg-slate-100:hover {
-  background-color: #1E263B;
+  background-color: #1e263b;
+}
+
+/* Ascenseurs discrets */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.28);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.48);
 }

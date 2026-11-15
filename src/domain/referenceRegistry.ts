@@ -1,0 +1,6508 @@
+// Registre structurel généré à partir des références V1.16 (aucune donnée personnelle réelle)
+export interface McSectionRef {
+  id: string;
+  label: string;
+  description: string;
+  sourceRefs: string[];
+}
+
+export interface SourceScreenRef {
+  id: string;
+  contractId: string;
+  sectionId: string;
+  title: string;
+  entryCount: number;
+  candidateActionIds: string[];
+  verified: boolean;
+}
+
+export interface ExtComplementRef {
+  id: string;
+  screenId: string;
+  option: string;
+  resultTested: boolean;
+}
+
+export interface CandidateActionRef {
+  id: string;
+  domain: string;
+  action: string;
+  primarySection: string;
+  relatedSections: string[];
+  refs: string[];
+  proof: string;
+}
+
+export interface EntityMetaRef {
+  id: string;
+  name: string;
+  refs: string[];
+}
+
+export const TOTAL_HISTORICAL_ENTRIES = 1605;
+
+export const MC_SECTIONS: McSectionRef[] = [
+  {
+    "id": "MC01",
+    "label": "Tableau de bord",
+    "description": "Ma journée et mes actions ; synthèse et validations de gestion selon droits",
+    "sourceRefs": [
+      "NAV01",
+      "ACC01"
+    ]
+  },
+  {
+    "id": "MC02",
+    "label": "Mes informations et mon dossier",
+    "description": "Fiche, contrats, documents, compteurs et préférences propres ; accès au dossier d’autrui par la gestion autorisée",
+    "sourceRefs": [
+      "EMP01",
+      "EMP02",
+      "EMP03",
+      "EMP04",
+      "EMP05",
+      "EMP06",
+      "CPT01",
+      "CPT02",
+      "CPT03",
+      "CPT04",
+      "CPT05"
+    ]
+  },
+  {
+    "id": "MC03",
+    "label": "Planning RH",
+    "description": "Horaires jour semaine mois, postes, créneaux, répétitions, publication, impression, signatures horaires, modèles et planification automatique",
+    "sourceRefs": [
+      "PLA01",
+      "PLA02",
+      "PLA03",
+      "PLA04",
+      "PLA05",
+      "PLA06",
+      "PLA07",
+      "PLA08",
+      "PLA09",
+      "PLA10",
+      "PLA11",
+      "PLA12",
+      "PLA13"
+    ]
+  },
+  {
+    "id": "MC04",
+    "label": "Demandes et disponibilités",
+    "description": "Mes demandes et plages ; traitement des demandes de l’équipe si autorisé",
+    "sourceRefs": [
+      "ABS01",
+      "ABS02",
+      "DIS01",
+      "DIS02"
+    ]
+  },
+  {
+    "id": "MC05",
+    "label": "Temps et pointeuse",
+    "description": "Mon suivi prévu badgé rémunéré ; anomalies et validations collectives selon droits",
+    "sourceRefs": [
+      "BAD01",
+      "BAD02",
+      "BAD03"
+    ]
+  },
+  {
+    "id": "MC06",
+    "label": "Documents et signatures RH",
+    "description": "Accès individuel et collectif autorisé, modèles, variables, classement, distribution et suivi",
+    "sourceRefs": [
+      "DOC01",
+      "DOC02",
+      "DOC03",
+      "DOC04",
+      "EDI01",
+      "EDI02"
+    ]
+  },
+  {
+    "id": "MC07",
+    "label": "Préparation de paie",
+    "description": "Rapport, corrections autorisées, éléments variables et paramétrage des exports",
+    "sourceRefs": [
+      "RAP01",
+      "RAP02",
+      "EXP01",
+      "EXP02",
+      "EXP03",
+      "EXP04",
+      "EXP05"
+    ]
+  },
+  {
+    "id": "MC08",
+    "label": "Pilotage et missions",
+    "description": "Indicateurs, coûts et missions accessibles au périmètre autorisé",
+    "sourceRefs": [
+      "PIL01",
+      "MIS01",
+      "MIS02",
+      "MIS03"
+    ]
+  },
+  {
+    "id": "MC09",
+    "label": "Communication RH",
+    "description": "Messages collectifs autorisés et sélection des destinataires",
+    "sourceRefs": [
+      "COM01"
+    ]
+  },
+  {
+    "id": "MC10",
+    "label": "Paramètres RH",
+    "description": "Règles, référentiels, modèles, besoins et automatismes du module",
+    "sourceRefs": [
+      "PAR01",
+      "PAR02",
+      "PAR03",
+      "PAR04",
+      "PAR05",
+      "PAR06",
+      "PAR07",
+      "PAR08",
+      "PAR09",
+      "PAR10",
+      "PAR11",
+      "PAR12",
+      "PAR13",
+      "PAR14",
+      "PAR15",
+      "PAR16",
+      "PAR17",
+      "PAR18"
+    ]
+  },
+  {
+    "id": "MC11",
+    "label": "Administration et droits",
+    "description": "Organisation, accès, délégation, journal ; abonnement et facturation de la solution source restent inventoriés pour décision explicite",
+    "sourceRefs": [
+      "ORG01",
+      "ORG02",
+      "ORG03",
+      "ORG04",
+      "JOU01",
+      "DRO01",
+      "DRO02",
+      "DRO03",
+      "DRO04",
+      "DRO05"
+    ]
+  },
+  {
+    "id": "MC12",
+    "label": "Intégrations et recrutement",
+    "description": "Catalogue des connexions, paie, SIRH, analyse, recrutement et acomptes ; fonctions annoncées distinguées des fonctions testées",
+    "sourceRefs": [
+      "INT01",
+      "INT02",
+      "INT03",
+      "INT04",
+      "INT05",
+      "INT06",
+      "REC01"
+    ]
+  },
+  {
+    "id": "MC13",
+    "label": "Préférences et assistance",
+    "description": "Profil connecté, notifications, calendrier, langue, mot de passe et assistance",
+    "sourceRefs": [
+      "UTI01",
+      "UTI02",
+      "UTI03",
+      "UTI04",
+      "UTI05"
+    ]
+  }
+];
+
+export const SOURCE_SCREENS: SourceScreenRef[] = [
+  {
+    "id": "NAV01",
+    "contractId": "ECR-NAV01",
+    "sectionId": "MC01",
+    "title": "Navigation principale",
+    "entryCount": 22,
+    "candidateActionIds": [
+      "OS001",
+      "OS002",
+      "OS003",
+      "OS004",
+      "OS005",
+      "OS006",
+      "OS007",
+      "OS008",
+      "OS009",
+      "OS010",
+      "OS011",
+      "OS012",
+      "OS013",
+      "OS014",
+      "OS015"
+    ],
+    "verified": false
+  },
+  {
+    "id": "ACC01",
+    "contractId": "ECR-ACC01",
+    "sectionId": "MC01",
+    "title": "Tableau de bord",
+    "entryCount": 15,
+    "candidateActionIds": [
+      "OS178",
+      "OS179",
+      "OS180",
+      "OS181",
+      "OS182",
+      "OS183",
+      "OS184",
+      "OS185",
+      "OS186",
+      "OS187",
+      "OS188",
+      "OS189"
+    ],
+    "verified": false
+  },
+  {
+    "id": "PLA01",
+    "contractId": "ECR-PLA01",
+    "sectionId": "MC03",
+    "title": "Planning hebdomadaire par employé",
+    "entryCount": 34,
+    "candidateActionIds": [
+      "OS049",
+      "OS050",
+      "OS051",
+      "OS052",
+      "OS053",
+      "OS054",
+      "OS055",
+      "OS056",
+      "OS057",
+      "OS058",
+      "OS059"
+    ],
+    "verified": false
+  },
+  {
+    "id": "PLA02",
+    "contractId": "ECR-PLA02",
+    "sectionId": "MC03",
+    "title": "Créer un shift de travail",
+    "entryCount": 23,
+    "candidateActionIds": [
+      "OS060",
+      "OS061",
+      "OS062",
+      "OS063",
+      "OS064",
+      "OS065",
+      "OS066",
+      "OS067",
+      "OS068",
+      "OS069",
+      "OS070",
+      "OS071",
+      "OS072",
+      "OS073",
+      "OS074",
+      "OS075",
+      "OS076",
+      "OS077",
+      "OS078",
+      "OS079",
+      "OS080",
+      "OS081",
+      "OS082"
+    ],
+    "verified": false
+  },
+  {
+    "id": "PLA03",
+    "contractId": "ECR-PLA03",
+    "sectionId": "MC03",
+    "title": "Répétition personnalisée",
+    "entryCount": 10,
+    "candidateActionIds": [
+      "OS060",
+      "OS061",
+      "OS062",
+      "OS063",
+      "OS064",
+      "OS065",
+      "OS066",
+      "OS067",
+      "OS068",
+      "OS069",
+      "OS070",
+      "OS071",
+      "OS072",
+      "OS073",
+      "OS074",
+      "OS075",
+      "OS076",
+      "OS077",
+      "OS078",
+      "OS079",
+      "OS080",
+      "OS081",
+      "OS082"
+    ],
+    "verified": false
+  },
+  {
+    "id": "PLA04",
+    "contractId": "ECR-PLA04",
+    "sectionId": "MC03",
+    "title": "Créer un shift d’absence",
+    "entryCount": 13,
+    "candidateActionIds": [
+      "OS060",
+      "OS061",
+      "OS062",
+      "OS063",
+      "OS064",
+      "OS065",
+      "OS066",
+      "OS067",
+      "OS068",
+      "OS069",
+      "OS070",
+      "OS071",
+      "OS072",
+      "OS073",
+      "OS074",
+      "OS075",
+      "OS076",
+      "OS077",
+      "OS078",
+      "OS079",
+      "OS080",
+      "OS081",
+      "OS082"
+    ],
+    "verified": false
+  },
+  {
+    "id": "PLA05",
+    "contractId": "ECR-PLA05",
+    "sectionId": "MC03",
+    "title": "Publier le planning",
+    "entryCount": 9,
+    "candidateActionIds": [
+      "OS083",
+      "OS084",
+      "OS085",
+      "OS086",
+      "OS087",
+      "OS088",
+      "OS089",
+      "OS090",
+      "OS091",
+      "OS092",
+      "OS093",
+      "OS094"
+    ],
+    "verified": false
+  },
+  {
+    "id": "PLA06",
+    "contractId": "ECR-PLA06",
+    "sectionId": "MC03",
+    "title": "Imprimer et exporter un planning",
+    "entryCount": 22,
+    "candidateActionIds": [
+      "OS083",
+      "OS084",
+      "OS085",
+      "OS086",
+      "OS087",
+      "OS088",
+      "OS089",
+      "OS090",
+      "OS091",
+      "OS092",
+      "OS093",
+      "OS094"
+    ],
+    "verified": false
+  },
+  {
+    "id": "PLA07",
+    "contractId": "ECR-PLA07",
+    "sectionId": "MC03",
+    "title": "Signature électronique des feuilles d’heures",
+    "entryCount": 8,
+    "candidateActionIds": [
+      "OS083",
+      "OS084",
+      "OS085",
+      "OS086",
+      "OS087",
+      "OS088",
+      "OS089",
+      "OS090",
+      "OS091",
+      "OS092",
+      "OS093",
+      "OS094"
+    ],
+    "verified": false
+  },
+  {
+    "id": "PLA08",
+    "contractId": "ECR-PLA08",
+    "sectionId": "MC03",
+    "title": "Créer à partir d’un modèle",
+    "entryCount": 12,
+    "candidateActionIds": [
+      "OS060",
+      "OS061",
+      "OS062",
+      "OS063",
+      "OS064",
+      "OS065",
+      "OS066",
+      "OS067",
+      "OS068",
+      "OS069",
+      "OS070",
+      "OS071",
+      "OS072",
+      "OS073",
+      "OS074",
+      "OS075",
+      "OS076",
+      "OS077",
+      "OS078",
+      "OS079",
+      "OS080",
+      "OS081",
+      "OS082"
+    ],
+    "verified": false
+  },
+  {
+    "id": "PLA09",
+    "contractId": "ECR-PLA09",
+    "sectionId": "MC03",
+    "title": "Options d’affichage",
+    "entryCount": 8,
+    "candidateActionIds": [
+      "OS049",
+      "OS050",
+      "OS051",
+      "OS052",
+      "OS053",
+      "OS054",
+      "OS055",
+      "OS056",
+      "OS057",
+      "OS058",
+      "OS059"
+    ],
+    "verified": false
+  },
+  {
+    "id": "PLA10",
+    "contractId": "ECR-PLA10",
+    "sectionId": "MC03",
+    "title": "Smart Planner",
+    "entryCount": 10,
+    "candidateActionIds": [
+      "OS166",
+      "OS167",
+      "OS168",
+      "OS169",
+      "OS170",
+      "OS171",
+      "OS172",
+      "OS173",
+      "OS174",
+      "OS175",
+      "OS176",
+      "OS177"
+    ],
+    "verified": false
+  },
+  {
+    "id": "PLA11",
+    "contractId": "ECR-PLA11",
+    "sectionId": "MC03",
+    "title": "Planning journalier et prévisions",
+    "entryCount": 24,
+    "candidateActionIds": [
+      "OS049",
+      "OS050",
+      "OS051",
+      "OS052",
+      "OS053",
+      "OS054",
+      "OS055",
+      "OS056",
+      "OS057",
+      "OS058",
+      "OS059",
+      "OS166",
+      "OS167",
+      "OS168",
+      "OS169",
+      "OS170",
+      "OS171",
+      "OS172",
+      "OS173",
+      "OS174",
+      "OS175",
+      "OS176",
+      "OS177"
+    ],
+    "verified": false
+  },
+  {
+    "id": "PLA12",
+    "contractId": "ECR-PLA12",
+    "sectionId": "MC03",
+    "title": "Planning mensuel",
+    "entryCount": 30,
+    "candidateActionIds": [
+      "OS049",
+      "OS050",
+      "OS051",
+      "OS052",
+      "OS053",
+      "OS054",
+      "OS055",
+      "OS056",
+      "OS057",
+      "OS058",
+      "OS059"
+    ],
+    "verified": false
+  },
+  {
+    "id": "MIS01",
+    "contractId": "ECR-MIS01",
+    "sectionId": "MC08",
+    "title": "Liste des missions",
+    "entryCount": 5,
+    "candidateActionIds": [
+      "OS166",
+      "OS167",
+      "OS168",
+      "OS169",
+      "OS170",
+      "OS171",
+      "OS172",
+      "OS173",
+      "OS174",
+      "OS175",
+      "OS176",
+      "OS177"
+    ],
+    "verified": false
+  },
+  {
+    "id": "MIS02",
+    "contractId": "ECR-MIS02",
+    "sectionId": "MC08",
+    "title": "Informations générales d’une mission",
+    "entryCount": 12,
+    "candidateActionIds": [
+      "OS166",
+      "OS167",
+      "OS168",
+      "OS169",
+      "OS170",
+      "OS171",
+      "OS172",
+      "OS173",
+      "OS174",
+      "OS175",
+      "OS176",
+      "OS177"
+    ],
+    "verified": false
+  },
+  {
+    "id": "MIS03",
+    "contractId": "ECR-MIS03",
+    "sectionId": "MC08",
+    "title": "Temps et coûts d’une mission",
+    "entryCount": 8,
+    "candidateActionIds": [
+      "OS166",
+      "OS167",
+      "OS168",
+      "OS169",
+      "OS170",
+      "OS171",
+      "OS172",
+      "OS173",
+      "OS174",
+      "OS175",
+      "OS176",
+      "OS177"
+    ],
+    "verified": false
+  },
+  {
+    "id": "EMP01",
+    "contractId": "ECR-EMP01",
+    "sectionId": "MC02",
+    "title": "Liste et outils collectifs",
+    "entryCount": 17,
+    "candidateActionIds": [
+      "OS016",
+      "OS017",
+      "OS018",
+      "OS019",
+      "OS020",
+      "OS021",
+      "OS022",
+      "OS023",
+      "OS024",
+      "OS025",
+      "OS026",
+      "OS027",
+      "OS028",
+      "OS029",
+      "OS030",
+      "OS031",
+      "OS032",
+      "OS033",
+      "OS034"
+    ],
+    "verified": false
+  },
+  {
+    "id": "EMP02",
+    "contractId": "ECR-EMP02",
+    "sectionId": "MC02",
+    "title": "Ajouter un employé",
+    "entryCount": 21,
+    "candidateActionIds": [
+      "OS016",
+      "OS017",
+      "OS018",
+      "OS019",
+      "OS020",
+      "OS021",
+      "OS022",
+      "OS023",
+      "OS024",
+      "OS025",
+      "OS026",
+      "OS027",
+      "OS028",
+      "OS029",
+      "OS030",
+      "OS031",
+      "OS032",
+      "OS033",
+      "OS034"
+    ],
+    "verified": false
+  },
+  {
+    "id": "EMP03",
+    "contractId": "ECR-EMP03",
+    "sectionId": "MC02",
+    "title": "Informations personnelles",
+    "entryCount": 19,
+    "candidateActionIds": [
+      "OS001",
+      "OS002",
+      "OS003",
+      "OS004",
+      "OS005",
+      "OS006",
+      "OS007",
+      "OS008",
+      "OS009",
+      "OS010",
+      "OS011",
+      "OS012",
+      "OS013",
+      "OS014",
+      "OS015",
+      "OS016",
+      "OS017",
+      "OS018",
+      "OS019",
+      "OS020",
+      "OS021",
+      "OS022",
+      "OS023",
+      "OS024",
+      "OS025",
+      "OS026",
+      "OS027",
+      "OS028",
+      "OS029",
+      "OS030",
+      "OS031",
+      "OS032",
+      "OS033",
+      "OS034"
+    ],
+    "verified": false
+  },
+  {
+    "id": "EMP04",
+    "contractId": "ECR-EMP04",
+    "sectionId": "MC02",
+    "title": "Espace contrats",
+    "entryCount": 14,
+    "candidateActionIds": [
+      "OS035",
+      "OS036",
+      "OS037",
+      "OS038",
+      "OS039",
+      "OS040",
+      "OS041",
+      "OS042",
+      "OS043",
+      "OS044",
+      "OS045",
+      "OS046",
+      "OS047",
+      "OS048"
+    ],
+    "verified": false
+  },
+  {
+    "id": "EMP05",
+    "contractId": "ECR-EMP05",
+    "sectionId": "MC02",
+    "title": "Détail contractuel et salarial",
+    "entryCount": 30,
+    "candidateActionIds": [
+      "OS035",
+      "OS036",
+      "OS037",
+      "OS038",
+      "OS039",
+      "OS040",
+      "OS041",
+      "OS042",
+      "OS043",
+      "OS044",
+      "OS045",
+      "OS046",
+      "OS047",
+      "OS048"
+    ],
+    "verified": false
+  },
+  {
+    "id": "EMP06",
+    "contractId": "ECR-EMP06",
+    "sectionId": "MC02",
+    "title": "Dossier RH",
+    "entryCount": 35,
+    "candidateActionIds": [
+      "OS016",
+      "OS017",
+      "OS018",
+      "OS019",
+      "OS020",
+      "OS021",
+      "OS022",
+      "OS023",
+      "OS024",
+      "OS025",
+      "OS026",
+      "OS027",
+      "OS028",
+      "OS029",
+      "OS030",
+      "OS031",
+      "OS032",
+      "OS033",
+      "OS034"
+    ],
+    "verified": false
+  },
+  {
+    "id": "CPT01",
+    "contractId": "ECR-CPT01",
+    "sectionId": "MC02",
+    "title": "Historique des shifts",
+    "entryCount": 12,
+    "candidateActionIds": [
+      "OS123",
+      "OS124",
+      "OS125",
+      "OS126",
+      "OS127",
+      "OS128",
+      "OS129",
+      "OS130",
+      "OS131",
+      "OS132"
+    ],
+    "verified": false
+  },
+  {
+    "id": "CPT02",
+    "contractId": "ECR-CPT02",
+    "sectionId": "MC02",
+    "title": "Compteur de forfait jour",
+    "entryCount": 8,
+    "candidateActionIds": [
+      "OS123",
+      "OS124",
+      "OS125",
+      "OS126",
+      "OS127",
+      "OS128",
+      "OS129",
+      "OS130",
+      "OS131",
+      "OS132"
+    ],
+    "verified": false
+  },
+  {
+    "id": "CPT03",
+    "contractId": "ECR-CPT03",
+    "sectionId": "MC02",
+    "title": "Compteur de congés payés",
+    "entryCount": 11,
+    "candidateActionIds": [
+      "OS123",
+      "OS124",
+      "OS125",
+      "OS126",
+      "OS127",
+      "OS128",
+      "OS129",
+      "OS130",
+      "OS131",
+      "OS132"
+    ],
+    "verified": false
+  },
+  {
+    "id": "CPT04",
+    "contractId": "ECR-CPT04",
+    "sectionId": "MC02",
+    "title": "Annualisation et compteurs conditionnels",
+    "entryCount": 4,
+    "candidateActionIds": [
+      "OS123",
+      "OS124",
+      "OS125",
+      "OS126",
+      "OS127",
+      "OS128",
+      "OS129",
+      "OS130",
+      "OS131",
+      "OS132"
+    ],
+    "verified": false
+  },
+  {
+    "id": "DOC01",
+    "contractId": "ECR-DOC01",
+    "sectionId": "MC06",
+    "title": "Documents individuels",
+    "entryCount": 17,
+    "candidateActionIds": [
+      "OS133",
+      "OS134",
+      "OS135",
+      "OS136",
+      "OS137",
+      "OS138",
+      "OS139",
+      "OS140",
+      "OS141",
+      "OS142",
+      "OS143",
+      "OS144",
+      "OS145",
+      "OS146",
+      "OS147",
+      "OS148",
+      "OS149",
+      "OS150",
+      "OS151",
+      "OS152",
+      "OS153"
+    ],
+    "verified": false
+  },
+  {
+    "id": "DOC02",
+    "contractId": "ECR-DOC02",
+    "sectionId": "MC06",
+    "title": "Gestion groupée des documents",
+    "entryCount": 5,
+    "candidateActionIds": [
+      "OS133",
+      "OS134",
+      "OS135",
+      "OS136",
+      "OS137",
+      "OS138",
+      "OS139",
+      "OS140",
+      "OS141",
+      "OS142",
+      "OS143",
+      "OS144",
+      "OS145",
+      "OS146",
+      "OS147",
+      "OS148",
+      "OS149",
+      "OS150",
+      "OS151",
+      "OS152",
+      "OS153"
+    ],
+    "verified": false
+  },
+  {
+    "id": "DOC03",
+    "contractId": "ECR-DOC03",
+    "sectionId": "MC06",
+    "title": "Distribution automatique des bulletins",
+    "entryCount": 4,
+    "candidateActionIds": [
+      "OS133",
+      "OS134",
+      "OS135",
+      "OS136",
+      "OS137",
+      "OS138",
+      "OS139",
+      "OS140",
+      "OS141",
+      "OS142",
+      "OS143",
+      "OS144",
+      "OS145",
+      "OS146",
+      "OS147",
+      "OS148",
+      "OS149",
+      "OS150",
+      "OS151",
+      "OS152",
+      "OS153"
+    ],
+    "verified": false
+  },
+  {
+    "id": "DOC04",
+    "contractId": "ECR-DOC04",
+    "sectionId": "MC06",
+    "title": "Suivi des signatures documentaires",
+    "entryCount": 10,
+    "candidateActionIds": [
+      "OS133",
+      "OS134",
+      "OS135",
+      "OS136",
+      "OS137",
+      "OS138",
+      "OS139",
+      "OS140",
+      "OS141",
+      "OS142",
+      "OS143",
+      "OS144",
+      "OS145",
+      "OS146",
+      "OS147",
+      "OS148",
+      "OS149",
+      "OS150",
+      "OS151",
+      "OS152",
+      "OS153"
+    ],
+    "verified": false
+  },
+  {
+    "id": "COM01",
+    "contractId": "ECR-COM01",
+    "sectionId": "MC09",
+    "title": "Envoyer un e mail collectif",
+    "entryCount": 8,
+    "candidateActionIds": [
+      "OS016",
+      "OS017",
+      "OS018",
+      "OS019",
+      "OS020",
+      "OS021",
+      "OS022",
+      "OS023",
+      "OS024",
+      "OS025",
+      "OS026",
+      "OS027",
+      "OS028",
+      "OS029",
+      "OS030",
+      "OS031",
+      "OS032",
+      "OS033",
+      "OS034"
+    ],
+    "verified": false
+  },
+  {
+    "id": "ABS01",
+    "contractId": "ECR-ABS01",
+    "sectionId": "MC04",
+    "title": "Demandes des équipes",
+    "entryCount": 22,
+    "candidateActionIds": [
+      "OS095",
+      "OS096",
+      "OS097",
+      "OS098",
+      "OS099",
+      "OS100",
+      "OS101",
+      "OS102",
+      "OS103",
+      "OS104",
+      "OS105",
+      "OS106"
+    ],
+    "verified": false
+  },
+  {
+    "id": "ABS02",
+    "contractId": "ECR-ABS02",
+    "sectionId": "MC04",
+    "title": "Ajouter une demande d’absence",
+    "entryCount": 11,
+    "candidateActionIds": [
+      "OS095",
+      "OS096",
+      "OS097",
+      "OS098",
+      "OS099",
+      "OS100",
+      "OS101",
+      "OS102",
+      "OS103",
+      "OS104",
+      "OS105",
+      "OS106"
+    ],
+    "verified": false
+  },
+  {
+    "id": "DIS01",
+    "contractId": "ECR-DIS01",
+    "sectionId": "MC04",
+    "title": "Disponibilités",
+    "entryCount": 3,
+    "candidateActionIds": [
+      "OS095",
+      "OS096",
+      "OS097",
+      "OS098",
+      "OS099",
+      "OS100",
+      "OS101",
+      "OS102",
+      "OS103",
+      "OS104",
+      "OS105",
+      "OS106"
+    ],
+    "verified": false
+  },
+  {
+    "id": "BAD01",
+    "contractId": "ECR-BAD01",
+    "sectionId": "MC05",
+    "title": "Suivi journalier des badges",
+    "entryCount": 29,
+    "candidateActionIds": [
+      "OS083",
+      "OS084",
+      "OS085",
+      "OS086",
+      "OS087",
+      "OS088",
+      "OS089",
+      "OS090",
+      "OS091",
+      "OS092",
+      "OS093",
+      "OS094",
+      "OS107",
+      "OS108",
+      "OS109",
+      "OS110",
+      "OS111",
+      "OS112",
+      "OS113",
+      "OS114",
+      "OS115",
+      "OS116",
+      "OS117",
+      "OS118",
+      "OS119",
+      "OS120",
+      "OS121",
+      "OS122"
+    ],
+    "verified": false
+  },
+  {
+    "id": "BAD02",
+    "contractId": "ECR-BAD02",
+    "sectionId": "MC05",
+    "title": "Historique des corrections",
+    "entryCount": 11,
+    "candidateActionIds": [
+      "OS107",
+      "OS108",
+      "OS109",
+      "OS110",
+      "OS111",
+      "OS112",
+      "OS113",
+      "OS114",
+      "OS115",
+      "OS116",
+      "OS117",
+      "OS118",
+      "OS119",
+      "OS120",
+      "OS121",
+      "OS122"
+    ],
+    "verified": false
+  },
+  {
+    "id": "RAP01",
+    "contractId": "ECR-RAP01",
+    "sectionId": "MC07",
+    "title": "Rapport de préparation de la paie",
+    "entryCount": 25,
+    "candidateActionIds": [
+      "OS154",
+      "OS155",
+      "OS156",
+      "OS157",
+      "OS158",
+      "OS159",
+      "OS160",
+      "OS161",
+      "OS162",
+      "OS163",
+      "OS164",
+      "OS165"
+    ],
+    "verified": false
+  },
+  {
+    "id": "RAP02",
+    "contractId": "ECR-RAP02",
+    "sectionId": "MC07",
+    "title": "Ajuster les compteurs d’annualisation",
+    "entryCount": 7,
+    "candidateActionIds": [
+      "OS123",
+      "OS124",
+      "OS125",
+      "OS126",
+      "OS127",
+      "OS128",
+      "OS129",
+      "OS130",
+      "OS131",
+      "OS132",
+      "OS154",
+      "OS155",
+      "OS156",
+      "OS157",
+      "OS158",
+      "OS159",
+      "OS160",
+      "OS161",
+      "OS162",
+      "OS163",
+      "OS164",
+      "OS165"
+    ],
+    "verified": false
+  },
+  {
+    "id": "EXP01",
+    "contractId": "ECR-EXP01",
+    "sectionId": "MC07",
+    "title": "Menu des exports du rapport",
+    "entryCount": 10,
+    "candidateActionIds": [
+      "OS154",
+      "OS155",
+      "OS156",
+      "OS157",
+      "OS158",
+      "OS159",
+      "OS160",
+      "OS161",
+      "OS162",
+      "OS163",
+      "OS164",
+      "OS165"
+    ],
+    "verified": false
+  },
+  {
+    "id": "EXP02",
+    "contractId": "ECR-EXP02",
+    "sectionId": "MC07",
+    "title": "Colonnes de la synthèse Excel",
+    "entryCount": 47,
+    "candidateActionIds": [
+      "OS154",
+      "OS155",
+      "OS156",
+      "OS157",
+      "OS158",
+      "OS159",
+      "OS160",
+      "OS161",
+      "OS162",
+      "OS163",
+      "OS164",
+      "OS165"
+    ],
+    "verified": false
+  },
+  {
+    "id": "EXP03",
+    "contractId": "ECR-EXP03",
+    "sectionId": "MC07",
+    "title": "Colonnes des fiches employés Excel",
+    "entryCount": 30,
+    "candidateActionIds": [
+      "OS154",
+      "OS155",
+      "OS156",
+      "OS157",
+      "OS158",
+      "OS159",
+      "OS160",
+      "OS161",
+      "OS162",
+      "OS163",
+      "OS164",
+      "OS165"
+    ],
+    "verified": false
+  },
+  {
+    "id": "EXP04",
+    "contractId": "ECR-EXP04",
+    "sectionId": "MC07",
+    "title": "Colonnes des détails Excel",
+    "entryCount": 34,
+    "candidateActionIds": [
+      "OS154",
+      "OS155",
+      "OS156",
+      "OS157",
+      "OS158",
+      "OS159",
+      "OS160",
+      "OS161",
+      "OS162",
+      "OS163",
+      "OS164",
+      "OS165"
+    ],
+    "verified": false
+  },
+  {
+    "id": "EXP05",
+    "contractId": "ECR-EXP05",
+    "sectionId": "MC07",
+    "title": "Colonnes des absences Excel",
+    "entryCount": 1,
+    "candidateActionIds": [
+      "OS154",
+      "OS155",
+      "OS156",
+      "OS157",
+      "OS158",
+      "OS159",
+      "OS160",
+      "OS161",
+      "OS162",
+      "OS163",
+      "OS164",
+      "OS165"
+    ],
+    "verified": false
+  },
+  {
+    "id": "PIL01",
+    "contractId": "ECR-PIL01",
+    "sectionId": "MC08",
+    "title": "Indicateurs de pilotage",
+    "entryCount": 8,
+    "candidateActionIds": [
+      "OS178",
+      "OS179",
+      "OS180",
+      "OS181",
+      "OS182",
+      "OS183",
+      "OS184",
+      "OS185",
+      "OS186",
+      "OS187",
+      "OS188",
+      "OS189"
+    ],
+    "verified": false
+  },
+  {
+    "id": "PAR01",
+    "contractId": "ECR-PAR01",
+    "sectionId": "MC10",
+    "title": "Règles de l’établissement",
+    "entryCount": 11,
+    "candidateActionIds": [],
+    "verified": false
+  },
+  {
+    "id": "PAR02",
+    "contractId": "ECR-PAR02",
+    "sectionId": "MC10",
+    "title": "Compteurs activables",
+    "entryCount": 9,
+    "candidateActionIds": [
+      "OS123",
+      "OS124",
+      "OS125",
+      "OS126",
+      "OS127",
+      "OS128",
+      "OS129",
+      "OS130",
+      "OS131",
+      "OS132"
+    ],
+    "verified": false
+  },
+  {
+    "id": "PAR03",
+    "contractId": "ECR-PAR03",
+    "sectionId": "MC10",
+    "title": "Alertes du planning",
+    "entryCount": 22,
+    "candidateActionIds": [],
+    "verified": false
+  },
+  {
+    "id": "PAR04",
+    "contractId": "ECR-PAR04",
+    "sectionId": "MC10",
+    "title": "Règles du rapport",
+    "entryCount": 13,
+    "candidateActionIds": [
+      "OS154",
+      "OS155",
+      "OS156",
+      "OS157",
+      "OS158",
+      "OS159",
+      "OS160",
+      "OS161",
+      "OS162",
+      "OS163",
+      "OS164",
+      "OS165"
+    ],
+    "verified": false
+  },
+  {
+    "id": "PAR05",
+    "contractId": "ECR-PAR05",
+    "sectionId": "MC10",
+    "title": "Postes",
+    "entryCount": 36,
+    "candidateActionIds": [],
+    "verified": false
+  },
+  {
+    "id": "PAR06",
+    "contractId": "ECR-PAR06",
+    "sectionId": "MC10",
+    "title": "Équipes",
+    "entryCount": 13,
+    "candidateActionIds": [],
+    "verified": false
+  },
+  {
+    "id": "PAR07",
+    "contractId": "ECR-PAR07",
+    "sectionId": "MC10",
+    "title": "Missions activables",
+    "entryCount": 4,
+    "candidateActionIds": [],
+    "verified": false
+  },
+  {
+    "id": "PAR08",
+    "contractId": "ECR-PAR08",
+    "sectionId": "MC10",
+    "title": "Planification automatique",
+    "entryCount": 9,
+    "candidateActionIds": [
+      "OS166",
+      "OS167",
+      "OS168",
+      "OS169",
+      "OS170",
+      "OS171",
+      "OS172",
+      "OS173",
+      "OS174",
+      "OS175",
+      "OS176",
+      "OS177"
+    ],
+    "verified": false
+  },
+  {
+    "id": "PAR09",
+    "contractId": "ECR-PAR09",
+    "sectionId": "MC10",
+    "title": "Règles du Smart Planner",
+    "entryCount": 19,
+    "candidateActionIds": [
+      "OS166",
+      "OS167",
+      "OS168",
+      "OS169",
+      "OS170",
+      "OS171",
+      "OS172",
+      "OS173",
+      "OS174",
+      "OS175",
+      "OS176",
+      "OS177"
+    ],
+    "verified": false
+  },
+  {
+    "id": "PAR10",
+    "contractId": "ECR-PAR10",
+    "sectionId": "MC10",
+    "title": "Attribution des shifts",
+    "entryCount": 5,
+    "candidateActionIds": [
+      "OS166",
+      "OS167",
+      "OS168",
+      "OS169",
+      "OS170",
+      "OS171",
+      "OS172",
+      "OS173",
+      "OS174",
+      "OS175",
+      "OS176",
+      "OS177"
+    ],
+    "verified": false
+  },
+  {
+    "id": "PAR11",
+    "contractId": "ECR-PAR11",
+    "sectionId": "MC10",
+    "title": "Règles des absences",
+    "entryCount": 12,
+    "candidateActionIds": [],
+    "verified": false
+  },
+  {
+    "id": "PAR12",
+    "contractId": "ECR-PAR12",
+    "sectionId": "MC10",
+    "title": "Motifs d’absence exposés",
+    "entryCount": 66,
+    "candidateActionIds": [],
+    "verified": false
+  },
+  {
+    "id": "PAR13",
+    "contractId": "ECR-PAR13",
+    "sectionId": "MC10",
+    "title": "Identité de l’établissement",
+    "entryCount": 15,
+    "candidateActionIds": [],
+    "verified": false
+  },
+  {
+    "id": "PAR14",
+    "contractId": "ECR-PAR14",
+    "sectionId": "MC10",
+    "title": "Modèles de documents RH",
+    "entryCount": 14,
+    "candidateActionIds": [
+      "OS133",
+      "OS134",
+      "OS135",
+      "OS136",
+      "OS137",
+      "OS138",
+      "OS139",
+      "OS140",
+      "OS141",
+      "OS142",
+      "OS143",
+      "OS144",
+      "OS145",
+      "OS146",
+      "OS147",
+      "OS148",
+      "OS149",
+      "OS150",
+      "OS151",
+      "OS152",
+      "OS153"
+    ],
+    "verified": false
+  },
+  {
+    "id": "PAR15",
+    "contractId": "ECR-PAR15",
+    "sectionId": "MC10",
+    "title": "Gestion des dossiers",
+    "entryCount": 10,
+    "candidateActionIds": [
+      "OS133",
+      "OS134",
+      "OS135",
+      "OS136",
+      "OS137",
+      "OS138",
+      "OS139",
+      "OS140",
+      "OS141",
+      "OS142",
+      "OS143",
+      "OS144",
+      "OS145",
+      "OS146",
+      "OS147",
+      "OS148",
+      "OS149",
+      "OS150",
+      "OS151",
+      "OS152",
+      "OS153"
+    ],
+    "verified": false
+  },
+  {
+    "id": "PAR16",
+    "contractId": "ECR-PAR16",
+    "sectionId": "MC10",
+    "title": "Paramètres de la badgeuse",
+    "entryCount": 34,
+    "candidateActionIds": [
+      "OS107",
+      "OS108",
+      "OS109",
+      "OS110",
+      "OS111",
+      "OS112",
+      "OS113",
+      "OS114",
+      "OS115",
+      "OS116",
+      "OS117",
+      "OS118",
+      "OS119",
+      "OS120",
+      "OS121",
+      "OS122"
+    ],
+    "verified": false
+  },
+  {
+    "id": "ORG01",
+    "contractId": "ECR-ORG01",
+    "sectionId": "MC11",
+    "title": "Données de l’organisation",
+    "entryCount": 16,
+    "candidateActionIds": [
+      "OS001",
+      "OS002",
+      "OS003",
+      "OS004",
+      "OS005",
+      "OS006",
+      "OS007",
+      "OS008",
+      "OS009",
+      "OS010",
+      "OS011",
+      "OS012",
+      "OS013",
+      "OS014",
+      "OS015"
+    ],
+    "verified": false
+  },
+  {
+    "id": "ORG02",
+    "contractId": "ECR-ORG02",
+    "sectionId": "MC11",
+    "title": "Abonnement et facturation",
+    "entryCount": 20,
+    "candidateActionIds": [
+      "OS001",
+      "OS002",
+      "OS003",
+      "OS004",
+      "OS005",
+      "OS006",
+      "OS007",
+      "OS008",
+      "OS009",
+      "OS010",
+      "OS011",
+      "OS012",
+      "OS013",
+      "OS014",
+      "OS015"
+    ],
+    "verified": false
+  },
+  {
+    "id": "ORG03",
+    "contractId": "ECR-ORG03",
+    "sectionId": "MC11",
+    "title": "Niveaux de permission",
+    "entryCount": 10,
+    "candidateActionIds": [
+      "OS001",
+      "OS002",
+      "OS003",
+      "OS004",
+      "OS005",
+      "OS006",
+      "OS007",
+      "OS008",
+      "OS009",
+      "OS010",
+      "OS011",
+      "OS012",
+      "OS013",
+      "OS014",
+      "OS015"
+    ],
+    "verified": false
+  },
+  {
+    "id": "ORG04",
+    "contractId": "ECR-ORG04",
+    "sectionId": "MC11",
+    "title": "Actions de la matrice de droits",
+    "entryCount": 44,
+    "candidateActionIds": [
+      "OS001",
+      "OS002",
+      "OS003",
+      "OS004",
+      "OS005",
+      "OS006",
+      "OS007",
+      "OS008",
+      "OS009",
+      "OS010",
+      "OS011",
+      "OS012",
+      "OS013",
+      "OS014",
+      "OS015",
+      "OS060",
+      "OS061",
+      "OS062",
+      "OS063",
+      "OS064",
+      "OS065",
+      "OS066",
+      "OS067",
+      "OS068",
+      "OS069",
+      "OS070",
+      "OS071",
+      "OS072",
+      "OS073",
+      "OS074",
+      "OS075",
+      "OS076",
+      "OS077",
+      "OS078",
+      "OS079",
+      "OS080",
+      "OS081",
+      "OS082",
+      "OS083",
+      "OS084",
+      "OS085",
+      "OS086",
+      "OS087",
+      "OS088",
+      "OS089",
+      "OS090",
+      "OS091",
+      "OS092",
+      "OS093",
+      "OS094"
+    ],
+    "verified": false
+  },
+  {
+    "id": "INT01",
+    "contractId": "ECR-INT01",
+    "sectionId": "MC12",
+    "title": "Catalogue des intégrations",
+    "entryCount": 6,
+    "candidateActionIds": [
+      "OS178",
+      "OS179",
+      "OS180",
+      "OS181",
+      "OS182",
+      "OS183",
+      "OS184",
+      "OS185",
+      "OS186",
+      "OS187",
+      "OS188",
+      "OS189"
+    ],
+    "verified": false
+  },
+  {
+    "id": "INT02",
+    "contractId": "ECR-INT02",
+    "sectionId": "MC12",
+    "title": "Logiciels de caisse",
+    "entryCount": 49,
+    "candidateActionIds": [
+      "OS178",
+      "OS179",
+      "OS180",
+      "OS181",
+      "OS182",
+      "OS183",
+      "OS184",
+      "OS185",
+      "OS186",
+      "OS187",
+      "OS188",
+      "OS189"
+    ],
+    "verified": false
+  },
+  {
+    "id": "INT03",
+    "contractId": "ECR-INT03",
+    "sectionId": "MC12",
+    "title": "Logiciels de paie",
+    "entryCount": 16,
+    "candidateActionIds": [
+      "OS178",
+      "OS179",
+      "OS180",
+      "OS181",
+      "OS182",
+      "OS183",
+      "OS184",
+      "OS185",
+      "OS186",
+      "OS187",
+      "OS188",
+      "OS189"
+    ],
+    "verified": false
+  },
+  {
+    "id": "INT04",
+    "contractId": "ECR-INT04",
+    "sectionId": "MC12",
+    "title": "Logiciels SIRH",
+    "entryCount": 4,
+    "candidateActionIds": [
+      "OS178",
+      "OS179",
+      "OS180",
+      "OS181",
+      "OS182",
+      "OS183",
+      "OS184",
+      "OS185",
+      "OS186",
+      "OS187",
+      "OS188",
+      "OS189"
+    ],
+    "verified": false
+  },
+  {
+    "id": "INT05",
+    "contractId": "ECR-INT05",
+    "sectionId": "MC12",
+    "title": "Logiciels d’analyse",
+    "entryCount": 5,
+    "candidateActionIds": [
+      "OS178",
+      "OS179",
+      "OS180",
+      "OS181",
+      "OS182",
+      "OS183",
+      "OS184",
+      "OS185",
+      "OS186",
+      "OS187",
+      "OS188",
+      "OS189"
+    ],
+    "verified": false
+  },
+  {
+    "id": "INT06",
+    "contractId": "ECR-INT06",
+    "sectionId": "MC12",
+    "title": "Recrutement et acomptes",
+    "entryCount": 5,
+    "candidateActionIds": [
+      "OS178",
+      "OS179",
+      "OS180",
+      "OS181",
+      "OS182",
+      "OS183",
+      "OS184",
+      "OS185",
+      "OS186",
+      "OS187",
+      "OS188",
+      "OS189"
+    ],
+    "verified": false
+  },
+  {
+    "id": "JOU01",
+    "contractId": "ECR-JOU01",
+    "sectionId": "MC11",
+    "title": "Journal d’activité",
+    "entryCount": 21,
+    "candidateActionIds": [
+      "OS178",
+      "OS179",
+      "OS180",
+      "OS181",
+      "OS182",
+      "OS183",
+      "OS184",
+      "OS185",
+      "OS186",
+      "OS187",
+      "OS188",
+      "OS189"
+    ],
+    "verified": false
+  },
+  {
+    "id": "REC01",
+    "contractId": "ECR-REC01",
+    "sectionId": "MC12",
+    "title": "Présentation du recrutement",
+    "entryCount": 7,
+    "candidateActionIds": [],
+    "verified": false
+  },
+  {
+    "id": "UTI01",
+    "contractId": "ECR-UTI01",
+    "sectionId": "MC13",
+    "title": "Menu personnel et assistance",
+    "entryCount": 9,
+    "candidateActionIds": [],
+    "verified": false
+  },
+  {
+    "id": "EDI01",
+    "contractId": "ECR-EDI01",
+    "sectionId": "MC06",
+    "title": "Éditeur d’un modèle documentaire existant",
+    "entryCount": 28,
+    "candidateActionIds": [
+      "OS133",
+      "OS134",
+      "OS135",
+      "OS136",
+      "OS137",
+      "OS138",
+      "OS139",
+      "OS140",
+      "OS141",
+      "OS142",
+      "OS143",
+      "OS144",
+      "OS145",
+      "OS146",
+      "OS147",
+      "OS148",
+      "OS149",
+      "OS150",
+      "OS151",
+      "OS152",
+      "OS153"
+    ],
+    "verified": false
+  },
+  {
+    "id": "EDI02",
+    "contractId": "ECR-EDI02",
+    "sectionId": "MC06",
+    "title": "Catalogue des variables documentaires",
+    "entryCount": 97,
+    "candidateActionIds": [
+      "OS133",
+      "OS134",
+      "OS135",
+      "OS136",
+      "OS137",
+      "OS138",
+      "OS139",
+      "OS140",
+      "OS141",
+      "OS142",
+      "OS143",
+      "OS144",
+      "OS145",
+      "OS146",
+      "OS147",
+      "OS148",
+      "OS149",
+      "OS150",
+      "OS151",
+      "OS152",
+      "OS153"
+    ],
+    "verified": false
+  },
+  {
+    "id": "DRO01",
+    "contractId": "ECR-DRO01",
+    "sectionId": "MC11",
+    "title": "Droits détaillés : Master avancé",
+    "entryCount": 45,
+    "candidateActionIds": [
+      "OS001",
+      "OS002",
+      "OS003",
+      "OS004",
+      "OS005",
+      "OS006",
+      "OS007",
+      "OS008",
+      "OS009",
+      "OS010",
+      "OS011",
+      "OS012",
+      "OS013",
+      "OS014",
+      "OS015"
+    ],
+    "verified": false
+  },
+  {
+    "id": "DRO02",
+    "contractId": "ECR-DRO02",
+    "sectionId": "MC11",
+    "title": "Droits détaillés : Lecture seule",
+    "entryCount": 18,
+    "candidateActionIds": [
+      "OS001",
+      "OS002",
+      "OS003",
+      "OS004",
+      "OS005",
+      "OS006",
+      "OS007",
+      "OS008",
+      "OS009",
+      "OS010",
+      "OS011",
+      "OS012",
+      "OS013",
+      "OS014",
+      "OS015"
+    ],
+    "verified": false
+  },
+  {
+    "id": "DRO03",
+    "contractId": "ECR-DRO03",
+    "sectionId": "MC11",
+    "title": "Droits détaillés : Planificateur avancé",
+    "entryCount": 45,
+    "candidateActionIds": [
+      "OS001",
+      "OS002",
+      "OS003",
+      "OS004",
+      "OS005",
+      "OS006",
+      "OS007",
+      "OS008",
+      "OS009",
+      "OS010",
+      "OS011",
+      "OS012",
+      "OS013",
+      "OS014",
+      "OS015"
+    ],
+    "verified": false
+  },
+  {
+    "id": "DRO04",
+    "contractId": "ECR-DRO04",
+    "sectionId": "MC11",
+    "title": "Droits détaillés : Planificateur standard",
+    "entryCount": 45,
+    "candidateActionIds": [
+      "OS001",
+      "OS002",
+      "OS003",
+      "OS004",
+      "OS005",
+      "OS006",
+      "OS007",
+      "OS008",
+      "OS009",
+      "OS010",
+      "OS011",
+      "OS012",
+      "OS013",
+      "OS014",
+      "OS015"
+    ],
+    "verified": false
+  },
+  {
+    "id": "DRO05",
+    "contractId": "ECR-DRO05",
+    "sectionId": "MC11",
+    "title": "Droits détaillés : Employé standard",
+    "entryCount": 7,
+    "candidateActionIds": [
+      "OS001",
+      "OS002",
+      "OS003",
+      "OS004",
+      "OS005",
+      "OS006",
+      "OS007",
+      "OS008",
+      "OS009",
+      "OS010",
+      "OS011",
+      "OS012",
+      "OS013",
+      "OS014",
+      "OS015"
+    ],
+    "verified": false
+  },
+  {
+    "id": "PLA13",
+    "contractId": "ECR-PLA13",
+    "sectionId": "MC03",
+    "title": "Planning hebdomadaire par postes",
+    "entryCount": 7,
+    "candidateActionIds": [
+      "OS049",
+      "OS050",
+      "OS051",
+      "OS052",
+      "OS053",
+      "OS054",
+      "OS055",
+      "OS056",
+      "OS057",
+      "OS058",
+      "OS059"
+    ],
+    "verified": false
+  },
+  {
+    "id": "CPT05",
+    "contractId": "ECR-CPT05",
+    "sectionId": "MC02",
+    "title": "Annualisation individuelle activée",
+    "entryCount": 7,
+    "candidateActionIds": [
+      "OS123",
+      "OS124",
+      "OS125",
+      "OS126",
+      "OS127",
+      "OS128",
+      "OS129",
+      "OS130",
+      "OS131",
+      "OS132"
+    ],
+    "verified": false
+  },
+  {
+    "id": "DIS02",
+    "contractId": "ECR-DIS02",
+    "sectionId": "MC04",
+    "title": "Disponibilités depuis une fiche salarié",
+    "entryCount": 9,
+    "candidateActionIds": [
+      "OS095",
+      "OS096",
+      "OS097",
+      "OS098",
+      "OS099",
+      "OS100",
+      "OS101",
+      "OS102",
+      "OS103",
+      "OS104",
+      "OS105",
+      "OS106"
+    ],
+    "verified": false
+  },
+  {
+    "id": "BAD03",
+    "contractId": "ECR-BAD03",
+    "sectionId": "MC05",
+    "title": "Badgeuse par employé",
+    "entryCount": 7,
+    "candidateActionIds": [
+      "OS083",
+      "OS084",
+      "OS085",
+      "OS086",
+      "OS087",
+      "OS088",
+      "OS089",
+      "OS090",
+      "OS091",
+      "OS092",
+      "OS093",
+      "OS094",
+      "OS107",
+      "OS108",
+      "OS109",
+      "OS110",
+      "OS111",
+      "OS112",
+      "OS113",
+      "OS114",
+      "OS115",
+      "OS116",
+      "OS117",
+      "OS118",
+      "OS119",
+      "OS120",
+      "OS121",
+      "OS122"
+    ],
+    "verified": false
+  },
+  {
+    "id": "UTI02",
+    "contractId": "ECR-UTI02",
+    "sectionId": "MC13",
+    "title": "Informations personnelles du profil connecté",
+    "entryCount": 8,
+    "candidateActionIds": [
+      "OS178",
+      "OS179",
+      "OS180",
+      "OS181",
+      "OS182",
+      "OS183",
+      "OS184",
+      "OS185",
+      "OS186",
+      "OS187",
+      "OS188",
+      "OS189"
+    ],
+    "verified": false
+  },
+  {
+    "id": "UTI03",
+    "contractId": "ECR-UTI03",
+    "sectionId": "MC13",
+    "title": "Notifications personnelles",
+    "entryCount": 18,
+    "candidateActionIds": [
+      "OS178",
+      "OS179",
+      "OS180",
+      "OS181",
+      "OS182",
+      "OS183",
+      "OS184",
+      "OS185",
+      "OS186",
+      "OS187",
+      "OS188",
+      "OS189"
+    ],
+    "verified": false
+  },
+  {
+    "id": "UTI04",
+    "contractId": "ECR-UTI04",
+    "sectionId": "MC13",
+    "title": "Synchroniser le calendrier",
+    "entryCount": 5,
+    "candidateActionIds": [
+      "OS178",
+      "OS179",
+      "OS180",
+      "OS181",
+      "OS182",
+      "OS183",
+      "OS184",
+      "OS185",
+      "OS186",
+      "OS187",
+      "OS188",
+      "OS189"
+    ],
+    "verified": false
+  },
+  {
+    "id": "UTI05",
+    "contractId": "ECR-UTI05",
+    "sectionId": "MC13",
+    "title": "Mot de passe",
+    "entryCount": 8,
+    "candidateActionIds": [
+      "OS178",
+      "OS179",
+      "OS180",
+      "OS181",
+      "OS182",
+      "OS183",
+      "OS184",
+      "OS185",
+      "OS186",
+      "OS187",
+      "OS188",
+      "OS189"
+    ],
+    "verified": false
+  },
+  {
+    "id": "PAR17",
+    "contractId": "ECR-PAR17",
+    "sectionId": "MC10",
+    "title": "Référentiels du Carré de Soie",
+    "entryCount": 4,
+    "candidateActionIds": [],
+    "verified": false
+  },
+  {
+    "id": "PAR18",
+    "contractId": "ECR-PAR18",
+    "sectionId": "MC10",
+    "title": "Besoins fixes et variables en personnel",
+    "entryCount": 25,
+    "candidateActionIds": [
+      "OS166",
+      "OS167",
+      "OS168",
+      "OS169",
+      "OS170",
+      "OS171",
+      "OS172",
+      "OS173",
+      "OS174",
+      "OS175",
+      "OS176",
+      "OS177"
+    ],
+    "verified": false
+  }
+];
+
+export const EXT_COMPLEMENTS: ExtComplementRef[] = [
+  {
+    "id": "EXT-PAR02-01",
+    "screenId": "PAR02",
+    "option": "Modes d’acquisition des congés payés",
+    "resultTested": false
+  },
+  {
+    "id": "EXT-PAR02-02",
+    "screenId": "PAR02",
+    "option": "Période affichée de l’annualisation",
+    "resultTested": false
+  },
+  {
+    "id": "EXT-PAR02-03",
+    "screenId": "PAR02",
+    "option": "Afficher les paramètres avancés de l’annualisation",
+    "resultTested": false
+  },
+  {
+    "id": "EXT-PAR02-04",
+    "screenId": "PAR02",
+    "option": "Absences incluses dans le calcul annuel",
+    "resultTested": false
+  },
+  {
+    "id": "EXT-PAR02-05",
+    "screenId": "PAR02",
+    "option": "Heures du dimanche incluses dans le calcul annuel",
+    "resultTested": false
+  },
+  {
+    "id": "EXT-PAR02-06",
+    "screenId": "PAR02",
+    "option": "Personnaliser le calcul des heures supplémentaires de l’annualisation",
+    "resultTested": false
+  },
+  {
+    "id": "EXT-PAR02-07",
+    "screenId": "PAR02",
+    "option": "Compteur RTT (Forfait heures)",
+    "resultTested": false
+  },
+  {
+    "id": "EXT-PAR02-08",
+    "screenId": "PAR02",
+    "option": "Inclusions et exclusions annuelles par motif",
+    "resultTested": false
+  },
+  {
+    "id": "EXT-CPT04-01",
+    "screenId": "CPT04",
+    "option": "Initialiser le compteur RTT forfait jours",
+    "resultTested": false
+  },
+  {
+    "id": "EXT-EMP04-01",
+    "screenId": "EMP04",
+    "option": "Modifier les informations du contrat passé",
+    "resultTested": false
+  },
+  {
+    "id": "EXT-EMP04-02",
+    "screenId": "EMP04",
+    "option": "Dupliquer le contrat passé",
+    "resultTested": false
+  },
+  {
+    "id": "EXT-EMP04-03",
+    "screenId": "EMP04",
+    "option": "Créer un document pour ce contrat passé",
+    "resultTested": false
+  },
+  {
+    "id": "EXT-DOC04-01",
+    "screenId": "DOC04",
+    "option": "Recherche dans les filtres de signature",
+    "resultTested": false
+  },
+  {
+    "id": "EXT-DOC04-02",
+    "screenId": "DOC04",
+    "option": "Filtre Destinataire(s)",
+    "resultTested": false
+  },
+  {
+    "id": "EXT-DOC04-03",
+    "screenId": "DOC04",
+    "option": "Filtre Dossiers",
+    "resultTested": false
+  },
+  {
+    "id": "EXT-DOC04-04",
+    "screenId": "DOC04",
+    "option": "Filtre Statuts",
+    "resultTested": false
+  },
+  {
+    "id": "EXT-DOC04-05",
+    "screenId": "DOC04",
+    "option": "Tout effacer — filtres des signatures",
+    "resultTested": false
+  },
+  {
+    "id": "EXT-DOC04-06",
+    "screenId": "DOC04",
+    "option": "Appliquer les filtres — signatures",
+    "resultTested": false
+  },
+  {
+    "id": "EXT-DOC04-07",
+    "screenId": "DOC04",
+    "option": "Renvoyer pour signature — ligne en erreur",
+    "resultTested": false
+  },
+  {
+    "id": "EXT-DOC04-08",
+    "screenId": "DOC04",
+    "option": "Annuler la demande de signature — ligne en erreur",
+    "resultTested": false
+  }
+];
+
+export const CANDIDATE_ACTIONS: CandidateActionRef[] = [
+  {
+    "id": "OS001",
+    "domain": "Organisation et accès",
+    "action": "Choisir un établissement",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC11",
+      "MC02"
+    ],
+    "refs": [
+      "NAV01",
+      "ORG01",
+      "ORG02",
+      "EMP03",
+      "ORG03",
+      "ORG04",
+      "DRO01",
+      "DRO02",
+      "DRO03",
+      "DRO04",
+      "DRO05"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS002",
+    "domain": "Organisation et accès",
+    "action": "Consulter tous les établissements",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC11",
+      "MC02"
+    ],
+    "refs": [
+      "NAV01",
+      "ORG01",
+      "ORG02",
+      "EMP03",
+      "ORG03",
+      "ORG04",
+      "DRO01",
+      "DRO02",
+      "DRO03",
+      "DRO04",
+      "DRO05"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS003",
+    "domain": "Organisation et accès",
+    "action": "Renseigner l’organisation",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC11",
+      "MC02"
+    ],
+    "refs": [
+      "NAV01",
+      "ORG01",
+      "ORG02",
+      "EMP03",
+      "ORG03",
+      "ORG04",
+      "DRO01",
+      "DRO02",
+      "DRO03",
+      "DRO04",
+      "DRO05"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS004",
+    "domain": "Organisation et accès",
+    "action": "Renseigner un établissement",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC11",
+      "MC02"
+    ],
+    "refs": [
+      "NAV01",
+      "ORG01",
+      "ORG02",
+      "EMP03",
+      "ORG03",
+      "ORG04",
+      "DRO01",
+      "DRO02",
+      "DRO03",
+      "DRO04",
+      "DRO05"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS005",
+    "domain": "Organisation et accès",
+    "action": "Créer un établissement",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC11",
+      "MC02"
+    ],
+    "refs": [
+      "NAV01",
+      "ORG01",
+      "ORG02",
+      "EMP03",
+      "ORG03",
+      "ORG04",
+      "DRO01",
+      "DRO02",
+      "DRO03",
+      "DRO04",
+      "DRO05"
+    ],
+    "proof": "Possibilité annoncée ou à spécifier"
+  },
+  {
+    "id": "OS006",
+    "domain": "Organisation et accès",
+    "action": "Consulter capacité et abonnement",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC11",
+      "MC02"
+    ],
+    "refs": [
+      "NAV01",
+      "ORG01",
+      "ORG02",
+      "EMP03",
+      "ORG03",
+      "ORG04",
+      "DRO01",
+      "DRO02",
+      "DRO03",
+      "DRO04",
+      "DRO05"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS007",
+    "domain": "Organisation et accès",
+    "action": "Consulter les factures",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC11",
+      "MC02"
+    ],
+    "refs": [
+      "NAV01",
+      "ORG01",
+      "ORG02",
+      "EMP03",
+      "ORG03",
+      "ORG04",
+      "DRO01",
+      "DRO02",
+      "DRO03",
+      "DRO04",
+      "DRO05"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS008",
+    "domain": "Organisation et accès",
+    "action": "Télécharger une facture",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC11",
+      "MC02"
+    ],
+    "refs": [
+      "NAV01",
+      "ORG01",
+      "ORG02",
+      "EMP03",
+      "ORG03",
+      "ORG04",
+      "DRO01",
+      "DRO02",
+      "DRO03",
+      "DRO04",
+      "DRO05"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS009",
+    "domain": "Organisation et accès",
+    "action": "Modifier adresse ou contact de facturation",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC11",
+      "MC02"
+    ],
+    "refs": [
+      "NAV01",
+      "ORG01",
+      "ORG02",
+      "EMP03",
+      "ORG03",
+      "ORG04",
+      "DRO01",
+      "DRO02",
+      "DRO03",
+      "DRO04",
+      "DRO05"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS010",
+    "domain": "Organisation et accès",
+    "action": "Modifier la méthode de paiement",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC11",
+      "MC02"
+    ],
+    "refs": [
+      "NAV01",
+      "ORG01",
+      "ORG02",
+      "EMP03",
+      "ORG03",
+      "ORG04",
+      "DRO01",
+      "DRO02",
+      "DRO03",
+      "DRO04",
+      "DRO05"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS011",
+    "domain": "Organisation et accès",
+    "action": "Lire les permissions d’un rôle",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC11",
+      "MC02"
+    ],
+    "refs": [
+      "NAV01",
+      "ORG01",
+      "ORG02",
+      "EMP03",
+      "ORG03",
+      "ORG04",
+      "DRO01",
+      "DRO02",
+      "DRO03",
+      "DRO04",
+      "DRO05"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS012",
+    "domain": "Organisation et accès",
+    "action": "Personnaliser les droits d’un rôle",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC11",
+      "MC02"
+    ],
+    "refs": [
+      "NAV01",
+      "ORG01",
+      "ORG02",
+      "EMP03",
+      "ORG03",
+      "ORG04",
+      "DRO01",
+      "DRO02",
+      "DRO03",
+      "DRO04",
+      "DRO05"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS013",
+    "domain": "Organisation et accès",
+    "action": "Rattacher une personne à plusieurs sites",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC11",
+      "MC02"
+    ],
+    "refs": [
+      "NAV01",
+      "ORG01",
+      "ORG02",
+      "EMP03",
+      "ORG03",
+      "ORG04",
+      "DRO01",
+      "DRO02",
+      "DRO03",
+      "DRO04",
+      "DRO05"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS014",
+    "domain": "Organisation et accès",
+    "action": "Choisir le rôle par site",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC11",
+      "MC02"
+    ],
+    "refs": [
+      "NAV01",
+      "ORG01",
+      "ORG02",
+      "EMP03",
+      "ORG03",
+      "ORG04",
+      "DRO01",
+      "DRO02",
+      "DRO03",
+      "DRO04",
+      "DRO05"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS015",
+    "domain": "Organisation et accès",
+    "action": "Affecter des équipes et postes par site",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC11",
+      "MC02"
+    ],
+    "refs": [
+      "NAV01",
+      "ORG01",
+      "ORG02",
+      "EMP03",
+      "ORG03",
+      "ORG04",
+      "DRO01",
+      "DRO02",
+      "DRO03",
+      "DRO04",
+      "DRO05"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS016",
+    "domain": "Annuaire salariés",
+    "action": "Rechercher une personne",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC09"
+    ],
+    "refs": [
+      "EMP01",
+      "EMP02",
+      "EMP03",
+      "EMP06",
+      "COM01"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS017",
+    "domain": "Annuaire salariés",
+    "action": "Filtrer les salariés actifs ou archivés",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC09"
+    ],
+    "refs": [
+      "EMP01",
+      "EMP02",
+      "EMP03",
+      "EMP06",
+      "COM01"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS018",
+    "domain": "Annuaire salariés",
+    "action": "Filtrer les dossiers RH en attente",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC09"
+    ],
+    "refs": [
+      "EMP01",
+      "EMP02",
+      "EMP03",
+      "EMP06",
+      "COM01"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS019",
+    "domain": "Annuaire salariés",
+    "action": "Filtrer les dossiers incomplets pour la paie",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC09"
+    ],
+    "refs": [
+      "EMP01",
+      "EMP02",
+      "EMP03",
+      "EMP06",
+      "COM01"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS020",
+    "domain": "Annuaire salariés",
+    "action": "Créer une personne",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC09"
+    ],
+    "refs": [
+      "EMP01",
+      "EMP02",
+      "EMP03",
+      "EMP06",
+      "COM01"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS021",
+    "domain": "Annuaire salariés",
+    "action": "Modifier l’identité et les contacts",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC09"
+    ],
+    "refs": [
+      "EMP01",
+      "EMP02",
+      "EMP03",
+      "EMP06",
+      "COM01"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS022",
+    "domain": "Annuaire salariés",
+    "action": "Renseigner un nom de naissance distinct",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC09"
+    ],
+    "refs": [
+      "EMP01",
+      "EMP02",
+      "EMP03",
+      "EMP06",
+      "COM01"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS023",
+    "domain": "Annuaire salariés",
+    "action": "Afficher ou masquer au planning",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC09"
+    ],
+    "refs": [
+      "EMP01",
+      "EMP02",
+      "EMP03",
+      "EMP06",
+      "COM01"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS024",
+    "domain": "Annuaire salariés",
+    "action": "Afficher au registre unique du personnel",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC09"
+    ],
+    "refs": [
+      "EMP01",
+      "EMP02",
+      "EMP03",
+      "EMP06",
+      "COM01"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS025",
+    "domain": "Annuaire salariés",
+    "action": "Réinitialiser le code PIN",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC09"
+    ],
+    "refs": [
+      "EMP01",
+      "EMP02",
+      "EMP03",
+      "EMP06",
+      "COM01"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS026",
+    "domain": "Annuaire salariés",
+    "action": "Envoyer le code PIN",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC09"
+    ],
+    "refs": [
+      "EMP01",
+      "EMP02",
+      "EMP03",
+      "EMP06",
+      "COM01"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS027",
+    "domain": "Annuaire salariés",
+    "action": "Archiver une personne",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC09"
+    ],
+    "refs": [
+      "EMP01",
+      "EMP02",
+      "EMP03",
+      "EMP06",
+      "COM01"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS028",
+    "domain": "Annuaire salariés",
+    "action": "Restaurer une personne archivée",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC09"
+    ],
+    "refs": [
+      "EMP01",
+      "EMP02",
+      "EMP03",
+      "EMP06",
+      "COM01"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS029",
+    "domain": "Annuaire salariés",
+    "action": "Demander les informations RH",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC09"
+    ],
+    "refs": [
+      "EMP01",
+      "EMP02",
+      "EMP03",
+      "EMP06",
+      "COM01"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS030",
+    "domain": "Annuaire salariés",
+    "action": "Relancer une demande RH",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC09"
+    ],
+    "refs": [
+      "EMP01",
+      "EMP02",
+      "EMP03",
+      "EMP06",
+      "COM01"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS031",
+    "domain": "Annuaire salariés",
+    "action": "Valider les informations RH",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC09"
+    ],
+    "refs": [
+      "EMP01",
+      "EMP02",
+      "EMP03",
+      "EMP06",
+      "COM01"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS032",
+    "domain": "Annuaire salariés",
+    "action": "Compléter le dossier RH",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC09"
+    ],
+    "refs": [
+      "EMP01",
+      "EMP02",
+      "EMP03",
+      "EMP06",
+      "COM01"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS033",
+    "domain": "Annuaire salariés",
+    "action": "Exporter la liste des personnes",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC09"
+    ],
+    "refs": [
+      "EMP01",
+      "EMP02",
+      "EMP03",
+      "EMP06",
+      "COM01"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS034",
+    "domain": "Annuaire salariés",
+    "action": "Envoyer un e-mail collectif",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC09"
+    ],
+    "refs": [
+      "EMP01",
+      "EMP02",
+      "EMP03",
+      "EMP06",
+      "COM01"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS035",
+    "domain": "Contrats et rémunération",
+    "action": "Lire contrat actuel, passé et futur",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02"
+    ],
+    "refs": [
+      "EMP04",
+      "EMP05"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS036",
+    "domain": "Contrats et rémunération",
+    "action": "Créer un nouveau contrat",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02"
+    ],
+    "refs": [
+      "EMP04",
+      "EMP05"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS037",
+    "domain": "Contrats et rémunération",
+    "action": "Modifier un contrat existant",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02"
+    ],
+    "refs": [
+      "EMP04",
+      "EMP05"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS038",
+    "domain": "Contrats et rémunération",
+    "action": "Créer un avenant de contrat",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02"
+    ],
+    "refs": [
+      "EMP04",
+      "EMP05"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS039",
+    "domain": "Contrats et rémunération",
+    "action": "Ajouter un avenant au volume horaire",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02"
+    ],
+    "refs": [
+      "EMP04",
+      "EMP05"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS040",
+    "domain": "Contrats et rémunération",
+    "action": "Définir contrat standard ou forfait jour",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02"
+    ],
+    "refs": [
+      "EMP04",
+      "EMP05"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS041",
+    "domain": "Contrats et rémunération",
+    "action": "Définir temps plein ou partiel",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02"
+    ],
+    "refs": [
+      "EMP04",
+      "EMP05"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS042",
+    "domain": "Contrats et rémunération",
+    "action": "Saisir classification professionnelle",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02"
+    ],
+    "refs": [
+      "EMP04",
+      "EMP05"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS043",
+    "domain": "Contrats et rémunération",
+    "action": "Renseigner période d’essai et échéance",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02"
+    ],
+    "refs": [
+      "EMP04",
+      "EMP05"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS044",
+    "domain": "Contrats et rémunération",
+    "action": "Renseigner la fin de contrat",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02"
+    ],
+    "refs": [
+      "EMP04",
+      "EMP05"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS045",
+    "domain": "Contrats et rémunération",
+    "action": "Renseigner la DPAE",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02"
+    ],
+    "refs": [
+      "EMP04",
+      "EMP05"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS046",
+    "domain": "Contrats et rémunération",
+    "action": "Définir salaire ou taux horaire",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02"
+    ],
+    "refs": [
+      "EMP04",
+      "EMP05"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS047",
+    "domain": "Contrats et rémunération",
+    "action": "Estimer un taux chargé",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02"
+    ],
+    "refs": [
+      "EMP04",
+      "EMP05"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS048",
+    "domain": "Contrats et rémunération",
+    "action": "Renseigner coût de transport",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02"
+    ],
+    "refs": [
+      "EMP04",
+      "EMP05"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS049",
+    "domain": "Lecture du planning",
+    "action": "Naviguer par jour, semaine et mois",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03"
+    ],
+    "refs": [
+      "PLA01",
+      "PLA09",
+      "PLA11",
+      "PLA12",
+      "PLA13"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS050",
+    "domain": "Lecture du planning",
+    "action": "Basculer employés ou postes",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03"
+    ],
+    "refs": [
+      "PLA01",
+      "PLA09",
+      "PLA11",
+      "PLA12",
+      "PLA13"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS051",
+    "domain": "Lecture du planning",
+    "action": "Déplier un poste au mois",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03"
+    ],
+    "refs": [
+      "PLA01",
+      "PLA09",
+      "PLA11",
+      "PLA12",
+      "PLA13"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS052",
+    "domain": "Lecture du planning",
+    "action": "Filtrer le planning",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03"
+    ],
+    "refs": [
+      "PLA01",
+      "PLA09",
+      "PLA11",
+      "PLA12",
+      "PLA13"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS053",
+    "domain": "Lecture du planning",
+    "action": "Trier employés ou postes",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03"
+    ],
+    "refs": [
+      "PLA01",
+      "PLA09",
+      "PLA11",
+      "PLA12",
+      "PLA13"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS054",
+    "domain": "Lecture du planning",
+    "action": "Ajuster taille et jours affichés",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03"
+    ],
+    "refs": [
+      "PLA01",
+      "PLA09",
+      "PLA11",
+      "PLA12",
+      "PLA13"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS055",
+    "domain": "Lecture du planning",
+    "action": "Lire les totaux et écarts",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03"
+    ],
+    "refs": [
+      "PLA01",
+      "PLA09",
+      "PLA11",
+      "PLA12",
+      "PLA13"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS056",
+    "domain": "Lecture du planning",
+    "action": "Lire l’annualisation depuis le planning",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03"
+    ],
+    "refs": [
+      "PLA01",
+      "PLA09",
+      "PLA11",
+      "PLA12",
+      "PLA13"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS057",
+    "domain": "Lecture du planning",
+    "action": "Afficher anniversaires et jours fériés",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03"
+    ],
+    "refs": [
+      "PLA01",
+      "PLA09",
+      "PLA11",
+      "PLA12",
+      "PLA13"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS058",
+    "domain": "Lecture du planning",
+    "action": "Lire les alertes d’un créneau",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03"
+    ],
+    "refs": [
+      "PLA01",
+      "PLA09",
+      "PLA11",
+      "PLA12",
+      "PLA13"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS059",
+    "domain": "Lecture du planning",
+    "action": "Afficher activité et besoins",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03"
+    ],
+    "refs": [
+      "PLA01",
+      "PLA09",
+      "PLA11",
+      "PLA12",
+      "PLA13"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS060",
+    "domain": "Création et gestion des shifts",
+    "action": "Créer un shift de travail",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC11"
+    ],
+    "refs": [
+      "PLA02",
+      "PLA03",
+      "PLA04",
+      "PLA08",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS061",
+    "domain": "Création et gestion des shifts",
+    "action": "Créer un shift non assigné",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC11"
+    ],
+    "refs": [
+      "PLA02",
+      "PLA03",
+      "PLA04",
+      "PLA08",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS062",
+    "domain": "Création et gestion des shifts",
+    "action": "Affecter un shift à une personne",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC11"
+    ],
+    "refs": [
+      "PLA02",
+      "PLA03",
+      "PLA04",
+      "PLA08",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS063",
+    "domain": "Création et gestion des shifts",
+    "action": "Modifier un shift existant",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC11"
+    ],
+    "refs": [
+      "PLA02",
+      "PLA03",
+      "PLA04",
+      "PLA08",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS064",
+    "domain": "Création et gestion des shifts",
+    "action": "Supprimer un shift",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC11"
+    ],
+    "refs": [
+      "PLA02",
+      "PLA03",
+      "PLA04",
+      "PLA08",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS065",
+    "domain": "Création et gestion des shifts",
+    "action": "Déplacer ou redimensionner un shift",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC11"
+    ],
+    "refs": [
+      "PLA02",
+      "PLA03",
+      "PLA04",
+      "PLA08",
+      "ORG04"
+    ],
+    "proof": "Possibilité annoncée ou à spécifier"
+  },
+  {
+    "id": "OS066",
+    "domain": "Création et gestion des shifts",
+    "action": "Demander un transfert de shift",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC11"
+    ],
+    "refs": [
+      "PLA02",
+      "PLA03",
+      "PLA04",
+      "PLA08",
+      "ORG04"
+    ],
+    "proof": "Possibilité annoncée ou à spécifier"
+  },
+  {
+    "id": "OS067",
+    "domain": "Création et gestion des shifts",
+    "action": "Ajouter plusieurs shifts dans un formulaire",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC11"
+    ],
+    "refs": [
+      "PLA02",
+      "PLA03",
+      "PLA04",
+      "PLA08",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS068",
+    "domain": "Création et gestion des shifts",
+    "action": "Associer un poste à un shift",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC11"
+    ],
+    "refs": [
+      "PLA02",
+      "PLA03",
+      "PLA04",
+      "PLA08",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS069",
+    "domain": "Création et gestion des shifts",
+    "action": "Associer une mission à un shift",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC11"
+    ],
+    "refs": [
+      "PLA02",
+      "PLA03",
+      "PLA04",
+      "PLA08",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS070",
+    "domain": "Création et gestion des shifts",
+    "action": "Ajouter des tâches au shift",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC11"
+    ],
+    "refs": [
+      "PLA02",
+      "PLA03",
+      "PLA04",
+      "PLA08",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS071",
+    "domain": "Création et gestion des shifts",
+    "action": "Ajouter une note ou des fichiers au shift",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC11"
+    ],
+    "refs": [
+      "PLA02",
+      "PLA03",
+      "PLA04",
+      "PLA08",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS072",
+    "domain": "Création et gestion des shifts",
+    "action": "Répéter un shift chaque jour",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC11"
+    ],
+    "refs": [
+      "PLA02",
+      "PLA03",
+      "PLA04",
+      "PLA08",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS073",
+    "domain": "Création et gestion des shifts",
+    "action": "Répéter un shift chaque semaine",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC11"
+    ],
+    "refs": [
+      "PLA02",
+      "PLA03",
+      "PLA04",
+      "PLA08",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS074",
+    "domain": "Création et gestion des shifts",
+    "action": "Répéter un shift chaque mois",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC11"
+    ],
+    "refs": [
+      "PLA02",
+      "PLA03",
+      "PLA04",
+      "PLA08",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS075",
+    "domain": "Création et gestion des shifts",
+    "action": "Créer un shift d’absence",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC11"
+    ],
+    "refs": [
+      "PLA02",
+      "PLA03",
+      "PLA04",
+      "PLA08",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS076",
+    "domain": "Création et gestion des shifts",
+    "action": "Choisir journée, demi-journée ou durée personnalisée",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC11"
+    ],
+    "refs": [
+      "PLA02",
+      "PLA03",
+      "PLA04",
+      "PLA08",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS077",
+    "domain": "Création et gestion des shifts",
+    "action": "Ajouter une note de journée",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC11"
+    ],
+    "refs": [
+      "PLA02",
+      "PLA03",
+      "PLA04",
+      "PLA08",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS078",
+    "domain": "Création et gestion des shifts",
+    "action": "Enregistrer la semaine comme modèle",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC11"
+    ],
+    "refs": [
+      "PLA02",
+      "PLA03",
+      "PLA04",
+      "PLA08",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS079",
+    "domain": "Création et gestion des shifts",
+    "action": "Créer depuis un modèle ou une semaine",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC11"
+    ],
+    "refs": [
+      "PLA02",
+      "PLA03",
+      "PLA04",
+      "PLA08",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS080",
+    "domain": "Création et gestion des shifts",
+    "action": "Convertir la reprise en shifts non assignés",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC11"
+    ],
+    "refs": [
+      "PLA02",
+      "PLA03",
+      "PLA04",
+      "PLA08",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS081",
+    "domain": "Création et gestion des shifts",
+    "action": "Effacer les shifts d’une période",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC11"
+    ],
+    "refs": [
+      "PLA02",
+      "PLA03",
+      "PLA04",
+      "PLA08",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS082",
+    "domain": "Création et gestion des shifts",
+    "action": "Annuler ou rétablir une opération de planning",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC11"
+    ],
+    "refs": [
+      "PLA02",
+      "PLA03",
+      "PLA04",
+      "PLA08",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS083",
+    "domain": "Publication et clôture",
+    "action": "Publier le planning",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC05",
+      "MC11"
+    ],
+    "refs": [
+      "PLA05",
+      "PLA06",
+      "PLA07",
+      "BAD01",
+      "BAD03",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS084",
+    "domain": "Publication et clôture",
+    "action": "Notifier par e-mail ou SMS",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC05",
+      "MC11"
+    ],
+    "refs": [
+      "PLA05",
+      "PLA06",
+      "PLA07",
+      "BAD01",
+      "BAD03",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS085",
+    "domain": "Publication et clôture",
+    "action": "Imprimer un planning hebdomadaire",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC05",
+      "MC11"
+    ],
+    "refs": [
+      "PLA05",
+      "PLA06",
+      "PLA07",
+      "BAD01",
+      "BAD03",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS086",
+    "domain": "Publication et clôture",
+    "action": "Imprimer un planning mensuel",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC05",
+      "MC11"
+    ],
+    "refs": [
+      "PLA05",
+      "PLA06",
+      "PLA07",
+      "BAD01",
+      "BAD03",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS087",
+    "domain": "Publication et clôture",
+    "action": "Imprimer une feuille d’heures individuelle",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC05",
+      "MC11"
+    ],
+    "refs": [
+      "PLA05",
+      "PLA06",
+      "PLA07",
+      "BAD01",
+      "BAD03",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS088",
+    "domain": "Publication et clôture",
+    "action": "Demander la signature des feuilles d’heures",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC05",
+      "MC11"
+    ],
+    "refs": [
+      "PLA05",
+      "PLA06",
+      "PLA07",
+      "BAD01",
+      "BAD03",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS089",
+    "domain": "Publication et clôture",
+    "action": "Suivre les signatures d’heures",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC05",
+      "MC11"
+    ],
+    "refs": [
+      "PLA05",
+      "PLA06",
+      "PLA07",
+      "BAD01",
+      "BAD03",
+      "ORG04"
+    ],
+    "proof": "Possibilité annoncée ou à spécifier"
+  },
+  {
+    "id": "OS090",
+    "domain": "Publication et clôture",
+    "action": "Valider une journée de badgeuse",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC05",
+      "MC11"
+    ],
+    "refs": [
+      "PLA05",
+      "PLA06",
+      "PLA07",
+      "BAD01",
+      "BAD03",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS091",
+    "domain": "Publication et clôture",
+    "action": "Valider la semaine d’une personne",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC05",
+      "MC11"
+    ],
+    "refs": [
+      "PLA05",
+      "PLA06",
+      "PLA07",
+      "BAD01",
+      "BAD03",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS092",
+    "domain": "Publication et clôture",
+    "action": "Verrouiller le planning",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC05",
+      "MC11"
+    ],
+    "refs": [
+      "PLA05",
+      "PLA06",
+      "PLA07",
+      "BAD01",
+      "BAD03",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS093",
+    "domain": "Publication et clôture",
+    "action": "Verrouiller pour la paie",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC05",
+      "MC11"
+    ],
+    "refs": [
+      "PLA05",
+      "PLA06",
+      "PLA07",
+      "BAD01",
+      "BAD03",
+      "ORG04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS094",
+    "domain": "Publication et clôture",
+    "action": "Déverrouiller une période",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC05",
+      "MC11"
+    ],
+    "refs": [
+      "PLA05",
+      "PLA06",
+      "PLA07",
+      "BAD01",
+      "BAD03",
+      "ORG04"
+    ],
+    "proof": "Possibilité annoncée ou à spécifier"
+  },
+  {
+    "id": "OS095",
+    "domain": "Demandes et disponibilités",
+    "action": "Lister et filtrer les demandes",
+    "primarySection": "MC04",
+    "relatedSections": [
+      "MC04"
+    ],
+    "refs": [
+      "ABS01",
+      "ABS02",
+      "DIS01",
+      "DIS02"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS096",
+    "domain": "Demandes et disponibilités",
+    "action": "Consulter une demande et sa décision",
+    "primarySection": "MC04",
+    "relatedSections": [
+      "MC04"
+    ],
+    "refs": [
+      "ABS01",
+      "ABS02",
+      "DIS01",
+      "DIS02"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS097",
+    "domain": "Demandes et disponibilités",
+    "action": "Créer une demande d’absence",
+    "primarySection": "MC04",
+    "relatedSections": [
+      "MC04"
+    ],
+    "refs": [
+      "ABS01",
+      "ABS02",
+      "DIS01",
+      "DIS02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS098",
+    "domain": "Demandes et disponibilités",
+    "action": "Définir les repos dans la période demandée",
+    "primarySection": "MC04",
+    "relatedSections": [
+      "MC04"
+    ],
+    "refs": [
+      "ABS01",
+      "ABS02",
+      "DIS01",
+      "DIS02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS099",
+    "domain": "Demandes et disponibilités",
+    "action": "Accepter une demande",
+    "primarySection": "MC04",
+    "relatedSections": [
+      "MC04"
+    ],
+    "refs": [
+      "ABS01",
+      "ABS02",
+      "DIS01",
+      "DIS02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS100",
+    "domain": "Demandes et disponibilités",
+    "action": "Refuser une demande",
+    "primarySection": "MC04",
+    "relatedSections": [
+      "MC04"
+    ],
+    "refs": [
+      "ABS01",
+      "ABS02",
+      "DIS01",
+      "DIS02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS101",
+    "domain": "Demandes et disponibilités",
+    "action": "Transférer une demande à un responsable",
+    "primarySection": "MC04",
+    "relatedSections": [
+      "MC04"
+    ],
+    "refs": [
+      "ABS01",
+      "ABS02",
+      "DIS01",
+      "DIS02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS102",
+    "domain": "Demandes et disponibilités",
+    "action": "Supprimer ou annuler une demande",
+    "primarySection": "MC04",
+    "relatedSections": [
+      "MC04"
+    ],
+    "refs": [
+      "ABS01",
+      "ABS02",
+      "DIS01",
+      "DIS02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS103",
+    "domain": "Demandes et disponibilités",
+    "action": "Ouvrir le planning depuis une demande",
+    "primarySection": "MC04",
+    "relatedSections": [
+      "MC04"
+    ],
+    "refs": [
+      "ABS01",
+      "ABS02",
+      "DIS01",
+      "DIS02"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS104",
+    "domain": "Demandes et disponibilités",
+    "action": "Saisir une disponibilité exceptionnelle",
+    "primarySection": "MC04",
+    "relatedSections": [
+      "MC04"
+    ],
+    "refs": [
+      "ABS01",
+      "ABS02",
+      "DIS01",
+      "DIS02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS105",
+    "domain": "Demandes et disponibilités",
+    "action": "Saisir des disponibilités récurrentes",
+    "primarySection": "MC04",
+    "relatedSections": [
+      "MC04"
+    ],
+    "refs": [
+      "ABS01",
+      "ABS02",
+      "DIS01",
+      "DIS02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS106",
+    "domain": "Demandes et disponibilités",
+    "action": "Retirer une plage de disponibilité",
+    "primarySection": "MC04",
+    "relatedSections": [
+      "MC04"
+    ],
+    "refs": [
+      "ABS01",
+      "ABS02",
+      "DIS01",
+      "DIS02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS107",
+    "domain": "Pointages",
+    "action": "Lire les badges par journée",
+    "primarySection": "MC05",
+    "relatedSections": [
+      "MC05",
+      "MC10"
+    ],
+    "refs": [
+      "BAD01",
+      "BAD02",
+      "BAD03",
+      "PAR16"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS108",
+    "domain": "Pointages",
+    "action": "Lire les badges par personne",
+    "primarySection": "MC05",
+    "relatedSections": [
+      "MC05",
+      "MC10"
+    ],
+    "refs": [
+      "BAD01",
+      "BAD02",
+      "BAD03",
+      "PAR16"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS109",
+    "domain": "Pointages",
+    "action": "Consulter les absences prévues",
+    "primarySection": "MC05",
+    "relatedSections": [
+      "MC05",
+      "MC10"
+    ],
+    "refs": [
+      "BAD01",
+      "BAD02",
+      "BAD03",
+      "PAR16"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS110",
+    "domain": "Pointages",
+    "action": "Consulter une preuve de badge",
+    "primarySection": "MC05",
+    "relatedSections": [
+      "MC05",
+      "MC10"
+    ],
+    "refs": [
+      "BAD01",
+      "BAD02",
+      "BAD03",
+      "PAR16"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS111",
+    "domain": "Pointages",
+    "action": "Corriger les heures rémunérées et pauses",
+    "primarySection": "MC05",
+    "relatedSections": [
+      "MC05",
+      "MC10"
+    ],
+    "refs": [
+      "BAD01",
+      "BAD02",
+      "BAD03",
+      "PAR16"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS112",
+    "domain": "Pointages",
+    "action": "Qualifier une absence depuis la badgeuse",
+    "primarySection": "MC05",
+    "relatedSections": [
+      "MC05",
+      "MC10"
+    ],
+    "refs": [
+      "BAD01",
+      "BAD02",
+      "BAD03",
+      "PAR16"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS113",
+    "domain": "Pointages",
+    "action": "Ajouter une note de badgeuse",
+    "primarySection": "MC05",
+    "relatedSections": [
+      "MC05",
+      "MC10"
+    ],
+    "refs": [
+      "BAD01",
+      "BAD02",
+      "BAD03",
+      "PAR16"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS114",
+    "domain": "Pointages",
+    "action": "Ignorer un badge",
+    "primarySection": "MC05",
+    "relatedSections": [
+      "MC05",
+      "MC10"
+    ],
+    "refs": [
+      "BAD01",
+      "BAD02",
+      "BAD03",
+      "PAR16"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS115",
+    "domain": "Pointages",
+    "action": "Affecter un poste à un badge",
+    "primarySection": "MC05",
+    "relatedSections": [
+      "MC05",
+      "MC10"
+    ],
+    "refs": [
+      "BAD01",
+      "BAD02",
+      "BAD03",
+      "PAR16"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS116",
+    "domain": "Pointages",
+    "action": "Télécharger les badges",
+    "primarySection": "MC05",
+    "relatedSections": [
+      "MC05",
+      "MC10"
+    ],
+    "refs": [
+      "BAD01",
+      "BAD02",
+      "BAD03",
+      "PAR16"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS117",
+    "domain": "Pointages",
+    "action": "Lire l’historique des corrections",
+    "primarySection": "MC05",
+    "relatedSections": [
+      "MC05",
+      "MC10"
+    ],
+    "refs": [
+      "BAD01",
+      "BAD02",
+      "BAD03",
+      "PAR16"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS118",
+    "domain": "Pointages",
+    "action": "Configurer les quatre règles de mise au réel",
+    "primarySection": "MC05",
+    "relatedSections": [
+      "MC05",
+      "MC10"
+    ],
+    "refs": [
+      "BAD01",
+      "BAD02",
+      "BAD03",
+      "PAR16"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS119",
+    "domain": "Pointages",
+    "action": "Configurer arrondis et pauses",
+    "primarySection": "MC05",
+    "relatedSections": [
+      "MC05",
+      "MC10"
+    ],
+    "refs": [
+      "BAD01",
+      "BAD02",
+      "BAD03",
+      "PAR16"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS120",
+    "domain": "Pointages",
+    "action": "Configurer badge secondaire et fréquence",
+    "primarySection": "MC05",
+    "relatedSections": [
+      "MC05",
+      "MC10"
+    ],
+    "refs": [
+      "BAD01",
+      "BAD02",
+      "BAD03",
+      "PAR16"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS121",
+    "domain": "Pointages",
+    "action": "Configurer tablette, mobile et preuves",
+    "primarySection": "MC05",
+    "relatedSections": [
+      "MC05",
+      "MC10"
+    ],
+    "refs": [
+      "BAD01",
+      "BAD02",
+      "BAD03",
+      "PAR16"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS122",
+    "domain": "Pointages",
+    "action": "Notifier les retards",
+    "primarySection": "MC05",
+    "relatedSections": [
+      "MC05",
+      "MC10"
+    ],
+    "refs": [
+      "BAD01",
+      "BAD02",
+      "BAD03",
+      "PAR16"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS123",
+    "domain": "Compteurs",
+    "action": "Consulter l’historique des shifts",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC07",
+      "MC10"
+    ],
+    "refs": [
+      "CPT01",
+      "CPT02",
+      "CPT03",
+      "CPT04",
+      "CPT05",
+      "RAP02",
+      "PAR02"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS124",
+    "domain": "Compteurs",
+    "action": "Lire les congés payés N et N moins 1",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC07",
+      "MC10"
+    ],
+    "refs": [
+      "CPT01",
+      "CPT02",
+      "CPT03",
+      "CPT04",
+      "CPT05",
+      "RAP02",
+      "PAR02"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS125",
+    "domain": "Compteurs",
+    "action": "Corriger les congés payés",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC07",
+      "MC10"
+    ],
+    "refs": [
+      "CPT01",
+      "CPT02",
+      "CPT03",
+      "CPT04",
+      "CPT05",
+      "RAP02",
+      "PAR02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS126",
+    "domain": "Compteurs",
+    "action": "Lire le forfait jour",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC07",
+      "MC10"
+    ],
+    "refs": [
+      "CPT01",
+      "CPT02",
+      "CPT03",
+      "CPT04",
+      "CPT05",
+      "RAP02",
+      "PAR02"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS127",
+    "domain": "Compteurs",
+    "action": "Ajuster un forfait jour",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC07",
+      "MC10"
+    ],
+    "refs": [
+      "CPT01",
+      "CPT02",
+      "CPT03",
+      "CPT04",
+      "CPT05",
+      "RAP02",
+      "PAR02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS128",
+    "domain": "Compteurs",
+    "action": "Initialiser l’annualisation",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC07",
+      "MC10"
+    ],
+    "refs": [
+      "CPT01",
+      "CPT02",
+      "CPT03",
+      "CPT04",
+      "CPT05",
+      "RAP02",
+      "PAR02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS129",
+    "domain": "Compteurs",
+    "action": "Lire l’annualisation active",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC07",
+      "MC10"
+    ],
+    "refs": [
+      "CPT01",
+      "CPT02",
+      "CPT03",
+      "CPT04",
+      "CPT05",
+      "RAP02",
+      "PAR02"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS130",
+    "domain": "Compteurs",
+    "action": "Ajuster collectivement l’annualisation",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC07",
+      "MC10"
+    ],
+    "refs": [
+      "CPT01",
+      "CPT02",
+      "CPT03",
+      "CPT04",
+      "CPT05",
+      "RAP02",
+      "PAR02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS131",
+    "domain": "Compteurs",
+    "action": "Désactiver l’annualisation",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC07",
+      "MC10"
+    ],
+    "refs": [
+      "CPT01",
+      "CPT02",
+      "CPT03",
+      "CPT04",
+      "CPT05",
+      "RAP02",
+      "PAR02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS132",
+    "domain": "Compteurs",
+    "action": "Gérer RTT, RCR, modulation et jours fériés",
+    "primarySection": "MC02",
+    "relatedSections": [
+      "MC02",
+      "MC07",
+      "MC10"
+    ],
+    "refs": [
+      "CPT01",
+      "CPT02",
+      "CPT03",
+      "CPT04",
+      "CPT05",
+      "RAP02",
+      "PAR02"
+    ],
+    "proof": "Possibilité annoncée ou à spécifier"
+  },
+  {
+    "id": "OS133",
+    "domain": "Documents RH",
+    "action": "Lister et classer les documents individuels",
+    "primarySection": "MC06",
+    "relatedSections": [
+      "MC06",
+      "MC10"
+    ],
+    "refs": [
+      "DOC01",
+      "DOC02",
+      "DOC03",
+      "DOC04",
+      "PAR14",
+      "PAR15",
+      "EDI01",
+      "EDI02"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS134",
+    "domain": "Documents RH",
+    "action": "Importer des documents",
+    "primarySection": "MC06",
+    "relatedSections": [
+      "MC06",
+      "MC10"
+    ],
+    "refs": [
+      "DOC01",
+      "DOC02",
+      "DOC03",
+      "DOC04",
+      "PAR14",
+      "PAR15",
+      "EDI01",
+      "EDI02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS135",
+    "domain": "Documents RH",
+    "action": "Renommer un document",
+    "primarySection": "MC06",
+    "relatedSections": [
+      "MC06",
+      "MC10"
+    ],
+    "refs": [
+      "DOC01",
+      "DOC02",
+      "DOC03",
+      "DOC04",
+      "PAR14",
+      "PAR15",
+      "EDI01",
+      "EDI02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS136",
+    "domain": "Documents RH",
+    "action": "Déplacer un document",
+    "primarySection": "MC06",
+    "relatedSections": [
+      "MC06",
+      "MC10"
+    ],
+    "refs": [
+      "DOC01",
+      "DOC02",
+      "DOC03",
+      "DOC04",
+      "PAR14",
+      "PAR15",
+      "EDI01",
+      "EDI02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS137",
+    "domain": "Documents RH",
+    "action": "Définir une date d’expiration",
+    "primarySection": "MC06",
+    "relatedSections": [
+      "MC06",
+      "MC10"
+    ],
+    "refs": [
+      "DOC01",
+      "DOC02",
+      "DOC03",
+      "DOC04",
+      "PAR14",
+      "PAR15",
+      "EDI01",
+      "EDI02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS138",
+    "domain": "Documents RH",
+    "action": "Supprimer un document",
+    "primarySection": "MC06",
+    "relatedSections": [
+      "MC06",
+      "MC10"
+    ],
+    "refs": [
+      "DOC01",
+      "DOC02",
+      "DOC03",
+      "DOC04",
+      "PAR14",
+      "PAR15",
+      "EDI01",
+      "EDI02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS139",
+    "domain": "Documents RH",
+    "action": "Envoyer un document par e-mail",
+    "primarySection": "MC06",
+    "relatedSections": [
+      "MC06",
+      "MC10"
+    ],
+    "refs": [
+      "DOC01",
+      "DOC02",
+      "DOC03",
+      "DOC04",
+      "PAR14",
+      "PAR15",
+      "EDI01",
+      "EDI02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS140",
+    "domain": "Documents RH",
+    "action": "Envoyer un document pour signature",
+    "primarySection": "MC06",
+    "relatedSections": [
+      "MC06",
+      "MC10"
+    ],
+    "refs": [
+      "DOC01",
+      "DOC02",
+      "DOC03",
+      "DOC04",
+      "PAR14",
+      "PAR15",
+      "EDI01",
+      "EDI02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS141",
+    "domain": "Documents RH",
+    "action": "Suivre et relancer des signatures",
+    "primarySection": "MC06",
+    "relatedSections": [
+      "MC06",
+      "MC10"
+    ],
+    "refs": [
+      "DOC01",
+      "DOC02",
+      "DOC03",
+      "DOC04",
+      "PAR14",
+      "PAR15",
+      "EDI01",
+      "EDI02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS142",
+    "domain": "Documents RH",
+    "action": "Créer un modèle documentaire",
+    "primarySection": "MC06",
+    "relatedSections": [
+      "MC06",
+      "MC10"
+    ],
+    "refs": [
+      "DOC01",
+      "DOC02",
+      "DOC03",
+      "DOC04",
+      "PAR14",
+      "PAR15",
+      "EDI01",
+      "EDI02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS143",
+    "domain": "Documents RH",
+    "action": "Modifier la mise en forme d’un modèle",
+    "primarySection": "MC06",
+    "relatedSections": [
+      "MC06",
+      "MC10"
+    ],
+    "refs": [
+      "DOC01",
+      "DOC02",
+      "DOC03",
+      "DOC04",
+      "PAR14",
+      "PAR15",
+      "EDI01",
+      "EDI02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS144",
+    "domain": "Documents RH",
+    "action": "Insérer une variable dans un modèle",
+    "primarySection": "MC06",
+    "relatedSections": [
+      "MC06",
+      "MC10"
+    ],
+    "refs": [
+      "DOC01",
+      "DOC02",
+      "DOC03",
+      "DOC04",
+      "PAR14",
+      "PAR15",
+      "EDI01",
+      "EDI02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS145",
+    "domain": "Documents RH",
+    "action": "Importer une image dans un modèle",
+    "primarySection": "MC06",
+    "relatedSections": [
+      "MC06",
+      "MC10"
+    ],
+    "refs": [
+      "DOC01",
+      "DOC02",
+      "DOC03",
+      "DOC04",
+      "PAR14",
+      "PAR15",
+      "EDI01",
+      "EDI02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS146",
+    "domain": "Documents RH",
+    "action": "Prévisualiser le modèle pour une personne",
+    "primarySection": "MC06",
+    "relatedSections": [
+      "MC06",
+      "MC10"
+    ],
+    "refs": [
+      "DOC01",
+      "DOC02",
+      "DOC03",
+      "DOC04",
+      "PAR14",
+      "PAR15",
+      "EDI01",
+      "EDI02"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS147",
+    "domain": "Documents RH",
+    "action": "Dupliquer ou supprimer un modèle",
+    "primarySection": "MC06",
+    "relatedSections": [
+      "MC06",
+      "MC10"
+    ],
+    "refs": [
+      "DOC01",
+      "DOC02",
+      "DOC03",
+      "DOC04",
+      "PAR14",
+      "PAR15",
+      "EDI01",
+      "EDI02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS148",
+    "domain": "Documents RH",
+    "action": "Activer ou désactiver un modèle",
+    "primarySection": "MC06",
+    "relatedSections": [
+      "MC06",
+      "MC10"
+    ],
+    "refs": [
+      "DOC01",
+      "DOC02",
+      "DOC03",
+      "DOC04",
+      "PAR14",
+      "PAR15",
+      "EDI01",
+      "EDI02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS149",
+    "domain": "Documents RH",
+    "action": "Générer un document individuel depuis un modèle",
+    "primarySection": "MC06",
+    "relatedSections": [
+      "MC06",
+      "MC10"
+    ],
+    "refs": [
+      "DOC01",
+      "DOC02",
+      "DOC03",
+      "DOC04",
+      "PAR14",
+      "PAR15",
+      "EDI01",
+      "EDI02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS150",
+    "domain": "Documents RH",
+    "action": "Créer des dossiers documentaires",
+    "primarySection": "MC06",
+    "relatedSections": [
+      "MC06",
+      "MC10"
+    ],
+    "refs": [
+      "DOC01",
+      "DOC02",
+      "DOC03",
+      "DOC04",
+      "PAR14",
+      "PAR15",
+      "EDI01",
+      "EDI02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS151",
+    "domain": "Documents RH",
+    "action": "Distribuer des documents en groupe",
+    "primarySection": "MC06",
+    "relatedSections": [
+      "MC06",
+      "MC10"
+    ],
+    "refs": [
+      "DOC01",
+      "DOC02",
+      "DOC03",
+      "DOC04",
+      "PAR14",
+      "PAR15",
+      "EDI01",
+      "EDI02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS152",
+    "domain": "Documents RH",
+    "action": "Associer un lot de contrats",
+    "primarySection": "MC06",
+    "relatedSections": [
+      "MC06",
+      "MC10"
+    ],
+    "refs": [
+      "DOC01",
+      "DOC02",
+      "DOC03",
+      "DOC04",
+      "PAR14",
+      "PAR15",
+      "EDI01",
+      "EDI02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS153",
+    "domain": "Documents RH",
+    "action": "Distribuer des bulletins de paie",
+    "primarySection": "MC06",
+    "relatedSections": [
+      "MC06",
+      "MC10"
+    ],
+    "refs": [
+      "DOC01",
+      "DOC02",
+      "DOC03",
+      "DOC04",
+      "PAR14",
+      "PAR15",
+      "EDI01",
+      "EDI02"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS154",
+    "domain": "Préparation de paie",
+    "action": "Choisir la période du rapport",
+    "primarySection": "MC07",
+    "relatedSections": [
+      "MC07",
+      "MC10"
+    ],
+    "refs": [
+      "RAP01",
+      "RAP02",
+      "EXP01",
+      "EXP02",
+      "EXP03",
+      "EXP04",
+      "EXP05",
+      "PAR04"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS155",
+    "domain": "Préparation de paie",
+    "action": "Lire les données contractuelles et salariales",
+    "primarySection": "MC07",
+    "relatedSections": [
+      "MC07",
+      "MC10"
+    ],
+    "refs": [
+      "RAP01",
+      "RAP02",
+      "EXP01",
+      "EXP02",
+      "EXP03",
+      "EXP04",
+      "EXP05",
+      "PAR04"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS156",
+    "domain": "Préparation de paie",
+    "action": "Lire heures normales et majorées",
+    "primarySection": "MC07",
+    "relatedSections": [
+      "MC07",
+      "MC10"
+    ],
+    "refs": [
+      "RAP01",
+      "RAP02",
+      "EXP01",
+      "EXP02",
+      "EXP03",
+      "EXP04",
+      "EXP05",
+      "PAR04"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS157",
+    "domain": "Préparation de paie",
+    "action": "Lire absences et annualisation",
+    "primarySection": "MC07",
+    "relatedSections": [
+      "MC07",
+      "MC10"
+    ],
+    "refs": [
+      "RAP01",
+      "RAP02",
+      "EXP01",
+      "EXP02",
+      "EXP03",
+      "EXP04",
+      "EXP05",
+      "PAR04"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS158",
+    "domain": "Préparation de paie",
+    "action": "Ajouter une prime",
+    "primarySection": "MC07",
+    "relatedSections": [
+      "MC07",
+      "MC10"
+    ],
+    "refs": [
+      "RAP01",
+      "RAP02",
+      "EXP01",
+      "EXP02",
+      "EXP03",
+      "EXP04",
+      "EXP05",
+      "PAR04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS159",
+    "domain": "Préparation de paie",
+    "action": "Ajouter une avance",
+    "primarySection": "MC07",
+    "relatedSections": [
+      "MC07",
+      "MC10"
+    ],
+    "refs": [
+      "RAP01",
+      "RAP02",
+      "EXP01",
+      "EXP02",
+      "EXP03",
+      "EXP04",
+      "EXP05",
+      "PAR04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS160",
+    "domain": "Préparation de paie",
+    "action": "Ajouter un commentaire de paie",
+    "primarySection": "MC07",
+    "relatedSections": [
+      "MC07",
+      "MC10"
+    ],
+    "refs": [
+      "RAP01",
+      "RAP02",
+      "EXP01",
+      "EXP02",
+      "EXP03",
+      "EXP04",
+      "EXP05",
+      "PAR04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS161",
+    "domain": "Préparation de paie",
+    "action": "Paramétrer les colonnes d’export",
+    "primarySection": "MC07",
+    "relatedSections": [
+      "MC07",
+      "MC10"
+    ],
+    "refs": [
+      "RAP01",
+      "RAP02",
+      "EXP01",
+      "EXP02",
+      "EXP03",
+      "EXP04",
+      "EXP05",
+      "PAR04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS162",
+    "domain": "Préparation de paie",
+    "action": "Exporter la synthèse et les détails Excel",
+    "primarySection": "MC07",
+    "relatedSections": [
+      "MC07",
+      "MC10"
+    ],
+    "refs": [
+      "RAP01",
+      "RAP02",
+      "EXP01",
+      "EXP02",
+      "EXP03",
+      "EXP04",
+      "EXP05",
+      "PAR04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS163",
+    "domain": "Préparation de paie",
+    "action": "Exporter vers le logiciel de paie",
+    "primarySection": "MC07",
+    "relatedSections": [
+      "MC07",
+      "MC10"
+    ],
+    "refs": [
+      "RAP01",
+      "RAP02",
+      "EXP01",
+      "EXP02",
+      "EXP03",
+      "EXP04",
+      "EXP05",
+      "PAR04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS164",
+    "domain": "Préparation de paie",
+    "action": "Envoyer un export par e-mail",
+    "primarySection": "MC07",
+    "relatedSections": [
+      "MC07",
+      "MC10"
+    ],
+    "refs": [
+      "RAP01",
+      "RAP02",
+      "EXP01",
+      "EXP02",
+      "EXP03",
+      "EXP04",
+      "EXP05",
+      "PAR04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS165",
+    "domain": "Préparation de paie",
+    "action": "Exporter les données d’activité partielle",
+    "primarySection": "MC07",
+    "relatedSections": [
+      "MC07",
+      "MC10"
+    ],
+    "refs": [
+      "RAP01",
+      "RAP02",
+      "EXP01",
+      "EXP02",
+      "EXP03",
+      "EXP04",
+      "EXP05",
+      "PAR04"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS166",
+    "domain": "Prévisions et missions",
+    "action": "Saisir une prévision d’activité",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC10",
+      "MC08"
+    ],
+    "refs": [
+      "PLA10",
+      "PLA11",
+      "PAR08",
+      "PAR09",
+      "PAR10",
+      "PAR18",
+      "MIS01",
+      "MIS02",
+      "MIS03"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS167",
+    "domain": "Prévisions et missions",
+    "action": "Choisir indicateurs et postes de l’analyse",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC10",
+      "MC08"
+    ],
+    "refs": [
+      "PLA10",
+      "PLA11",
+      "PAR08",
+      "PAR09",
+      "PAR10",
+      "PAR18",
+      "MIS01",
+      "MIS02",
+      "MIS03"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS168",
+    "domain": "Prévisions et missions",
+    "action": "Définir des besoins fixes",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC10",
+      "MC08"
+    ],
+    "refs": [
+      "PLA10",
+      "PLA11",
+      "PAR08",
+      "PAR09",
+      "PAR10",
+      "PAR18",
+      "MIS01",
+      "MIS02",
+      "MIS03"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS169",
+    "domain": "Prévisions et missions",
+    "action": "Définir des besoins variables",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC10",
+      "MC08"
+    ],
+    "refs": [
+      "PLA10",
+      "PLA11",
+      "PAR08",
+      "PAR09",
+      "PAR10",
+      "PAR18",
+      "MIS01",
+      "MIS02",
+      "MIS03"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS170",
+    "domain": "Prévisions et missions",
+    "action": "Générer une prévision automatique",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC10",
+      "MC08"
+    ],
+    "refs": [
+      "PLA10",
+      "PLA11",
+      "PAR08",
+      "PAR09",
+      "PAR10",
+      "PAR18",
+      "MIS01",
+      "MIS02",
+      "MIS03"
+    ],
+    "proof": "Possibilité annoncée ou à spécifier"
+  },
+  {
+    "id": "OS171",
+    "domain": "Prévisions et missions",
+    "action": "Générer ou compléter un planning automatiquement",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC10",
+      "MC08"
+    ],
+    "refs": [
+      "PLA10",
+      "PLA11",
+      "PAR08",
+      "PAR09",
+      "PAR10",
+      "PAR18",
+      "MIS01",
+      "MIS02",
+      "MIS03"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS172",
+    "domain": "Prévisions et missions",
+    "action": "Définir priorités de postes par personne",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC10",
+      "MC08"
+    ],
+    "refs": [
+      "PLA10",
+      "PLA11",
+      "PAR08",
+      "PAR09",
+      "PAR10",
+      "PAR18",
+      "MIS01",
+      "MIS02",
+      "MIS03"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS173",
+    "domain": "Prévisions et missions",
+    "action": "Configurer les contraintes de planification",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC10",
+      "MC08"
+    ],
+    "refs": [
+      "PLA10",
+      "PLA11",
+      "PAR08",
+      "PAR09",
+      "PAR10",
+      "PAR18",
+      "MIS01",
+      "MIS02",
+      "MIS03"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS174",
+    "domain": "Prévisions et missions",
+    "action": "Créer et modifier une mission",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC10",
+      "MC08"
+    ],
+    "refs": [
+      "PLA10",
+      "PLA11",
+      "PAR08",
+      "PAR09",
+      "PAR10",
+      "PAR18",
+      "MIS01",
+      "MIS02",
+      "MIS03"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS175",
+    "domain": "Prévisions et missions",
+    "action": "Terminer une mission",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC10",
+      "MC08"
+    ],
+    "refs": [
+      "PLA10",
+      "PLA11",
+      "PAR08",
+      "PAR09",
+      "PAR10",
+      "PAR18",
+      "MIS01",
+      "MIS02",
+      "MIS03"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS176",
+    "domain": "Prévisions et missions",
+    "action": "Lire les temps et coûts d’une mission",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC10",
+      "MC08"
+    ],
+    "refs": [
+      "PLA10",
+      "PLA11",
+      "PAR08",
+      "PAR09",
+      "PAR10",
+      "PAR18",
+      "MIS01",
+      "MIS02",
+      "MIS03"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS177",
+    "domain": "Prévisions et missions",
+    "action": "Ouvrir le planning d’une mission",
+    "primarySection": "MC03",
+    "relatedSections": [
+      "MC03",
+      "MC10",
+      "MC08"
+    ],
+    "refs": [
+      "PLA10",
+      "PLA11",
+      "PAR08",
+      "PAR09",
+      "PAR10",
+      "PAR18",
+      "MIS01",
+      "MIS02",
+      "MIS03"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS178",
+    "domain": "Pilotage et profil",
+    "action": "Lire le tableau de bord RH",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC08",
+      "MC11",
+      "MC13",
+      "MC12"
+    ],
+    "refs": [
+      "ACC01",
+      "PIL01",
+      "JOU01",
+      "UTI02",
+      "UTI03",
+      "UTI04",
+      "UTI05",
+      "INT01",
+      "INT02",
+      "INT03",
+      "INT04",
+      "INT05",
+      "INT06"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS179",
+    "domain": "Pilotage et profil",
+    "action": "Lire CA, productivité et masse salariale",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC08",
+      "MC11",
+      "MC13",
+      "MC12"
+    ],
+    "refs": [
+      "ACC01",
+      "PIL01",
+      "JOU01",
+      "UTI02",
+      "UTI03",
+      "UTI04",
+      "UTI05",
+      "INT01",
+      "INT02",
+      "INT03",
+      "INT04",
+      "INT05",
+      "INT06"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS180",
+    "domain": "Pilotage et profil",
+    "action": "Filtrer le journal d’activité",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC08",
+      "MC11",
+      "MC13",
+      "MC12"
+    ],
+    "refs": [
+      "ACC01",
+      "PIL01",
+      "JOU01",
+      "UTI02",
+      "UTI03",
+      "UTI04",
+      "UTI05",
+      "INT01",
+      "INT02",
+      "INT03",
+      "INT04",
+      "INT05",
+      "INT06"
+    ],
+    "proof": "Possibilité de consultation issue du relevé ; vérifier les observations et limites des fiches sources."
+  },
+  {
+    "id": "OS181",
+    "domain": "Pilotage et profil",
+    "action": "Exporter le journal d’activité",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC08",
+      "MC11",
+      "MC13",
+      "MC12"
+    ],
+    "refs": [
+      "ACC01",
+      "PIL01",
+      "JOU01",
+      "UTI02",
+      "UTI03",
+      "UTI04",
+      "UTI05",
+      "INT01",
+      "INT02",
+      "INT03",
+      "INT04",
+      "INT05",
+      "INT06"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS182",
+    "domain": "Pilotage et profil",
+    "action": "Configurer sa langue et ses contacts",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC08",
+      "MC11",
+      "MC13",
+      "MC12"
+    ],
+    "refs": [
+      "ACC01",
+      "PIL01",
+      "JOU01",
+      "UTI02",
+      "UTI03",
+      "UTI04",
+      "UTI05",
+      "INT01",
+      "INT02",
+      "INT03",
+      "INT04",
+      "INT05",
+      "INT06"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS183",
+    "domain": "Pilotage et profil",
+    "action": "Configurer ses notifications et rapports",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC08",
+      "MC11",
+      "MC13",
+      "MC12"
+    ],
+    "refs": [
+      "ACC01",
+      "PIL01",
+      "JOU01",
+      "UTI02",
+      "UTI03",
+      "UTI04",
+      "UTI05",
+      "INT01",
+      "INT02",
+      "INT03",
+      "INT04",
+      "INT05",
+      "INT06"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS184",
+    "domain": "Pilotage et profil",
+    "action": "Abonner un calendrier personnel",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC08",
+      "MC11",
+      "MC13",
+      "MC12"
+    ],
+    "refs": [
+      "ACC01",
+      "PIL01",
+      "JOU01",
+      "UTI02",
+      "UTI03",
+      "UTI04",
+      "UTI05",
+      "INT01",
+      "INT02",
+      "INT03",
+      "INT04",
+      "INT05",
+      "INT06"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS185",
+    "domain": "Pilotage et profil",
+    "action": "Modifier son mot de passe",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC08",
+      "MC11",
+      "MC13",
+      "MC12"
+    ],
+    "refs": [
+      "ACC01",
+      "PIL01",
+      "JOU01",
+      "UTI02",
+      "UTI03",
+      "UTI04",
+      "UTI05",
+      "INT01",
+      "INT02",
+      "INT03",
+      "INT04",
+      "INT05",
+      "INT06"
+    ],
+    "proof": "Commande ou préparation observée ; effet final non testé"
+  },
+  {
+    "id": "OS186",
+    "domain": "Pilotage et profil",
+    "action": "Relier une caisse",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC08",
+      "MC11",
+      "MC13",
+      "MC12"
+    ],
+    "refs": [
+      "ACC01",
+      "PIL01",
+      "JOU01",
+      "UTI02",
+      "UTI03",
+      "UTI04",
+      "UTI05",
+      "INT01",
+      "INT02",
+      "INT03",
+      "INT04",
+      "INT05",
+      "INT06"
+    ],
+    "proof": "Possibilité annoncée ou à spécifier"
+  },
+  {
+    "id": "OS187",
+    "domain": "Pilotage et profil",
+    "action": "Relier le logiciel de paie ou SIRH",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC08",
+      "MC11",
+      "MC13",
+      "MC12"
+    ],
+    "refs": [
+      "ACC01",
+      "PIL01",
+      "JOU01",
+      "UTI02",
+      "UTI03",
+      "UTI04",
+      "UTI05",
+      "INT01",
+      "INT02",
+      "INT03",
+      "INT04",
+      "INT05",
+      "INT06"
+    ],
+    "proof": "Possibilité annoncée ou à spécifier"
+  },
+  {
+    "id": "OS188",
+    "domain": "Pilotage et profil",
+    "action": "Relier un outil d’analyse",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC08",
+      "MC11",
+      "MC13",
+      "MC12"
+    ],
+    "refs": [
+      "ACC01",
+      "PIL01",
+      "JOU01",
+      "UTI02",
+      "UTI03",
+      "UTI04",
+      "UTI05",
+      "INT01",
+      "INT02",
+      "INT03",
+      "INT04",
+      "INT05",
+      "INT06"
+    ],
+    "proof": "Possibilité annoncée ou à spécifier"
+  },
+  {
+    "id": "OS189",
+    "domain": "Pilotage et profil",
+    "action": "Relier recrutement ou acompte",
+    "primarySection": "MC01",
+    "relatedSections": [
+      "MC01",
+      "MC08",
+      "MC11",
+      "MC13",
+      "MC12"
+    ],
+    "refs": [
+      "ACC01",
+      "PIL01",
+      "JOU01",
+      "UTI02",
+      "UTI03",
+      "UTI04",
+      "UTI05",
+      "INT01",
+      "INT02",
+      "INT03",
+      "INT04",
+      "INT05",
+      "INT06"
+    ],
+    "proof": "Possibilité annoncée ou à spécifier"
+  }
+];
+
+export const ENTITIES_META: EntityMetaRef[] = [
+  {
+    "id": "OBJ01",
+    "name": "Organisation",
+    "refs": [
+      "ORG01"
+    ]
+  },
+  {
+    "id": "OBJ02",
+    "name": "Établissement",
+    "refs": [
+      "PAR13"
+    ]
+  },
+  {
+    "id": "OBJ03",
+    "name": "Personne",
+    "refs": [
+      "EMP01",
+      "EMP02",
+      "EMP03"
+    ]
+  },
+  {
+    "id": "OBJ04",
+    "name": "Accès à un site",
+    "refs": [
+      "EMP03"
+    ]
+  },
+  {
+    "id": "OBJ05",
+    "name": "Rôle et autorisation",
+    "refs": [
+      "ORG03",
+      "ORG04",
+      "DRO01",
+      "DRO02",
+      "DRO03",
+      "DRO04",
+      "DRO05"
+    ]
+  },
+  {
+    "id": "OBJ06",
+    "name": "Dossier RH",
+    "refs": [
+      "EMP06"
+    ]
+  },
+  {
+    "id": "OBJ07",
+    "name": "Coordonnées de paiement",
+    "refs": [
+      "EMP06",
+      "ORG04"
+    ]
+  },
+  {
+    "id": "OBJ08",
+    "name": "Contrat",
+    "refs": [
+      "EMP04",
+      "EMP05"
+    ]
+  },
+  {
+    "id": "OBJ09",
+    "name": "Avenant",
+    "refs": [
+      "EMP04",
+      "EMP05"
+    ]
+  },
+  {
+    "id": "OBJ10",
+    "name": "Poste",
+    "refs": [
+      "PAR05",
+      "PAR17"
+    ]
+  },
+  {
+    "id": "OBJ11",
+    "name": "Équipe",
+    "refs": [
+      "PAR06",
+      "PAR17"
+    ]
+  },
+  {
+    "id": "OBJ12",
+    "name": "Shift",
+    "refs": [
+      "PLA01",
+      "PLA02",
+      "PLA13"
+    ]
+  },
+  {
+    "id": "OBJ13",
+    "name": "Série de répétition",
+    "refs": [
+      "PLA03"
+    ]
+  },
+  {
+    "id": "OBJ14",
+    "name": "Note tâche et pièce de shift",
+    "refs": [
+      "PLA01",
+      "PLA02"
+    ]
+  },
+  {
+    "id": "OBJ15",
+    "name": "Motif d’absence",
+    "refs": [
+      "PAR11",
+      "PAR12"
+    ]
+  },
+  {
+    "id": "OBJ16",
+    "name": "Absence au planning",
+    "refs": [
+      "PLA04",
+      "ABS01",
+      "ABS02"
+    ]
+  },
+  {
+    "id": "OBJ17",
+    "name": "Demande et décision",
+    "refs": [
+      "ABS01",
+      "ABS02"
+    ]
+  },
+  {
+    "id": "OBJ18",
+    "name": "Disponibilité",
+    "refs": [
+      "DIS02"
+    ]
+  },
+  {
+    "id": "OBJ19",
+    "name": "Badge brut",
+    "refs": [
+      "BAD01",
+      "BAD03",
+      "PAR16"
+    ]
+  },
+  {
+    "id": "OBJ20",
+    "name": "Correction et heure rémunérée",
+    "refs": [
+      "BAD01",
+      "BAD02"
+    ]
+  },
+  {
+    "id": "OBJ21",
+    "name": "Validation et verrou",
+    "refs": [
+      "PLA01",
+      "BAD01",
+      "ORG04"
+    ]
+  },
+  {
+    "id": "OBJ22",
+    "name": "Mouvement de compteur",
+    "refs": [
+      "CPT01",
+      "CPT02",
+      "CPT03",
+      "CPT04",
+      "CPT05",
+      "RAP02"
+    ]
+  },
+  {
+    "id": "OBJ23",
+    "name": "Modèle et version documentaire",
+    "refs": [
+      "PAR14",
+      "EDI01",
+      "EDI02"
+    ]
+  },
+  {
+    "id": "OBJ24",
+    "name": "Document et dossier",
+    "refs": [
+      "DOC01",
+      "PAR15"
+    ]
+  },
+  {
+    "id": "OBJ25",
+    "name": "Signature et diffusion",
+    "refs": [
+      "DOC04",
+      "PLA07"
+    ]
+  },
+  {
+    "id": "OBJ26",
+    "name": "Période et élément de paie",
+    "refs": [
+      "RAP01",
+      "EXP01",
+      "EXP02",
+      "EXP03",
+      "EXP04"
+    ]
+  },
+  {
+    "id": "OBJ27",
+    "name": "Mission",
+    "refs": [
+      "MIS01",
+      "MIS02",
+      "MIS03"
+    ]
+  },
+  {
+    "id": "OBJ28",
+    "name": "Prévision et besoin",
+    "refs": [
+      "PLA10",
+      "PLA11",
+      "PAR18"
+    ]
+  },
+  {
+    "id": "OBJ29",
+    "name": "Notification et calendrier",
+    "refs": [
+      "UTI03",
+      "UTI04"
+    ]
+  },
+  {
+    "id": "OBJ30",
+    "name": "Connexion et correspondance",
+    "refs": [
+      "INT01",
+      "INT02",
+      "INT03",
+      "INT04",
+      "INT05",
+      "INT06"
+    ]
+  },
+  {
+    "id": "OBJ31",
+    "name": "Événement du journal",
+    "refs": [
+      "JOU01"
+    ]
+  }
+];

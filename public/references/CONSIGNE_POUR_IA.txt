@@ -1,0 +1,26 @@
+VERSION COURANTE : V1.16, 14 novembre 2026. Lire 00_DEMARRER_ICI_VERSION_COURANTE.txt ; les relevés datés plus anciens ci-dessous sont conservés pour traçabilité.
+
+CONSIGNE DE TRANSMISSION À L’IA QUI CODERA CFITNESS OS
+
+Objectif accepté : intégrer les fonctions RH étudiées dans Mon compte. Le collaborateur accède à son dashboard personnel ; le responsable accède également à la gestion selon ses autorisations. Le Planning global ouvre les mêmes données RH ; sport et tâches seront agrégés ultérieurement. Aucun doublon de planning RH.
+Reprendre le design CFitness : fond sombre, palette et pictogrammes du dossier visuel ; conserver les regroupements, colonnes, onglets, intitulés et parcours observés de Skello pour faciliter la migration.
+Le choix « Responsable · ensemble du relevé » dans les maquettes est un assemblage de conception ; ce n’est pas la preuve qu’un profil réel possède tous les droits. Les profils observés ont leurs variantes et restrictions propres. Ne pas déduire une hiérarchie du nom des six profils.
+
+1. Lire les décisions d’organisation et les contrats d’écrans avant de modifier le dépôt. Examiner le code réel du dépôt pour adapter ce dossier à son architecture ; la présente livraison n’affirme pas avoir audité ce code.
+2. Tracer chaque écran, champ et action vers son identifiant source. Conserver les 91 fiches et 1 605 entrées ; les 189 actions sont des propositions de l’OS. Toute absence ou fusion doit être explicitement décidée par le propriétaire.
+3. Classer les exigences : observée directement, documentée seulement, déduite/proposée, inconnue. Une absence de contrôle, un contrôle décoché, un contrôle désactivé et un refus sont quatre états différents. Ne pas inventer les résultats des parcours non exécutés.
+4. Appliquer les droits dans l’interface et au serveur : action + périmètre personne/équipe/établissement + état/verrou. Les droits des sessions observées peuvent être personnalisés. Vérifier l’accès direct et les données renvoyées, pas seulement le masquage du bouton.
+5. Conserver les paramètres par établissement. Deux sites peuvent partager leurs 66 motifs d’absence affichés et différer sur les alertes, les règles du rapport, la fréquence de badge ou la durée de coupure Smart Planner. Ne pas utiliser les valeurs observées comme des règles légales ou des valeurs universelles.
+6. Préparer les calculs avec exemples fictifs et résultats attendus validés : temps prévus/pointés/rémunérés, pauses, arrondis, contrats, compteurs, absences, majorations et exports. Ne pas annoncer une conformité métier sur la seule ressemblance des écrans.
+7. Avant chaque lot : périmètre couvert, identifiants inclus, limites, données fictives, critères de recette. Après chaque lot : vues collaborateur/responsable, variations de droits et de clubs, états vides/erreurs, captures maison et écarts de migration. Les scénarios de test proposés dans ce dossier sont des exigences maison, pas des résultats observés dans Skello.
+8. Ne brancher aucun connecteur réel avant validation des contrats techniques, droits et destinataires. Ne pas intégrer de PIN, clé, jeton, URL privée ni valeur personnelle issue des captures. L’API native et le code serveur de Skello n’ont pas été récupérés.
+9. Développer d’abord la navigation Mon compte et les droits, puis dossiers/contrats, planning/absences, pointage, compteurs/rapport, documents et intégrations. Chaque lot doit rester traçable et testable avec les profils fictifs du dossier.
+10. Ne pas marquer un lot complet parce que la maquette l’affiche. Lire EXHAUSTIVITE_ET_ACCES_RESTANTS.txt et tenir à jour le registre des écarts. Aucun « 100 % Skello » n’est établi.
+
+
+MISE À JOUR DU 14 NOVEMBRE 2026 — VERSION COURANTE V1.15
+66 constats administrateur ; 99 captures d’administration et 9 captures distinctes d’émulation web. 91 fiches / 1 605 entrées historiques / 12 compléments / 189 actions maison proposées. Lire les compléments contrats/compteurs, les règles documentées et AIDE_NECESSAIRE_ET_RESTANT_ADMINISTRATEUR.txt. Les résultats métier restent non testés. Maquettes_Mon_compte_CFITNESS_V1_16.html est la version courante. Les versions antérieures sont conservées pour traçabilité.
+
+
+PASSE APPROFONDIE V1.16 — 14 NOVEMBRE 2026
+Version courante : Maquettes_Mon_compte_CFITNESS_V1_16.html. 71 constats administrateur, 20 compléments aux 1 605 entrées historiques. Les 67 articles de la relecture sont documentaires, pas des résultats testés. Les signatures en erreur/attente/signées ont été observées ; ne plus demander simplement un exemple signé. Voir la nouvelle liste d’aide et les dix ambiguïtés. Aucune nouvelle capture RH nominative ajoutée.

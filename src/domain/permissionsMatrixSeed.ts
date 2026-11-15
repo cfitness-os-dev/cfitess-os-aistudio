@@ -1,0 +1,2473 @@
+// Matrice de droits canonique extraite de Matrice_droits_profils_Skello_2026_11_12.json
+import type { RoleProfile } from './types';
+
+export const INITIAL_ROLE_PROFILES: RoleProfile[] = [
+  {
+    "id": "admin_systeme",
+    "name": "Administrateur système",
+    "sourceScreen": "ORG04",
+    "scopeSelected": "sites",
+    "scopeOptions": [],
+    "scopeEditable": false,
+    "cardOtherActionsCount": 53,
+    "exposedActionCount": 44,
+    "rows": [
+      {
+        "actionId": "ORG04-01",
+        "label": "Ajouter des shifts aux employés",
+        "group": "Planning",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-02",
+        "label": "Modifier les shifts des employés",
+        "group": "Planning",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-03",
+        "label": "Faire une demande de transfert de shift",
+        "group": "Planning",
+        "exposed": true,
+        "checked": false,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-04",
+        "label": "Verrouiller le planning en bleu et vert",
+        "group": "Planning",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-05",
+        "label": "Verrouiller le planning en rouge",
+        "group": "Planning",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-06",
+        "label": "Publier le planning",
+        "group": "Planning",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-07",
+        "label": "Voir les fiches employés",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-08",
+        "label": "Modifier les fiches employés",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-09",
+        "label": "Archiver ou restaurer un employé",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-10",
+        "label": "Voir les données salariales et bancaires",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-11",
+        "label": "Modifier les données salariales et bancaires",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-12",
+        "label": "Modifier le volume horaire",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-13",
+        "label": "Ajouter un avenant",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-14",
+        "label": "Accéder aux documents des employés pour consulter importer ou supprimer",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-15",
+        "label": "Ajouter un employé",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-16",
+        "label": "Voir le compteur de congés payés",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-17",
+        "label": "Gérer les demandes de disponibilité congés et transferts",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-18",
+        "label": "Faire ses propres demandes de disponibilité",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-19",
+        "label": "Faire ses propres demandes de congés",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-20",
+        "label": "Modifier son dossier RH",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-21",
+        "label": "Ajouter ses documents",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-22",
+        "label": "Accéder à ses compteurs heures jours fériés et RCR dans l’application",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-23",
+        "label": "Voir le rapport",
+        "group": "Rapport",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-24",
+        "label": "Modifier les paramètres d’exportation",
+        "group": "Rapport",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-25",
+        "label": "Ajouter ou modifier des primes",
+        "group": "Rapport",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-26",
+        "label": "Ajouter ou modifier des commentaires",
+        "group": "Rapport",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-27",
+        "label": "Créer des postes et des équipes",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-28",
+        "label": "Voir les règles et absences de l’établissement",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-29",
+        "label": "Modifier les règles et absences",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-30",
+        "label": "Activer les alertes et modifier les règles du rapport",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-31",
+        "label": "Modifier les niveaux de permission et actions",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-32",
+        "label": "Modifier les données de facturation",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-33",
+        "label": "Créer un établissement",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-34",
+        "label": "Gérer les modèles de documents",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-35",
+        "label": "Voir l’espace badgeuse",
+        "group": "Badgeuse",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-36",
+        "label": "Modifier l’espace badgeuse",
+        "group": "Badgeuse",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-37",
+        "label": "Accéder aux paramètres de badgeuse",
+        "group": "Badgeuse",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-38",
+        "label": "Accéder aux indicateurs du planning et du pilotage",
+        "group": "Dashboard",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-39",
+        "label": "Recevoir le rapport d’activité",
+        "group": "Dashboard",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-40",
+        "label": "Voir les missions",
+        "group": "Missions",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-41",
+        "label": "Modifier les missions",
+        "group": "Missions",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-42",
+        "label": "Créer et archiver des missions",
+        "group": "Missions",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-43",
+        "label": "Voir les soldes de RTT des contrats en heures",
+        "group": "Suivi des compteurs",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-44",
+        "label": "Modifier les soldes de RTT des contrats en heures",
+        "group": "Suivi des compteurs",
+        "exposed": true,
+        "checked": true,
+        "disabled": null,
+        "editableControl": false
+      }
+    ]
+  },
+  {
+    "id": "master_avance",
+    "name": "Master avancé",
+    "sourceScreen": "DRO01",
+    "scopeSelected": "sites",
+    "scopeOptions": [
+      "self",
+      "teams",
+      "sites"
+    ],
+    "scopeEditable": true,
+    "cardOtherActionsCount": 52,
+    "exposedActionCount": 44,
+    "rows": [
+      {
+        "actionId": "ORG04-01",
+        "label": "Ajouter des shifts aux employés",
+        "group": "Planning",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-02",
+        "label": "Modifier les shifts des employés",
+        "group": "Planning",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-03",
+        "label": "Faire une demande de transfert de shift",
+        "group": "Planning",
+        "exposed": true,
+        "checked": false,
+        "disabled": true,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-04",
+        "label": "Verrouiller le planning en bleu et vert",
+        "group": "Planning",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-05",
+        "label": "Verrouiller le planning en rouge",
+        "group": "Planning",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-06",
+        "label": "Publier le planning",
+        "group": "Planning",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-07",
+        "label": "Voir les fiches employés",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-08",
+        "label": "Modifier les fiches employés",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-09",
+        "label": "Archiver ou restaurer un employé",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-10",
+        "label": "Voir les données salariales et bancaires",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-11",
+        "label": "Modifier les données salariales et bancaires",
+        "group": "Employés",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-12",
+        "label": "Modifier le volume horaire",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-13",
+        "label": "Ajouter un avenant",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-14",
+        "label": "Accéder aux documents des employés pour consulter importer ou supprimer",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-15",
+        "label": "Ajouter un employé",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-16",
+        "label": "Voir le compteur de congés payés",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-17",
+        "label": "Gérer les demandes de disponibilité congés et transferts",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-18",
+        "label": "Faire ses propres demandes de disponibilité",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-19",
+        "label": "Faire ses propres demandes de congés",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-20",
+        "label": "Modifier son dossier RH",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-21",
+        "label": "Ajouter ses documents",
+        "group": "Employés",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-22",
+        "label": "Accéder à ses compteurs heures jours fériés et RCR dans l’application",
+        "group": "Employés",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-23",
+        "label": "Voir le rapport",
+        "group": "Rapport",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-24",
+        "label": "Modifier les paramètres d’exportation",
+        "group": "Rapport",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-25",
+        "label": "Ajouter ou modifier des primes",
+        "group": "Rapport",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-26",
+        "label": "Ajouter ou modifier des commentaires",
+        "group": "Rapport",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-27",
+        "label": "Créer des postes et des équipes",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-28",
+        "label": "Voir les règles et absences de l’établissement",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-29",
+        "label": "Modifier les règles et absences",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-30",
+        "label": "Activer les alertes et modifier les règles du rapport",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-31",
+        "label": "Modifier les niveaux de permission et actions",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-32",
+        "label": "Modifier les données de facturation",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-33",
+        "label": "Créer un établissement",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-34",
+        "label": "Gérer les modèles de documents",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-35",
+        "label": "Voir l’espace badgeuse",
+        "group": "Badgeuse",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-36",
+        "label": "Modifier l’espace badgeuse",
+        "group": "Badgeuse",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-37",
+        "label": "Accéder aux paramètres de badgeuse",
+        "group": "Badgeuse",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-38",
+        "label": "Accéder aux indicateurs du planning et du pilotage",
+        "group": "Dashboard",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-39",
+        "label": "Recevoir le rapport d’activité",
+        "group": "Dashboard",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-40",
+        "label": "Voir les missions",
+        "group": "Missions",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-41",
+        "label": "Modifier les missions",
+        "group": "Missions",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-42",
+        "label": "Créer et archiver des missions",
+        "group": "Missions",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-43",
+        "label": "Voir les soldes de RTT des contrats en heures",
+        "group": "Suivi des compteurs",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-44",
+        "label": "Modifier les soldes de RTT des contrats en heures",
+        "group": "Suivi des compteurs",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      }
+    ]
+  },
+  {
+    "id": "lecture_seule_avancee",
+    "name": "Lecture seule avancée",
+    "sourceScreen": "DRO02",
+    "scopeSelected": "sites",
+    "scopeOptions": [
+      "self",
+      "teams",
+      "sites"
+    ],
+    "scopeEditable": true,
+    "cardOtherActionsCount": 22,
+    "exposedActionCount": 17,
+    "rows": [
+      {
+        "actionId": "ORG04-01",
+        "label": "Ajouter des shifts aux employés",
+        "group": "Planning",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-02",
+        "label": "Modifier les shifts des employés",
+        "group": "Planning",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-03",
+        "label": "Faire une demande de transfert de shift",
+        "group": "Planning",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-04",
+        "label": "Verrouiller le planning en bleu et vert",
+        "group": "Planning",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-05",
+        "label": "Verrouiller le planning en rouge",
+        "group": "Planning",
+        "exposed": true,
+        "checked": false,
+        "disabled": true,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-06",
+        "label": "Publier le planning",
+        "group": "Planning",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-07",
+        "label": "Voir les fiches employés",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-08",
+        "label": "Modifier les fiches employés",
+        "group": "Employés",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-09",
+        "label": "Archiver ou restaurer un employé",
+        "group": "Employés",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-10",
+        "label": "Voir les données salariales et bancaires",
+        "group": "Employés",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-11",
+        "label": "Modifier les données salariales et bancaires",
+        "group": "Employés",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-12",
+        "label": "Modifier le volume horaire",
+        "group": "Employés",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-13",
+        "label": "Ajouter un avenant",
+        "group": "Employés",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-14",
+        "label": "Accéder aux documents des employés pour consulter importer ou supprimer",
+        "group": "Employés",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-15",
+        "label": "Ajouter un employé",
+        "group": "Employés",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-16",
+        "label": "Voir le compteur de congés payés",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-17",
+        "label": "Gérer les demandes de disponibilité congés et transferts",
+        "group": "Employés",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-18",
+        "label": "Faire ses propres demandes de disponibilité",
+        "group": "Employés",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-19",
+        "label": "Faire ses propres demandes de congés",
+        "group": "Employés",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-20",
+        "label": "Modifier son dossier RH",
+        "group": "Employés",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-21",
+        "label": "Ajouter ses documents",
+        "group": "Employés",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-22",
+        "label": "Accéder à ses compteurs heures jours fériés et RCR dans l’application",
+        "group": "Employés",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-23",
+        "label": "Voir le rapport",
+        "group": "Rapport",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-24",
+        "label": "Modifier les paramètres d’exportation",
+        "group": "Rapport",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-25",
+        "label": "Ajouter ou modifier des primes",
+        "group": "Rapport",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-26",
+        "label": "Ajouter ou modifier des commentaires",
+        "group": "Rapport",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-27",
+        "label": "Créer des postes et des équipes",
+        "group": "Paramètres",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-28",
+        "label": "Voir les règles et absences de l’établissement",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-29",
+        "label": "Modifier les règles et absences",
+        "group": "Paramètres",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-30",
+        "label": "Activer les alertes et modifier les règles du rapport",
+        "group": "Paramètres",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-31",
+        "label": "Modifier les niveaux de permission et actions",
+        "group": "Paramètres",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-32",
+        "label": "Modifier les données de facturation",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-33",
+        "label": "Créer un établissement",
+        "group": "Paramètres",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-34",
+        "label": "Gérer les modèles de documents",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-35",
+        "label": "Voir l’espace badgeuse",
+        "group": "Badgeuse",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-36",
+        "label": "Modifier l’espace badgeuse",
+        "group": "Badgeuse",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-37",
+        "label": "Accéder aux paramètres de badgeuse",
+        "group": "Badgeuse",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-38",
+        "label": "Accéder aux indicateurs du planning et du pilotage",
+        "group": "Dashboard",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-39",
+        "label": "Recevoir le rapport d’activité",
+        "group": "Dashboard",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-40",
+        "label": "Voir les missions",
+        "group": "Missions",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-41",
+        "label": "Modifier les missions",
+        "group": "Missions",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-42",
+        "label": "Créer et archiver des missions",
+        "group": "Missions",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-43",
+        "label": "Voir les soldes de RTT des contrats en heures",
+        "group": "Suivi des compteurs",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-44",
+        "label": "Modifier les soldes de RTT des contrats en heures",
+        "group": "Suivi des compteurs",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      }
+    ]
+  },
+  {
+    "id": "planificateur_avance",
+    "name": "Planificateur avancé",
+    "sourceScreen": "DRO03",
+    "scopeSelected": "sites",
+    "scopeOptions": [
+      "self",
+      "teams",
+      "sites"
+    ],
+    "scopeEditable": true,
+    "cardOtherActionsCount": 52,
+    "exposedActionCount": 44,
+    "rows": [
+      {
+        "actionId": "ORG04-01",
+        "label": "Ajouter des shifts aux employés",
+        "group": "Planning",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-02",
+        "label": "Modifier les shifts des employés",
+        "group": "Planning",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-03",
+        "label": "Faire une demande de transfert de shift",
+        "group": "Planning",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-04",
+        "label": "Verrouiller le planning en bleu et vert",
+        "group": "Planning",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-05",
+        "label": "Verrouiller le planning en rouge",
+        "group": "Planning",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-06",
+        "label": "Publier le planning",
+        "group": "Planning",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-07",
+        "label": "Voir les fiches employés",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-08",
+        "label": "Modifier les fiches employés",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-09",
+        "label": "Archiver ou restaurer un employé",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-10",
+        "label": "Voir les données salariales et bancaires",
+        "group": "Employés",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-11",
+        "label": "Modifier les données salariales et bancaires",
+        "group": "Employés",
+        "exposed": true,
+        "checked": false,
+        "disabled": true,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-12",
+        "label": "Modifier le volume horaire",
+        "group": "Employés",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-13",
+        "label": "Ajouter un avenant",
+        "group": "Employés",
+        "exposed": true,
+        "checked": false,
+        "disabled": true,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-14",
+        "label": "Accéder aux documents des employés pour consulter importer ou supprimer",
+        "group": "Employés",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-15",
+        "label": "Ajouter un employé",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-16",
+        "label": "Voir le compteur de congés payés",
+        "group": "Employés",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-17",
+        "label": "Gérer les demandes de disponibilité congés et transferts",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-18",
+        "label": "Faire ses propres demandes de disponibilité",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-19",
+        "label": "Faire ses propres demandes de congés",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-20",
+        "label": "Modifier son dossier RH",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-21",
+        "label": "Ajouter ses documents",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-22",
+        "label": "Accéder à ses compteurs heures jours fériés et RCR dans l’application",
+        "group": "Employés",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-23",
+        "label": "Voir le rapport",
+        "group": "Rapport",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-24",
+        "label": "Modifier les paramètres d’exportation",
+        "group": "Rapport",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-25",
+        "label": "Ajouter ou modifier des primes",
+        "group": "Rapport",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-26",
+        "label": "Ajouter ou modifier des commentaires",
+        "group": "Rapport",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-27",
+        "label": "Créer des postes et des équipes",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-28",
+        "label": "Voir les règles et absences de l’établissement",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-29",
+        "label": "Modifier les règles et absences",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": false,
+        "disabled": true,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-30",
+        "label": "Activer les alertes et modifier les règles du rapport",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-31",
+        "label": "Modifier les niveaux de permission et actions",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-32",
+        "label": "Modifier les données de facturation",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-33",
+        "label": "Créer un établissement",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-34",
+        "label": "Gérer les modèles de documents",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-35",
+        "label": "Voir l’espace badgeuse",
+        "group": "Badgeuse",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-36",
+        "label": "Modifier l’espace badgeuse",
+        "group": "Badgeuse",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-37",
+        "label": "Accéder aux paramètres de badgeuse",
+        "group": "Badgeuse",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-38",
+        "label": "Accéder aux indicateurs du planning et du pilotage",
+        "group": "Dashboard",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-39",
+        "label": "Recevoir le rapport d’activité",
+        "group": "Dashboard",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-40",
+        "label": "Voir les missions",
+        "group": "Missions",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-41",
+        "label": "Modifier les missions",
+        "group": "Missions",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-42",
+        "label": "Créer et archiver des missions",
+        "group": "Missions",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-43",
+        "label": "Voir les soldes de RTT des contrats en heures",
+        "group": "Suivi des compteurs",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-44",
+        "label": "Modifier les soldes de RTT des contrats en heures",
+        "group": "Suivi des compteurs",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      }
+    ]
+  },
+  {
+    "id": "planificateur_standard",
+    "name": "Planificateur standard",
+    "sourceScreen": "DRO04",
+    "scopeSelected": "teams",
+    "scopeOptions": [
+      "self",
+      "teams",
+      "sites"
+    ],
+    "scopeEditable": true,
+    "cardOtherActionsCount": 51,
+    "exposedActionCount": 44,
+    "rows": [
+      {
+        "actionId": "ORG04-01",
+        "label": "Ajouter des shifts aux employés",
+        "group": "Planning",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-02",
+        "label": "Modifier les shifts des employés",
+        "group": "Planning",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-03",
+        "label": "Faire une demande de transfert de shift",
+        "group": "Planning",
+        "exposed": true,
+        "checked": false,
+        "disabled": true,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-04",
+        "label": "Verrouiller le planning en bleu et vert",
+        "group": "Planning",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-05",
+        "label": "Verrouiller le planning en rouge",
+        "group": "Planning",
+        "exposed": true,
+        "checked": false,
+        "disabled": true,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-06",
+        "label": "Publier le planning",
+        "group": "Planning",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-07",
+        "label": "Voir les fiches employés",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-08",
+        "label": "Modifier les fiches employés",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-09",
+        "label": "Archiver ou restaurer un employé",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-10",
+        "label": "Voir les données salariales et bancaires",
+        "group": "Employés",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-11",
+        "label": "Modifier les données salariales et bancaires",
+        "group": "Employés",
+        "exposed": true,
+        "checked": false,
+        "disabled": true,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-12",
+        "label": "Modifier le volume horaire",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-13",
+        "label": "Ajouter un avenant",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-14",
+        "label": "Accéder aux documents des employés pour consulter importer ou supprimer",
+        "group": "Employés",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-15",
+        "label": "Ajouter un employé",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-16",
+        "label": "Voir le compteur de congés payés",
+        "group": "Employés",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-17",
+        "label": "Gérer les demandes de disponibilité congés et transferts",
+        "group": "Employés",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-18",
+        "label": "Faire ses propres demandes de disponibilité",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-19",
+        "label": "Faire ses propres demandes de congés",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-20",
+        "label": "Modifier son dossier RH",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-21",
+        "label": "Ajouter ses documents",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-22",
+        "label": "Accéder à ses compteurs heures jours fériés et RCR dans l’application",
+        "group": "Employés",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-23",
+        "label": "Voir le rapport",
+        "group": "Rapport",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-24",
+        "label": "Modifier les paramètres d’exportation",
+        "group": "Rapport",
+        "exposed": true,
+        "checked": false,
+        "disabled": true,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-25",
+        "label": "Ajouter ou modifier des primes",
+        "group": "Rapport",
+        "exposed": true,
+        "checked": false,
+        "disabled": true,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-26",
+        "label": "Ajouter ou modifier des commentaires",
+        "group": "Rapport",
+        "exposed": true,
+        "checked": false,
+        "disabled": true,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-27",
+        "label": "Créer des postes et des équipes",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-28",
+        "label": "Voir les règles et absences de l’établissement",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-29",
+        "label": "Modifier les règles et absences",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": false,
+        "disabled": true,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-30",
+        "label": "Activer les alertes et modifier les règles du rapport",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-31",
+        "label": "Modifier les niveaux de permission et actions",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-32",
+        "label": "Modifier les données de facturation",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-33",
+        "label": "Créer un établissement",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-34",
+        "label": "Gérer les modèles de documents",
+        "group": "Paramètres",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-35",
+        "label": "Voir l’espace badgeuse",
+        "group": "Badgeuse",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-36",
+        "label": "Modifier l’espace badgeuse",
+        "group": "Badgeuse",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-37",
+        "label": "Accéder aux paramètres de badgeuse",
+        "group": "Badgeuse",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-38",
+        "label": "Accéder aux indicateurs du planning et du pilotage",
+        "group": "Dashboard",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-39",
+        "label": "Recevoir le rapport d’activité",
+        "group": "Dashboard",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-40",
+        "label": "Voir les missions",
+        "group": "Missions",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-41",
+        "label": "Modifier les missions",
+        "group": "Missions",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-42",
+        "label": "Créer et archiver des missions",
+        "group": "Missions",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-43",
+        "label": "Voir les soldes de RTT des contrats en heures",
+        "group": "Suivi des compteurs",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-44",
+        "label": "Modifier les soldes de RTT des contrats en heures",
+        "group": "Suivi des compteurs",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      }
+    ]
+  },
+  {
+    "id": "employe_standard",
+    "name": "Employé standard",
+    "sourceScreen": "DRO05",
+    "scopeSelected": "sites",
+    "scopeOptions": [
+      "self",
+      "teams",
+      "sites"
+    ],
+    "scopeEditable": true,
+    "cardOtherActionsCount": 9,
+    "exposedActionCount": 6,
+    "rows": [
+      {
+        "actionId": "ORG04-01",
+        "label": "Ajouter des shifts aux employés",
+        "group": "Planning",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-02",
+        "label": "Modifier les shifts des employés",
+        "group": "Planning",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-03",
+        "label": "Faire une demande de transfert de shift",
+        "group": "Planning",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-04",
+        "label": "Verrouiller le planning en bleu et vert",
+        "group": "Planning",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-05",
+        "label": "Verrouiller le planning en rouge",
+        "group": "Planning",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-06",
+        "label": "Publier le planning",
+        "group": "Planning",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-07",
+        "label": "Voir les fiches employés",
+        "group": "Employés",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-08",
+        "label": "Modifier les fiches employés",
+        "group": "Employés",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-09",
+        "label": "Archiver ou restaurer un employé",
+        "group": "Employés",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-10",
+        "label": "Voir les données salariales et bancaires",
+        "group": "Employés",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-11",
+        "label": "Modifier les données salariales et bancaires",
+        "group": "Employés",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-12",
+        "label": "Modifier le volume horaire",
+        "group": "Employés",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-13",
+        "label": "Ajouter un avenant",
+        "group": "Employés",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-14",
+        "label": "Accéder aux documents des employés pour consulter importer ou supprimer",
+        "group": "Employés",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-15",
+        "label": "Ajouter un employé",
+        "group": "Employés",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-16",
+        "label": "Voir le compteur de congés payés",
+        "group": "Employés",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-17",
+        "label": "Gérer les demandes de disponibilité congés et transferts",
+        "group": "Employés",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-18",
+        "label": "Faire ses propres demandes de disponibilité",
+        "group": "Employés",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-19",
+        "label": "Faire ses propres demandes de congés",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-20",
+        "label": "Modifier son dossier RH",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-21",
+        "label": "Ajouter ses documents",
+        "group": "Employés",
+        "exposed": true,
+        "checked": true,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-22",
+        "label": "Accéder à ses compteurs heures jours fériés et RCR dans l’application",
+        "group": "Employés",
+        "exposed": true,
+        "checked": false,
+        "disabled": false,
+        "editableControl": true
+      },
+      {
+        "actionId": "ORG04-23",
+        "label": "Voir le rapport",
+        "group": "Rapport",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-24",
+        "label": "Modifier les paramètres d’exportation",
+        "group": "Rapport",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-25",
+        "label": "Ajouter ou modifier des primes",
+        "group": "Rapport",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-26",
+        "label": "Ajouter ou modifier des commentaires",
+        "group": "Rapport",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-27",
+        "label": "Créer des postes et des équipes",
+        "group": "Paramètres",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-28",
+        "label": "Voir les règles et absences de l’établissement",
+        "group": "Paramètres",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-29",
+        "label": "Modifier les règles et absences",
+        "group": "Paramètres",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-30",
+        "label": "Activer les alertes et modifier les règles du rapport",
+        "group": "Paramètres",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-31",
+        "label": "Modifier les niveaux de permission et actions",
+        "group": "Paramètres",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-32",
+        "label": "Modifier les données de facturation",
+        "group": "Paramètres",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-33",
+        "label": "Créer un établissement",
+        "group": "Paramètres",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-34",
+        "label": "Gérer les modèles de documents",
+        "group": "Paramètres",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-35",
+        "label": "Voir l’espace badgeuse",
+        "group": "Badgeuse",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-36",
+        "label": "Modifier l’espace badgeuse",
+        "group": "Badgeuse",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-37",
+        "label": "Accéder aux paramètres de badgeuse",
+        "group": "Badgeuse",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-38",
+        "label": "Accéder aux indicateurs du planning et du pilotage",
+        "group": "Dashboard",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-39",
+        "label": "Recevoir le rapport d’activité",
+        "group": "Dashboard",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-40",
+        "label": "Voir les missions",
+        "group": "Missions",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-41",
+        "label": "Modifier les missions",
+        "group": "Missions",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-42",
+        "label": "Créer et archiver des missions",
+        "group": "Missions",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-43",
+        "label": "Voir les soldes de RTT des contrats en heures",
+        "group": "Suivi des compteurs",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      },
+      {
+        "actionId": "ORG04-44",
+        "label": "Modifier les soldes de RTT des contrats en heures",
+        "group": "Suivi des compteurs",
+        "exposed": false,
+        "checked": null,
+        "disabled": null,
+        "editableControl": false
+      }
+    ]
+  }
+];

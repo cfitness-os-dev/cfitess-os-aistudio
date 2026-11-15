@@ -33,12 +33,13 @@ import {
   Search,
   Bell,
   MessageSquare,
+  Compass,
 } from 'lucide-react';
 import { AdminSection } from '../types/cfos';
 import { isSectionAllowedForRole } from '../domain/rules';
 import { DashboardView } from './views/DashboardView';
 import { OrchestratorMaintenanceView } from './views/OrchestratorMaintenanceView';
-import { MyDayCollaboratorView } from './views/MyDayCollaboratorView';
+import { MonCompteRhHubView } from './views/MonCompteRhHubView';
 import { TelephonyView } from './views/TelephonyView';
 import { CrmView } from './views/CrmView';
 import { PlanningHrView } from './views/PlanningHrView';
@@ -100,10 +101,20 @@ const VISUAL_SIDEBAR_ITEMS: VisualNavItem[] = [
   },
   {
     id: 'nav-personnel',
-    label: 'Personnel',
+    label: 'Personnel (Mon compte)',
     icon: Users,
     iconColor: 'text-blue-500',
     sectionId: 'my-day',
+    subTarget: 'MC01',
+    hasChevron: true,
+  },
+  {
+    id: 'nav-tracabilite',
+    label: 'Traçabilité V1.16 (91/1605)',
+    icon: Compass,
+    iconColor: 'text-violet-400',
+    sectionId: 'my-day',
+    subTarget: 'traceability',
     hasChevron: true,
   },
   {
@@ -256,7 +267,9 @@ export function AdminShell() {
     } else if (activeSection === 'planning-hr') {
       setSelectedNavId(navSubTarget === 'cours-collectifs' ? 'nav-cours' : 'nav-planning');
     } else if (activeSection === 'my-day') {
-      setSelectedNavId('nav-personnel');
+      setSelectedNavId(
+        navSubTarget === 'traceability' ? 'nav-tracabilite' : 'nav-personnel'
+      );
     } else if (activeSection === 'orchestrator') {
       if (navSubTarget === 'stocks') setSelectedNavId('nav-stock');
       else if (navSubTarget === 'maintenance') setSelectedNavId('nav-maintenance');
@@ -981,17 +994,117 @@ export function AdminShell() {
 
         {/* Active View Content */}
         <main className="flex-1 p-4 sm:p-6 max-w-[1440px] w-full mx-auto">
-          {activeSection === 'my-day' && <MyDayCollaboratorView />}
-          {activeSection === 'planning-hr' && <PlanningHrView />}
-          {activeSection === 'telephony' && <TelephonyView />}
+          {activeSection === 'my-day' && (
+            <MonCompteRhHubView subTarget={navSubTarget} />
+          )}
+          {activeSection === 'planning-hr' && (
+            navSubTarget === 'cours-collectifs' || navSubTarget === 'github-planning' ? (
+              <div className="space-y-4">
+                <div className="cf-card p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span className="cf-muted">
+                    Vue active : <strong className="text-slate-100">Planning Sportif, Cours Collectifs &amp; Contrats CDI (GitHub CFOS)</strong>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection('planning-hr', 'planning')}
+                    className="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold cursor-pointer"
+                  >
+                    Ouvrir Planning RH Skello V1.16 (MC03)
+                  </button>
+                </div>
+                <PlanningHrView />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="cf-card p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span className="cf-muted">
+                    Raccourci Planning (ORGOS05 / TST36) → <strong className="text-violet-300">MC03 Planning RH V1.16</strong>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection('planning-hr', 'github-planning')}
+                    className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 font-semibold cursor-pointer"
+                  >
+                    Planning Sportif &amp; Unifié / Contrats CDI (Vue GitHub)
+                  </button>
+                </div>
+                <MonCompteRhHubView subTarget="MC03" />
+              </div>
+            )
+          )}
+          {activeSection === 'telephony' && (
+            <div className="space-y-4">
+              <div className="cf-card p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className="cf-muted">
+                  Module Marketing &amp; Téléphonie WebRTC 12 Lignes (GitHub CFOS)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setActiveSection('my-day', 'MC09')}
+                  className="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold cursor-pointer"
+                >
+                  Ouvrir MC09 Communication RH (V1.16) →
+                </button>
+              </div>
+              <TelephonyView />
+            </div>
+          )}
           {activeSection === 'crm' && <CrmView />}
-          {activeSection === 'ats' && <AtsView />}
-          {activeSection === 'devices' && <DevicesHeitzView />}
+          {activeSection === 'ats' && (
+            <div className="space-y-4">
+              <div className="cf-card p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className="cf-muted">
+                  Module ATS Recrutement &amp; Signatures Internes eIDAS (GitHub CFOS)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setActiveSection('my-day', 'MC06')}
+                  className="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold cursor-pointer"
+                >
+                  Ouvrir MC06 Documents &amp; signatures RH (V1.16) →
+                </button>
+              </div>
+              <AtsView />
+            </div>
+          )}
+          {activeSection === 'devices' && (
+            <div className="space-y-4">
+              <div className="cf-card p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className="cf-muted">
+                  Module Adhérents Heitz, Finances &amp; InBody/Checkup (GitHub CFOS)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setActiveSection('my-day', 'MC07')}
+                  className="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold cursor-pointer"
+                >
+                  Ouvrir MC07 Préparation de paie (V1.16) →
+                </button>
+              </div>
+              <DevicesHeitzView />
+            </div>
+          )}
           {(activeSection === 'dashboard' || activeSection === 'executive-dossier') && (
             <DashboardView />
           )}
           {activeSection === 'orchestrator' && <OrchestratorMaintenanceView />}
-          {activeSection === 'academy' && <AcademyView />}
+          {activeSection === 'academy' && (
+            <div className="space-y-4">
+              <div className="cf-card p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className="cf-muted">
+                  Module Rapports, Académie 3S &amp; Livret BPJEPS (GitHub CFOS)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setActiveSection('my-day', 'MC08')}
+                  className="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold cursor-pointer"
+                >
+                  Ouvrir MC08 Pilotage &amp; missions (V1.16) →
+                </button>
+              </div>
+              <AcademyView />
+            </div>
+          )}
           {activeSection === 'governance' && <GovernanceView />}
         </main>
       </div>

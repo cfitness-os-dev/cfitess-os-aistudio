@@ -1,74 +1,50 @@
-# ==============================================================================
-# C.FITNESS OS v1.2 — Dockerfile Multi-Stage Optimisé pour Linux (Debian 12)
-# Siège : 2 Rue Jacquard, 69120 Vaulx-en-Velin (Carré de Soie)
-# Établissement secondaire : ZAC des Baterses, 01700 Beynost
-# ==============================================================================
-# Étape 1 : Compilation du Frontend Web / PWA (React 19 + TypeScript + Tailwind -> dist/)
-# Étape 2 : Compilation du Serveur Backend natif en Rust (Axum -> cfitness-os-server)
-# Étape 3 : Image finale minimale Debian 12 (bookworm-slim) sécurisée (utilisateur non-root)
-# ==============================================================================
+# Étape 1 : Build Frontend React + Vite + Tailwind CSS
+FROM node:22-alpine3.21 AS frontend-builder
+WORKDIR /app
 
-# ------------------------------------------------------------------------------
-# STAGE 1 : Build Frontend (Vite -> dist/)
-# ------------------------------------------------------------------------------
-FROM node:22-bookworm-slim AS frontend-builder
-
-WORKDIR /app/frontend
-
-COPY package.json package-lock.json* ./
+COPY package*.json ./
 RUN npm install --no-audit --no-fund
 
-COPY index.html tsconfig.json vite.config.ts metadata.json ./
+COPY index.html postcss.config.js tailwind.config.js tsconfig.json vite.config.ts ./
+COPY docker-compose.yml Dockerfile deploy-linux.sh Cargo.toml metadata.json ./
 COPY public ./public
 COPY src ./src
-
+COPY src-rust ./src-rust
 RUN npm run build
 
-# ------------------------------------------------------------------------------
-# STAGE 2 : Build Backend Rust (Axum -> binaire natif Linux x86_64)
-# ------------------------------------------------------------------------------
-FROM rust:1.82-bookworm AS rust-builder
+# Étape 2 : Build Backend Rust + Axum + Tokio
+FROM rust:1.85-alpine3.21 AS rust-builder
+WORKDIR /app
 
-WORKDIR /app/backend
-
-# Mise en cache des dépendances Cargo
+RUN apk add --no-cache musl-dev
 COPY Cargo.toml ./
 COPY src-rust ./src-rust
+RUN cargo build --release
 
-RUN cargo build --release --bin cfitness-os-server
+# Étape 3 : Image de production Linux minimale et durcie (Alpine 3.21)
+FROM alpine:3.21 AS runtime
+WORKDIR /app
 
-# ------------------------------------------------------------------------------
-# STAGE 3 : Runtime de Production Debian 12 (Bookworm Slim)
-# ------------------------------------------------------------------------------
-FROM debian:bookworm-slim AS runtime
+RUN apk add --no-cache ca-certificates curl tzdata \
+    && addgroup -S cfitness \
+    && adduser -S -D -H -G cfitness cfitness \
+    && mkdir -p /var/lib/cfitness /var/backups/cfitness-os /var/inbody-lb120-drop /app/dist \
+    && chown -R cfitness:cfitness /var/lib/cfitness /var/backups/cfitness-os /var/inbody-lb120-drop /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    curl \
-    tzdata \
-    && rm -rf /var/lib/apt/lists/*
-
-ENV TZ=Europe/Paris \
-    PORT=3000 \
-    STATIC_DIR=/opt/cfitness-os/dist \
-    RUST_LOG=cfitness_os_server=info,tower_http=info
-
-# Création d'un compte système dédié non-privilégié
-RUN groupadd -r cfitness && useradd -r -g cfitness -d /opt/cfitness-os -s /sbin/nologin cfitness
-
-WORKDIR /opt/cfitness-os
-
-# Copie du binaire Rust compilé et des assets Frontend (dist/)
-COPY --from=rust-builder /app/backend/target/release/cfitness-os-server /usr/local/bin/cfitness-os-server
-COPY --from=frontend-builder /app/frontend/dist /opt/cfitness-os/dist
-
-RUN chown -R cfitness:cfitness /opt/cfitness-os
+COPY --from=frontend-builder /app/dist /app/dist
+COPY --from=rust-builder /app/target/release/cfitness-os /usr/local/bin/cfitness-os
 
 USER cfitness
 
-EXPOSE 3000
+ENV TZ=Europe/Paris
+ENV CFITNESS_BIND_ADDR=0.0.0.0:8080
+ENV CFITNESS_DATA_DIR=/var/lib/cfitness
+ENV CFITNESS_FRONTEND_DIR=/app/dist
+ENV BACKUP_REPLICA_DIR=/var/backups/cfitness-os
+ENV INBODY_LB120_CSV_DROP_DIR=/var/inbody-lb120-drop
+ENV RUST_LOG=info,cfitness_os=debug
 
-HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=3 \
-    CMD curl -fsS http://127.0.0.1:3000/api/health || exit 1
+EXPOSE 8080
+VOLUME ["/var/lib/cfitness", "/var/backups/cfitness-os"]
 
-ENTRYPOINT ["/usr/local/bin/cfitness-os-server"]
+CMD ["cfitness-os"]

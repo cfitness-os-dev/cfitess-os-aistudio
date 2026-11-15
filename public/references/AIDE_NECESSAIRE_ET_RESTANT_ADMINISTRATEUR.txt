@@ -1,0 +1,30 @@
+AIDE NÉCESSAIRE ET TRAVAIL RESTANT — MISE À JOUR V1.16, 14 NOVEMBRE 2026
+
+AVANCÉES CONCRÈTES
+91 fiches et 1 605 entrées historiques conservées, 20 compléments distincts, 189 actions maison proposées. 71 constats administrateur cumulés. 99 captures de réglages et 9 d’émulation web séparées ; aucune nouvelle capture RH nominative sauvegardée dans cette passe.
+67 corps d’articles consultés dans cette passe. Cinq listes de collections écrites sont couvertes en combinant les lectures : Gestion RH 16, Planning 29, App Skello 6, Performance 6, Temps/paie 21 dont 14 lus précédemment. FAQ et Initialisation ne sont que partielles. Ce décompte ne signifie ni 67 fonctions nouvelles, ni toutes les vidéos visionnées, ni 100 % du centre d’aide.
+Signature : cinq lignes existantes trouvées, avec deux erreurs d’envoi, une attente 0/1 et deux signatures terminées 1/1 ; sept états de filtre, six dossiers et menu d’erreur qualifiés. Aucune relance ni annulation effectuée. Un exemple simplement signé n’est plus à chercher.
+Journal : recherche Modification de shift rémunéré du 1er janvier au 14 novembre 2026 vide. Période et filtre retirés ; journal ordinaire à vingt lignes retrouvé. Cela ne prouve pas l’absence de toute correction de badge.
+
+CE QUE L’AGENT PEUT ENCORE FAIRE EN LECTURE SEULE
+Les articles et tutoriels restant dans Initialisation, FAQ, Intégrations, Recrutement, démarrages et formations ne sont pas tous lus/visionnés. D’autres menus conditionnels, types de contrats, documents, périodes et formats restent consultables selon les données présentes. Les choix seulement listés dans un filtre ne prouvent pas un vrai document dans chaque état. Les vingt familles de vérification restent ouvertes ou partielles ; elles ne sont pas toutes bloquées par le propriétaire.
+
+TON AIDE CIBLÉE — SEULEMENT SI CES EXEMPLES EXISTENT
+• Correction de badge : un club et une période connue avec une correction déjà enregistrée, ou l’ouverture de la ligne existante. Pas de correction à créer pour l’audit.
+• Mission terminée : ouvrir un exemple accessible si le filtre Terminées reste grisé. Ne pas terminer de mission réelle.
+• Compteurs : fiche ayant déjà un RTT initialisé, RTT horaire, RCR, modulation ou jours fériés réellement utilisés ; pas d’activation pour obtenir l’exemple.
+• États rares : contrat futur non vide, avenant spécifique, signature multi-signataire partielle, envoi annulé/expiré ou demande annulée non encore rencontrée. Les signatures simples en attente/signées/en erreur ont été trouvées.
+• Mobile/tablette : appareil ou véritable simulateur compatible dont l’écran est observable et sur lequel tu réalises l’authentification. L’émulation Chrome a couvert cinq cas web partiels, pas les applications natives, Safari, caméra, GPS, notifications système ou stockage hors connexion.
+
+CE QUI NÉCESSITE SKELLO OU UNE DÉMONSTRATION FICTIVE
+1. Résultats des actions : création/avenant/invitation, publication/verrous, corrections, décisions de demandes, archivage/restauration, calculs, génération/envoi/signature, pointeuse et synchronisation, erreurs/conflits. Aucun essai enregistrant sur salariés réels.
+2. Modules et visibilité : accès de démonstration aux options conditionnelles et catalogue exact de l’offre. SSO, RTT horaire, prévision, recrutement, import assisté de modèles et Assistant sont documentés ; disponibilité des clubs non déduite de la seule aide.
+3. API : opérations, schémas, authentification, périmètres, limites, erreurs, pagination, événements/webhooks s’ils existent, imports/exports, synchronisation et bac de test. L’article de l’API analytique n’est pas ce contrat technique.
+4. Explication des écarts : dix ambiguïtés identifiées dans la relecture, dont versions mobiles, bornes d’avenant, absences/non-assignés, nombre des permissions, périodes du Pilotage et version des besoins automatiques. Aucun message envoyé au support par l’agent.
+
+COMMENT VALIDER L’EXHAUSTIVITÉ DU PÉRIMÈTRE
+Fixer date/version/offre/modules et profils effectifs ; rapprocher le catalogue éditeur de chaque écran/option. Pour chaque entrée : source, droits et portées, champs/valeurs/bornes, états vides/peuplés/erreur, résultat après action, notifications et impacts croisés, variantes web/mobile/tablette, données de migration et recette fictive avec résultat attendu validé. Une case ne se ferme que sur preuve adaptée ; un libellé ou une maquette ne valide pas un calcul ni une sécurité serveur.
+Le logiciel maison peut utiliser ces références pour développer les lots, mais une copie visuelle ne certifie pas la conformité métier. Les maquettes V1.16 conservent Mon compte, le design sombre et les repères des écrans ; leur génération et garde-fous passent en mémoire. La validation visuelle dans un navigateur reste à faire.
+
+AUCUNE GARANTIE DE 100 % ÉTABLIE
+Les corpus documentaires rapprochés ne remplacent pas tous les supports, options conditionnelles et résultats après sauvegarde. Le dossier sépare observé, documenté, proposé et inconnu. L’archive conserve les Word/Excel et maquettes antérieures comme historiques ; le guide et les compléments actualisés prévalent.

@@ -1,5 +1,17 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
+import test from 'node:test';
+import { CFitnessApiEngine } from './apiEngine';
+import { INITIAL_ROLE_PROFILES } from './permissionsMatrixSeed';
+import { computeShiftNetMinutes, formatMinutesAsHours, getControlState } from './rbac';
+import {
+  CANDIDATE_ACTIONS,
+  ENTITIES_META,
+  EXT_COMPLEMENTS,
+  MC_SECTIONS,
+  SOURCE_SCREENS,
+  TOTAL_HISTORICAL_ENTRIES,
+} from './referenceRegistry';
+import { AMBIGUITIES_BASELINE } from './seed';
 import {
   CFITNESS_LEGAL_IDENTITY,
   HARDWARE_COMPATIBILITY_SPECS,
@@ -39,17 +51,312 @@ import {
 import { INITIAL_HEITZ_KPI_TICKETS } from '../data/seed';
 import type {
   Candidate,
-  Employee,
+  Employee as CfosEmployee,
   HRDocument,
   HeitzMember,
   InBodyScan,
   Prospect,
-  Shift,
+  Shift as CfosShift,
   TrainingModule,
   UnifiedPlanningEvent,
 } from '../types/cfos';
+import './theme.test';
+import './__tests__/systemSecurityCompatibility.test';
 
-const baseEmployee: Employee = {
+test('TST39 — Couverture structurelle V1.16 complète (13 MC, 91 écrans, 1605 entrées, 20 EXT, 189 OS, 31 OBJ, 6x44)', () => {
+  assert.equal(MC_SECTIONS.length, 13);
+  assert.equal(SOURCE_SCREENS.length, 91);
+  assert.equal(TOTAL_HISTORICAL_ENTRIES, 1605);
+  assert.equal(EXT_COMPLEMENTS.length, 20);
+  assert.equal(CANDIDATE_ACTIONS.length, 189);
+  assert.equal(ENTITIES_META.length, 31);
+  assert.equal(INITIAL_ROLE_PROFILES.length, 6);
+  for (const prof of INITIAL_ROLE_PROFILES) {
+    assert.equal(prof.rows.length, 44, `Profil ${prof.id} doit contenir 44 lignes ORG04`);
+  }
+  assert.equal(AMBIGUITIES_BASELINE.length, 10);
+});
+
+test('TST01 — Calcul durée nette 09:00–17:00 pause 30 min = 450 min (7h30)', () => {
+  const engine = new CFitnessApiEngine();
+  const dash = engine.getDashboardData('emp-employe-multi', 'club-carre-soie');
+  assert.equal(dash.status, 200);
+  const sh = dash.data!.myShifts.find((s) => s.id === 'sh-tst01');
+  assert.ok(sh, 'Le shift sh-tst01 doit exister pour emp-employe-multi');
+  const net = computeShiftNetMinutes(sh.startTime, sh.endTime, sh.breakMinutes);
+  assert.equal(net, 450);
+  assert.equal(formatMinutesAsHours(net), '7h30');
+});
+
+test('TST02 & TST03 & TST04 — Multi-sites employé et masquage brouillon non assigné', () => {
+  const engine = new CFitnessApiEngine();
+  const empCs = engine.getDashboardData('emp-employe-multi', 'club-carre-soie');
+  assert.equal(empCs.status, 200);
+  assert.equal(empCs.data!.sites.length, 2);
+  assert.ok(empCs.data!.myShifts.some((s) => s.id === 'sh-tst01'));
+  assert.ok(!empCs.data!.teamShifts.some((s) => s.id === 'sh-unassigned-1'));
+
+  const empBey = engine.getDashboardData('emp-employe-multi', 'club-beynost');
+  assert.equal(empBey.status, 200);
+  assert.ok(empBey.data!.myShifts.some((s) => s.id === 'sh-bey-multi'));
+  assert.ok(!empBey.data!.myShifts.some((s) => s.id === 'sh-tst01'));
+
+  const adminAll = engine.getDashboardData('emp-admin', 'all');
+  assert.equal(adminAll.status, 200);
+  assert.ok(adminAll.data!.teamShifts.some((s) => s.id === 'sh-unassigned-1'));
+});
+
+test('TST06 — Lecture seule avancée bloque toute écriture et MC11', () => {
+  const engine = new CFitnessApiEngine();
+  const dash = engine.getDashboardData('emp-readonly', 'club-beynost');
+  assert.equal(dash.status, 200);
+  assert.ok(dash.data!.kpis.length >= 1, 'Lecture seule peut consulter le pilotage (ORG04-38)');
+
+  const editOrg = engine.updateOrganization('emp-readonly', 'club-beynost', {
+    name: 'Piraté',
+  });
+  assert.equal(editOrg.status, 403);
+
+  const accessMc11 = engine.assertSectionRouteAccess(
+    'emp-readonly',
+    'club-beynost',
+    'MC11'
+  );
+  assert.equal(accessMc11.status, 403);
+});
+
+test('TST07 & TST32 & TST33 — Périmètre équipes uniquement + masquage IBAN/Salaires ORG04-10', () => {
+  const engine = new CFitnessApiEngine();
+  const dash = engine.getDashboardData('emp-planif-std', 'club-carre-soie');
+  assert.equal(dash.status, 200);
+
+  const visibleIds = dash.data!.visibleEmployees.map((e) => e.id);
+  assert.ok(visibleIds.includes('emp-planif-std'), 'Se voit lui-même');
+  assert.ok(
+    visibleIds.includes('emp-accueil-cs'),
+    'Voit Julie Roux (même équipe team-cs-accueil)'
+  );
+  assert.ok(
+    !visibleIds.includes('emp-employe-multi'),
+    'Ne voit PAS Thomas Girard (équipe coaching distincte)'
+  );
+
+  // Vérification TST33 : Lucas Bernard n'a pas ORG04-10 -> champs sensibles masqués sur Julie Roux
+  const julieView = dash.data!.visibleEmployees.find(
+    (e) => e.id === 'emp-accueil-cs'
+  )!;
+  assert.equal(julieView.sensitiveBank, null);
+  assert.equal(julieView.contract?.monthlyGrossEur, null);
+  assert.equal(julieView.contract?.hourlyRateEur, null);
+  assert.equal(julieView.email, undefined);
+
+  // Vérification self : Lucas voit ses propres données sensibles
+  const lucasSelf = dash.data!.visibleEmployees.find(
+    (e) => e.id === 'emp-planif-std'
+  )!;
+  assert.ok(lucasSelf.sensitiveBank?.ibanMasked.startsWith('FR76'));
+  assert.equal(lucasSelf.contract?.monthlyGrossEur, 2350);
+});
+
+test('TST08 — Verrou rouge planning empêche modification sans ORG04-05 (grisé sur Planif. standard)', () => {
+  const engine = new CFitnessApiEngine();
+  const planifStdProfile = INITIAL_ROLE_PROFILES.find(
+    (p) => p.id === 'planificateur_standard'
+  )!;
+  const row05 = planifStdProfile.rows.find((r) => r.actionId === 'ORG04-05');
+  assert.equal(getControlState(row05), 'grise_desactive');
+
+  const blocked = engine.updateShift('emp-planif-std', 'club-carre-soie', 'sh-accueil-1', {
+    startTime: '08:30',
+  });
+  assert.equal(blocked.status, 403);
+
+  const adminOk = engine.updateShift('emp-admin', 'club-carre-soie', 'sh-accueil-1', {
+    startTime: '08:15',
+  });
+  assert.equal(adminOk.status, 200);
+  assert.equal(adminOk.data!.startTime, '08:15');
+});
+
+test('TST24 — KPI manquant (null) distingué de zéro € sur Beynost', () => {
+  const engine = new CFitnessApiEngine();
+  const dash = engine.getDashboardData('emp-admin', 'all');
+  assert.equal(dash.status, 200);
+  const beynost = dash.data!.kpis.find((k) => k.siteId === 'club-beynost')!;
+  assert.equal(beynost.revenueEur, null);
+  assert.equal(beynost.productivityPerHour, null);
+  assert.equal(beynost.payrollMassEur, 10940);
+});
+
+test('TST28 — Export & Restauration sauvegarde JSON contrôlés par ORG04-31', () => {
+  const engine = new CFitnessApiEngine();
+  assert.equal(
+    engine.exportBackupJson('emp-employe-multi', 'club-carre-soie').status,
+    403
+  );
+
+  const snap = engine.exportBackupJson('emp-admin', 'club-carre-soie');
+  assert.equal(snap.status, 200);
+
+  engine.updateOrganization('emp-admin', 'club-carre-soie', {
+    name: 'Nom Temporaire Test',
+  });
+  assert.equal(
+    engine.getDashboardData('emp-admin', 'club-carre-soie').data!.organization.name,
+    'Nom Temporaire Test'
+  );
+
+  const restored = engine.restoreBackupJson(
+    'emp-admin',
+    'club-carre-soie',
+    snap.data!
+  );
+  assert.equal(restored.status, 200);
+  assert.equal(
+    engine.getDashboardData('emp-admin', 'club-carre-soie').data!.organization.name,
+    'C.FITNESS OS (Environnement Fictif)'
+  );
+});
+
+test('TST29 & EX32 & UTI05 — Préférences, révocation URL .ics et mot de passe >= 12 car.', () => {
+  const engine = new CFitnessApiEngine();
+  const prefUpd = engine.updateOwnPreferences('emp-employe-multi', {
+    language: 'English',
+    notifications: {
+      emailEnabled: false,
+      smsEnabled: true,
+      frequency: 'weekly',
+      digestHour: '09:00',
+      includeActivityReport: true,
+    },
+  });
+  assert.equal(prefUpd.status, 200);
+  assert.equal(prefUpd.data!.language, 'English');
+  assert.equal(prefUpd.data!.notifications.smsEnabled, true);
+
+  const rev = engine.revokeCalendarToken('emp-employe-multi');
+  assert.equal(rev.status, 200);
+  assert.notEqual(rev.data!.calendarFeedToken, 'cal-demo-token-0000');
+
+  const weakPwd = engine.changeOwnPassword('emp-employe-multi', 'ancien123', 'court');
+  assert.equal(weakPwd.status, 400);
+
+  const strongPwd = engine.changeOwnPassword(
+    'emp-employe-multi',
+    'ancien123',
+    'NouveauMotDePasseTresRobuste2026!'
+  );
+  assert.equal(strongPwd.status, 200);
+});
+
+test('TST31 & TST40 — Employé standard cantonné à soi-même et HTTP 403 URL directe', () => {
+  const engine = new CFitnessApiEngine();
+  const dash = engine.getDashboardData('emp-employe-multi', 'club-carre-soie');
+  assert.equal(dash.status, 200);
+  assert.equal(
+    dash.data!.visibleEmployees.length,
+    1,
+    'employe_standard ne doit voir aucun collègue même si DRO05 affiche portée sites'
+  );
+  assert.equal(dash.data!.visibleEmployees[0].id, 'emp-employe-multi');
+  assert.equal(dash.data!.kpis.length, 0);
+
+  const forbiddenMc11 = engine.assertSectionRouteAccess(
+    'emp-employe-multi',
+    'club-carre-soie',
+    'MC11'
+  );
+  assert.equal(forbiddenMc11.status, 403);
+
+  const allowedMc11Admin = engine.assertSectionRouteAccess(
+    'emp-admin',
+    'club-carre-soie',
+    'MC11'
+  );
+  assert.equal(allowedMc11Admin.status, 200);
+});
+
+test('TST34 & TST35 — Non-élévation en délégation et révocation à effet immédiat', () => {
+  const engine = new CFitnessApiEngine();
+
+  // Admin donne ORG04-31 (Gérer droits) à master_avance, mais master_avance n'a pas ORG04-11
+  const grant31 = engine.updateRolePermissions(
+    'emp-admin',
+    'club-carre-soie',
+    'master_avance',
+    'sites',
+    { 'ORG04-31': true }
+  );
+  assert.equal(grant31.status, 200);
+
+  // Karim Haddad (master_avance) essaie maintenant d'accorder ORG04-25 (editable sur Planif. avancé mais absent de master_avance) -> REFUS 403 TST34
+  const escalationAttempt = engine.updateRolePermissions(
+    'emp-master',
+    'club-carre-soie',
+    'planificateur_avance',
+    'sites',
+    { 'ORG04-25': true }
+  );
+  assert.equal(escalationAttempt.status, 403);
+  assert.ok(escalationAttempt.error?.includes('TST34'));
+
+  // Et un contrôle grisé/verrouillé (ORG04-11) est également refusé en 403
+  const lockedAttempt = engine.updateRolePermissions(
+    'emp-master',
+    'club-carre-soie',
+    'planificateur_avance',
+    'sites',
+    { 'ORG04-11': true }
+  );
+  assert.equal(lockedAttempt.status, 403);
+
+  // TST35 : Admin révoque ORG04-38 sur lecture_seule_avancee -> effet immédiat sur claire.petit
+  const beforeMc08 = engine.assertSectionRouteAccess(
+    'emp-readonly',
+    'club-beynost',
+    'MC08'
+  );
+  assert.equal(beforeMc08.status, 200);
+
+  const revoke38 = engine.updateRolePermissions(
+    'emp-admin',
+    'club-carre-soie',
+    'lecture_seule_avancee',
+    'sites',
+    { 'ORG04-38': false, 'ORG04-40': false }
+  );
+  assert.equal(revoke38.status, 200);
+
+  const afterMc08 = engine.assertSectionRouteAccess(
+    'emp-readonly',
+    'club-beynost',
+    'MC08'
+  );
+  assert.equal(afterMc08.status, 403);
+});
+
+test('TST36 & PAR13 & PAR17 & Sécurité V1.16 — Diffs Carré de Soie vs Beynost, doublons Entretien, zéro donnée réelle', () => {
+  const engine = new CFitnessApiEngine();
+  const state = engine.getRawStateSnapshot();
+
+  const cs = state.sites.find((s) => s.id === 'club-carre-soie')!;
+  const bey = state.sites.find((s) => s.id === 'club-beynost')!;
+  assert.notEqual(cs.settings.dayStartHour, bey.settings.dayStartHour);
+  assert.notEqual(cs.settings.badgeFrequency, bey.settings.badgeFrequency);
+  assert.notEqual(cs.settings.missionsModuleActive, bey.settings.missionsModuleActive);
+
+  const entretiens = state.positions.filter((p) => p.label === 'Entretien');
+  assert.equal(entretiens.length, 2);
+  assert.notEqual(entretiens[0].id, entretiens[1].id);
+
+  const serialized = JSON.stringify(state);
+  assert.ok(!serialized.includes('skello.io'), 'Aucune trace domaine réel ne doit exister');
+  for (const emp of state.employees) {
+    assert.ok(emp.email.endsWith('@cfitness-fictif.local'));
+  }
+});
+
+const aistudioBaseEmployee: CfosEmployee = {
   id: 'emp-1',
   firstName: 'Lucas',
   lastName: 'Martin',
@@ -71,7 +378,7 @@ const baseEmployee: Employee = {
 };
 
 test('IDCC 2511 detects < 11h daily rest between evening close and early morning open', () => {
-  const shifts: Shift[] = [
+  const shifts: CfosShift[] = [
     {
       id: 's1',
       employeeId: 'emp-1',
@@ -101,7 +408,7 @@ test('IDCC 2511 detects < 11h daily rest between evening close and early morning
 });
 
 test('IDCC 2511 passes compliant schedule with >= 11h rest and >= 20min break', () => {
-  const shifts: Shift[] = [
+  const shifts: CfosShift[] = [
     {
       id: 's1',
       employeeId: 'emp-1',
@@ -149,7 +456,7 @@ test('07 mobile pool rotation never repeats the last 07 caller ID on consecutive
 });
 
 test('PIN authentication locks employee after 5 consecutive wrong attempts', () => {
-  let emp = { ...baseEmployee };
+  let emp = { ...aistudioBaseEmployee };
   for (let i = 1; i <= 4; i++) {
     const res = verifyEmployeePin(emp, '0000');
     assert.equal(res.authenticated, false);
@@ -246,7 +553,7 @@ test('Transactional 1-click onboarding rolls back cleanly on simulated failure a
 
   const rbacDenied = executeTransactionalOnboarding({
     candidate,
-    existingEmployees: [baseEmployee],
+    existingEmployees: [aistudioBaseEmployee],
     trainingModules: modules,
     firstShiftDate: '2026-10-26',
     firstShiftStart: '09:00',
@@ -261,7 +568,7 @@ test('Transactional 1-click onboarding rolls back cleanly on simulated failure a
 
   const rolledBack = executeTransactionalOnboarding({
     candidate,
-    existingEmployees: [baseEmployee],
+    existingEmployees: [aistudioBaseEmployee],
     trainingModules: modules,
     firstShiftDate: '2026-10-26',
     firstShiftStart: '09:00',
@@ -278,7 +585,7 @@ test('Transactional 1-click onboarding rolls back cleanly on simulated failure a
 
   const committed = executeTransactionalOnboarding({
     candidate,
-    existingEmployees: [baseEmployee],
+    existingEmployees: [aistudioBaseEmployee],
     trainingModules: modules,
     firstShiftDate: '2026-10-26',
     firstShiftStart: '09:00',
@@ -342,7 +649,7 @@ test('v1.2 specifications: probation notice periods, recrutement@c.fitness parse
 });
 
 test('Silae payroll calculation, formatters, and CRM guards work accurately', () => {
-  const shifts: Shift[] = [
+  const shifts: CfosShift[] = [
     {
       id: 'sh-1',
       employeeId: 'emp-1',
@@ -355,7 +662,7 @@ test('Silae payroll calculation, formatters, and CRM guards work accurately', ()
       published: true,
     },
   ];
-  const rows = computePayrollVariables([baseEmployee], shifts);
+  const rows = computePayrollVariables([aistudioBaseEmployee], shifts);
   assert.equal(rows[0].sundayHours, 8);
   const csv = generateSilaeCsv(rows, '2026-10');
   assert.equal(csv.includes('CDS_VAULX;2026-10;8.00;0.00;8.00'), true);
@@ -423,7 +730,7 @@ test('Multi-device backup envelope checksum and power-outage failover merge pres
         daysSinceLastWorkout: 3,
       },
     ],
-    employees: [baseEmployee],
+    employees: [aistudioBaseEmployee],
     prospects: [],
     shifts: [],
     timeEntries: [],
@@ -442,7 +749,6 @@ test('Multi-device backup envelope checksum and power-outage failover merge pres
   assert.equal(envelope.schemaVersion, 'cfos-replica-v1.2');
   assert.equal(envelope.counts.members, 1);
 
-  // Simulate actions performed on a backup PC/Tablet/Phone during server power outage
   const replicaDuringOutage = {
     ...primaryState,
     heitzMembers: [
@@ -589,7 +895,7 @@ test('Legacy software 100% parity matrix, LookinBody 120 sheet metrics, and CRM-
 test('Internal zero-cost electronic signature proof, Unified multi-source planning deduplication, Mywellness deep-links, and Silae API payload', () => {
   const sampleDoc: HRDocument = {
     id: 'doc-avenant-1',
-    employeeId: baseEmployee.id,
+    employeeId: aistudioBaseEmployee.id,
     title: 'Avenant CDI Objectifs CRM C.Fitness',
     category: 'Avenant',
     uploadedAt: '2026-10-25',
@@ -598,20 +904,18 @@ test('Internal zero-cost electronic signature proof, Unified multi-source planni
     contractBodyText: 'Clause CRM C.Fitness OS — 20 abonnements/mois',
   };
 
-  // Missing consent must be rejected
   const rejectedConsent = createInternalElectronicSignatureProof({
     document: sampleDoc,
-    employee: baseEmployee,
+    employee: aistudioBaseEmployee,
     otpInput: '246842',
     consentChecked: false,
     consentPhrase: 'Lu et approuvé, bon pour accord',
   });
   assert.equal(rejectedConsent.ok, false);
 
-  // Valid OTP + explicit consent produces a sealed SHA-256 legal proof at 0 € / signature
   const signedRes = createInternalElectronicSignatureProof({
     document: sampleDoc,
-    employee: baseEmployee,
+    employee: aistudioBaseEmployee,
     otpInput: '246842',
     consentChecked: true,
     consentPhrase: 'Lu et approuvé, bon pour accord',
@@ -623,11 +927,10 @@ test('Internal zero-cost electronic signature proof, Unified multi-source planni
   assert.equal(signedRes.proof?.proofSealSha256.startsWith('SHA256-SEAL-'), true);
   assert.equal(signedRes.proof?.legalFramework.includes('0 € / signature'), true);
 
-  // Unified planning deduplicates events by externalSourceId across RH, Mywellness, Heitz, and Internal
-  const shifts: Shift[] = [
+  const shifts: CfosShift[] = [
     {
       id: 'sh-101',
-      employeeId: baseEmployee.id,
+      employeeId: aistudioBaseEmployee.id,
       clubId: 'carre-de-soie',
       date: '2026-10-23',
       startTime: '09:00',
@@ -646,7 +949,7 @@ test('Internal zero-cost electronic signature proof, Unified multi-source planni
       title: 'Biocircuit Guidé',
       subtitle: 'Technogym Mywellness',
       clubId: 'carre-de-soie',
-      employeeId: baseEmployee.id,
+      employeeId: aistudioBaseEmployee.id,
       date: '2026-10-23',
       startTime: '10:30',
       endTime: '11:30',
@@ -654,7 +957,6 @@ test('Internal zero-cost electronic signature proof, Unified multi-source planni
       writableViaApi: true,
       lastSyncedAt: '2026-10-23T08:00:00Z',
     },
-    // Duplicate externalSourceId must be ignored
     {
       id: 'ev-1-dup',
       externalSourceId: 'MW-CRS-999',
@@ -663,7 +965,7 @@ test('Internal zero-cost electronic signature proof, Unified multi-source planni
       title: 'Biocircuit Guidé (Doublon)',
       subtitle: 'Technogym Mywellness',
       clubId: 'carre-de-soie',
-      employeeId: baseEmployee.id,
+      employeeId: aistudioBaseEmployee.id,
       date: '2026-10-23',
       startTime: '10:30',
       endTime: '11:30',
@@ -676,7 +978,6 @@ test('Internal zero-cost electronic signature proof, Unified multi-source planni
   const unified = buildUnifiedPlanningEvents(shifts, extEvents);
   assert.equal(unified.length, 2);
 
-  // Mywellness contextual deep-link vs fallback dashboard link
   const deepLink = buildMywellnessContextualUrl({
     mywellnessMemberId: 'mw-claire-1042',
     personName: 'Claire Dubois',
@@ -689,14 +990,12 @@ test('Internal zero-cost electronic signature proof, Unified multi-source planni
   assert.equal(fallbackLink.isContextualDeepLink, false);
   assert.equal(fallbackLink.url.includes('/dashboard'), true);
 
-  // Silae API payload
-  const payrollRows = computePayrollVariables([baseEmployee], shifts);
+  const payrollRows = computePayrollVariables([aistudioBaseEmployee], shifts);
   const apiPayload = buildSilaeApiPayload(payrollRows, '2026-10', 'API_REST_SILAE');
   assert.equal(apiPayload.dossierNumero, '081865');
   assert.equal(apiPayload.idcc, '2511');
   assert.equal(apiPayload.variables.length, 1);
 
-  // Heitz HZ.WS (/planning/book + /passageCode/generate) & FITNESS KPI (/api/ticket + /api/employee/list)
   const trialQr = generateHeitzTrialPassageCode(
     {
       id: 'pr-2',
@@ -716,5 +1015,3 @@ test('Internal zero-cost electronic signature proof, Unified multi-source planni
   assert.equal(kpiSummary.totalSilaeCommissionsEur > 40, true);
   assert.equal(kpiSummary.byEmployeeSeller.length >= 3, true);
 });
-
-

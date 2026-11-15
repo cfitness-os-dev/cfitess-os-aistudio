@@ -1,9 +1,7 @@
-node_modules
-dist
+node_modules/
+dist/
+target/
 .env
-.dev.env.json
-.dev.pid
-.playwright-cli
-.aistudio
-.DS_Store
 *.log
+*.db
+*.sqlite

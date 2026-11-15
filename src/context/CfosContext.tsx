@@ -414,8 +414,29 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     }
     return 'admin';
   });
-  const [activeSection, setActiveSectionState] = useState<AdminSection>('dashboard');
-  const [navSubTarget, setNavSubTarget] = useState<string | null>(null);
+  const initialNav = (() => {
+    try {
+      const path = window.location.pathname.toLowerCase();
+      if (path.startsWith('/tracabilite')) {
+        return { section: 'my-day' as AdminSection, subTarget: 'traceability' as string | null };
+      }
+      if (path.startsWith('/planning')) {
+        return { section: 'planning-hr' as AdminSection, subTarget: 'planning' as string | null };
+      }
+      if (path.startsWith('/mon-compte') || path.startsWith('/personnel')) {
+        const parts = path.split('/').filter(Boolean);
+        return {
+          section: 'my-day' as AdminSection,
+          subTarget: (parts[1]?.toUpperCase() || 'MC01') as string | null,
+        };
+      }
+    } catch {
+      // ignore
+    }
+    return { section: 'dashboard' as AdminSection, subTarget: null as string | null };
+  })();
+  const [activeSection, setActiveSectionState] = useState<AdminSection>(initialNav.section);
+  const [navSubTarget, setNavSubTarget] = useState<string | null>(initialNav.subTarget);
   const [isArchitectUnlocked, setIsArchitectUnlocked] = useState<boolean>(false);
   const [clubFilter, setClubFilter] = useState<ClubFilter>('all');
   const [activeMywellnessModal, setActiveMywellnessModal] = useState<{
@@ -430,7 +451,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // ignore
     }
-    return 'light';
+    return 'dark';
   });
   const [accentColor, setAccentColorState] = useState<AccentColorId>(() => {
     try {
