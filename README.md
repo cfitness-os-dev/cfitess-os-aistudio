@@ -39,6 +39,16 @@ npm run dev     # Lance UI + middleware API /api/* sur http://127.0.0.1:5173
 
 ## Transfert et déploiement sur le serveur Linux du club (Debian 12 / Ubuntu LTS)
 
+### 0. Installation automatique depuis une clé USB (après installation de Linux)
+
+Copiez le dossier `cfitess-os/` sur une clé USB (sans `node_modules/` ni `target/`), branchez la clé sur le PC/serveur Linux fraîchement installé, puis lancez en une seule commande :
+
+```bash
+sudo bash /media/"$USER"/*/cfitess-os/install-linux-auto.sh
+```
+
+Ce script (`install-linux-auto.sh`) installe automatiquement Docker Engine + Docker Compose v2, active le démarrage automatique, désactive la mise en veille capot fermé sur PC portable de test, ouvre le port `8080` si `ufw` est actif, copie le projet vers `/opt/cfitness-os` (ou le clone depuis GitHub s'il est lancé seul) et exécute `./deploy-linux.sh`.
+
 ### 1. Transférer le dossier `cfitess-os/` sur le serveur Linux
 
 Depuis Windows (`scp` ou `rsync`), en excluant `node_modules` et `target` (le conteneur Docker compile lui-même `dist/` et le binaire Rust `release`) :
