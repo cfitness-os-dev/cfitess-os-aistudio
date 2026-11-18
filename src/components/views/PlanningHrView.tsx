@@ -27,6 +27,8 @@ import {
   Layers,
   Send,
   Calendar,
+  Lock,
+  Copy,
 } from 'lucide-react';
 import {
   ClubId,
@@ -67,6 +69,27 @@ const WEEK_DATES = [
   { date: '2026-10-24', label: 'Sam. 24 oct.', short: 'Sam 24/10' },
   { date: '2026-10-25', label: 'Dim. 25 oct.', short: 'Dim 25/10' },
 ];
+
+const FR_DAYS_SHORT = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+const FR_MONTHS_SHORT = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+
+function buildWeekDates(weekOffset: number) {
+  if (weekOffset === 0) return WEEK_DATES;
+  const base = new Date(Date.UTC(2026, 9, 19 + weekOffset * 7));
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(base.getTime() + i * 86400000);
+    const yyyy = d.getUTCFullYear();
+    const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(d.getUTCDate()).padStart(2, '0');
+    const dayName = FR_DAYS_SHORT[d.getUTCDay()];
+    const monthName = FR_MONTHS_SHORT[d.getUTCMonth()];
+    return {
+      date: `${yyyy}-${mm}-${dd}`,
+      label: `${dayName}. ${d.getUTCDate()} ${monthName}`,
+      short: `${dayName} ${dd}/${mm}`,
+    };
+  });
+}
 
 function getSkelloShiftBlockStyle(roleLabel: string, clubId: ClubId): {
   card: string;
@@ -170,6 +193,52 @@ export function PlanningHrView() {
   const [shiftClub, setShiftClub] = useState<ClubId>('carre-de-soie');
   const [roleLabel, setRoleLabel] = useState('Accueil & Vente');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
+
+  // Skello Week Navigation, Publish, Lock & Copy Week -> S+1
+  const [weekOffset, setWeekOffset] = useState<number>(0);
+  const [publishedWeeks, setPublishedWeeks] = useState<Record<number, boolean>>({ 0: true });
+  const [lockedWeeks, setLockedWeeks] = useState<Record<number, boolean>>({});
+  const activeWeekDates = buildWeekDates(weekOffset);
+  const currentWeekNumber = 43 + weekOffset;
+  const isCurrentWeekPublished = Boolean(publishedWeeks[weekOffset]);
+  const isCurrentWeekLocked = Boolean(lockedWeeks[weekOffset]);
+
+  const handleCopyWeekToNext = () => {
+    const currentDateSet = new Set(activeWeekDates.map((d) => d.date));
+    const nextWeekDates = buildWeekDates(weekOffset + 1);
+    const sourceShifts = shifts.filter((s) => currentDateSet.has(s.date));
+    let copied = 0;
+    sourceShifts.forEach((s) => {
+      const idx = activeWeekDates.findIndex((d) => d.date === s.date);
+      if (idx < 0) return;
+      const targetDate = nextWeekDates[idx].date;
+      const alreadyExists = shifts.some(
+        (ex) =>
+          ex.employeeId === s.employeeId &&
+          ex.date === targetDate &&
+          ex.startTime === s.startTime &&
+          ex.endTime === s.endTime
+      );
+      if (!alreadyExists) {
+        addShift({
+          employeeId: s.employeeId,
+          clubId: s.clubId,
+          date: targetDate,
+          startTime: s.startTime,
+          endTime: s.endTime,
+          breakMinutes: s.breakMinutes,
+          roleLabel: s.roleLabel,
+          published: false,
+        });
+        copied += 1;
+      }
+    });
+    setWeekOffset((prev) => prev + 1);
+    setDate(nextWeekDates[0].date);
+    setFeedbackBanner(
+      `Semaine ${currentWeekNumber} copiée vers Semaine ${currentWeekNumber + 1} (${copied} créneau(x) dupliqué(s)).`
+    );
+  };
 
   useEffect(() => {
     if (navSubTarget === 'cours-collectifs') {
@@ -330,7 +399,9 @@ export function PlanningHrView() {
     URL.revokeObjectURL(url);
   };
 
-  const isCoursCollectifsView = navSubTarget === 'cours-collectifs' || roleFilter === 'coach';
+  const isCoursCollectifsView = navSubTarget === 'cours-collectifs';
+  const isPlanningOnlyView = navSubTarget === 'planning';
+  const hideDuplicateRhTabs = isCoursCollectifsView || isPlanningOnlyView;
 
   return (
     <div className="space-y-4">
@@ -348,11 +419,15 @@ export function PlanningHrView() {
                 <div className="text-[11px] font-bold uppercase tracking-wider text-violet-600">
                   {isCoursCollectifsView
                     ? 'Cours collectifs · Salles, Coachs & Top 5 Remplissage Bi-Club'
+                    : isPlanningOnlyView
+                    ? 'Planning · Grille Hebdomadaire des Équipes (Skello)'
                     : 'Planning · Planning Général des Équipes, Pointeuse & Export Paie'}
                 </div>
                 <h2 className="font-extrabold text-lg tracking-tight text-slate-900">
                   {isCoursCollectifsView
                     ? 'Cours collectifs — 28 cours/sem Center · 32 cours/sem Place'
+                    : isPlanningOnlyView
+                    ? 'Planning des Équipes — Carré de Soie & Beynost'
                     : 'Planning Équipes, Pointeuse & Export Paie Silae'}
                 </h2>
                 <div className="text-xs text-slate-500">
@@ -363,8 +438,8 @@ export function PlanningHrView() {
               </div>
             </div>
 
-            {/* Onglets principaux (masqués en vue Cours collectifs car Pointeuse/Absences/Paie sont déjà dans Personnel) */}
-            {!isCoursCollectifsView && (
+            {/* Onglets principaux (masqués en vue Planning dédié et Cours collectifs car Pointeuse/Absences/Paie sont déjà dans Personnel) */}
+            {!hideDuplicateRhTabs && (
               <nav className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
                 {[
                   { id: 'PLANNING', label: '1. Planning & Cours' },
@@ -422,7 +497,7 @@ export function PlanningHrView() {
                   : 'Filtrer Cours Collectifs & Coachs'}
               </span>
             </button>
-            {!isCoursCollectifsView && (
+            {!hideDuplicateRhTabs && (
               <button
                 type="button"
                 onClick={() => setActiveSection('ats', 'documents')}
@@ -525,21 +600,27 @@ export function PlanningHrView() {
             <div className="inline-flex items-center bg-white border border-slate-200 rounded-xl px-2 py-1 shadow-2xs">
               <button
                 type="button"
-                onClick={() =>
-                  setFeedbackBanner('Semaine de référence active : Semaine 43 (19 au 25 oct. 2026)')
-                }
+                onClick={() => {
+                  const next = weekOffset - 1;
+                  setWeekOffset(next);
+                  setDate(buildWeekDates(next)[0].date);
+                }}
+                title="Semaine précédente"
                 className="p-1 hover:bg-slate-100 rounded text-slate-600 cursor-pointer"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
               <span className="px-3 font-bold text-slate-900 font-mono text-xs">
-                Semaine 43 · 19 oct. – 25 oct. 2026
+                Semaine {currentWeekNumber} · {activeWeekDates[0].label.replace(/^[A-Za-z]+\.\s*/, '')} – {activeWeekDates[6].label.replace(/^[A-Za-z]+\.\s*/, '')} 2026
               </span>
               <button
                 type="button"
-                onClick={() =>
-                  setFeedbackBanner('Semaine de référence active : Semaine 43 (19 au 25 oct. 2026)')
-                }
+                onClick={() => {
+                  const next = weekOffset + 1;
+                  setWeekOffset(next);
+                  setDate(buildWeekDates(next)[0].date);
+                }}
+                title="Semaine suivante"
                 className="p-1 hover:bg-slate-100 rounded text-slate-600 cursor-pointer"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -592,17 +673,83 @@ export function PlanningHrView() {
             </div>
 
             {subTab === 'PLANNING' && (
-              <button
-                type="button"
-                onClick={() => {
-                  setShowShiftCreator(!showShiftCreator);
-                  setShowUnifiedEventModal(false);
-                }}
-                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap shadow-2xs"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                {showShiftCreator ? 'Fermer l’éditeur' : '+ Planifier un créneau'}
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={handleCopyWeekToNext}
+                  title="Dupliquer tous les créneaux de cette semaine vers la semaine suivante"
+                  className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-semibold text-xs flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                >
+                  <Copy className="w-3.5 h-3.5 text-violet-600" />
+                  Copier → S{currentWeekNumber + 1}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextPub = !isCurrentWeekPublished;
+                    setPublishedWeeks((prev) => ({ ...prev, [weekOffset]: nextPub }));
+                    setFeedbackBanner(
+                      nextPub
+                        ? `Planning Semaine ${currentWeekNumber} publié et notifié aux équipes.`
+                        : `Planning Semaine ${currentWeekNumber} repassé en brouillon.`
+                    );
+                  }}
+                  className={`px-2.5 py-1.5 rounded-xl border font-bold text-xs flex items-center gap-1 cursor-pointer whitespace-nowrap ${
+                    isCurrentWeekPublished
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'bg-white hover:bg-emerald-50 border-emerald-300 text-emerald-700'
+                  }`}
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  {isCurrentWeekPublished ? 'Publié ✓' : 'Publier'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextLock = !isCurrentWeekLocked;
+                    setLockedWeeks((prev) => ({ ...prev, [weekOffset]: nextLock }));
+                    if (nextLock) setShowShiftCreator(false);
+                    setFeedbackBanner(
+                      nextLock
+                        ? `Verrou rouge activé sur la Semaine ${currentWeekNumber} (prêt pour export paie).`
+                        : `Semaine ${currentWeekNumber} déverrouillée pour modification.`
+                    );
+                  }}
+                  className={`px-2.5 py-1.5 rounded-xl border font-bold text-xs flex items-center gap-1 cursor-pointer whitespace-nowrap ${
+                    isCurrentWeekLocked
+                      ? 'bg-rose-600 text-white border-rose-600'
+                      : 'bg-white hover:bg-rose-50 border-slate-300 text-slate-700'
+                  }`}
+                >
+                  {isCurrentWeekLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                  {isCurrentWeekLocked ? 'Verrouillé' : 'Verrouiller'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  title="Imprimer ou exporter en PDF"
+                  className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-semibold text-xs flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isCurrentWeekLocked) {
+                      setFeedbackBanner(
+                        `Semaine ${currentWeekNumber} verrouillée (verrou rouge paie). Déverrouillez pour ajouter un créneau.`
+                      );
+                      return;
+                    }
+                    setShowShiftCreator(!showShiftCreator);
+                    setShowUnifiedEventModal(false);
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap shadow-2xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  {showShiftCreator ? 'Fermer l’éditeur' : '+ Planifier un créneau'}
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -766,7 +913,7 @@ export function PlanningHrView() {
                     onChange={(e) => setExtDate(e.target.value)}
                     className="w-1/2 px-1.5 py-1.5 rounded bg-slate-800 border border-slate-600 text-white font-mono"
                   >
-                    {WEEK_DATES.map((d) => (
+                    {activeWeekDates.map((d) => (
                       <option key={d.date} value={d.date}>
                         {d.short}
                       </option>
@@ -854,7 +1001,7 @@ export function PlanningHrView() {
                           <span className="font-mono text-[10px] text-slate-500">Contrat 35h</span>
                         </div>
                       </th>
-                      {WEEK_DATES.map((d) => {
+                      {activeWeekDates.map((d) => {
                         const dayShifts = shifts.filter(
                           (s) =>
                             s.date === d.date &&
@@ -944,7 +1091,7 @@ export function PlanningHrView() {
                           </td>
 
                           {/* 7 Day Cells (Showing both RH Shifts + Mywellness Courses/Checkup + Heitz RDVs + Internal Events) */}
-                          {WEEK_DATES.map((d) => {
+                          {activeWeekDates.map((d) => {
                             const showRhShifts =
                               sourceFilter === 'ALL' || sourceFilter === 'cfitness_rh';
                             const dayShifts = showRhShifts
@@ -1010,7 +1157,15 @@ export function PlanningHrView() {
                                             </span>
                                             <button
                                               type="button"
-                                              onClick={() => deleteShift(s.id)}
+                                              onClick={() => {
+                                                if (isCurrentWeekLocked) {
+                                                  setFeedbackBanner(
+                                                    `Semaine ${currentWeekNumber} verrouillée (verrou rouge paie). Déverrouillez pour supprimer un créneau.`
+                                                  );
+                                                  return;
+                                                }
+                                                deleteShift(s.id);
+                                              }}
                                               title="Supprimer ce shift RH"
                                               className="text-slate-400 hover:text-rose-600 cursor-pointer p-0.5"
                                             >
@@ -1178,7 +1333,7 @@ export function PlanningHrView() {
                           onChange={(e) => setDate(e.target.value)}
                           className="w-full px-2.5 py-2 rounded-lg border border-slate-200 bg-white"
                         >
-                          {WEEK_DATES.map((d) => (
+                          {activeWeekDates.map((d) => (
                             <option key={d.date} value={d.date}>
                               {d.short}
                             </option>

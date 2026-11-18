@@ -1083,41 +1083,39 @@ export function AdminShell() {
             <MonCompteRhHubView subTarget={navSubTarget} />
           )}
           {activeSection === 'planning-hr' && (
-            navSubTarget === 'cours-collectifs' || navSubTarget === 'github-planning' ? (
+            navSubTarget === 'mc03-legacy' && isTechnicalMode ? (
               <div className="space-y-4">
-                {isTechnicalMode && (
-                  <div className="cf-card p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
-                    <span className="cf-muted">
-                      Vue active : <strong className="text-slate-100">Planning Sportif, Cours Collectifs &amp; Contrats CDI (GitHub CFOS)</strong>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setActiveSection('planning-hr', 'planning')}
-                      className="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold cursor-pointer"
-                    >
-                      Ouvrir Planning RH Skello V1.16 (MC03)
-                    </button>
-                  </div>
-                )}
-                <PlanningHrView />
+                <div className="cf-card p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span className="cf-muted">
+                    Mode Technique : <strong className="text-violet-300">MC03 Tableau Planning RH V1.16</strong>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection('planning-hr', 'planning')}
+                    className="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold cursor-pointer"
+                  >
+                    Revenir à la Grille Skello →
+                  </button>
+                </div>
+                <MonCompteRhHubView subTarget="MC03" planningOnly />
               </div>
             ) : (
               <div className="space-y-4">
                 {isTechnicalMode && (
                   <div className="cf-card p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
                     <span className="cf-muted">
-                      Raccourci Planning (ORGOS05 / TST36) → <strong className="text-violet-300">MC03 Planning RH V1.16</strong>
+                      Vue active : <strong className="text-slate-100">Grille Planning Skello &amp; Cours Collectifs</strong>
                     </span>
                     <button
                       type="button"
-                      onClick={() => setActiveSection('planning-hr', 'github-planning')}
-                      className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 font-semibold cursor-pointer"
+                      onClick={() => setActiveSection('planning-hr', 'mc03-legacy')}
+                      className="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold cursor-pointer"
                     >
-                      Planning Sportif &amp; Unifié / Contrats CDI (Vue GitHub)
+                      Ouvrir Tableau MC03 V1.16
                     </button>
                   </div>
                 )}
-                <MonCompteRhHubView subTarget="MC03" planningOnly={!isTechnicalMode} />
+                <PlanningHrView />
               </div>
             )
           )}
