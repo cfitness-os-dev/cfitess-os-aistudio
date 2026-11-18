@@ -1155,23 +1155,7 @@ export function AdminShell() {
               <AtsView />
             </div>
           )}
-          {activeSection === 'devices' && (
-            <div className="space-y-4">
-              <div className="cf-card p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
-                <span className="cf-muted">
-                  Module Adhérents Heitz, Finances &amp; InBody/Checkup (GitHub CFOS)
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setActiveSection('my-day', 'MC07')}
-                  className="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold cursor-pointer"
-                >
-                  Ouvrir MC07 Préparation de paie (V1.16) →
-                </button>
-              </div>
-              <DevicesHeitzView />
-            </div>
-          )}
+          {activeSection === 'devices' && <DevicesHeitzView />}
           {(activeSection === 'dashboard' || activeSection === 'executive-dossier') && (
             <DashboardView />
           )}
