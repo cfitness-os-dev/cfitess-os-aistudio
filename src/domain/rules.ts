@@ -743,10 +743,10 @@ export function canAccessFeature(role: Role, feature: RbacFeature): boolean {
 export function isSectionAllowedForRole(section: AdminSection, role: Role): boolean {
   if (role === 'admin' || role === 'manager') return true;
   if (role === 'commercial') {
-    return ['dashboard', 'orchestrator', 'my-day', 'telephony', 'crm', 'planning-hr', 'academy', 'devices', 'executive-dossier'].includes(section);
+    return ['dashboard', 'orchestrator', 'my-day', 'telephony', 'crm', 'planning-hr', 'academy', 'devices', 'recovery', 'executive-dossier'].includes(section);
   }
   if (role === 'coach' || role === 'apprenti') {
-    return ['dashboard', 'orchestrator', 'my-day', 'planning-hr', 'academy', 'devices', 'telephony', 'executive-dossier'].includes(section);
+    return ['dashboard', 'orchestrator', 'my-day', 'planning-hr', 'academy', 'devices', 'telephony', 'recovery', 'executive-dossier'].includes(section);
   }
   return true;
 }

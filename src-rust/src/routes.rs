@@ -162,6 +162,8 @@ pub fn api_router(state: SharedState) -> Router {
         .route("/api/me/preferences", put(put_preferences))
         .route("/api/me/calendar-token/revoke", post(post_revoke_calendar_token))
         .route("/api/me/password", post(post_change_password))
+        .route("/api/ollama/status", get(get_ollama_status))
+        .route("/api/ollama/chat", post(post_ollama_chat))
         .with_state(state)
 }
 
@@ -1371,4 +1373,227 @@ async fn post_change_password(
     let _ = persist_state(&state.data_dir, &db);
 
     Ok(Json(json!({ "changed": true })))
+}
+
+#[derive(Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub struct OllamaChatMessage {
+    pub role: String,
+    pub content: String,
+}
+
+#[derive(Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub struct OllamaChatPayload {
+    pub model: Option<String>,
+    pub system_prompt: Option<String>,
+    pub messages: Vec<OllamaChatMessage>,
+}
+
+fn ollama_base_url() -> String {
+    std::env::var("OLLAMA_BASE_URL")
+        .ok()
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| "http://host.docker.internal:11434".to_string())
+}
+
+fn ollama_default_model() -> String {
+    std::env::var("OLLAMA_DEFAULT_MODEL")
+        .ok()
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| "qwen2.5:3b".to_string())
+}
+
+fn parse_http_host_port(base_url: &str) -> (String, String) {
+    let stripped = base_url
+        .trim()
+        .trim_start_matches("http://")
+        .trim_start_matches("https://")
+        .split('/')
+        .next()
+        .unwrap_or("127.0.0.1:11434");
+    if stripped.contains(':') {
+        (stripped.to_string(), stripped.to_string())
+    } else {
+        let addr = format!("{}:11434", stripped);
+        (addr.clone(), addr)
+    }
+}
+
+fn decode_http_body(raw: &[u8]) -> Result<String, String> {
+    let text = String::from_utf8_lossy(raw);
+    let Some((headers_part, body_part)) = text.split_once("\r\n\r\n") else {
+        return Err("Réponse HTTP Ollama invalide.".into());
+    };
+    let is_chunked = headers_part
+        .to_ascii_lowercase()
+        .contains("transfer-encoding: chunked");
+    if !is_chunked {
+        return Ok(body_part.to_string());
+    }
+    let body_bytes = body_part.as_bytes();
+    let mut pos = 0usize;
+    let mut acc: Vec<u8> = Vec::new();
+    while pos < body_bytes.len() {
+        let Some(rel_crlf) = body_bytes[pos..].windows(2).position(|w| w == b"\r\n") else {
+            break;
+        };
+        let len_str = String::from_utf8_lossy(&body_bytes[pos..pos + rel_crlf]);
+        let len_hex = len_str.split(';').next().unwrap_or("").trim();
+        let Ok(chunk_len) = usize::from_str_radix(len_hex, 16) else {
+            break;
+        };
+        pos += rel_crlf + 2;
+        if chunk_len == 0 {
+            break;
+        }
+        let end = (pos + chunk_len).min(body_bytes.len());
+        acc.extend_from_slice(&body_bytes[pos..end]);
+        pos = end;
+        if pos + 2 <= body_bytes.len() && &body_bytes[pos..pos + 2] == b"\r\n" {
+            pos += 2;
+        }
+    }
+    Ok(String::from_utf8_lossy(&acc).to_string())
+}
+
+async fn ollama_http_request(
+    method: &str,
+    path: &str,
+    json_body: Option<&str>,
+    timeout_secs: u64,
+) -> Result<Value, String> {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpStream;
+
+    let base = ollama_base_url();
+    let (addr, host_hdr) = parse_http_host_port(&base);
+    let body = json_body.unwrap_or("");
+
+    let req = if method == "POST" {
+        format!(
+            "POST {} HTTP/1.1\r\nHost: {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            path,
+            host_hdr,
+            body.as_bytes().len(),
+            body
+        )
+    } else {
+        format!(
+            "GET {} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n\r\n",
+            path, host_hdr
+        )
+    };
+
+    let fut = async {
+        let mut stream = TcpStream::connect(&addr)
+            .await
+            .map_err(|e| format!("Connexion Ollama ({}) impossible: {}", addr, e))?;
+        stream
+            .write_all(req.as_bytes())
+            .await
+            .map_err(|e| format!("Écriture requête Ollama impossible: {}", e))?;
+        let mut buf = Vec::new();
+        stream
+            .read_to_end(&mut buf)
+            .await
+            .map_err(|e| format!("Lecture réponse Ollama impossible: {}", e))?;
+        let body_str = decode_http_body(&buf)?;
+        serde_json::from_str::<Value>(&body_str)
+            .map_err(|e| format!("Réponse JSON Ollama invalide: {}", e))
+    };
+
+    tokio::time::timeout(std::time::Duration::from_secs(timeout_secs), fut)
+        .await
+        .map_err(|_| format!("Délai dépassé ({}s) sur Ollama ({}).", timeout_secs, base))?
+}
+
+async fn get_ollama_status() -> Json<Value> {
+    let base_url = ollama_base_url();
+    let default_model = ollama_default_model();
+    match ollama_http_request("GET", "/api/tags", None, 5).await {
+        Ok(val) => {
+            let models: Vec<String> = val
+                .get("models")
+                .and_then(|m| m.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|item| item.get("name").and_then(|n| n.as_str()).map(String::from))
+                        .collect()
+                })
+                .unwrap_or_default();
+            Json(json!({
+                "online": true,
+                "baseUrl": base_url,
+                "defaultModel": default_model,
+                "models": models,
+            }))
+        }
+        Err(err) => Json(json!({
+            "online": false,
+            "baseUrl": base_url,
+            "defaultModel": default_model,
+            "models": [],
+            "error": err,
+        })),
+    }
+}
+
+async fn post_ollama_chat(Json(payload): Json<OllamaChatPayload>) -> Json<Value> {
+    let model = payload
+        .model
+        .filter(|m| !m.trim().is_empty())
+        .unwrap_or_else(ollama_default_model);
+
+    let mut msgs: Vec<Value> = Vec::new();
+    if let Some(sys) = payload.system_prompt.filter(|s| !s.trim().is_empty()) {
+        msgs.push(json!({ "role": "system", "content": sys }));
+    }
+    for m in payload.messages {
+        if !m.content.trim().is_empty() {
+            msgs.push(json!({ "role": m.role, "content": m.content }));
+        }
+    }
+
+    let req_body = json!({
+        "model": model,
+        "messages": msgs,
+        "stream": false,
+        "options": {
+            "temperature": 0.3
+        }
+    });
+
+    match ollama_http_request("POST", "/api/chat", Some(&req_body.to_string()), 90).await {
+        Ok(val) => {
+            let reply = val
+                .get("message")
+                .and_then(|m| m.get("content"))
+                .and_then(|c| c.as_str())
+                .unwrap_or("")
+                .to_string();
+            if reply.is_empty() {
+                let err_msg = val
+                    .get("error")
+                    .and_then(|e| e.as_str())
+                    .unwrap_or("Réponse vide du modèle Ollama.");
+                Json(json!({
+                    "ok": false,
+                    "model": model,
+                    "error": err_msg,
+                }))
+            } else {
+                Json(json!({
+                    "ok": true,
+                    "model": model,
+                    "reply": reply,
+                }))
+            }
+        }
+        Err(err) => Json(json!({
+            "ok": false,
+            "model": model,
+            "error": err,
+        })),
+    }
 }

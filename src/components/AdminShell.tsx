@@ -34,6 +34,7 @@ import {
   Bell,
   MessageSquare,
   Compass,
+  Scale,
 } from 'lucide-react';
 import { AdminSection } from '../types/cfos';
 import { isSectionAllowedForRole } from '../domain/rules';
@@ -47,6 +48,7 @@ import { AcademyView } from './views/AcademyView';
 import { AtsView } from './views/AtsView';
 import { DevicesHeitzView } from './views/DevicesHeitzView';
 import { GovernanceView } from './views/GovernanceView';
+import { RecoveryView } from './views/RecoveryView';
 import { AuthSwitchModal } from './AuthSwitchModal';
 import { MywellnessQuickConnect } from './MywellnessQuickConnect';
 import { ThemeColorControl } from './ThemeColorControl';
@@ -136,6 +138,14 @@ const VISUAL_SIDEBAR_ITEMS: VisualNavItem[] = [
     iconColor: 'text-amber-500',
     sectionId: 'devices',
     subTarget: 'finances',
+    hasChevron: true,
+  },
+  {
+    id: 'nav-recovery',
+    label: 'Recouvrement',
+    icon: Scale,
+    iconColor: 'text-rose-500',
+    sectionId: 'recovery',
     hasChevron: true,
   },
   {
@@ -248,6 +258,7 @@ export function AdminShell() {
     isArchitectUnlocked,
     isTechnicalMode,
     toggleTechnicalMode,
+    canAccessRecovery,
     lockArchitectSpace,
     setShellMode,
     logoutSession,
@@ -298,6 +309,8 @@ export function AdminShell() {
       setSelectedNavId('nav-documents');
     } else if (activeSection === 'academy') {
       setSelectedNavId(navSubTarget === 'bpjeps' ? 'module-bpjeps' : 'nav-rapports');
+    } else if (activeSection === 'recovery') {
+      setSelectedNavId('nav-recovery');
     } else if (activeSection === 'governance') {
       setSelectedNavId('nav-governance');
     }
@@ -504,6 +517,7 @@ export function AdminShell() {
             {VISUAL_SIDEBAR_ITEMS.filter(
               (item) =>
                 (!item.technicalOnly || isTechnicalMode) &&
+                (item.sectionId === 'recovery' ? canAccessRecovery : true) &&
                 (item.sectionId ? isSectionAllowedForRole(item.sectionId, currentUser.role) : true)
             ).map((item) => {
               const Icon = item.icon;
@@ -1103,6 +1117,7 @@ export function AdminShell() {
               </div>
             )
           )}
+          {activeSection === 'recovery' && <RecoveryView />}
           {activeSection === 'telephony' && (
             <div className="space-y-4">
               <div className="cf-card p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
@@ -1284,6 +1299,7 @@ export function AdminShell() {
                 {VISUAL_SIDEBAR_ITEMS.filter(
                   (item) =>
                     (!item.technicalOnly || isTechnicalMode) &&
+                    (item.sectionId === 'recovery' ? canAccessRecovery : true) &&
                     (item.sectionId ? isSectionAllowedForRole(item.sectionId, currentUser.role) : true)
                 ).map((item) => {
                   const Icon = item.icon;

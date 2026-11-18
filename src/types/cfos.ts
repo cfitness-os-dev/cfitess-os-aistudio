@@ -16,6 +16,7 @@ export type AdminSection =
   | 'ats'
   | 'academy'
   | 'governance'
+  | 'recovery'
   | 'executive-dossier';
 
 export type NavSection = AdminSection;
@@ -549,6 +550,34 @@ export interface HeitzKpiTicket {
   amountTtcEur: number;
   silaeCommissionEur: number;
   ticketState: 1;
+}
+
+export type RecoveryCaseStatus =
+  | 'a_relancer'
+  | 'mise_en_demeure'
+  | 'pret_contentieux'
+  | 'transmis_contentieux'
+  | 'regularise';
+
+export interface RecoveryCase {
+  id: string;
+  memberId: string;
+  memberName: string;
+  clubId: ClubId;
+  phone: string;
+  email: string;
+  contractLabel: string;
+  amountDueEur: number;
+  daysOverdue: number;
+  unpaidReason: string;
+  billedMonths: string[];
+  hasSignedContract: boolean;
+  hasIdAndRib: boolean;
+  hasCgvAccepted: boolean;
+  missingDocs: string[];
+  status: RecoveryCaseStatus;
+  relanceCount: number;
+  lastActionNote: string;
 }
 
 

@@ -28,6 +28,8 @@ import type {
   PointageType,
   Prospect,
   ProspectStage,
+  RecoveryCase,
+  RecoveryCaseStatus,
   ServerPowerStatus,
   ShellMode,
   Shift,
@@ -57,6 +59,7 @@ import {
   INITIAL_MODULE_PROGRESS,
   INITIAL_PHONE_LINES,
   INITIAL_PROSPECTS,
+  INITIAL_RECOVERY_CASES,
   INITIAL_SHIFTS,
   INITIAL_TIME_ENTRIES,
   INITIAL_TRAINING_MODULES,
@@ -150,6 +153,8 @@ interface PersistedState {
   collaboratorTasks: CollaboratorTask[];
   collaboratorNotifications: CollaboratorNotification[];
   heitzKpiTickets: HeitzKpiTicket[];
+  recoveryCases: RecoveryCase[];
+  recoveryAuthorizedEmployeeIds: string[];
 }
 
 function getDefaultState(): PersistedState {
@@ -186,6 +191,8 @@ function getDefaultState(): PersistedState {
     collaboratorTasks: INITIAL_COLLABORATOR_TASKS,
     collaboratorNotifications: INITIAL_COLLABORATOR_NOTIFICATIONS,
     heitzKpiTickets: INITIAL_HEITZ_KPI_TICKETS,
+    recoveryCases: INITIAL_RECOVERY_CASES,
+    recoveryAuthorizedEmployeeIds: ['emp-mario', 'emp-daniel'],
   };
 }
 
@@ -195,6 +202,10 @@ interface CfosContextValue extends PersistedState {
   isArchitectUnlocked: boolean;
   isTechnicalMode: boolean;
   toggleTechnicalMode: () => void;
+  canAccessRecovery: boolean;
+  toggleRecoveryAccess: (employeeId: string) => void;
+  updateRecoveryCaseStatus: (caseId: string, status: RecoveryCaseStatus, note?: string) => void;
+  recordRecoveryRelance: (caseId: string, note: string) => void;
   shellMode: ShellMode;
   activeSection: AdminSection;
   navSubTarget: string | null;
@@ -2339,13 +2350,73 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
 
   const closeMywellnessModal = () => setActiveMywellnessModal(null);
 
+  const recoveryAuthorizedIds = state.recoveryAuthorizedEmployeeIds ?? ['emp-mario', 'emp-daniel'];
+  const recoveryCasesSafe = state.recoveryCases ?? INITIAL_RECOVERY_CASES;
+
+  const canAccessRecovery =
+    currentUser.role === 'admin' || recoveryAuthorizedIds.includes(currentUser.id);
+
+  const toggleRecoveryAccess = (employeeId: string) => {
+    setState((prev) => {
+      const currentIds = prev.recoveryAuthorizedEmployeeIds ?? ['emp-mario', 'emp-daniel'];
+      const exists = currentIds.includes(employeeId);
+      const nextIds = exists
+        ? currentIds.filter((id) => id !== employeeId)
+        : [...currentIds, employeeId];
+      return {
+        ...prev,
+        recoveryAuthorizedEmployeeIds: nextIds,
+      };
+    });
+  };
+
+  const updateRecoveryCaseStatus = (
+    caseId: string,
+    status: RecoveryCaseStatus,
+    note?: string
+  ) => {
+    setState((prev) => ({
+      ...prev,
+      recoveryCases: (prev.recoveryCases ?? INITIAL_RECOVERY_CASES).map((rc) =>
+        rc.id === caseId
+          ? {
+              ...rc,
+              status,
+              lastActionNote: note ? note : rc.lastActionNote,
+            }
+          : rc
+      ),
+    }));
+  };
+
+  const recordRecoveryRelance = (caseId: string, note: string) => {
+    setState((prev) => ({
+      ...prev,
+      recoveryCases: (prev.recoveryCases ?? INITIAL_RECOVERY_CASES).map((rc) =>
+        rc.id === caseId
+          ? {
+              ...rc,
+              relanceCount: rc.relanceCount + 1,
+              lastActionNote: note,
+            }
+          : rc
+      ),
+    }));
+  };
+
   const value: CfosContextValue = {
     ...state,
+    recoveryCases: recoveryCasesSafe,
+    recoveryAuthorizedEmployeeIds: recoveryAuthorizedIds,
     currentUser,
     isAuthenticated,
     isArchitectUnlocked,
     isTechnicalMode,
     toggleTechnicalMode,
+    canAccessRecovery,
+    toggleRecoveryAccess,
+    updateRecoveryCaseStatus,
+    recordRecoveryRelance,
     shellMode,
     activeSection,
     navSubTarget,
