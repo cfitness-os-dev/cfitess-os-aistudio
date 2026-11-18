@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type { DashboardPayload } from '../domain/apiEngine';
 import { computeShiftNetMinutes, formatMinutesAsHours } from '../domain/rbac';
+import { useCfos } from '../context/CfosContext';
 
 interface DashboardViewProps {
   dashboard: DashboardPayload;
@@ -28,6 +29,7 @@ export function DashboardView({
   onOpenPlanning,
   onOpenPreferences,
 }: DashboardViewProps) {
+  const { isTechnicalMode } = useCfos();
   const {
     session,
     myShifts,
@@ -58,17 +60,25 @@ export function DashboardView({
       <div className="cf-card p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-xs cf-mono text-violet-300">
-            <span>MC01 • NAV01 / ACC01</span>
-            <span>•</span>
+            {isTechnicalMode && (
+              <>
+                <span>MC01 • NAV01 / ACC01</span>
+                <span>•</span>
+              </>
+            )}
             <span>Matricule {session.employee.matricule}</span>
           </div>
           <h1 className="text-xl font-bold">
             Bonjour {session.employee.firstName} {session.employee.lastName}
           </h1>
           <p className="text-sm cf-muted">
-            Profil actif sur ce périmètre :{' '}
-            <strong className="text-slate-100">{session.activeProfile.name}</strong>{' '}
-            (portée <span className="cf-mono text-emerald-400">{session.activeProfile.scopeSelected}</span>)
+            Profil actif :{' '}
+            <strong className="text-slate-100">{session.activeProfile.name}</strong>
+            {isTechnicalMode && (
+              <>
+                {' '}(portée <span className="cf-mono text-emerald-400">{session.activeProfile.scopeSelected}</span>)
+              </>
+            )}
           </p>
         </div>
 
@@ -78,7 +88,7 @@ export function DashboardView({
             onClick={onOpenPlanning}
             className="cf-brand-gradient text-white text-xs font-semibold px-4 py-2.5 rounded-btn shadow-md shadow-violet-950/25"
           >
-            Ouvrir mon planning (MC03)
+            {isTechnicalMode ? 'Ouvrir mon planning (MC03)' : 'Ouvrir mon planning'}
           </button>
           <button
             type="button"
@@ -97,7 +107,9 @@ export function DashboardView({
             <UserCheck className="w-4 h-4 text-violet-400" />
             Mon espace collaborateur (Portée personnelle)
           </h2>
-          <span className="text-xs cf-mono cf-muted">TST01 • TST02</span>
+          {isTechnicalMode && (
+            <span className="text-xs cf-mono cf-muted">TST01 • TST02</span>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -240,9 +252,11 @@ export function DashboardView({
               <TrendingUp className="w-4 h-4 text-emerald-400" />
               Espace Gestion & Pilotage ({session.activeProfile.name})
             </h2>
-            <span className="text-xs cf-mono text-emerald-400">
-              TST24 • TST32 • TST33
-            </span>
+            {isTechnicalMode && (
+              <span className="text-xs cf-mono text-emerald-400">
+                TST24 • TST32 • TST33
+              </span>
+            )}
           </div>
 
           {/* KPIs multi-sites avec distinction explicite null vs 0 € (TST24) */}
@@ -259,7 +273,7 @@ export function DashboardView({
                         </div>
                         <div className="text-xs cf-muted">{kpi.periodLabel}</div>
                       </div>
-                      {(kpi.revenueEur === null || kpi.productivityPerHour === null) && (
+                      {isTechnicalMode && (kpi.revenueEur === null || kpi.productivityPerHour === null) && (
                         <span className="text-[10px] cf-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
                           TST24 : absent ≠ 0 €
                         </span>
@@ -386,9 +400,11 @@ export function DashboardView({
                 <Shield className="w-4 h-4 text-violet-400" />
                 Effectif visible sur ce périmètre ({visibleEmployees.length})
               </div>
-              <span className="text-[11px] cf-mono cf-muted">
-                Masquage serveur IBAN / NIR / Salaires si droit ORG04-10 absent (TST33)
-              </span>
+              {isTechnicalMode && (
+                <span className="text-[11px] cf-mono cf-muted">
+                  Masquage serveur IBAN / NIR / Salaires si droit ORG04-10 absent (TST33)
+                </span>
+              )}
             </div>
 
             <div className="overflow-x-auto">
@@ -397,8 +413,12 @@ export function DashboardView({
                   <tr>
                     <th className="py-2 pr-3">Collaborateur</th>
                     <th className="py-2 pr-3">Contrat</th>
-                    <th className="py-2 pr-3">Rémunération (ORG04-10)</th>
-                    <th className="py-2 pr-3">IBAN / NIR (ORG04-10)</th>
+                    <th className="py-2 pr-3">
+                      {isTechnicalMode ? 'Rémunération (ORG04-10)' : 'Rémunération'}
+                    </th>
+                    <th className="py-2 pr-3">
+                      {isTechnicalMode ? 'IBAN / NIR (ORG04-10)' : 'IBAN / NIR'}
+                    </th>
                     <th className="py-2">Statut dossier</th>
                   </tr>
                 </thead>
@@ -422,7 +442,7 @@ export function DashboardView({
                           ) : (
                             <span className="inline-flex items-center gap-1 text-amber-300 cf-mono text-[11px]">
                               <EyeOff className="w-3.5 h-3.5" />
-                              Masqué (ORG04-10)
+                              {isTechnicalMode ? 'Masqué (ORG04-10)' : 'Masqué'}
                             </span>
                           )}
                         </td>
@@ -434,7 +454,7 @@ export function DashboardView({
                           ) : (
                             <span className="inline-flex items-center gap-1 text-amber-300">
                               <EyeOff className="w-3.5 h-3.5" />
-                              Non transmis par l’API
+                              {isTechnicalMode ? 'Non transmis par l’API' : 'Masqué'}
                             </span>
                           )}
                         </td>
@@ -461,7 +481,7 @@ export function DashboardView({
           <Shield className="w-4 h-4 text-violet-400" />
           Espace gestion et pilotage masqué : le profil{' '}
           <strong>{session.activeProfile.name}</strong> est strictement cantonné à ses
-          données propres (TST31).
+          données propres{isTechnicalMode ? ' (TST31)' : ''}.
         </div>
       )}
     </div>

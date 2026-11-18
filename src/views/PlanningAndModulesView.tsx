@@ -35,6 +35,7 @@ import {
   ZoomIn,
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
+import { useCfos } from '../context/CfosContext';
 import type { DashboardPayload } from '../domain/apiEngine';
 import {
   ApiClientError,
@@ -364,6 +365,7 @@ export function PlanningAndModulesView({
   ambiguities,
   onRefreshDashboard,
 }: PlanningAndModulesViewProps) {
+  const { isTechnicalMode } = useCfos();
   const can = (actionId: string) =>
     Boolean(dashboard.session.resolvedPermissions[actionId]?.allowed);
 
@@ -697,6 +699,7 @@ export function PlanningAndModulesView({
     ) : null;
 
   const renderSourceDrawer = (sectionId: McSectionId = activeSection): ReactNode => {
+    if (!isTechnicalMode) return null;
     const sectionScreens = registry.screens.filter((s) => s.sectionId === sectionId);
     const sectionScreenIds = new Set(sectionScreens.map((s) => s.id));
     const sectionCaptures = ADMIN_CAPTURES.filter((cap) =>
@@ -1939,7 +1942,8 @@ export function PlanningAndModulesView({
               Dossiers collaborateurs, contrats & compteurs RH
             </h1>
             <p className="text-xs cf-muted mt-1">
-              {dashboard.visibleEmployees.length} fiche(s) autorisée(s) sur ce périmètre — protection IBAN/NIR/salaires via ORG04-10 (TST33).
+              {dashboard.visibleEmployees.length} fiche(s) autorisée(s) sur ce périmètre
+              {isTechnicalMode ? ' — protection IBAN/NIR/salaires via ORG04-10 (TST33).' : '.'}
             </p>
           </div>
           {canCreateEmployee && (
@@ -1949,7 +1953,7 @@ export function PlanningAndModulesView({
               className="cf-brand-gradient text-white px-4 py-2 rounded-btn text-xs font-semibold flex items-center gap-1.5"
             >
               <UserPlus className="w-4 h-4" />
-              Ajouter un employé (EMP02)
+              {isTechnicalMode ? 'Ajouter un employé (EMP02)' : 'Ajouter un employé'}
             </button>
           )}
         </div>
@@ -1958,7 +1962,11 @@ export function PlanningAndModulesView({
 
         {showAddEmpForm && (
           <div className="cf-card p-4 border-violet-500/40 space-y-3 text-xs">
-            <div className="font-semibold">Création rapide de collaborateur (EMP02 — simulation locale)</div>
+            <div className="font-semibold">
+              {isTechnicalMode
+                ? 'Création rapide de collaborateur (EMP02 — simulation locale)'
+                : 'Nouveau collaborateur'}
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <input
                 type="text"

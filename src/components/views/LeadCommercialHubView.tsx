@@ -170,7 +170,7 @@ export function LeadCommercialHubView({
   pipelineChildren,
   subTarget,
 }: LeadCommercialHubViewProps) {
-  const { currentUser, heitzMembers, prospects, clubFilter } = useCfos();
+  const { currentUser, heitzMembers, prospects, clubFilter, isTechnicalMode } = useCfos();
 
   const [activeTab, setActiveTab] = useState<LeadHubTab>(() =>
     subTarget === 'lead-traceability' ? 'traceability' : 'prospects'
@@ -181,10 +181,12 @@ export function LeadCommercialHubView({
   const [statsAllowedForCommercial, setStatsAllowedForCommercial] = useState(true);
 
   useEffect(() => {
-    if (subTarget === 'lead-traceability') {
+    if (subTarget === 'lead-traceability' && isTechnicalMode) {
       setActiveTab('traceability');
+    } else if (!isTechnicalMode && activeTab === 'traceability') {
+      setActiveTab('prospects');
     }
-  }, [subTarget]);
+  }, [subTarget, isTechnicalMode, activeTab]);
 
   // Tab 1 : Import Excel 11 col. + Archivage réponse entrante + Segments sélection multiple
   const [importCsvText, setImportCsvText] = useState(
@@ -474,17 +476,18 @@ export function LeadCommercialHubView({
     }
   };
 
-  const TABS: Array<{ id: LeadHubTab; label: string; badge?: string; icon: React.ComponentType<{ className?: string }> }> = [
-    { id: 'prospects', label: 'Prospects & Pipeline', badge: '10 statuts', icon: Users },
-    { id: 'clients', label: 'Clients & Vacances', badge: 'Heitz', icon: UserCheck },
-    { id: 'activities', label: 'Activités', badge: '9 filtres', icon: ActivityIcon },
-    { id: 'planning', label: 'Planning RDV & Stripe', badge: 'RDV-01', icon: Calendar },
-    { id: 'messaging', label: 'WhatsApp 24h', badge: 'WA-01/02', icon: MessageCircle },
-    { id: 'communication', label: 'Communication (6)', badge: 'Admin/Mgr', icon: Send },
-    { id: 'analytics_forms', label: 'Stats (8) · Ventes · Formulaires', badge: 'ACL-01', icon: BarChart3 },
-    { id: 'settings', label: 'Paramètres CRM (14)', badge: '9 APIs', icon: Sliders },
-    { id: 'traceability', label: 'Traçabilité Lead', badge: '1682', icon: Compass },
+  const ALL_TABS: Array<{ id: LeadHubTab; label: string; badge?: string; icon: React.ComponentType<{ className?: string }>; technicalOnly?: boolean }> = [
+    { id: 'prospects', label: 'Prospects & Pipeline', badge: isTechnicalMode ? '10 statuts' : undefined, icon: Users },
+    { id: 'clients', label: 'Clients & Vacances', badge: isTechnicalMode ? 'Heitz' : undefined, icon: UserCheck },
+    { id: 'activities', label: 'Activités', badge: isTechnicalMode ? '9 filtres' : undefined, icon: ActivityIcon },
+    { id: 'planning', label: 'Planning RDV & Stripe', badge: isTechnicalMode ? 'RDV-01' : undefined, icon: Calendar },
+    { id: 'messaging', label: 'WhatsApp 24h', badge: isTechnicalMode ? 'WA-01/02' : undefined, icon: MessageCircle },
+    { id: 'communication', label: 'Communication', badge: isTechnicalMode ? 'Admin/Mgr' : undefined, icon: Send },
+    { id: 'analytics_forms', label: 'Stats · Ventes · Formulaires', badge: isTechnicalMode ? 'ACL-01' : undefined, icon: BarChart3 },
+    { id: 'settings', label: 'Paramètres CRM', badge: isTechnicalMode ? '9 APIs' : undefined, icon: Sliders },
+    { id: 'traceability', label: 'Traçabilité Lead', badge: '1682', icon: Compass, technicalOnly: true },
   ];
+  const TABS = ALL_TABS.filter((t) => !t.technicalOnly || isTechnicalMode);
 
   return (
     <div className="space-y-4">
@@ -494,38 +497,48 @@ export function LeadCommercialHubView({
       <div className="cf-card p-4 space-y-3 border border-emerald-500/30">
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
           <div>
-            <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">
-              <span>Module Commercial CRM « Lead → C.Fitness OS » · v{LEAD_AUDIT_META.version}</span>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30">
-                {LEAD_AUDIT_META.totalEntries} entrées ({LEAD_AUDIT_META.observedCount} observées · {LEAD_AUDIT_META.documentedCount} doc · {LEAD_AUDIT_META.toVerifyCount} à vérifier)
-              </span>
-              <span className="px-2 py-0.5 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-300">
-                Séparé de « Mon compte » RH V1.16
-              </span>
-            </div>
+            {isTechnicalMode ? (
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+                <span>Module Commercial CRM « Lead → C.Fitness OS » · v{LEAD_AUDIT_META.version}</span>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30">
+                  {LEAD_AUDIT_META.totalEntries} entrées ({LEAD_AUDIT_META.observedCount} observées · {LEAD_AUDIT_META.documentedCount} doc · {LEAD_AUDIT_META.toVerifyCount} à vérifier)
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-300">
+                  Séparé de « Mon compte » RH V1.16
+                </span>
+              </div>
+            ) : (
+              <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+                CRM Commercial · Carré de Soie &amp; Beynost
+              </div>
+            )}
             <h1 className="text-base sm:text-lg font-extrabold mt-1">
-              CRM Commercial Bi-Club, Communication Multicanal &amp; Traçabilité Lead ({LEAD_AUDIT_META.totalFiles} fichiers)
+              {isTechnicalMode
+                ? `CRM Commercial Bi-Club, Communication Multicanal & Traçabilité Lead (${LEAD_AUDIT_META.totalFiles} fichiers)`
+                : 'Gestion Commerciale, Prospects & Suivi Client'}
             </h1>
           </div>
 
           {/* Sélecteur de rôle Lead pour tester les restrictions RBAC serveur */}
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="cf-muted font-semibold">Simulation Rôle Lead :</span>
-            {(['admin', 'manager', 'commercial', 'coach'] as LeadRole[]).map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setSimulatedRole(r)}
-                className={`px-2.5 py-1 rounded-lg font-bold uppercase cursor-pointer border transition-colors ${
-                  simulatedRole === r
-                    ? 'bg-emerald-600 text-white border-emerald-500'
-                    : 'bg-slate-900/60 text-slate-300 border-slate-700 hover:border-slate-500'
-                }`}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
+          {isTechnicalMode && (
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="cf-muted font-semibold">Simulation Rôle Lead :</span>
+              {(['admin', 'manager', 'commercial', 'coach'] as LeadRole[]).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setSimulatedRole(r)}
+                  className={`px-2.5 py-1 rounded-lg font-bold uppercase cursor-pointer border transition-colors ${
+                    simulatedRole === r
+                      ? 'bg-emerald-600 text-white border-emerald-500'
+                      : 'bg-slate-900/60 text-slate-300 border-slate-700 hover:border-slate-500'
+                  }`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Navigation interne des 9 onglets Lead — 100% responsive sans débordement */}

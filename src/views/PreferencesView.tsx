@@ -9,6 +9,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useCfos } from '../context/CfosContext';
 import { ApiClientError, clientApi, type ApiAuthContext } from '../domain/clientApi';
 import type { UserPreferences } from '../domain/types';
 
@@ -37,6 +38,7 @@ export function PreferencesView({
   preferences,
   onRefreshDashboard,
 }: PreferencesViewProps) {
+  const { isTechnicalMode } = useCfos();
   const [draft, setDraft] = useState<UserPreferences>(preferences);
   const [currentSecret, setCurrentSecret] = useState('');
   const [newSecret, setNewSecret] = useState('');
@@ -110,11 +112,13 @@ export function PreferencesView({
     <div className="space-y-5">
       <div className="cf-card p-5 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="text-xs cf-mono text-violet-300">
-            MC13 • UTI01–UTI05 • EXT03 • EX32
-          </div>
+          {isTechnicalMode && (
+            <div className="text-xs cf-mono text-violet-300">
+              MC13 • UTI01–UTI05 • EXT03 • EX32
+            </div>
+          )}
           <h1 className="text-xl font-bold mt-0.5">
-            Mes préférences personnelles, calendrier & sécurité
+            Mes préférences personnelles, calendrier &amp; sécurité
           </h1>
           <p className="text-xs cf-muted mt-1">
             Paramètres individuels : langue (11 choix), canaux de notification,

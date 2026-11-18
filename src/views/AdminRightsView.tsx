@@ -12,6 +12,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useCfos } from '../context/CfosContext';
 import type { DashboardPayload } from '../domain/apiEngine';
 import { ApiClientError, clientApi, type ApiAuthContext } from '../domain/clientApi';
 import { getControlState } from '../domain/rbac';
@@ -58,6 +59,7 @@ export function AdminRightsView({
   dashboard,
   onRefreshDashboard,
 }: AdminRightsViewProps) {
+  const { isTechnicalMode } = useCfos();
   const [activeTab, setActiveTab] = useState<AdminTab>('permissions');
   const [statusMsg, setStatusMsg] = useState<{
     kind: 'ok' | 'err';
@@ -282,24 +284,27 @@ export function AdminRightsView({
     <div className="space-y-5">
       <div className="cf-card p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <div className="text-xs cf-mono text-violet-300">
-            MC11 • ORG01–ORG04 • DRO01–DRO05 • JOU01
-          </div>
+          {isTechnicalMode && (
+            <div className="text-xs cf-mono text-violet-300">
+              MC11 • ORG01–ORG04 • DRO01–DRO05 • JOU01
+            </div>
+          )}
           <h1 className="text-xl font-bold mt-0.5">
-            Organisation, Multi-Établissements & Matrice des droits
+            Organisation, Établissements &amp; Droits d&apos;accès
           </h1>
           <p className="text-xs cf-muted mt-1">
-            Toutes les vérifications d’élévation de privilèges (TST34),
-            révocations (TST35) et écritures sont contrôlées côté serveur.
+            {isTechnicalMode
+              ? 'Toutes les vérifications d’élévation de privilèges (TST34), révocations (TST35) et écritures sont contrôlées côté serveur.'
+              : 'Gestion des profils, des établissements et de la sécurité des accès.'}
           </p>
         </div>
 
         <div className="flex flex-wrap gap-1.5">
           {[
-            { id: 'permissions' as const, label: 'Matrice Droits (6×44)', icon: ShieldCheck },
+            { id: 'permissions' as const, label: isTechnicalMode ? 'Matrice Droits (6×44)' : 'Droits & Rôles', icon: ShieldCheck },
             { id: 'org_sites' as const, label: 'Organisation & Clubs', icon: Building2 },
-            { id: 'audit' as const, label: 'Journal JOU01 & CSV', icon: History },
-            { id: 'backup' as const, label: 'Sauvegarde TST28', icon: DatabaseBackup },
+            { id: 'audit' as const, label: isTechnicalMode ? 'Journal JOU01 & CSV' : 'Journal d’activité', icon: History },
+            { id: 'backup' as const, label: isTechnicalMode ? 'Sauvegarde TST28' : 'Sauvegarde', icon: DatabaseBackup },
           ].map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;

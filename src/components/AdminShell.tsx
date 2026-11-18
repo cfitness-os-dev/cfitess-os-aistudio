@@ -527,7 +527,9 @@ export function AdminShell() {
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <Icon className={`w-4 h-4 shrink-0 ${item.iconColor}`} />
-                    <span className="truncate">{item.label}</span>
+                    <span className="truncate">
+                      {item.id === 'nav-crm' && !isTechnicalMode ? 'CRM & Ventes' : item.label}
+                    </span>
                   </div>
                   {item.hasChevron && (
                     <ChevronRight className="w-3.5 h-3.5 text-slate-400/70 shrink-0" />

@@ -73,10 +73,16 @@ function parseInitialTarget(subTarget?: string | null): {
 }
 
 export function MonCompteRhHubView({ subTarget }: MonCompteRhHubViewProps) {
-  const { clubFilter, setClubFilter } = useCfos();
+  const { clubFilter, setClubFilter, isTechnicalMode } = useCfos();
   const initialTarget = parseInitialTarget(subTarget);
 
   const [hubTab, setHubTab] = useState<MonCompteHubTab>(initialTarget.tab);
+
+  useEffect(() => {
+    if (!isTechnicalMode && hubTab === 'traceability') {
+      setHubTab('mon-compte');
+    }
+  }, [isTechnicalMode, hubTab]);
   const [activeActorId, setActiveActorId] = useState<string>('emp-admin');
   const [activeSiteId, setActiveSiteId] = useState<string | 'all'>(() =>
     clubFilter === 'all' ? 'club-carre-soie' : clubFilterToSiteId(clubFilter)
@@ -256,21 +262,27 @@ export function MonCompteRhHubView({ subTarget }: MonCompteRhHubViewProps) {
               }`}
             >
               <Users className="w-4 h-4 shrink-0" />
-              <span>Espace Mon compte RH V1.16 (MC01–MC13)</span>
+              <span>
+                {isTechnicalMode
+                  ? 'Espace Mon compte RH V1.16 (MC01–MC13)'
+                  : 'Espace Mon compte RH'}
+              </span>
             </button>
 
-            <button
-              type="button"
-              onClick={handleNavigateTraceability}
-              className={`px-3 py-2 rounded-btn text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
-                hubTab === 'traceability'
-                  ? 'cf-brand-gradient text-white shadow-sm'
-                  : 'cf-card-secondary hover:border-violet-500/50'
-              }`}
-            >
-              <Compass className="w-4 h-4 text-violet-400 shrink-0" />
-              <span>Traçabilité &amp; Livrables V1.16 (91/1605 • 111 captures)</span>
-            </button>
+            {isTechnicalMode && (
+              <button
+                type="button"
+                onClick={handleNavigateTraceability}
+                className={`px-3 py-2 rounded-btn text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+                  hubTab === 'traceability'
+                    ? 'cf-brand-gradient text-white shadow-sm'
+                    : 'cf-card-secondary hover:border-violet-500/50'
+                }`}
+              >
+                <Compass className="w-4 h-4 text-violet-400 shrink-0" />
+                <span>Traçabilité &amp; Livrables V1.16 (91/1605 • 111 captures)</span>
+              </button>
+            )}
 
             <button
               type="button"
@@ -282,7 +294,11 @@ export function MonCompteRhHubView({ subTarget }: MonCompteRhHubViewProps) {
               }`}
             >
               <Calendar className="w-4 h-4 text-sky-400 shrink-0" />
-              <span>Ma Journée &amp; Tâches Terrain (Vue GitHub CFOS)</span>
+              <span>
+                {isTechnicalMode
+                  ? 'Ma Journée & Tâches Terrain (Vue GitHub CFOS)'
+                  : 'Ma Journée & Tâches'}
+              </span>
             </button>
 
             <button
@@ -295,24 +311,37 @@ export function MonCompteRhHubView({ subTarget }: MonCompteRhHubViewProps) {
               }`}
             >
               <SlidersHorizontal className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>Planning Unifié, Pointage &amp; Contrats CDI (Vue GitHub CFOS)</span>
+              <span>
+                {isTechnicalMode
+                  ? 'Planning Unifié, Pointage & Contrats CDI (Vue GitHub CFOS)'
+                  : 'Planning, Pointage & Contrats'}
+              </span>
             </button>
           </div>
 
           {dashboard && (
             <div className="text-[11px] cf-muted flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>
-                Profil RBAC V1.16 :{' '}
-                <strong className="text-violet-300">
-                  {dashboard.session.activeProfile.name}
-                </strong>{' '}
-                • Portée{' '}
-                <span className="cf-mono uppercase text-emerald-300">
-                  {dashboard.session.activeProfile.scopeSelected}
-                </span>{' '}
-                • Backend <span className="cf-mono">{backendKind}</span>
-              </span>
+              {isTechnicalMode ? (
+                <span>
+                  Profil RBAC V1.16 :{' '}
+                  <strong className="text-violet-300">
+                    {dashboard.session.activeProfile.name}
+                  </strong>{' '}
+                  • Portée{' '}
+                  <span className="cf-mono uppercase text-emerald-300">
+                    {dashboard.session.activeProfile.scopeSelected}
+                  </span>{' '}
+                  • Backend <span className="cf-mono">{backendKind}</span>
+                </span>
+              ) : (
+                <span>
+                  Profil :{' '}
+                  <strong className="text-violet-300">
+                    {dashboard.session.activeProfile.name}
+                  </strong>
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -322,24 +351,26 @@ export function MonCompteRhHubView({ subTarget }: MonCompteRhHubViewProps) {
           <div className="pt-3 border-t border-[var(--cf-border)] space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-violet-400 shrink-0" />
-                  <label htmlFor="hub-persona-select" className="text-xs cf-muted hidden sm:inline">
-                    Compte simulé :
-                  </label>
-                  <select
-                    id="hub-persona-select"
-                    value={activeActorId}
-                    onChange={(e) => handleChangeActor(e.target.value)}
-                    className="cf-input text-xs px-2.5 py-1.5 font-medium"
-                  >
-                    {PERSONA_OPTIONS.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.label} — {p.roleSummary}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {isTechnicalMode && (
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-violet-400 shrink-0" />
+                    <label htmlFor="hub-persona-select" className="text-xs cf-muted hidden sm:inline">
+                      Compte simulé :
+                    </label>
+                    <select
+                      id="hub-persona-select"
+                      value={activeActorId}
+                      onChange={(e) => handleChangeActor(e.target.value)}
+                      className="cf-input text-xs px-2.5 py-1.5 font-medium"
+                    >
+                      {PERSONA_OPTIONS.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.label} — {p.roleSummary}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div className="flex items-center gap-2">
                   <Building2 className="w-4 h-4 text-cyan-400 shrink-0" />
@@ -379,13 +410,15 @@ export function MonCompteRhHubView({ subTarget }: MonCompteRhHubViewProps) {
               </div>
             </div>
 
-            {/* Barre des 13 sous-sections MC01 à MC13 + Traçabilité */}
+            {/* Barre des 13 sous-sections */}
             <div className="overflow-x-auto pb-1">
               <div className="flex items-center gap-1.5 min-w-max">
-                <span className="text-[11px] cf-mono cf-muted mr-1.5 flex items-center gap-1">
-                  <SlidersHorizontal className="w-3.5 h-3.5" />
-                  /mon-compte
-                </span>
+                {isTechnicalMode && (
+                  <span className="text-[11px] cf-mono cf-muted mr-1.5 flex items-center gap-1">
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                    /mon-compte
+                  </span>
+                )}
                 {registry.sections.map((sec) => {
                   const secId = sec.id as McSectionId;
                   const isVisible = dashboard.session.visibleSections.includes(secId);
@@ -403,23 +436,27 @@ export function MonCompteRhHubView({ subTarget }: MonCompteRhHubViewProps) {
                           : 'cf-card-secondary hover:border-violet-500/50'
                       }`}
                     >
-                      <span className="cf-mono text-[10px] opacity-80">{sec.id}</span>
+                      {isTechnicalMode && (
+                        <span className="cf-mono text-[10px] opacity-80">{sec.id}</span>
+                      )}
                       <span>{sec.label}</span>
                     </button>
                   );
                 })}
-                <button
-                  type="button"
-                  onClick={handleNavigateTraceability}
-                  className={`px-2.5 py-1.5 rounded-btn text-xs transition-all flex items-center gap-1.5 cursor-pointer ${
-                    hubTab === 'traceability'
-                      ? 'cf-brand-gradient text-white font-semibold'
-                      : 'cf-card-secondary hover:border-violet-500/50'
-                  }`}
-                >
-                  <Compass className="w-3.5 h-3.5 text-violet-400" />
-                  <span>Traçabilité &amp; Ambiguïtés 91/1605</span>
-                </button>
+                {isTechnicalMode && (
+                  <button
+                    type="button"
+                    onClick={handleNavigateTraceability}
+                    className={`px-2.5 py-1.5 rounded-btn text-xs transition-all flex items-center gap-1.5 cursor-pointer ${
+                      hubTab === 'traceability'
+                        ? 'cf-brand-gradient text-white font-semibold'
+                        : 'cf-card-secondary hover:border-violet-500/50'
+                    }`}
+                  >
+                    <Compass className="w-3.5 h-3.5 text-violet-400" />
+                    <span>Traçabilité &amp; Ambiguïtés 91/1605</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -433,7 +470,9 @@ export function MonCompteRhHubView({ subTarget }: MonCompteRhHubViewProps) {
             <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
             <div>
               <div className="font-semibold text-sm">
-                Accès refusé côté serveur (HTTP 403 Forbidden — TST40 / RBAC)
+                {isTechnicalMode
+                  ? 'Accès refusé côté serveur (HTTP 403 Forbidden — TST40 / RBAC)'
+                  : 'Accès restreint'}
               </div>
               <p className="text-xs text-red-200/90 mt-1">{forbiddenBanner}</p>
             </div>
