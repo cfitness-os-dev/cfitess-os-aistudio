@@ -348,6 +348,21 @@ interface CfosContextValue extends PersistedState {
     homeClubId: ClubId;
     subscriptionName: string;
   }) => HeitzMember;
+  importHeitzMembers: (params: {
+    source: 'HEITZ_CSV' | 'MYWELLNESS_CSV' | 'HEITZ_API' | 'MYWELLNESS_API';
+    members: Array<{
+      firstName: string;
+      lastName: string;
+      phone?: string;
+      email?: string;
+      badgeCode?: string;
+      homeClubId?: ClubId;
+      subscriptionName?: string;
+      activeSubscription?: boolean;
+      finBalanceEur?: number;
+      mywellnessMemberId?: string;
+    }>;
+  }) => { added: number; skippedDuplicates: number; totalProcessed: number };
   simulateMemberGateScan: (memberId: string, clubId: ClubId) => AccessEvent | null;
   triggerManualTurnstileOpen: (
     clubId: ClubId,
@@ -1843,6 +1858,108 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     return newMember;
   };
 
+  const importHeitzMembers: CfosContextValue['importHeitzMembers'] = ({ source, members }) => {
+    const existingBadges = new Set(
+      state.heitzMembers.map((m) => m.badgeCode.trim().toLowerCase())
+    );
+    const existingEmails = new Set(
+      state.heitzMembers
+        .map((m) => (m.email || '').trim().toLowerCase())
+        .filter(Boolean)
+    );
+    const existingNames = new Set(
+      state.heitzMembers.map(
+        (m) => `${m.firstName.trim().toLowerCase()}|${m.lastName.trim().toLowerCase()}`
+      )
+    );
+
+    const toAdd: HeitzMember[] = [];
+    let skippedDuplicates = 0;
+
+    members.forEach((raw, idx) => {
+      const firstName = (raw.firstName || '').trim();
+      const lastName = (raw.lastName || '').trim();
+      if (!firstName && !lastName) return;
+
+      const emailNorm = (raw.email || '').trim().toLowerCase();
+      const badgeNorm = (raw.badgeCode || '').trim().toLowerCase();
+      const nameNorm = `${firstName.toLowerCase()}|${lastName.toLowerCase()}`;
+
+      if (
+        (badgeNorm && existingBadges.has(badgeNorm)) ||
+        (emailNorm && existingEmails.has(emailNorm)) ||
+        existingNames.has(nameNorm)
+      ) {
+        skippedDuplicates += 1;
+        return;
+      }
+
+      const clubId: ClubId = raw.homeClubId === 'beynost' ? 'beynost' : 'carre-de-soie';
+      const clubPrefix = clubId === 'carre-de-soie' ? 'CDS' : 'BEY';
+      const generatedBadge =
+        raw.badgeCode?.trim() ||
+        `HZ-${clubPrefix}-${String(2000 + state.heitzMembers.length + idx).slice(-4)}`;
+
+      existingBadges.add(generatedBadge.toLowerCase());
+      if (emailNorm) existingEmails.add(emailNorm);
+      existingNames.add(nameNorm);
+
+      const balance = typeof raw.finBalanceEur === 'number' && !Number.isNaN(raw.finBalanceEur)
+        ? raw.finBalanceEur
+        : 0;
+
+      toAdd.push({
+        id: `hm-imp-${Date.now()}-${idx}`,
+        badgeCode: generatedBadge,
+        rfidBluetoothEnabled: true,
+        mywellnessMemberId: raw.mywellnessMemberId?.trim() || undefined,
+        firstName: firstName || 'Adhérent',
+        lastName: lastName || 'Importé',
+        phone: (raw.phone || '06 00 00 00 00').trim(),
+        email: raw.email?.trim() || undefined,
+        homeClubId: clubId,
+        subscriptionName: raw.subscriptionName?.trim() || 'Liberté Bi-Club (39,90 €/mois)',
+        activeSubscription: raw.activeSubscription ?? true,
+        finBalanceEur: balance,
+        finBalanceState: balance < 0 ? 0 : 1,
+        technogymMoves30d: 0,
+        daysSinceLastWorkout: 0,
+        loyaltyPoints: 50,
+        referralsCount: 0,
+      });
+    });
+
+    if (toAdd.length > 0) {
+      setState((prev) => ({
+        ...prev,
+        heitzMembers: [...toAdd, ...prev.heitzMembers],
+        auditLogs: appendAudit(prev.auditLogs, {
+          clubId: 'carre-de-soie',
+          action: 'IMPORT_SYNC_ADHERENTS',
+          target: `Source ${source}`,
+          afterState: `${toAdd.length} adhérent(s) importé(s), ${skippedDuplicates} doublon(s) ignoré(s)`,
+        }),
+      }));
+      notify(
+        'success',
+        `Import ${source} terminé : ${toAdd.length} adhérent(s) ajouté(s)${
+          skippedDuplicates > 0 ? `, ${skippedDuplicates} doublon(s) ignoré(s)` : ''
+        }.`
+      );
+    } else {
+      notify(
+        'warning',
+        `Synchronisation ${source} : aucun nouvel adhérent (${skippedDuplicates} doublon(s) déjà présent(s)).`
+      );
+    }
+
+    return {
+      added: toAdd.length,
+      skippedDuplicates,
+      totalProcessed: members.length,
+    };
+  };
+
   const rewardMemberLoyaltyOrReferral: CfosContextValue['rewardMemberLoyaltyOrReferral'] = (
     memberId,
     rewardType,
@@ -2570,6 +2687,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     createJobOffer,
     runCandidateOnboarding,
     createHeitzMember,
+    importHeitzMembers,
     simulateMemberGateScan,
     triggerManualTurnstileOpen,
     regularizeMemberSepa,

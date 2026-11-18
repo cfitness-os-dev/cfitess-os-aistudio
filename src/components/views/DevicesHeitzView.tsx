@@ -22,6 +22,9 @@ import {
   Printer,
   ExternalLink,
   Dumbbell,
+  Upload,
+  RefreshCw,
+  Download,
 } from 'lucide-react';
 import { AccessEvent, ClubId } from '../../types/cfos';
 import {
@@ -40,6 +43,7 @@ export function DevicesHeitzView() {
     accessEvents,
     inBodyScans,
     createHeitzMember,
+    importHeitzMembers,
     simulateMemberGateScan,
     triggerManualTurnstileOpen,
     regularizeMemberSepa,
@@ -118,6 +122,131 @@ export function DevicesHeitzView() {
     setNewMemberPhone('');
     setNewMemberEmail('');
     setShowNewMemberForm(false);
+  };
+
+  // Import CSV & Software Sync (Heitz System / Technogym Mywellness)
+  const [showImportSyncPanel, setShowImportSyncPanel] = useState(false);
+  const [importCsvSource, setImportCsvSource] = useState<'HEITZ_CSV' | 'MYWELLNESS_CSV'>('HEITZ_CSV');
+  const [importReport, setImportReport] = useState<string | null>(null);
+
+  const handleDownloadCsvTemplate = () => {
+    const csvContent =
+      'prenom;nom;telephone;email;badge;club;abonnement;solde\n' +
+      'Lucas;Morel;06 11 22 33 44;lucas.morel@email.fr;HZ-CDS-8801;carre-de-soie;Liberté Bi-Club (39,90 €/mois);0\n' +
+      'Ines;Benali;06 55 66 77 88;ines.benali@email.fr;HZ-BEY-8802;beynost;Privilège + Biocircuit (49,90 €/mois);0\n';
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'modele-import-adherents-heitz.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportCsvFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result || '').replace(/^\uFEFF/, '');
+      const lines = text
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter(Boolean);
+      if (lines.length < 2) {
+        setImportReport('Fichier vide ou sans ligne de données (en-tête + au moins 1 adhérent requis).');
+        return;
+      }
+      const sep = lines[0].includes(';') ? ';' : ',';
+      const headers = lines[0]
+        .split(sep)
+        .map((h) => h.trim().toLowerCase().replace(/^"|"$/g, ''));
+
+      const findIdx = (keys: string[]) => headers.findIndex((h) => keys.some((k) => h.includes(k)));
+      const idxFirst = findIdx(['prenom', 'prénom', 'firstname', 'first_name']);
+      const idxLast = findIdx(['nom', 'lastname', 'last_name']);
+      const idxPhone = findIdx(['tel', 'phone', 'mobile']);
+      const idxEmail = findIdx(['mail', 'email']);
+      const idxBadge = findIdx(['badge', 'carte', 'rfid', 'code']);
+      const idxClub = findIdx(['club', 'site', 'centre']);
+      const idxSub = findIdx(['abonnement', 'formule', 'subscription', 'offre']);
+      const idxBalance = findIdx(['solde', 'balance', 'impay']);
+
+      const parsed = lines.slice(1).map((line) => {
+        const cols = line.split(sep).map((c) => c.trim().replace(/^"|"$/g, ''));
+        const clubRaw = (idxClub >= 0 ? cols[idxClub] : '').toLowerCase();
+        const homeClubId: ClubId =
+          clubRaw.includes('bey') || clubRaw.includes('place') ? 'beynost' : 'carre-de-soie';
+        const balanceRaw = idxBalance >= 0 ? Number((cols[idxBalance] || '0').replace(',', '.')) : 0;
+
+        return {
+          firstName: idxFirst >= 0 ? cols[idxFirst] : cols[0] || '',
+          lastName: idxLast >= 0 ? cols[idxLast] : cols[1] || '',
+          phone: idxPhone >= 0 ? cols[idxPhone] : cols[2] || '',
+          email: idxEmail >= 0 ? cols[idxEmail] : cols[3] || '',
+          badgeCode: idxBadge >= 0 ? cols[idxBadge] : undefined,
+          homeClubId,
+          subscriptionName: idxSub >= 0 ? cols[idxSub] : undefined,
+          finBalanceEur: Number.isNaN(balanceRaw) ? 0 : balanceRaw,
+        };
+      });
+
+      const res = importHeitzMembers({
+        source: importCsvSource,
+        members: parsed,
+      });
+      setImportReport(
+        `${file.name} traité (${res.totalProcessed} ligne(s)) : ${res.added} adhérent(s) ajouté(s), ${res.skippedDuplicates} doublon(s) ignoré(s).`
+      );
+      e.target.value = '';
+    };
+    reader.readAsText(file, 'utf-8');
+  };
+
+  const handleRunSoftwareSync = (source: 'HEITZ_API' | 'MYWELLNESS_API') => {
+    const batch =
+      source === 'HEITZ_API'
+        ? [
+            {
+              firstName: 'Julien',
+              lastName: 'Perrin',
+              phone: '06 42 18 75 90',
+              email: 'julien.perrin@cfitness-demo.fr',
+              badgeCode: 'HZ-CDS-9104',
+              homeClubId: 'carre-de-soie' as ClubId,
+              subscriptionName: 'Liberté Bi-Club (39,90 €/mois)',
+              finBalanceEur: 0,
+            },
+            {
+              firstName: 'Amélie',
+              lastName: 'Roux',
+              phone: '06 78 33 12 04',
+              email: 'amelie.roux@cfitness-demo.fr',
+              badgeCode: 'HZ-BEY-9105',
+              homeClubId: 'beynost' as ClubId,
+              subscriptionName: 'Privilège + Biocircuit (49,90 €/mois)',
+              finBalanceEur: 0,
+            },
+          ]
+        : [
+            {
+              firstName: 'Mehdi',
+              lastName: 'Kaci',
+              phone: '06 51 94 20 11',
+              email: 'mehdi.kaci@cfitness-demo.fr',
+              badgeCode: 'HZ-CDS-9201',
+              mywellnessMemberId: 'MW-LYON-8842',
+              homeClubId: 'carre-de-soie' as ClubId,
+              subscriptionName: 'Privilège + Biocircuit (49,90 €/mois)',
+              finBalanceEur: 0,
+            },
+          ];
+
+    const res = importHeitzMembers({ source, members: batch });
+    const label = source === 'HEITZ_API' ? 'Heitz System' : 'Technogym Mywellness';
+    setImportReport(
+      `Synchronisation ${label} : ${res.added} nouveau(x) profil(s) récupéré(s), ${res.skippedDuplicates} doublon(s) ignoré(s). (Prêt pour branchement clé API client en production.)`
+    );
   };
 
   useEffect(() => {
@@ -365,14 +494,34 @@ export function DevicesHeitzView() {
 
           <div className="flex flex-wrap items-center gap-2">
             {navSubTarget !== 'finances' && (
-              <button
-                type="button"
-                onClick={() => setShowNewMemberForm((prev) => !prev)}
-                className="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-xs"
-              >
-                <Plus className="w-4 h-4" />
-                {showNewMemberForm ? 'Fermer le formulaire' : 'Nouvel adhérent'}
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowNewMemberForm((prev) => !prev);
+                    setShowImportSyncPanel(false);
+                  }}
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-xs"
+                >
+                  <Plus className="w-4 h-4" />
+                  {showNewMemberForm ? 'Fermer le formulaire' : 'Nouvel adhérent'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowImportSyncPanel((prev) => !prev);
+                    setShowNewMemberForm(false);
+                  }}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer border transition-colors ${
+                    showImportSyncPanel
+                      ? 'bg-emerald-600 text-white border-emerald-500'
+                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  Importer / Synchroniser
+                </button>
+              </>
             )}
 
             <button
@@ -503,6 +652,99 @@ export function DevicesHeitzView() {
               </button>
             </div>
           </form>
+        )}
+
+        {showImportSyncPanel && navSubTarget !== 'finances' && (
+          <div className="p-4 rounded-xl border border-emerald-300 bg-emerald-50/70 space-y-3 text-xs">
+            <div className="flex items-center justify-between gap-2">
+              <div className="font-extrabold uppercase tracking-wider text-emerald-800">
+                Importer ou synchroniser la liste adhérents (Heitz System · Technogym Mywellness · CSV)
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowImportSyncPanel(false)}
+                className="text-slate-500 hover:text-slate-800 cursor-pointer"
+              >
+                Fermer
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              {/* Bloc 1 : Import fichier CSV / Excel */}
+              <div className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-2.5">
+                <div className="font-bold text-slate-900">
+                  1. Importer un fichier exporté (CSV / Excel .csv)
+                </div>
+                <div className="text-[11px] text-slate-600">
+                  Colonnes reconnues automatiquement : Prénom, Nom, Téléphone, Email, Badge, Club, Abonnement, Solde. Les doublons sont ignorés automatiquement.
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={importCsvSource}
+                    onChange={(e) =>
+                      setImportCsvSource(e.target.value as 'HEITZ_CSV' | 'MYWELLNESS_CSV')
+                    }
+                    className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-xs"
+                  >
+                    <option value="HEITZ_CSV">Export Heitz System (.csv)</option>
+                    <option value="MYWELLNESS_CSV">Export Technogym Mywellness (.csv)</option>
+                  </select>
+                  <label className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer inline-flex items-center gap-1.5">
+                    <Upload className="w-3.5 h-3.5" />
+                    Choisir un fichier CSV
+                    <input
+                      type="file"
+                      accept=".csv,.txt"
+                      onChange={handleImportCsvFile}
+                      className="hidden"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleDownloadCsvTemplate}
+                    className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold cursor-pointer inline-flex items-center gap-1"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Modèle CSV
+                  </button>
+                </div>
+              </div>
+
+              {/* Bloc 2 : Synchronisation API logiciels client */}
+              <div className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-2.5">
+                <div className="font-bold text-slate-900">
+                  2. Synchroniser depuis les logiciels du club
+                </div>
+                <div className="text-[11px] text-slate-600">
+                  Récupère les nouveaux adhérents actifs depuis Heitz System ou Technogym Mywellness avec dédoublonnage automatique.
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleRunSoftwareSync('HEITZ_API')}
+                    className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-bold cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    Synchroniser Heitz System
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRunSoftwareSync('MYWELLNESS_API')}
+                    className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    Synchroniser Mywellness
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {importReport && (
+              <div className="p-2.5 rounded-lg bg-white border border-emerald-300 text-emerald-800 font-semibold">
+                {importReport}
+              </div>
+            )}
+          </div>
         )}
 
         {/* Contextual Summary Strip matching Homepage KPIs (Finances OR Adhérents) */}
