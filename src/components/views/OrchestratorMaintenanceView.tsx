@@ -429,7 +429,7 @@ const INITIAL_PURCHASE_ORDERS: PurchaseOrderItem[] = [
 ];
 
 export function OrchestratorMaintenanceView() {
-  const { clubFilter, heitzMembers, employees, setActiveSection, navSubTarget } = useCfos();
+  const { clubFilter, heitzMembers, employees, setActiveSection, navSubTarget, isTechnicalMode } = useCfos();
 
   const [activeTab, setActiveTab] = useState<
     | 'ARCHITECTURE_ORCHESTRATOR'
@@ -441,9 +441,11 @@ export function OrchestratorMaintenanceView() {
       ? 'MODULE_STOCKS'
       : navSubTarget === 'maintenance'
       ? 'MODULE_MAINTENANCE'
-      : navSubTarget === 'infra'
+      : navSubTarget === 'infra' && isTechnicalMode
       ? 'INFRA_POSTGRES_TEMPORAL'
-      : 'ARCHITECTURE_ORCHESTRATOR'
+      : isTechnicalMode
+      ? 'ARCHITECTURE_ORCHESTRATOR'
+      : 'MODULE_STOCKS'
   );
 
   useEffect(() => {
@@ -451,12 +453,21 @@ export function OrchestratorMaintenanceView() {
       setActiveTab('MODULE_STOCKS');
     } else if (navSubTarget === 'maintenance') {
       setActiveTab('MODULE_MAINTENANCE');
-    } else if (navSubTarget === 'agents') {
+    } else if (navSubTarget === 'agents' && isTechnicalMode) {
       setActiveTab('ARCHITECTURE_ORCHESTRATOR');
-    } else if (navSubTarget === 'infra') {
+    } else if (navSubTarget === 'infra' && isTechnicalMode) {
       setActiveTab('INFRA_POSTGRES_TEMPORAL');
     }
-  }, [navSubTarget]);
+  }, [navSubTarget, isTechnicalMode]);
+
+  useEffect(() => {
+    if (
+      !isTechnicalMode &&
+      (activeTab === 'ARCHITECTURE_ORCHESTRATOR' || activeTab === 'INFRA_POSTGRES_TEMPORAL')
+    ) {
+      setActiveTab('MODULE_STOCKS');
+    }
+  }, [isTechnicalMode, activeTab]);
 
   const [agents, setAgents] = useState<AgentDefinition[]>(INITIAL_AGENTS);
   const [decisions, setDecisions] = useState<OrchestratorDecisionItem[]>(
@@ -773,31 +784,35 @@ export function OrchestratorMaintenanceView() {
               <span>Maintenance ({filteredTickets.length})</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab('ARCHITECTURE_ORCHESTRATOR')}
-              className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
-                activeTab === 'ARCHITECTURE_ORCHESTRATOR'
-                  ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-2xs'
-                  : 'text-slate-600 hover:bg-white hover:text-slate-900'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Agents IA ({pendingApprovalsCount})</span>
-            </button>
+            {isTechnicalMode && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('ARCHITECTURE_ORCHESTRATOR')}
+                  className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
+                    activeTab === 'ARCHITECTURE_ORCHESTRATOR'
+                      ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-2xs'
+                      : 'text-slate-600 hover:bg-white hover:text-slate-900'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Agents IA ({pendingApprovalsCount})</span>
+                </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab('INFRA_POSTGRES_TEMPORAL')}
-              className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
-                activeTab === 'INFRA_POSTGRES_TEMPORAL'
-                  ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-2xs'
-                  : 'text-slate-600 hover:bg-white hover:text-slate-900'
-              }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Sécurité &amp; Compatibilité (8)</span>
-            </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('INFRA_POSTGRES_TEMPORAL')}
+                  className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
+                    activeTab === 'INFRA_POSTGRES_TEMPORAL'
+                      ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-2xs'
+                      : 'text-slate-600 hover:bg-white hover:text-slate-900'
+                  }`}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Sécurité &amp; Compatibilité (8)</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

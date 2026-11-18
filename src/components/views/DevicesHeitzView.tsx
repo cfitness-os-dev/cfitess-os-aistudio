@@ -50,6 +50,7 @@ export function DevicesHeitzView() {
     openMywellnessLink,
     setActiveSection,
     navSubTarget,
+    isTechnicalMode,
   } = useCfos();
 
   const [activeSoftwareTab, setActiveSoftwareTab] = useState<
@@ -476,7 +477,9 @@ export function DevicesHeitzView() {
                 H
               </div>
               <span className="font-bold tracking-wide">
-                Heitz System v12.4 — Supervision Accueil, Contrôle d&apos;Accès &amp; Caisse TPV [Connecté : Heitz-WS.exe · 10.10.0.20:8080]
+                {isTechnicalMode
+                  ? "Heitz System v12.4 — Supervision Accueil, Contrôle d'Accès & Caisse TPV [Connecté : Heitz-WS.exe · 10.10.0.20:8080]"
+                  : "Supervision Accueil, Contrôle d'Accès & Caisse"}
               </span>
             </div>
             <div className="flex items-center gap-3 font-mono text-[11px]">
@@ -539,7 +542,7 @@ export function DevicesHeitzView() {
                     : 'hover:bg-slate-200 text-slate-700'
                 }`}
               >
-                Prélèvements SEPA (finBalance)
+                {isTechnicalMode ? 'Prélèvements SEPA (finBalance)' : 'Prélèvements SEPA'}
               </button>
               <button
                 type="button"
@@ -607,7 +610,11 @@ export function DevicesHeitzView() {
 
             <div className="flex items-center gap-2 font-mono text-[11px] text-slate-600">
               <Barcode className="w-4 h-4 text-violet-600" />
-              <span>Douchette USB / Lecteur Wiegand 26 bits Prêt (&lt; 50 ms)</span>
+              <span>
+                {isTechnicalMode
+                  ? 'Douchette USB / Lecteur Wiegand 26 bits Prêt (< 50 ms)'
+                  : "Lecteur d'accès prêt"}
+              </span>
             </div>
           </div>
 
@@ -752,9 +759,11 @@ export function DevicesHeitzView() {
                         </>
                       )}
                     </span>
-                    <span className="font-mono text-xs bg-black/25 px-2 py-0.5 rounded">
-                      finBalanceState={selectedMember.finBalanceState}
-                    </span>
+                    {isTechnicalMode && (
+                      <span className="font-mono text-xs bg-black/25 px-2 py-0.5 rounded">
+                        finBalanceState={selectedMember.finBalanceState}
+                      </span>
+                    )}
                   </div>
 
                   {/* Member Identity Box with Webcam Photo Frame & Barcode */}
