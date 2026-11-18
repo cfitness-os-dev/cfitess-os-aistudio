@@ -366,7 +366,7 @@ export function PlanningAndModulesView({
   ambiguities,
   onRefreshDashboard,
 }: PlanningAndModulesViewProps) {
-  const { isTechnicalMode } = useCfos();
+  const { isTechnicalMode, addStaffEmployee } = useCfos();
   const can = (actionId: string) =>
     Boolean(dashboard.session.resolvedPermissions[actionId]?.allowed);
 
@@ -2022,11 +2022,17 @@ export function PlanningAndModulesView({
                   }
                   const siteName =
                     dashboard.sites[0]?.name ?? 'C.FITNESS Carré de Soie';
+                  const created = addStaffEmployee({
+                    firstName: newEmpFirst.trim(),
+                    lastName: newEmpLast.trim(),
+                    contractType: newEmpContract,
+                    weeklyContractHours: newEmpHours,
+                  });
                   setCreatedEmployees((prev) => [
                     ...prev,
                     {
-                      id: `emp-new-${prev.length + 1}`,
-                      name: `${newEmpFirst.trim()} ${newEmpLast.trim()}`,
+                      id: created.id,
+                      name: `${created.firstName} ${created.lastName}`,
                       contract: newEmpContract,
                       hours: newEmpHours,
                       site: siteName,

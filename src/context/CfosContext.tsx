@@ -192,7 +192,7 @@ function getDefaultState(): PersistedState {
     collaboratorNotifications: INITIAL_COLLABORATOR_NOTIFICATIONS,
     heitzKpiTickets: INITIAL_HEITZ_KPI_TICKETS,
     recoveryCases: INITIAL_RECOVERY_CASES,
-    recoveryAuthorizedEmployeeIds: ['emp-mario', 'emp-daniel'],
+    recoveryAuthorizedEmployeeIds: ['emp-mario', 'emp-daniel', 'emp-greg'],
   };
 }
 
@@ -204,6 +204,13 @@ interface CfosContextValue extends PersistedState {
   toggleTechnicalMode: () => void;
   canAccessRecovery: boolean;
   toggleRecoveryAccess: (employeeId: string) => void;
+  addStaffEmployee: (params: {
+    firstName: string;
+    lastName: string;
+    contractType?: 'CDI' | 'CDD';
+    weeklyContractHours?: number;
+    jobTitle?: string;
+  }) => Employee;
   updateRecoveryCaseStatus: (caseId: string, status: RecoveryCaseStatus, note?: string) => void;
   recordRecoveryRelance: (caseId: string, note: string) => void;
   shellMode: ShellMode;
@@ -2350,15 +2357,59 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
 
   const closeMywellnessModal = () => setActiveMywellnessModal(null);
 
-  const recoveryAuthorizedIds = state.recoveryAuthorizedEmployeeIds ?? ['emp-mario', 'emp-daniel'];
+  const recoveryAuthorizedIds = state.recoveryAuthorizedEmployeeIds ?? ['emp-mario', 'emp-daniel', 'emp-greg'];
   const recoveryCasesSafe = state.recoveryCases ?? INITIAL_RECOVERY_CASES;
+
+  // Garantit que Greg Carvalho (Responsable Recouvrement) est présent même si un ancien localStorage existait
+  const gregSeed = INITIAL_EMPLOYEES.find((e) => e.id === 'emp-greg');
+  const syncedEmployees =
+    gregSeed && !state.employees.some((e) => e.id === 'emp-greg')
+      ? [...state.employees, gregSeed]
+      : state.employees;
 
   const canAccessRecovery =
     currentUser.role === 'admin' || recoveryAuthorizedIds.includes(currentUser.id);
 
+  const addStaffEmployee: CfosContextValue['addStaffEmployee'] = ({
+    firstName,
+    lastName,
+    contractType = 'CDI',
+    weeklyContractHours = 35,
+    jobTitle = 'Collaborateur Club',
+  }) => {
+    const cleanFirst = firstName.trim();
+    const cleanLast = lastName.trim();
+    const newEmp: Employee = {
+      id: `emp-staff-${Date.now()}`,
+      firstName: cleanFirst,
+      lastName: cleanLast,
+      email: `${cleanFirst.toLowerCase()}.${cleanLast.toLowerCase()}@cfitness.fr`.replace(/\s+/g, ''),
+      phone: '06 00 00 00 00',
+      role: 'manager',
+      clubId: 'carre-de-soie',
+      contractType,
+      jobTitle,
+      hourlyRate: 18,
+      weeklyContractHours,
+      monthlyGrossEur: Math.round(18 * weeklyContractHours * 4.333 * 100) / 100,
+      pinCode: '5050',
+      failedPinAttempts: 0,
+      pinLocked: false,
+      totpEnabled: false,
+      cpBalance: 0,
+      rttBalance: 0,
+      hireDate: new Date().toISOString().slice(0, 10),
+    };
+    setState((prev) => ({
+      ...prev,
+      employees: [...prev.employees, newEmp],
+    }));
+    return newEmp;
+  };
+
   const toggleRecoveryAccess = (employeeId: string) => {
     setState((prev) => {
-      const currentIds = prev.recoveryAuthorizedEmployeeIds ?? ['emp-mario', 'emp-daniel'];
+      const currentIds = prev.recoveryAuthorizedEmployeeIds ?? ['emp-mario', 'emp-daniel', 'emp-greg'];
       const exists = currentIds.includes(employeeId);
       const nextIds = exists
         ? currentIds.filter((id) => id !== employeeId)
@@ -2406,6 +2457,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
 
   const value: CfosContextValue = {
     ...state,
+    employees: syncedEmployees,
     recoveryCases: recoveryCasesSafe,
     recoveryAuthorizedEmployeeIds: recoveryAuthorizedIds,
     currentUser,
@@ -2415,6 +2467,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     toggleTechnicalMode,
     canAccessRecovery,
     toggleRecoveryAccess,
+    addStaffEmployee,
     updateRecoveryCaseStatus,
     recordRecoveryRelance,
     shellMode,
