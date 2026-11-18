@@ -363,36 +363,38 @@ export function PlanningHrView() {
               </div>
             </div>
 
-            {/* Onglets principaux */}
-            <nav className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
-              {[
-                { id: 'PLANNING', label: '1. Planning & Cours' },
-                { id: 'POINTAGES', label: `2. La Pointeuse (${timeEntries.length})` },
-                {
-                  id: 'CONGES',
-                  label: `3. Absences & CP (${leaveRequests.length})`,
-                  badge: pendingLeavesCount > 0 ? pendingLeavesCount : undefined,
-                },
-                { id: 'SILAE', label: '4. Export Paie Silae' },
-              ].map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setSubTab(t.id as typeof subTab)}
-                  className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
-                    subTab === t.id
-                      ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-2xs'
-                      : 'text-slate-600 hover:bg-white hover:text-slate-900'
-                  }`}
-                >
-                  <span>{t.label}</span>
-                  {t.badge !== undefined && (
-                    <span className="px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 font-mono text-[10px] font-bold">
-                      {t.badge}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </nav>
+            {/* Onglets principaux (masqués en vue Cours collectifs car Pointeuse/Absences/Paie sont déjà dans Personnel) */}
+            {!isCoursCollectifsView && (
+              <nav className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
+                {[
+                  { id: 'PLANNING', label: '1. Planning & Cours' },
+                  { id: 'POINTAGES', label: `2. La Pointeuse (${timeEntries.length})` },
+                  {
+                    id: 'CONGES',
+                    label: `3. Absences & CP (${leaveRequests.length})`,
+                    badge: pendingLeavesCount > 0 ? pendingLeavesCount : undefined,
+                  },
+                  { id: 'SILAE', label: '4. Export Paie Silae' },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setSubTab(t.id as typeof subTab)}
+                    className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
+                      subTab === t.id
+                        ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-2xs'
+                        : 'text-slate-600 hover:bg-white hover:text-slate-900'
+                    }`}
+                  >
+                    <span>{t.label}</span>
+                    {t.badge !== undefined && (
+                      <span className="px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 font-mono text-[10px] font-bold">
+                        {t.badge}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </nav>
+            )}
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
