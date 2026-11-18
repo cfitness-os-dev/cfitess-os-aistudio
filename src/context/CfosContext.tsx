@@ -288,6 +288,7 @@ interface CfosContextValue extends PersistedState {
   toggleProspectStopSms: (prospectId: string) => void;
 
   addShift: (shift: Omit<Shift, 'id'>) => void;
+  moveShift: (shiftId: string, targetEmployeeId: string, targetDate: string) => void;
   deleteShift: (shiftId: string) => void;
   punchWithPin: (
     clubId: ClubId,
@@ -1299,6 +1300,21 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
       }),
     }));
     notify('success', `Shift ajouté le ${shiftInput.date} (${shiftInput.startTime}–${shiftInput.endTime}).`);
+  };
+
+  const moveShift = (shiftId: string, targetEmployeeId: string, targetDate: string) => {
+    setState((prev) => ({
+      ...prev,
+      shifts: prev.shifts.map((s) =>
+        s.id === shiftId ? { ...s, employeeId: targetEmployeeId, date: targetDate } : s
+      ),
+    }));
+    notify(
+      'success',
+      targetEmployeeId === 'UNASSIGNED'
+        ? 'Créneau basculé en « Non assigné / À remplacer ».'
+        : 'Créneau déplacé sur le planning.'
+    );
   };
 
   const deleteShift = (shiftId: string) => {
@@ -2672,6 +2688,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     sendValidatedProspectSms,
     toggleProspectStopSms,
     addShift,
+    moveShift,
     deleteShift,
     punchWithPin,
     unlockEmployeePin,

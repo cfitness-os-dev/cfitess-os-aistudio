@@ -146,6 +146,7 @@ export function PlanningHrView() {
     leaveRequests,
     hrDocuments,
     addShift,
+    moveShift,
     deleteShift,
     punchWithPin,
     decideLeaveRequest,
@@ -237,6 +238,136 @@ export function PlanningHrView() {
     setDate(nextWeekDates[0].date);
     setFeedbackBanner(
       `Semaine ${currentWeekNumber} copiée vers Semaine ${currentWeekNumber + 1} (${copied} créneau(x) dupliqué(s)).`
+    );
+  };
+
+  // Skello Drag & Drop State
+  const [dragOverCellKey, setDragOverCellKey] = useState<string | null>(null);
+
+  const handleShiftDragStart = (e: React.DragEvent, shiftId: string) => {
+    if (isCurrentWeekLocked) {
+      e.preventDefault();
+      setFeedbackBanner(
+        `Semaine ${currentWeekNumber} verrouillée (verrou rouge paie). Déverrouillez pour déplacer un créneau.`
+      );
+      return;
+    }
+    e.dataTransfer.setData('text/plain', shiftId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleCellDrop = (e: React.DragEvent, targetEmpId: string, targetDate: string) => {
+    e.preventDefault();
+    setDragOverCellKey(null);
+    if (isCurrentWeekLocked) {
+      setFeedbackBanner(
+        `Semaine ${currentWeekNumber} verrouillée (verrou rouge paie). Déverrouillez pour déplacer un créneau.`
+      );
+      return;
+    }
+    const shiftId = e.dataTransfer.getData('text/plain');
+    if (!shiftId) return;
+    moveShift(shiftId, targetEmpId, targetDate);
+  };
+
+  // Skello Week Templates (Modèles de semaine type)
+  type WeekTemplateShift = {
+    dayIndex: number;
+    employeeId: string;
+    clubId: ClubId;
+    startTime: string;
+    endTime: string;
+    breakMinutes: number;
+    roleLabel: string;
+  };
+  const [weekTemplates, setWeekTemplates] = useState<
+    Array<{ id: string; name: string; items: WeekTemplateShift[] }>
+  >([
+    {
+      id: 'tpl-std',
+      name: 'Semaine Standard Clubs',
+      items: [
+        { dayIndex: 0, employeeId: 'emp-maxime', clubId: 'carre-de-soie', startTime: '09:00', endTime: '17:00', breakMinutes: 60, roleLabel: 'Accueil & Vente' },
+        { dayIndex: 1, employeeId: 'emp-maxime', clubId: 'carre-de-soie', startTime: '09:00', endTime: '17:00', breakMinutes: 60, roleLabel: 'Accueil & Vente' },
+        { dayIndex: 0, employeeId: 'emp-karim', clubId: 'carre-de-soie', startTime: '10:00', endTime: '18:30', breakMinutes: 60, roleLabel: 'Coaching Plateau & Cours' },
+        { dayIndex: 2, employeeId: 'UNASSIGNED', clubId: 'beynost', startTime: '14:00', endTime: '20:00', breakMinutes: 30, roleLabel: 'Accueil & Vente' },
+      ],
+    },
+    {
+      id: 'tpl-vac',
+      name: 'Semaine Vacances Scolaires',
+      items: [
+        { dayIndex: 0, employeeId: 'emp-maxime', clubId: 'carre-de-soie', startTime: '10:00', endTime: '18:00', breakMinutes: 60, roleLabel: 'Accueil & Vente' },
+        { dayIndex: 3, employeeId: 'UNASSIGNED', clubId: 'carre-de-soie', startTime: '16:00', endTime: '21:00', breakMinutes: 30, roleLabel: 'Coaching Plateau & Cours' },
+      ],
+    },
+  ]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('tpl-std');
+
+  const handleSaveCurrentWeekAsTemplate = () => {
+    const items: WeekTemplateShift[] = [];
+    activeWeekDates.forEach((d, dayIndex) => {
+      shifts
+        .filter((s) => s.date === d.date)
+        .forEach((s) => {
+          items.push({
+            dayIndex,
+            employeeId: s.employeeId,
+            clubId: s.clubId,
+            startTime: s.startTime,
+            endTime: s.endTime,
+            breakMinutes: s.breakMinutes,
+            roleLabel: s.roleLabel,
+          });
+        });
+    });
+    if (items.length === 0) {
+      setFeedbackBanner(`Aucun créneau sur la Semaine ${currentWeekNumber} à enregistrer comme modèle.`);
+      return;
+    }
+    const newId = `tpl-${Date.now()}`;
+    const name = `Modèle Semaine ${currentWeekNumber} (${items.length} shifts)`;
+    setWeekTemplates((prev) => [{ id: newId, name, items }, ...prev]);
+    setSelectedTemplateId(newId);
+    setFeedbackBanner(`Modèle « ${name} » enregistré dans vos semaines types Skello.`);
+  };
+
+  const handleApplySelectedTemplate = () => {
+    if (isCurrentWeekLocked) {
+      setFeedbackBanner(
+        `Semaine ${currentWeekNumber} verrouillée (verrou rouge paie). Déverrouillez pour appliquer un modèle.`
+      );
+      return;
+    }
+    const tpl = weekTemplates.find((t) => t.id === selectedTemplateId);
+    if (!tpl) return;
+    let added = 0;
+    tpl.items.forEach((item) => {
+      const targetDate = activeWeekDates[item.dayIndex]?.date;
+      if (!targetDate) return;
+      const exists = shifts.some(
+        (ex) =>
+          ex.employeeId === item.employeeId &&
+          ex.date === targetDate &&
+          ex.startTime === item.startTime &&
+          ex.endTime === item.endTime
+      );
+      if (!exists) {
+        addShift({
+          employeeId: item.employeeId,
+          clubId: item.clubId,
+          date: targetDate,
+          startTime: item.startTime,
+          endTime: item.endTime,
+          breakMinutes: item.breakMinutes,
+          roleLabel: item.roleLabel,
+          published: false,
+        });
+        added += 1;
+      }
+    });
+    setFeedbackBanner(
+      `Modèle « ${tpl.name} » appliqué sur la Semaine ${currentWeekNumber} (${added} créneau(x) ajouté(s)).`
     );
   };
 
@@ -683,6 +814,35 @@ export function PlanningHrView() {
                   <Copy className="w-3.5 h-3.5 text-violet-600" />
                   Copier → S{currentWeekNumber + 1}
                 </button>
+                <div className="inline-flex items-center gap-1 bg-white border border-slate-300 rounded-xl px-1.5 py-1 text-xs">
+                  <select
+                    value={selectedTemplateId}
+                    onChange={(e) => setSelectedTemplateId(e.target.value)}
+                    title="Choisir un modèle de semaine type"
+                    className="bg-transparent text-slate-700 font-semibold text-[11px] outline-none max-w-[155px]"
+                  >
+                    {weekTemplates.map((tpl) => (
+                      <option key={tpl.id} value={tpl.id}>
+                        {tpl.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleApplySelectedTemplate}
+                    className="px-2 py-0.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-bold text-[11px] cursor-pointer"
+                  >
+                    Appliquer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveCurrentWeekAsTemplate}
+                    title="Enregistrer cette semaine comme modèle réutilisable"
+                    className="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px] cursor-pointer"
+                  >
+                    + Modèle
+                  </button>
+                </div>
                 <button
                   type="button"
                   onClick={() => {
@@ -1031,6 +1191,96 @@ export function PlanningHrView() {
                   </thead>
 
                   <tbody className="divide-y divide-slate-200 text-xs">
+                    {/* Skello Top Row: Shifts non assignés / À remplacer (Drag & Drop compatible) */}
+                    {!isCoursCollectifsView && (
+                      <tr className="bg-amber-50/50 dark:bg-amber-950/20 border-b-2 border-amber-200/80">
+                        <td className="p-3 align-top border-r border-slate-200">
+                          <div className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                            <span>Shifts non assignés</span>
+                          </div>
+                          <div className="text-[10px] text-amber-700/80 dark:text-amber-400/80 mt-0.5">
+                            À remplacer · Glissez-déposez un créneau ici ou vers un salarié
+                          </div>
+                        </td>
+                        {activeWeekDates.map((d) => {
+                          const cellKey = `UNASSIGNED|${d.date}`;
+                          const unassignedDayShifts = shifts.filter(
+                            (s) => s.employeeId === 'UNASSIGNED' && s.date === d.date
+                          );
+                          return (
+                            <td
+                              key={d.date}
+                              onDragOver={(e) => {
+                                e.preventDefault();
+                                setDragOverCellKey(cellKey);
+                              }}
+                              onDragLeave={() => setDragOverCellKey(null)}
+                              onDrop={(e) => handleCellDrop(e, 'UNASSIGNED', d.date)}
+                              className={`p-1.5 align-top border-r border-slate-200 last:border-r-0 transition-colors ${
+                                dragOverCellKey === cellKey ? 'bg-amber-100/80 ring-2 ring-inset ring-amber-500' : ''
+                              }`}
+                            >
+                              {unassignedDayShifts.length === 0 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleQuickCellClick('UNASSIGNED', d.date, clubFilter === 'beynost' ? 'beynost' : 'carre-de-soie')}
+                                  className="w-full h-12 rounded-md border border-dashed border-amber-300/70 hover:border-amber-500 text-amber-600/70 hover:text-amber-700 flex items-center justify-center gap-1 text-[10px] font-semibold cursor-pointer"
+                                >
+                                  <Plus className="w-3 h-3" /> Besoin
+                                </button>
+                              ) : (
+                                <div className="space-y-1.5">
+                                  {unassignedDayShifts.map((s) => (
+                                    <div
+                                      key={s.id}
+                                      draggable={!isCurrentWeekLocked}
+                                      onDragStart={(e) => handleShiftDragStart(e, s.id)}
+                                      className="p-2 rounded-md bg-amber-100 border border-amber-400 text-amber-950 text-[11px] shadow-2xs cursor-grab active:cursor-grabbing space-y-1"
+                                    >
+                                      <div className="flex items-center justify-between gap-1">
+                                        <span className="font-mono font-extrabold text-[11px]">
+                                          {s.startTime} - {s.endTime}
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            if (isCurrentWeekLocked) return;
+                                            deleteShift(s.id);
+                                          }}
+                                          className="text-amber-700 hover:text-rose-600 cursor-pointer"
+                                        >
+                                          <Trash2 className="w-3 h-3" />
+                                        </button>
+                                      </div>
+                                      <div className="text-[10px] font-bold truncate">{s.roleLabel}</div>
+                                      <select
+                                        defaultValue=""
+                                        onChange={(e) => {
+                                          if (!e.target.value || isCurrentWeekLocked) return;
+                                          moveShift(s.id, e.target.value, s.date);
+                                        }}
+                                        className="w-full text-[10px] px-1 py-0.5 rounded bg-white border border-amber-300 text-slate-800 font-semibold"
+                                      >
+                                        <option value="" disabled>
+                                          Affecter à...
+                                        </option>
+                                        {filteredEmployees.map((empOpt) => (
+                                          <option key={empOpt.id} value={empOpt.id}>
+                                            {empOpt.firstName} {empOpt.lastName}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    )}
+
                     {filteredEmployees.map((emp) => {
                       const empShifts = shifts.filter((s) => s.employeeId === emp.id);
                       const plannedHours = empShifts.reduce(
@@ -1114,7 +1364,17 @@ export function PlanningHrView() {
                             return (
                               <td
                                 key={d.date}
-                                className="p-1.5 align-top border-r border-slate-200 last:border-r-0 bg-slate-50/20"
+                                onDragOver={(e) => {
+                                  e.preventDefault();
+                                  setDragOverCellKey(`${emp.id}|${d.date}`);
+                                }}
+                                onDragLeave={() => setDragOverCellKey(null)}
+                                onDrop={(e) => handleCellDrop(e, emp.id, d.date)}
+                                className={`p-1.5 align-top border-r border-slate-200 last:border-r-0 transition-colors ${
+                                  dragOverCellKey === `${emp.id}|${d.date}`
+                                    ? 'bg-violet-100/70 ring-2 ring-inset ring-violet-500'
+                                    : 'bg-slate-50/20'
+                                }`}
                               >
                                 {empLeave ? (
                                   <div className="p-2 rounded-md bg-purple-50 border border-purple-200 border-l-4 border-l-purple-500 text-[11px] text-purple-900">
@@ -1149,7 +1409,16 @@ export function PlanningHrView() {
                                       return (
                                         <div
                                           key={s.id}
-                                          className={`p-2 rounded-md text-[11px] shadow-2xs transition-transform ${st.card}`}
+                                          draggable={!isCurrentWeekLocked}
+                                          onDragStart={(e) => handleShiftDragStart(e, s.id)}
+                                          title={
+                                            isCurrentWeekLocked
+                                              ? 'Semaine verrouillée'
+                                              : 'Glisser-déposer vers un autre jour, un autre salarié ou la ligne Non assignés'
+                                          }
+                                          className={`p-2 rounded-md text-[11px] shadow-2xs transition-transform ${
+                                            isCurrentWeekLocked ? '' : 'cursor-grab active:cursor-grabbing'
+                                          } ${st.card}`}
                                         >
                                           <div className="flex items-center justify-between gap-1">
                                             <span className="font-mono font-extrabold text-xs tabular-nums">
@@ -1315,6 +1584,7 @@ export function PlanningHrView() {
                         onChange={(e) => setEmpId(e.target.value)}
                         className="w-full px-2.5 py-2 rounded-lg border border-slate-200 bg-white font-medium"
                       >
+                        <option value="UNASSIGNED">⚠️ Non assigné (À remplacer)</option>
                         {employees
                           .filter((e) => e.role !== 'kiosque')
                           .map((e) => (
@@ -1465,7 +1735,7 @@ export function PlanningHrView() {
             <div className="bg-[#1B2559] text-white px-4 py-3 border-t border-slate-300 flex flex-wrap items-center justify-between gap-4 text-xs">
               <div className="flex items-center gap-2">
                 <span className="px-2 py-0.5 rounded bg-white/10 font-mono text-[10px] uppercase tracking-wider text-sky-300">
-                  Indicateurs Skello Semaine 43
+                  Indicateurs Skello Semaine {currentWeekNumber}
                 </span>
                 <span className="text-slate-300 hidden sm:inline">
                   Synthèse temps réel des heures planifiées et masse salariale chargée
@@ -1481,6 +1751,16 @@ export function PlanningHrView() {
                   <span className="text-slate-400 text-[11px]">Coût chargé estimé : </span>
                   <span className="font-bold text-emerald-400">
                     {totalEstimatedGrossEur.toLocaleString('fr-FR')} €
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 text-[11px]">Ratio MS / CA hebdo : </span>
+                  <span
+                    className={`font-bold ${
+                      totalEstimatedGrossEur / 25600 <= 0.25 ? 'text-emerald-400' : 'text-amber-400'
+                    }`}
+                  >
+                    {((totalEstimatedGrossEur / 25600) * 100).toFixed(1)} %
                   </span>
                 </div>
                 <div>
