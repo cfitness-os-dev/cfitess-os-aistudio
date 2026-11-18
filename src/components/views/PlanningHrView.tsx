@@ -605,30 +605,24 @@ export function PlanningHrView() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => {
-                if (roleFilter === 'coach') {
-                  setRoleFilter('ALL');
-                  setSourceFilter('ALL');
-                } else {
-                  setRoleFilter('coach');
-                  setSourceFilter('heitz_api');
-                }
-              }}
-              className={`px-3.5 py-2 rounded-xl border font-bold text-xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-                isCoursCollectifsView
-                  ? 'bg-rose-600 text-white border-rose-600'
-                  : 'bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-700'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>
-                {isCoursCollectifsView
-                  ? 'Afficher tout le Planning RH'
-                  : 'Filtrer Cours Collectifs & Coachs'}
-              </span>
-            </button>
+            {!isCoursCollectifsView && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (roleFilter === 'coach') {
+                    setRoleFilter('ALL');
+                    setSourceFilter('ALL');
+                  } else {
+                    setRoleFilter('coach');
+                    setSourceFilter('heitz_api');
+                  }
+                }}
+                className="px-3.5 py-2 rounded-xl border font-bold text-xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-700"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Filtrer Cours Collectifs &amp; Coachs</span>
+              </button>
+            )}
             {!hideDuplicateRhTabs && (
               <button
                 type="button"
@@ -759,52 +753,56 @@ export function PlanningHrView() {
               </button>
             </div>
 
-            {/* Filter by Role (Skello Position Filter) */}
-            <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1">
-              {[
-                { id: 'ALL', label: 'Toutes les équipes' },
-                { id: 'commercial', label: 'Accueil & Vente' },
-                { id: 'coach', label: 'Coachs Fitness' },
-                { id: 'apprenti', label: 'Alternants BPJEPS' },
-                { id: 'admin', label: 'Direction' },
-              ].map((rf) => (
-                <button
-                  key={rf.id}
-                  onClick={() => setRoleFilter(rf.id)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer ${
-                    roleFilter === rf.id
-                      ? 'bg-violet-600 text-white'
-                      : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  {rf.label}
-                </button>
-              ))}
-            </div>
+            {/* Filter by Role (Skello Position Filter — masqué en vue Cours collectifs) */}
+            {!isCoursCollectifsView && (
+              <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1">
+                {[
+                  { id: 'ALL', label: 'Toutes les équipes' },
+                  { id: 'commercial', label: 'Accueil & Vente' },
+                  { id: 'coach', label: 'Coachs Fitness' },
+                  { id: 'apprenti', label: 'Alternants BPJEPS' },
+                  { id: 'admin', label: 'Direction' },
+                ].map((rf) => (
+                  <button
+                    key={rf.id}
+                    onClick={() => setRoleFilter(rf.id)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer ${
+                      roleFilter === rf.id
+                        ? 'bg-violet-600 text-white'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {rf.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Right Legend & Add Shift Toggle */}
           <div className="flex flex-wrap items-center gap-2">
-            <div className="hidden sm:flex items-center gap-2 text-[11px] mr-2">
-              <span className="inline-flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-xs bg-violet-500 inline-block" />
-                Accueil/Vente CDS
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-xs bg-blue-600 inline-block" />
-                Accueil/Vente BEY
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500 inline-block" />
-                Plateau &amp; Checkup
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-xs bg-sky-500 inline-block" />
-                Alternant BPJEPS
-              </span>
-            </div>
+            {!isCoursCollectifsView && (
+              <div className="hidden sm:flex items-center gap-2 text-[11px] mr-2">
+                <span className="inline-flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-violet-500 inline-block" />
+                  Accueil/Vente CDS
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-blue-600 inline-block" />
+                  Accueil/Vente BEY
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500 inline-block" />
+                  Plateau &amp; Checkup
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-sky-500 inline-block" />
+                  Alternant BPJEPS
+                </span>
+              </div>
+            )}
 
-            {subTab === 'PLANNING' && (
+            {subTab === 'PLANNING' && !isCoursCollectifsView && (
               <>
                 <button
                   type="button"
@@ -920,11 +918,15 @@ export function PlanningHrView() {
           <div className="bg-white px-4 py-2.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-[10px] font-mono uppercase tracking-wider text-violet-600 font-bold mr-1">
-                Calques Planning Centralisé (Sans Duplication) :
+                {isCoursCollectifsView
+                  ? 'Calques Cours & Coachs :'
+                  : 'Calques Planning Centralisé (Sans Duplication) :'}
               </span>
               {[
                 { id: 'ALL', label: `Tout afficher (${allUnifiedEvents.length})` },
-                { id: 'cfitness_rh', label: `Horaires RH (${shifts.length})` },
+                ...(!isCoursCollectifsView
+                  ? [{ id: 'cfitness_rh', label: `Horaires RH (${shifts.length})` }]
+                  : []),
                 {
                   id: 'mywellness_api',
                   label: `Cours & Checkup Mywellness (${
@@ -959,7 +961,9 @@ export function PlanningHrView() {
               ))}
             </div>
             <span className="text-[10px] text-slate-500 font-mono">
-              Remplacement Skello · Synchronisation bidirectionnelle API Heitz &amp; Technogym Mywellness
+              {isCoursCollectifsView
+                ? 'Synchronisation bidirectionnelle API Heitz & Technogym Mywellness'
+                : 'Remplacement Skello · Synchronisation bidirectionnelle API Heitz & Technogym Mywellness'}
             </span>
           </div>
         )}
@@ -1789,57 +1793,86 @@ export function PlanningHrView() {
               )}
             </div>
 
-            {/* Authentic Skello Bottom Sticky KPI Footer ("Indicateurs de pilotage") */}
+            {/* Bottom Sticky KPI Footer (Cours Collectifs vs Skello RH) */}
             <div className="bg-[#1B2559] text-white px-4 py-3 border-t border-slate-300 flex flex-wrap items-center justify-between gap-4 text-xs">
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded bg-white/10 font-mono text-[10px] uppercase tracking-wider text-sky-300">
-                  Indicateurs Skello Semaine {currentWeekNumber}
-                </span>
-                <span className="text-slate-300 hidden sm:inline">
-                  Synthèse temps réel des heures planifiées et masse salariale chargée
-                </span>
-              </div>
+              {isCoursCollectifsView ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded bg-white/10 font-mono text-[10px] uppercase tracking-wider text-rose-300">
+                      Indicateurs Cours Collectifs · Semaine {currentWeekNumber}
+                    </span>
+                    <span className="text-slate-300 hidden sm:inline">
+                      Fréquentation &amp; salles actives Center &amp; Place
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-5 font-mono tabular-nums">
+                    <div>
+                      <span className="text-slate-400 text-[11px]">Volume hebdo : </span>
+                      <span className="font-bold text-white">60 cours (28 Center · 32 Place)</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 text-[11px]">Remplissage moyen : </span>
+                      <span className="font-bold text-emerald-400">85 %</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 text-[11px]">Salles actives : </span>
+                      <span className="font-bold text-white">4 studios (Salle 1, Zen, Athletic, Bike)</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded bg-white/10 font-mono text-[10px] uppercase tracking-wider text-sky-300">
+                      Indicateurs Skello Semaine {currentWeekNumber}
+                    </span>
+                    <span className="text-slate-300 hidden sm:inline">
+                      Synthèse temps réel des heures planifiées et masse salariale chargée
+                    </span>
+                  </div>
 
-              <div className="flex flex-wrap items-center gap-5 font-mono tabular-nums">
-                <div>
-                  <span className="text-slate-400 text-[11px]">Heures planifiées : </span>
-                  <span className="font-bold text-white">{totalPlannedHours.toFixed(1)} h</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 text-[11px]">Coût chargé estimé : </span>
-                  <span className="font-bold text-emerald-400">
-                    {totalEstimatedGrossEur.toLocaleString('fr-FR')} €
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 text-[11px]">Ratio MS / CA hebdo : </span>
-                  <span
-                    className={`font-bold ${
-                      totalEstimatedGrossEur / 25600 <= 0.25 ? 'text-emerald-400' : 'text-amber-400'
-                    }`}
-                  >
-                    {((totalEstimatedGrossEur / 25600) * 100).toFixed(1)} %
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 text-[11px]">Taux Horaire Gr. 1 : </span>
-                  <span className="font-bold text-white">12,02 € brut/h</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 text-[11px]">Conformité IDCC 2511 : </span>
-                  <span
-                    className={`font-bold ${
-                      existingScheduleViolations.length === 0
-                        ? 'text-emerald-400'
-                        : 'text-amber-400'
-                    }`}
-                  >
-                    {existingScheduleViolations.length === 0
-                      ? '100% Conforme'
-                      : `${existingScheduleViolations.length} alerte(s)`}
-                  </span>
-                </div>
-              </div>
+                  <div className="flex flex-wrap items-center gap-5 font-mono tabular-nums">
+                    <div>
+                      <span className="text-slate-400 text-[11px]">Heures planifiées : </span>
+                      <span className="font-bold text-white">{totalPlannedHours.toFixed(1)} h</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 text-[11px]">Coût chargé estimé : </span>
+                      <span className="font-bold text-emerald-400">
+                        {totalEstimatedGrossEur.toLocaleString('fr-FR')} €
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 text-[11px]">Ratio MS / CA hebdo : </span>
+                      <span
+                        className={`font-bold ${
+                          totalEstimatedGrossEur / 25600 <= 0.25 ? 'text-emerald-400' : 'text-amber-400'
+                        }`}
+                      >
+                        {((totalEstimatedGrossEur / 25600) * 100).toFixed(1)} %
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 text-[11px]">Taux Horaire Gr. 1 : </span>
+                      <span className="font-bold text-white">12,02 € brut/h</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 text-[11px]">Conformité IDCC 2511 : </span>
+                      <span
+                        className={`font-bold ${
+                          existingScheduleViolations.length === 0
+                            ? 'text-emerald-400'
+                            : 'text-amber-400'
+                        }`}
+                      >
+                        {existingScheduleViolations.length === 0
+                          ? '100% Conforme'
+                          : `${existingScheduleViolations.length} alerte(s)`}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
