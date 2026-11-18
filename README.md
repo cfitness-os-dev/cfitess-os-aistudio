@@ -2,7 +2,7 @@
 
 Application complète développée sous **Windows** (itération locale + tests + build) puis empaquetée en conteneur unique Docker pour fonctionner en production sur le **serveur Linux Debian 12 du club** (`React 18 / TypeScript / Tailwind CSS v3 + Rust / Axum / Tokio`).
 
-> **Architecture unifiée** : cette version rassemble intégralement les modules opérationnels C.Fitness OS issus de `cfitess-os-aistudio` (Bi-club Carré de Soie & Beynost, Adhérents & Portillons Heitz, Caisse TPV NF525, CRM & Téléphonie 04/07 ARCEP, Documents & Signatures internes eIDAS SHA-256 à 0 €, Recrutement ATS, Technogym Checkup / InBody, Agents IA, 4 Shells terminaux) **et** le socle RH V1.16 « Mon compte » (`MC01` à `MC13`, matrice RBAC `6×44`, traçabilité `91` écrans / `1 605` entrées, `117` fichiers de références).
+> **Architecture unifiée** : cette version rassemble intégralement les modules opérationnels C.Fitness OS issus de `cfitess-os-aistudio` (Bi-club Carré de Soie & Beynost, Adhérents & Portillons Heitz, Caisse TPV NF525, CRM & Téléphonie 04/07 ARCEP, Documents & Signatures internes eIDAS SHA-256 à 0 €, Recrutement ATS, Technogym Checkup / InBody, Agents IA, 4 Shells terminaux), le socle **RH V1.16 « Mon compte »** (`MC01` à `MC13`, matrice RBAC `6×44`, traçabilité `91` écrans / `1 605` entrées, `117` fichiers de références) **et** le **Module Commercial & Marketing « Lead » v0.4** (`1 682` entrées `LEAD-0001` à `LEAD-1682`, `84` fichiers de références, `9` onglets CRM, `6` sous-vues Communication, `14` rubriques Paramètres CRM et `9` connecteurs partenaires).
 
 ---
 
@@ -10,15 +10,18 @@ Application complète développée sous **Windows** (itération locale + tests +
 
 - **Barre latérale & 4 Shells terminaux** (`src/components/AdminShell.tsx`, `src/components/shells/`) :
   - `AdminShell`, `EmployeeMobileShell`, `KioskTabletShell`, `SoftphoneShell` et verrouillage PIN local (`LocalLoginGate`).
-  - Modules complets : `Tableau de bord`, `Clubs` (Carré de Soie / Beynost), `Adhérents`, `CRM & Ventes`, `Planning`, `Cours collectifs`, `Personnel (Mon compte)`, `Traçabilité V1.16 (91/1605)`, `Finances`, `Maintenance`, `Stock & Achats`, `Marketing`, `Documents`, `Rapports`, `Agents IA`, `Bornes & Terminaux (4)`, `Paramètres · Mon Espace`.
+  - Modules complets : `Tableau de bord`, `Clubs` (Carré de Soie / Beynost), `Adhérents`, `CRM & Ventes (Lead)`, `Traçabilité Lead (1682)`, `Planning`, `Cours collectifs`, `Personnel (Mon compte)`, `Traçabilité V1.16 (91/1605)`, `Finances`, `Maintenance`, `Stock & Achats`, `Marketing`, `Documents`, `Rapports`, `Agents IA`, `Bornes & Terminaux (4)`, `Paramètres · Mon Espace`.
+- **Module Commercial & Marketing « Lead » v0.4 (`src/components/views/LeadCommercialHubView.tsx`, `src/domain/leadAuditRegistry.ts`)** :
+  - `9` onglets métier séparés de « Mon compte » RH : *Prospects & Pipeline* (10 statuts, import Excel `11` colonnes, consentement RGPD décoché par défaut, archivage sur réponse entrante), *Clients & Vacances* (radar décrochage Heitz + *Histoire sportive* Checkup/Mywellness), *Activités* (`9` filtres + purge), *Planning RDV & Stripe* (`RDV-01`), *WhatsApp 24h* (`WA-01/02`, `INC-001`), *Communication* (`6` sous-vues), *Statistiques (`8` tableaux) · Ventes · Formulaires* (`UI-01`, `ACL-01`, `RSP-01`), *Paramètres CRM (`14` rubriques & `9` partenaires)*, et *Traçabilité Lead (`1 682` entrées, `26` captures, `23` écarts, `84` fichiers dans `public/references/lead_audit/`)*.
+  - Corrections responsive mobiles intégrées (`RSP-01` à `RSP-04`).
 - **Module RH « Mon compte » (`/mon-compte`, `/personnel`, `/planning`, `/tracabilite`)** :
   - Hub unifié (`MonCompteRhHubView.tsx`) reliant `MC01`–`MC13`, le sélecteur de `7` personas RBAC V1.16, `Traçabilité 91/1605` (avec `117` fichiers dans `public/references/`) et les vues terrain GitHub (`MyDayCollaboratorView`, `PlanningHrView`).
 - **Backend unifié (Middleware Vite dev + Serveur Rust/Axum prod)** :
-  - `19` routes API exposées dans `src-rust/src/routes.rs` et `vite.config.ts` :
+  - `22` routes API exposées dans `src-rust/src/routes.rs` et `vite.config.ts` :
     - Socle RH V1.16 : `/api/health`, `/api/registry`, `/api/ambiguities`, `/api/session`, `/api/section-access/:section_id`, `/api/dashboard`, `/api/shifts/:shift_id`, `/api/admin/profiles`, `/api/admin/profiles/:profile_id`, `/api/admin/audit-log`, `/api/admin/audit-log/csv`, `/api/admin/organization`, `/api/admin/org02-policy`, `/api/admin/backup`, `/api/admin/restore`, `/api/me/preferences`, `/api/me/calendar-token/revoke`, `/api/me/password`.
-    - Passerelles C.Fitness OS : `POST /api/auth/login`, `POST /api/heitz/gate-check`, `POST /api/ats/ingest-email`, `GET/POST /api/backup/snapshot`.
+    - Passerelles C.Fitness OS & CRM Lead : `POST /api/auth/login`, `POST /api/heitz/gate-check`, `POST /api/ats/ingest-email`, `GET/POST /api/backup/snapshot`, `GET /api/lead/registry`, `POST /api/lead/webhooks/clubEntry`, `POST /api/v2/appointment/webhooks/stripe/:club`.
   - Persistance atomique JSON sur `/var/lib/cfitness/cfitness_state.json`.
-- **Suite de tests automatisés** : `29` tests unitaires dans `src/domain/rules.test.ts` (12 tests RH V1.16 + 12 tests métier C.Fitness OS + 4 tests thème + 1 audit sécurité/compatibilité).
+- **Suite de tests automatisés** : `34` tests unitaires dans `src/domain/rules.test.ts` (12 tests RH V1.16 + 12 tests métier C.Fitness OS + 5 tests CRM Lead v0.4 + 4 tests thème + 1 audit sécurité/compatibilité).
 
 ---
 
@@ -30,7 +33,7 @@ Prérequis : Node.js 20+.
 cd cfitess-os
 npm install
 npm run lint    # Vérification TypeScript strict (tsc --noEmit)
-npm test        # Exécute la suite de 29 tests (tsx src/domain/rules.test.ts)
+npm test        # Exécute la suite de 34 tests (tsx src/domain/rules.test.ts)
 npm run build   # Compile dist/
 npm run dev     # Lance UI + middleware API /api/* sur http://127.0.0.1:5173
 ```
