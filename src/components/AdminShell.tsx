@@ -1085,18 +1085,20 @@ export function AdminShell() {
           {activeSection === 'planning-hr' && (
             navSubTarget === 'cours-collectifs' || navSubTarget === 'github-planning' ? (
               <div className="space-y-4">
-                <div className="cf-card p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
-                  <span className="cf-muted">
-                    Vue active : <strong className="text-slate-100">Planning Sportif, Cours Collectifs &amp; Contrats CDI (GitHub CFOS)</strong>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setActiveSection('planning-hr', 'planning')}
-                    className="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold cursor-pointer"
-                  >
-                    Ouvrir Planning RH Skello V1.16 (MC03)
-                  </button>
-                </div>
+                {isTechnicalMode && (
+                  <div className="cf-card p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span className="cf-muted">
+                      Vue active : <strong className="text-slate-100">Planning Sportif, Cours Collectifs &amp; Contrats CDI (GitHub CFOS)</strong>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveSection('planning-hr', 'planning')}
+                      className="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold cursor-pointer"
+                    >
+                      Ouvrir Planning RH Skello V1.16 (MC03)
+                    </button>
+                  </div>
+                )}
                 <PlanningHrView />
               </div>
             ) : (

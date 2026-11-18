@@ -422,14 +422,16 @@ export function PlanningHrView() {
                   : 'Filtrer Cours Collectifs & Coachs'}
               </span>
             </button>
-            <button
-              type="button"
-              onClick={() => setActiveSection('ats', 'documents')}
-              className="px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 font-bold text-xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
-            >
-              <FileSignature className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Contrats &amp; Documents →</span>
-            </button>
+            {!isCoursCollectifsView && (
+              <button
+                type="button"
+                onClick={() => setActiveSection('ats', 'documents')}
+                className="px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 font-bold text-xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+              >
+                <FileSignature className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Contrats &amp; Documents →</span>
+              </button>
+            )}
           </div>
         </div>
 
