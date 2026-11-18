@@ -247,6 +247,8 @@ html.dark {
 }
 
 .cfos-dark main .bg-slate-50,
+.cfos-dark main .bg-slate-50\/10,
+.cfos-dark main .bg-slate-50\/20,
 .cfos-dark main .bg-slate-50\/30,
 .cfos-dark main .bg-slate-50\/40,
 .cfos-dark main .bg-slate-50\/50,
@@ -260,6 +262,9 @@ html.dark {
 }
 
 .cfos-dark main .bg-slate-100,
+.cfos-dark main .bg-slate-100\/20,
+.cfos-dark main .bg-slate-100\/30,
+.cfos-dark main .bg-slate-100\/40,
 .cfos-dark main .bg-slate-100\/50,
 .cfos-dark main .bg-slate-100\/60,
 .cfos-dark main .bg-slate-100\/70,
