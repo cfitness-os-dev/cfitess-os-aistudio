@@ -416,9 +416,19 @@ export function DashboardView() {
     setShellMode,
     openMywellnessLink,
     themeMode,
+    isTechnicalMode,
   } = useCfos();
 
   const [activeTab, setActiveTab] = useState<ExecutiveDashboardTab>('overview');
+
+  React.useEffect(() => {
+    if (
+      !isTechnicalMode &&
+      (activeTab === 'features' || activeTab === 'pitch_roi' || activeTab === 'ecosystem_resale')
+    ) {
+      setActiveTab('overview');
+    }
+  }, [isTechnicalMode, activeTab]);
   const [periodFilter, setPeriodFilter] = useState<'7d' | '30d' | '90d'>('30d');
   const [subClubFilter, setSubClubFilter] = useState<'all' | 'center' | 'place'>('all');
   const [hoveredChartIdx, setHoveredChartIdx] = useState<number>(3);
@@ -541,50 +551,54 @@ export function DashboardView() {
             <span>1. Pilotage Heitz &amp; FMI</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('features')}
-            className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === 'features'
-                ? 'bg-violet-600 text-white shadow-xs'
-                : isDark
-                ? 'text-slate-300 hover:bg-slate-800'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            <span>2. Catalogue des Fonctions</span>
-          </button>
+          {isTechnicalMode && (
+            <>
+              <button
+                type="button"
+                onClick={() => setActiveTab('features')}
+                className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  activeTab === 'features'
+                    ? 'bg-violet-600 text-white shadow-xs'
+                    : isDark
+                    ? 'text-slate-300 hover:bg-slate-800'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>2. Catalogue des Fonctions</span>
+              </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('pitch_roi')}
-            className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === 'pitch_roi'
-                ? 'bg-violet-600 text-white shadow-xs'
-                : isDark
-                ? 'text-slate-300 hover:bg-slate-800'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Presentation className="w-3.5 h-3.5" />
-            <span>3. Dossier Dirigeants &amp; ROI</span>
-          </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('pitch_roi')}
+                className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  activeTab === 'pitch_roi'
+                    ? 'bg-violet-600 text-white shadow-xs'
+                    : isDark
+                    ? 'text-slate-300 hover:bg-slate-800'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <Presentation className="w-3.5 h-3.5" />
+                <span>3. Dossier Dirigeants &amp; ROI</span>
+              </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('ecosystem_resale')}
-            className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === 'ecosystem_resale'
-                ? 'bg-violet-600 text-white shadow-xs'
-                : isDark
-                ? 'text-slate-300 hover:bg-slate-800'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <GitMerge className="w-3.5 h-3.5" />
-            <span>4. Écosystème &amp; Revente</span>
-          </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('ecosystem_resale')}
+                className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  activeTab === 'ecosystem_resale'
+                    ? 'bg-violet-600 text-white shadow-xs'
+                    : isDark
+                    ? 'text-slate-300 hover:bg-slate-800'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <GitMerge className="w-3.5 h-3.5" />
+                <span>4. Écosystème &amp; Revente</span>
+              </button>
+            </>
+          )}
         </div>
 
         <button

@@ -193,6 +193,8 @@ interface CfosContextValue extends PersistedState {
   currentUser: Employee;
   isAuthenticated: boolean;
   isArchitectUnlocked: boolean;
+  isTechnicalMode: boolean;
+  toggleTechnicalMode: () => void;
   shellMode: ShellMode;
   activeSection: AdminSection;
   navSubTarget: string | null;
@@ -438,6 +440,8 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
   const [activeSection, setActiveSectionState] = useState<AdminSection>(initialNav.section);
   const [navSubTarget, setNavSubTarget] = useState<string | null>(initialNav.subTarget);
   const [isArchitectUnlocked, setIsArchitectUnlocked] = useState<boolean>(false);
+  const [isTechnicalMode, setIsTechnicalMode] = useState<boolean>(false);
+  const toggleTechnicalMode = () => setIsTechnicalMode((prev) => !prev);
   const [clubFilter, setClubFilter] = useState<ClubFilter>('all');
   const [activeMywellnessModal, setActiveMywellnessModal] = useState<{
     mywellnessMemberId?: string;
@@ -2340,6 +2344,8 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     currentUser,
     isAuthenticated,
     isArchitectUnlocked,
+    isTechnicalMode,
+    toggleTechnicalMode,
     shellMode,
     activeSection,
     navSubTarget,
