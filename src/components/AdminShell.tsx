@@ -858,6 +858,31 @@ export function AdminShell() {
                 <span className="hidden lg:inline">Vue Mobile &amp; Tablette</span>
               </button>
 
+              {/* Mode Épuré / Vue Technique Toggle */}
+              <button
+                type="button"
+                onClick={toggleTechnicalMode}
+                title={
+                  isTechnicalMode
+                    ? 'Revenir en Mode Épuré (vue client)'
+                    : 'Afficher la Vue Technique (audit, traçabilité, architecture)'
+                }
+                className={`flex min-h-[38px] px-3 py-1.5 rounded-xl border text-xs font-semibold items-center gap-1.5 cursor-pointer transition-colors ${
+                  isTechnicalMode
+                    ? isDark
+                      ? 'bg-amber-500/20 border-amber-500/60 text-amber-300 hover:bg-amber-500/30'
+                      : 'bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100'
+                    : isDark
+                    ? 'bg-[#1A2033] border-slate-700 text-slate-300 hover:bg-slate-800'
+                    : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <Compass className={`w-3.5 h-3.5 ${isTechnicalMode ? 'text-amber-400' : 'text-emerald-500'}`} />
+                <span className="hidden sm:inline">
+                  {isTechnicalMode ? 'Vue Technique' : 'Mode Épuré'}
+                </span>
+              </button>
+
               {/* Notifications Bell with Badge 3 */}
               <div className="relative">
                 <button
