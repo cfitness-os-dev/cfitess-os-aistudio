@@ -193,25 +193,8 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
       {/* EN-TÊTE UNIFIÉ C.FITNESS OS — CRM PROSPECTS & ADHÉSIONS               */}
       {/* ===================================================================== */}
       <div className="rounded-2xl overflow-hidden border border-slate-200/80 shadow-2xs bg-white">
-        <div className="bg-white border-b border-slate-200/80 px-5 py-4 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-3.5 pr-4 xl:border-r border-slate-200/80">
-              <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-500 text-white flex items-center justify-center shadow-xs shrink-0">
-                <UserPlus className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-wider text-violet-600">
-                  06 · Le CRM Prospects &amp; Adhésions
-                </div>
-                <h2 className="font-extrabold text-lg tracking-tight text-slate-900">
-                  Pipeline Commercial, Relances &amp; Parrainages
-                </h2>
-                <div className="text-xs text-slate-500">
-                  Synchronisé avec les passages portillons Heitz &amp; bilans coach Mywellness
-                </div>
-              </div>
-            </div>
-
+        <div className="bg-white border-b border-slate-200/80 px-5 py-3 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {/* Sélecteur de vue */}
             <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-xs">
               <button
@@ -301,7 +284,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Filtrer dans Pipedrive / HubSpot..."
+              placeholder="Rechercher un prospect (nom, tél., email)..."
               className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs focus:outline-none focus:border-[#017737]"
             />
           </div>
@@ -604,7 +587,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                 {/* HubSpot Property Fields */}
                 <div className="space-y-2.5">
                   <div className="font-extrabold uppercase tracking-wider text-[10px] text-slate-500">
-                    À propos de ce contact (HubSpot)
+                    À propos de ce contact
                   </div>
                   <div>
                     <div className="text-[10px] text-slate-400">Téléphone mobile</div>
@@ -663,7 +646,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
               <div className="lg:col-span-5 bg-white border border-slate-300 rounded-lg p-4 space-y-4">
                 <div className="border-b border-slate-200 pb-2.5 flex items-center justify-between">
                   <span className="font-extrabold text-slate-900">
-                    Chronologie d&apos;Activité HubSpot (Art. 4 CDI)
+                    Chronologie d&apos;activité &amp; relances
                   </span>
                   <span className="px-2 py-0.5 rounded bg-slate-100 font-mono text-[10px] text-slate-600">
                     {selectedHubspotProspect.retryCount} relance(s)
@@ -993,7 +976,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
           >
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-slate-900">
-                Ajouter une Offre / Prospect Pipedrive (anti-doublon)
+                Ajouter un nouveau prospect (anti-doublon)
               </h3>
               <button
                 type="button"

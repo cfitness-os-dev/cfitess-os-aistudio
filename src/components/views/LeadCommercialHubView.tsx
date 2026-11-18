@@ -184,7 +184,7 @@ export function LeadCommercialHubView({
   useEffect(() => {
     if (subTarget === 'lead-traceability' && isTechnicalMode) {
       setActiveTab('traceability');
-    } else if (!isTechnicalMode && activeTab === 'traceability') {
+    } else if (!isTechnicalMode && (activeTab === 'traceability' || activeTab === 'clients')) {
       setActiveTab('prospects');
     }
   }, [subTarget, isTechnicalMode, activeTab]);
@@ -234,7 +234,7 @@ export function LeadCommercialHubView({
   const [rdvMinDelayHours, setRdvMinDelayHours] = useState(4);
   const [rdvHoursBeforeSlot, setRdvHoursBeforeSlot] = useState(6);
   const [rdvTypeCandidate, setRdvTypeCandidate] = useState('Coaching Découverte (60 min)');
-  const [rdvRequiresStripe, setRdvRequiresStripe] = useState(true);
+  const [rdvRequiresStripe, setRdvRequiresStripe] = useState(false);
   const [rdvStripePaid, setRdvStripePaid] = useState(false);
 
   // Tab 5 : Messagerie & WhatsApp
@@ -479,9 +479,9 @@ export function LeadCommercialHubView({
 
   const ALL_TABS: Array<{ id: LeadHubTab; label: string; badge?: string; icon: React.ComponentType<{ className?: string }>; technicalOnly?: boolean }> = [
     { id: 'prospects', label: 'Prospects & Pipeline', badge: isTechnicalMode ? '10 statuts' : undefined, icon: Users },
-    { id: 'clients', label: 'Clients & Vacances', badge: isTechnicalMode ? 'Heitz' : undefined, icon: UserCheck },
+    { id: 'clients', label: 'Clients & Vacances', badge: 'Heitz', icon: UserCheck, technicalOnly: true },
     { id: 'activities', label: 'Activités', badge: isTechnicalMode ? '9 filtres' : undefined, icon: ActivityIcon },
-    { id: 'planning', label: 'Planning RDV & Stripe', badge: isTechnicalMode ? 'RDV-01' : undefined, icon: Calendar },
+    { id: 'planning', label: isTechnicalMode ? 'Planning RDV & Stripe' : 'RDV Découverte', badge: isTechnicalMode ? 'RDV-01' : undefined, icon: Calendar },
     { id: 'messaging', label: 'WhatsApp 24h', badge: isTechnicalMode ? 'WA-01/02' : undefined, icon: MessageCircle },
     { id: 'communication', label: 'Communication', badge: isTechnicalMode ? 'Admin/Mgr' : undefined, icon: Send },
     { id: 'analytics_forms', label: 'Stats · Ventes · Formulaires', badge: isTechnicalMode ? 'ACL-01' : undefined, icon: BarChart3 },
@@ -1118,25 +1118,33 @@ export function LeadCommercialHubView({
                       checked={preventCrossTypeCollision}
                       onChange={(e) => setPreventCrossTypeCollision(e.target.checked)}
                     />
-                    <span>Activer la prévention automatique des collisions inter-types (Décision RDV-01)</span>
+                    <span>
+                      {isTechnicalMode
+                        ? 'Activer la prévention automatique des collisions inter-types (Décision RDV-01)'
+                        : 'Empêcher automatiquement les doubles réservations sur un même créneau'}
+                    </span>
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={rdvRequiresStripe}
-                      onChange={(e) => setRdvRequiresStripe(e.target.checked)}
-                    />
-                    <span>Exiger prépaiement Stripe (`/api/v2/appointment/webhooks/stripe/:club`)</span>
-                  </label>
-                  {rdvRequiresStripe && (
-                    <label className="flex items-center gap-2 cursor-pointer pl-5 text-emerald-300">
-                      <input
-                        type="checkbox"
-                        checked={rdvStripePaid}
-                        onChange={(e) => setRdvStripePaid(e.target.checked)}
-                      />
-                      <span>Simuler webhook Stripe reçu : paiement payé/confirmé</span>
-                    </label>
+                  {isTechnicalMode && (
+                    <>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={rdvRequiresStripe}
+                          onChange={(e) => setRdvRequiresStripe(e.target.checked)}
+                        />
+                        <span>Exiger prépaiement Stripe (`/api/v2/appointment/webhooks/stripe/:club`)</span>
+                      </label>
+                      {rdvRequiresStripe && (
+                        <label className="flex items-center gap-2 cursor-pointer pl-5 text-emerald-300">
+                          <input
+                            type="checkbox"
+                            checked={rdvStripePaid}
+                            onChange={(e) => setRdvStripePaid(e.target.checked)}
+                          />
+                          <span>Simuler webhook Stripe reçu : paiement payé/confirmé</span>
+                        </label>
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -1162,7 +1170,9 @@ export function LeadCommercialHubView({
                 <div className="p-3 rounded-xl bg-slate-900/70 border border-slate-800 space-y-1 font-mono text-[11px]">
                   <div>Carré de Soie : /book/carre-de-soie/coaching-decouverte</div>
                   <div>Beynost       : /book/beynost/bilan-checkup-technogym</div>
-                  <div>Webhook Stripe: POST /api/v2/appointment/webhooks/stripe/{'{club}'}</div>
+                  {isTechnicalMode && (
+                    <div>Webhook Stripe: POST /api/v2/appointment/webhooks/stripe/{'{club}'}</div>
+                  )}
                 </div>
               </div>
             </div>
