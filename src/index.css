@@ -322,9 +322,13 @@ html.dark {
 
 /* Préserver le contraste sombre sur les badges clairs */
 .cfos-dark main .bg-amber-50,
+.cfos-dark main .bg-amber-50\/40,
 .cfos-dark main .bg-amber-50\/50,
 .cfos-dark main .bg-amber-50\/60,
-.cfos-dark main .bg-amber-100 {
+.cfos-dark main .bg-amber-50\/70,
+.cfos-dark main .bg-amber-50\/80,
+.cfos-dark main .bg-amber-100,
+.cfos-dark main .bg-amber-100\/70 {
   background-color: rgba(245, 158, 11, 0.14);
   border-color: rgba(245, 158, 11, 0.35);
   color: #fde68a;
@@ -332,14 +336,19 @@ html.dark {
 
 .cfos-dark main .text-amber-950,
 .cfos-dark main .text-amber-900,
-.cfos-dark main .text-amber-800 {
+.cfos-dark main .text-amber-800,
+.cfos-dark main .text-amber-700 {
   color: #fde68a;
 }
 
 .cfos-dark main .bg-emerald-50,
+.cfos-dark main .bg-emerald-50\/40,
 .cfos-dark main .bg-emerald-50\/50,
 .cfos-dark main .bg-emerald-50\/60,
-.cfos-dark main .bg-emerald-100 {
+.cfos-dark main .bg-emerald-50\/70,
+.cfos-dark main .bg-emerald-50\/80,
+.cfos-dark main .bg-emerald-100,
+.cfos-dark main .bg-emerald-100\/70 {
   background-color: rgba(16, 185, 129, 0.14);
   border-color: rgba(16, 185, 129, 0.35);
   color: #a7f3d0;
@@ -353,9 +362,13 @@ html.dark {
 }
 
 .cfos-dark main .bg-rose-50,
+.cfos-dark main .bg-rose-50\/40,
 .cfos-dark main .bg-rose-50\/50,
 .cfos-dark main .bg-rose-50\/60,
-.cfos-dark main .bg-rose-100 {
+.cfos-dark main .bg-rose-50\/70,
+.cfos-dark main .bg-rose-50\/80,
+.cfos-dark main .bg-rose-100,
+.cfos-dark main .bg-rose-100\/70 {
   background-color: rgba(244, 63, 94, 0.14);
   border-color: rgba(244, 63, 94, 0.35);
   color: #fecdd3;
@@ -371,9 +384,18 @@ html.dark {
 .cfos-dark main .bg-blue-50,
 .cfos-dark main .bg-blue-50\/40,
 .cfos-dark main .bg-blue-50\/50,
+.cfos-dark main .bg-blue-50\/60,
+.cfos-dark main .bg-blue-50\/70,
+.cfos-dark main .bg-blue-50\/80,
+.cfos-dark main .bg-blue-100,
 .cfos-dark main .bg-sky-50,
+.cfos-dark main .bg-sky-50\/70,
+.cfos-dark main .bg-sky-100,
 .cfos-dark main .bg-indigo-50,
 .cfos-dark main .bg-indigo-50\/40,
+.cfos-dark main .bg-indigo-50\/70,
+.cfos-dark main .bg-indigo-100,
+.cfos-dark main .bg-teal-50,
 .cfos-dark main .bg-teal-50\/70 {
   background-color: rgba(59, 130, 246, 0.14);
   border-color: rgba(59, 130, 246, 0.35);
@@ -382,16 +404,27 @@ html.dark {
 
 .cfos-dark main .text-blue-950,
 .cfos-dark main .text-blue-900,
+.cfos-dark main .text-blue-800,
+.cfos-dark main .text-blue-700,
 .cfos-dark main .text-sky-950,
 .cfos-dark main .text-indigo-950,
-.cfos-dark main .text-indigo-900 {
+.cfos-dark main .text-indigo-900,
+.cfos-dark main .text-indigo-800,
+.cfos-dark main .text-indigo-700 {
   color: #bfdbfe;
 }
 
 .cfos-dark main .bg-violet-50,
 .cfos-dark main .bg-violet-50\/40,
 .cfos-dark main .bg-violet-50\/50,
-.cfos-dark main .bg-purple-50 {
+.cfos-dark main .bg-violet-50\/60,
+.cfos-dark main .bg-violet-50\/70,
+.cfos-dark main .bg-violet-50\/80,
+.cfos-dark main .bg-violet-100,
+.cfos-dark main .bg-violet-100\/70,
+.cfos-dark main .bg-purple-50,
+.cfos-dark main .bg-purple-50\/70,
+.cfos-dark main .bg-purple-100 {
   background-color: var(--cfos-accent-soft-dark);
   border-color: var(--cfos-accent-border);
   color: var(--cfos-accent-text-dark);
@@ -399,6 +432,7 @@ html.dark {
 
 .cfos-dark main .text-violet-950,
 .cfos-dark main .text-violet-900,
+.cfos-dark main .text-violet-800,
 .cfos-dark main .text-violet-700 {
   color: var(--cfos-accent-text-dark);
 }
