@@ -47,6 +47,45 @@ export type ArchitectTabId =
   | 'third_party_updates'
   | 'governance_backups';
 
+const CLIENT_INSTALL_PREREQUISITES = [
+  {
+    id: 'req-heitz',
+    system: '1. Heitz System (Adhérents, Portillons & SEPA)',
+    ask: 'IP locale du serveur Windows Heitz (Heitz-WS.exe + port), identifiants API Heitz, codes centres (Carré de Soie & Beynost) et export CSV initial des adhérents.',
+    envHint: 'HEITZ_WS_URL, HEITZ_API_KEY',
+  },
+  {
+    id: 'req-mywellness',
+    system: '2. Technogym Mywellness Cloud & Checkup (Cours collectifs & Bilans)',
+    ask: 'Clé API Technogym Mywellness, identifiants Facility ID des 2 clubs (Center & Place) et compte admin Mywellness pour la synchro des cours et bilans.',
+    envHint: 'MYWELLNESS_API_KEY, MYWELLNESS_FACILITY_IDS',
+  },
+  {
+    id: 'req-silae',
+    system: '3. Silae Paie (Cabinet comptable)',
+    ask: 'Matrice des codes rubriques Silae (heures normales, HS, CP, RTT, absences), validation de l’export CSV test, et token API REST Silae si envoi direct souhaité.',
+    envHint: 'SILAE_API_TOKEN (optionnel si CSV)',
+  },
+  {
+    id: 'req-telecom',
+    system: '4. Téléphonie, SMS 07 & WhatsApp Business (CRM & Recouvrement)',
+    ask: 'Accès passerelle SIP/GSM (Yeastar / lignes 07) ou fournisseur SMS, plus identifiants Meta WhatsApp Business API (Phone Number ID + Token) pour les relances.',
+    envHint: 'SIP_TRUNK_HOST, WHATSAPP_TOKEN, WHATSAPP_PHONE_ID',
+  },
+  {
+    id: 'req-server-ollama',
+    system: '5. Serveur Local Club & Agent IA (Ollama)',
+    ask: 'Accès admin/SSH au serveur local du club (IP fixe LAN, ports 80/443/8080), URL Ollama locale + modèle IA choisi, et disque/NAS externe pour sauvegardes 3-2-1.',
+    envHint: 'CFITNESS_BIND_ADDR, OLLAMA_BASE_URL, OLLAMA_DEFAULT_MODEL',
+  },
+  {
+    id: 'req-domain-smtp',
+    system: '6. Nom de domaine, Accès distant & Boîtes Email (SMTP)',
+    ask: 'Nom de domaine ou accès VPN/Zero Trust dirigeants, et identifiants SMTP (ex. contact@c.fitness, recrutement@c.fitness) pour les emails automatiques & relances.',
+    envHint: 'SMTP_HOST, SMTP_USER, SMTP_PASS',
+  },
+];
+
 interface HardwareNode {
   id: string;
   clubId: ClubId | 'bi-club';
@@ -620,6 +659,38 @@ export function GovernanceView() {
   const [pinInput, setPinInput] = useState<string>('');
   const [pinError, setPinError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ArchitectTabId>('server_hardware');
+  const [checkedClientReqs, setCheckedClientReqs] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('cfos_client_install_reqs');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [copiedClientReqs, setCopiedClientReqs] = useState(false);
+
+  const toggleClientReq = (id: string) => {
+    setCheckedClientReqs((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      try {
+        localStorage.setItem('cfos_client_install_reqs', JSON.stringify(next));
+      } catch {
+        // ignore storage errors
+      }
+      return next;
+    });
+  };
+
+  const handleCopyClientReqs = () => {
+    const text =
+      '=== INFOS & ACCÈS À DEMANDER AU CLIENT POUR L’INSTALLATION SERVEUR C.FITNESS OS ===\n\n' +
+      CLIENT_INSTALL_PREREQUISITES.map(
+        (r) => `${checkedClientReqs[r.id] ? '[x]' : '[ ]'} ${r.system}\n    → À demander : ${r.ask}\n    → Variables .env : ${r.envHint}`
+      ).join('\n\n');
+    navigator.clipboard?.writeText(text).catch(() => {});
+    setCopiedClientReqs(true);
+    setTimeout(() => setCopiedClientReqs(false), 2500);
+  };
   const [pingResult, setPingResult] = useState<string | null>(null);
   const [activeDeployFile, setActiveDeployFile] =
     useState<keyof typeof DEPLOYMENT_FILES>('docker-compose.yml');
@@ -1416,6 +1487,74 @@ ${ONSITE_INSTALLATION_STEPS.map(
 
         return (
           <div className="space-y-4">
+            {/* Checklist dédiée : Accès & Clés API à demander au client lors de l'installation */}
+            <div
+              className={`rounded-2xl border p-4 space-y-3 ${
+                isDark
+                  ? 'bg-[#151A2A] border-amber-500/40'
+                  : 'bg-amber-50/50 border-amber-300'
+              }`}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                  <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-500 flex items-center gap-1.5">
+                    <KeyRound className="w-3.5 h-3.5" />
+                    Mémo Installation Serveur Client — À demander au client
+                  </div>
+                  <h3 className="text-sm font-extrabold mt-0.5">
+                    Accès, Clés API &amp; Prérequis à récupérer chez le client ({
+                      CLIENT_INSTALL_PREREQUISITES.filter((r) => checkedClientReqs[r.id]).length
+                    }/{CLIENT_INSTALL_PREREQUISITES.length})
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyClientReqs}
+                  className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer self-start"
+                >
+                  {copiedClientReqs ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedClientReqs ? 'Liste copiée !' : 'Copier la liste client'}</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 text-xs">
+                {CLIENT_INSTALL_PREREQUISITES.map((req) => {
+                  const done = Boolean(checkedClientReqs[req.id]);
+                  return (
+                    <button
+                      key={req.id}
+                      type="button"
+                      onClick={() => toggleClientReq(req.id)}
+                      className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition-colors cursor-pointer ${
+                        done
+                          ? isDark
+                            ? 'bg-emerald-950/30 border-emerald-600/40 opacity-80'
+                            : 'bg-emerald-50 border-emerald-300 opacity-85'
+                          : isDark
+                          ? 'bg-slate-900/70 border-slate-700 hover:border-amber-500/50'
+                          : 'bg-white border-slate-200 hover:border-amber-400'
+                      }`}
+                    >
+                      {done ? (
+                        <CheckSquare className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                      ) : (
+                        <Square className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                      )}
+                      <div className="min-w-0 space-y-1">
+                        <div className={`font-bold ${done ? 'line-through opacity-75' : ''}`}>
+                          {req.system}
+                        </div>
+                        <div className="text-[11px] opacity-85 leading-relaxed">{req.ask}</div>
+                        <div className="text-[10px] font-mono text-violet-400">
+                          Variables .env : {req.envHint}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Barre de progression sur une ligne */}
             <div
               className={`rounded-2xl border p-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 ${
