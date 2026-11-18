@@ -1,0 +1,22 @@
+[
+  {
+    "icone": "main",
+    "url": "https://lead.masalledesport.com/club/11400/todos?type=CONTACT&filter=todo",
+    "limite": "Route de filtre observée ; comptage immédiat écarté car chargement asynchrone."
+  },
+  {
+    "icone": "étoile",
+    "url": "https://lead.masalledesport.com/club/11400/todos?type=REVIEW&filter=todo",
+    "limite": "Route de filtre observée ; comptage immédiat écarté car chargement asynchrone."
+  },
+  {
+    "icone": "message crayon",
+    "url": "https://lead.masalledesport.com/club/11400/todos?type=SCHEDULED_SMS&filter=todo",
+    "limite": "Route de filtre observée ; comptage immédiat écarté car chargement asynchrone."
+  },
+  {
+    "icone": "message",
+    "url": "https://lead.masalledesport.com/club/11400/todos?type=SMS&filter=todo",
+    "limite": "Route de filtre observée ; comptage immédiat écarté car chargement asynchrone."
+  }
+]

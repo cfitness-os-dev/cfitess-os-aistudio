@@ -1,0 +1,150 @@
+[
+  {
+    "id": "API-01",
+    "constat": "Deux types de demandes sont décrits comme deux endpoints, mais une même adresse POST est donnée.",
+    "suite": "Faire préciser le contrat contact/essai, notamment offername, réponses, validation, doublons, erreurs et reprise.",
+    "etat": "ouvert"
+  },
+  {
+    "id": "WA-01",
+    "constat": "Le guide WhatsApp propose Message direct dans un scénario ; le guide Scénarios exige un modèle approuvé.",
+    "suite": "Vérifier les conditions exactes dans l’éditeur sans créer d’étape et les contraintes Meta applicables.",
+    "etat": "clarifie_en_interface_resultat_non_teste",
+    "verification_2026_11_17": "Le formulaire WhatsApp propose Message direct et gère explicitement une conversation fermée après 24h sans message entrant. Replis : ne pas envoyer, modèle ou SMS. Aucun envoi effectué ; calcul, tarification et traitement des erreurs restent à confirmer."
+  },
+  {
+    "id": "SMS-01",
+    "constat": "159 caractères dans plusieurs guides, 160 dans le guide de consommation.",
+    "suite": "Obtenir le calcul exact, encodage, concaténation et substitution des tags ; ne pas coder une constante approximative.",
+    "etat": "ouvert"
+  },
+  {
+    "id": "SC-01",
+    "constat": "L’aide dit supprimer/recréer une étape ; un crayon est visible en session.",
+    "suite": "Lire le panneau de modification sans saisie après clarification des éventuelles sauvegardes automatiques.",
+    "etat": "clarifie_partiellement",
+    "verification_2026_11_17": "Le crayon ouvre l’édition d’une étape existante. Type et délai sont grisés ; un bouton séparé permet d’éditer le mail. Les modifications réelles restent non testées."
+  },
+  {
+    "id": "SC-02",
+    "constat": "L’aide décrit des jours ; le scénario existant affiche cinq minutes.",
+    "suite": "Compléter les unités, limites et point de départ des délais.",
+    "etat": "clarifie_en_interface",
+    "verification_2026_11_17": "Le menu de délai propose Minutes, Heures et Jours. Aucun délai changé ni exécution déclenchée."
+  },
+  {
+    "id": "PR-01",
+    "constat": "Réglage avancé Prospect décrit mais non vu ; seuil de décrochage présent mais peu documenté.",
+    "suite": "Comparer version, abonnement et droits avant de conclure à une absence.",
+    "etat": "ouvert"
+  },
+  {
+    "id": "ST-01",
+    "constat": "L’aide décrit davantage de tableaux que la vue consultée, qui annonce un rafraîchissement de 30 minutes.",
+    "suite": "Retrouver les vues détaillées et définir chaque calcul ; ne pas promettre du temps réel.",
+    "etat": "clarifie_partiellement",
+    "verification_2026_11_17": "Les tableaux supplémentaires apparaissent après défilement et chargement progressif. Huit vues du tunnel et de l’activité commerciale ont été parcourues, avec UTM, mix des ventes et métriques commerciales. Formules et délai de fraîcheur restent non validés."
+  },
+  {
+    "id": "IN-01",
+    "constat": "Heitz est source active et des offres importées existent, mais sa carte partenaire affiche Non connectée.",
+    "suite": "Faire confirmer la liaison effectivement utilisée, l’historique, le sens des flux et leur fraîcheur.",
+    "etat": "ouvert"
+  },
+  {
+    "id": "IN-02",
+    "constat": "La fiche Funnelo parle de ClickFunnels dans son résumé.",
+    "suite": "Ne pas prendre ce résumé pour une spécification technique Funnelo.",
+    "etat": "ouvert"
+  },
+  {
+    "id": "UI-01",
+    "constat": "La liste Formulaires nomme sa première colonne Prénom.",
+    "suite": "Conserver le constat source, proposer Nom du formulaire pour CFitness avec validation explicite.",
+    "etat": "ouvert"
+  },
+  {
+    "id": "INC-001",
+    "constat": "Identifiant attribué et ligne vide au retour de l’assistant WhatsApp.",
+    "suite": "Une création de brouillon est possible ; aucune suppression ou nouvelle progression dans cet assistant.",
+    "etat": "ouvert"
+  },
+  {
+    "id": "ACL-01",
+    "constat": "La corbeille d’un formulaire est visible non grisée en Commercial, malgré l’absence de création et de crayon d’édition.",
+    "suite": "Ne pas actionner une suppression réelle pour tester. Faire préciser le droit attendu et prévoir une recette serveur sur données fictives.",
+    "etat": "ouvert"
+  },
+  {
+    "id": "RDV-01",
+    "constat": "La formation indique que chaque type de rendez-vous gère ses disponibilités indépendamment, sans blocage mutuel automatique.",
+    "suite": "Vérifier le comportement actuel sur environnement fictif et décider si CFitness doit bloquer des collisions entre types/intervenants.",
+    "etat": "documente_a_confronter"
+  },
+  {
+    "id": "WA-02",
+    "constat": "Un modèle WhatsApp En cours d’examen dans la liste affiche Actif et Modifications verrouillées dans le détail ; une image manquante est aussi signalée.",
+    "suite": "Faire confirmer le statut Meta réel et la source de vérité. Séparer approbation, complétude et possibilité d’envoi dans CFitness.",
+    "etat": "ouvert"
+  },
+  {
+    "id": "CM-01",
+    "etat": "observe_a_documenter",
+    "constat": "La création email actuelle utilise quatre étapes ; la formation Campagnes décrit un parcours plus ancien.",
+    "suite": "Maquetter la première étape actuelle. Obtenir une démonstration fictive ou un brouillon existant pour Composer, Objet et Vérifier ; ne pas présenter la vidéo comme observation de ces étapes."
+  },
+  {
+    "id": "DOC-02",
+    "etat": "ouvert",
+    "constat": "L’aide mentionne Histoire sportive ; rubrique non retrouvée dans la fiche ordinateur et mobile observée.",
+    "suite": "Demander un exemple existant ou la confirmation du fournisseur : ancien libellé, option de compte ou fonctionnalité retirée."
+  },
+  {
+    "id": "CM-02",
+    "etat": "a_confirmer",
+    "constat": "Le champ heure SMS différé exposait ponctuellement un attribut max=16:00 avec une valeur initiale 16:01, sans date choisie.",
+    "suite": "Ne pas coder cette borne comme règle horaire fixe. Faire préciser restrictions, fuseau et validation sur dates fictives. Aucun changement d’heure ni publication testé."
+  },
+  {
+    "id": "RSP-01",
+    "etat": "observe",
+    "constat": "Éditeur de formulaire existant à 390 px : bouton Ajouter une section de x=352 à x≈516 dans un ancêtre de 390 px avec overflow-x hidden.",
+    "suite": "Empiler les colonnes pour CFitness ; recette de chaque commande dans le cadre. Aucun ajout de section exécuté.",
+    "preuve": "captures/024_formulaire_existant_vide_mobile.jpg"
+  },
+  {
+    "id": "RSP-02",
+    "etat": "observe",
+    "constat": "Assistant email à 390 px : bouton Suivant de x≈710 à x≈790 ; colonnes et commandes partiellement hors cadre.",
+    "suite": "Adapter en-tête, progression et ciblage au mobile. Seule la première étape est observée.",
+    "preuve": "captures/025_campagne_email_mobile_ciblage.jpg"
+  },
+  {
+    "id": "RSP-03",
+    "etat": "reproduit_dans_la_session",
+    "constat": "Nouvelle campagne SMS : chargement réussi après rechargement à 820 px, puis erreur Something went wrong après passage à 390 px. Diagnostic visible : DialogClose must be used within Dialog.",
+    "suite": "Reproduire en recette et prévoir une page mobile autonome dans CFitness. Pas de cause backend ni de généralisation à tous les navigateurs établie.",
+    "preuve": "captures/026_campagne_sms_mobile_erreur.jpg"
+  },
+  {
+    "id": "RSP-04",
+    "etat": "observe",
+    "constat": "Éditeur de modèle email existant à 390 px : Aperçu mesuré jusqu’à x≈583, champs d’en-tête hors cadre.",
+    "suite": "Prévoir un éditeur réellement adapté au mobile, en conservant les opérations sans tests d’envoi réels.",
+    "preuve": "SOUS_ECRANS_RESPONSIVE_2026-11-17.json"
+  },
+  {
+    "id": "ST-02",
+    "etat": "clarifie_en_interface",
+    "constat": "Le filtre annuel utilise compareToPreviousYear ; compareTo=none coexiste avec la case annuelle cochée.",
+    "suite": "Ne pas déduire la comparaison annuelle de compareTo seul. Contrat et calculs serveur restent non vérifiés.",
+    "preuve": "FILTRES_ET_VARIANTES_RESPONSIVE_2026-11-17.json"
+  },
+  {
+    "id": "ST-03",
+    "etat": "observe_cause_non_etablie",
+    "constat": "Une navigation directe vers /statistics a renvoyé à Prospects avec un message d’accès, puis l’entrée du menu a ouvert les statistiques sous le même profil.",
+    "suite": "Ne pas assimiler ce message à une preuve de refus serveur. Tester initialisation et liens directs dans CFitness.",
+    "preuve": "Journal de contrôle du 17/11/2026"
+  }
+]

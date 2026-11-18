@@ -1,0 +1,117 @@
+{
+  "date": "2026-11-17",
+  "modules": [
+    {
+      "module": "Modèles",
+      "ui": [
+        "- button \"Assistance\":",
+        "- heading \"Modèles\" [level=4]",
+        "- button \"Nouveau modèle\"",
+        "- heading \"WhatsApp est arrivé !\" [level=4]",
+        "- button \"Démarrer la création de modèle WhatsApp\":",
+        "- textbox \"Recherche par nom, mail, téléphone\"",
+        "- button \"SMS\":",
+        "- button \"Email\":",
+        "- button \"WhatsApp\":",
+        "- combobox \"Basculer les colonnes\":",
+        "- columnheader \"Créé le\":",
+        "- columnheader \"Canal\":",
+        "- columnheader \"Nom\":",
+        "- columnheader \"Type WhatsApp\":",
+        "- columnheader \"Statut de validation\":",
+        "- columnheader \"Envoyés\":",
+        "- columnheader \"Ouverts\":",
+        "- columnheader \"Actions\":"
+      ]
+    },
+    {
+      "module": "Campagnes",
+      "ui": [
+        "- heading \"Campagnes\" [level=4]",
+        "- button \"Créer une campagne Mail\":",
+        "- button \"Créer une campagne SMS\":",
+        "- button \"Mail\":",
+        "- button \"SMS\":",
+        "- columnheader \"Nom\":",
+        "- columnheader \"Status\":",
+        "- columnheader \"Créée le\":",
+        "- combobox:",
+        "- button [disabled]:",
+        "- button [disabled]:"
+      ]
+    },
+    {
+      "module": "Campagnes UTM",
+      "ui": [
+        "- heading \"Campagnes UTM\" [level=4]",
+        "- columnheader \"Nom\":",
+        "- columnheader \"Première activité\":",
+        "- columnheader \"Dernière activité\":",
+        "- columnheader \"Lead atteints\":",
+        "- columnheader \"Conversion\":"
+      ]
+    },
+    {
+      "module": "Scénarios",
+      "ui": [
+        "- heading \"Scénarios\" [level=4]",
+        "- button \"Copier vers un club\":",
+        "- button \"Créer un scénario\"",
+        "- textbox \"Recherche par nom\"",
+        "- button \"Cible\":",
+        "- combobox \"Basculer les colonnes\":",
+        "- columnheader \"Nom\":",
+        "- columnheader \"Actif\":",
+        "- columnheader \"Type\":",
+        "- columnheader \"Cible\":",
+        "- columnheader \"Crée le\":",
+        "- columnheader \"Action\":",
+        "- combobox:",
+        "- button [disabled]:",
+        "- button:"
+      ]
+    },
+    {
+      "module": "SMS envoyés",
+      "ui": [
+        "- button \"Tous\"",
+        "- button \"A envoyer\"",
+        "- button \"Envoyé\"",
+        "- button \"Pas assez de crédit\"",
+        "- button \"Erreur\"",
+        "- button \"SMS\":",
+        "- button \"Exporter en Excel\":",
+        "- columnheader \"Prospect\":",
+        "- columnheader \"Téléphone\":",
+        "- columnheader \"Créé le\":",
+        "- columnheader \"Statut\":",
+        "- columnheader \"Informations\":",
+        "- columnheader \"Action\":",
+        "- combobox:",
+        "- button [disabled]:",
+        "- button [disabled]:"
+      ]
+    },
+    {
+      "module": "Emails envoyés / reçus",
+      "ui": [
+        "- button \"Tous\"",
+        "- button \"A envoyer\"",
+        "- button \"Envoyé\"",
+        "- button \"Erreur\"",
+        "- button \"Reçu\"",
+        "- button \"En cours d'envoi\"",
+        "- button \"Mails\":",
+        "- button \"Exporter en Excel\":",
+        "- columnheader \"Prospect\":",
+        "- columnheader \"Objet\":",
+        "- columnheader \"Créé le\":",
+        "- columnheader \"Statut\":",
+        "- combobox:",
+        "- button [disabled]:",
+        "- button [disabled]:"
+      ]
+    }
+  ],
+  "limite": "Navigation et commandes visibles, droits serveur non testés. Modèles relevé à nouveau après chargement : WhatsApp présent."
+}

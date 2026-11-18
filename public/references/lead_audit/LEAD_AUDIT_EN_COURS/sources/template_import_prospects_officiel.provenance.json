@@ -1,0 +1,21 @@
+{
+  "source": "https://lead.masalledesport.com/template-import-prospects.xlsx",
+  "date": "2026-11-17",
+  "colonnes": [
+    "Genre",
+    "Prénom",
+    "Nom",
+    "Email",
+    "Téléphone",
+    "Rue",
+    "Code postal",
+    "Ville",
+    "Date de naissance",
+    "Accepte les communications commerciales",
+    "Commentaire"
+  ],
+  "cellules_non_vides_apres_entete": 0,
+  "modification_du_fichier": false,
+  "sha256": "9c1557ae14a78dac50ee6d8b9e5e7230d3be4c6308c24690866b72378dfa4562",
+  "limite": "Modèle public vierge conservé ; aucun import exécuté, aucune règle serveur validée."
+}

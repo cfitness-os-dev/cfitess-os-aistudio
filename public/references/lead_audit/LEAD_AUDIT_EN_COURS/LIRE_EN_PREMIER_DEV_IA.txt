@@ -1,0 +1,29 @@
+LEAD → C.FITNESS OS — À LIRE EN PREMIER PAR LE DÉVELOPPEUR ET SON IA
+Version de transmission 0.4 — 17 novembre 2026
+
+OBJECTIF
+Construire un module commercial adapté à C.Fitness OS en conservant les repères utiles de Lead et toutes les options relevées. Le code propriétaire de Lead n’est pas fourni et ne doit pas être copié. Le dépôt CFitness n’a pas été analysé ou modifié dans cette passe.
+Le dossier est prêt à transmettre pour analyse, estimation et validation du périmètre. Il reste des réserves : ne pas le présenter comme une parité à 100 % ou un cahier définitivement fermé. Aucun développement n’est autorisé par cet audit avant validation de l’analyse.
+
+ORDRE DE LECTURE
+1. DOSSIER_UNIQUE_DEV_IA.txt : instructions et cadrage rassemblés dans un fichier de départ.
+2. 07_CAHIER_DES_CHARGES_CFITNESS_OS.txt : version consolidée actuelle, fonctionnelle et technique.
+3. INVENTAIRE_LEAD.json ou INDEX_LEAD.html : chaque option et son identifiant stable ; parcourir module par module, sans remplacer cette annexe par le résumé.
+4. 09_COUVERTURE_ET_BLOCAGES.txt et ECARTS_ET_QUESTIONS.json : limites et divergences non résolues.
+5. 14_EXEMPLES_A_RETROUVER_DANS_LES_CLUBS.txt : EX01–EX16 et références à demander au propriétaire.
+6. captures/ : 26 fichiers, dont les deux premiers non probants ; les autres sont des portions d’écran, pas des captures de tout le logiciel.
+7. 01 à 06 : cartographie, composants, technologies, contrat API documenté, parcours, recommandations. 08 et 11 à 13 conservent les journaux et compléments.
+8. sources/ : modèle Excel d’import officiel vierge, original inchangé et provenance. Ne pas le confondre avec un export des contacts.
+
+RÈGLES DE CONCEPTION
+Conserver les noms, états et gestes utiles pour la migration, tout en respectant le design sombre de CFitness. Corriger les débordements mobiles constatés. L’emplacement du module commercial et ses dashboards restent à valider ; Mon compte désigne la RH dans la décision antérieure, pas automatiquement le CRM.
+Les rôles sont à contrôler par action et par club au serveur. Les compteurs d’options ne sont pas un score de couverture. Les règles documentées, choix de conception et résultats effectivement testés restent distincts.
+L’API publique relevée est un webhook entrant limité. Aucun journal HTTP détaillé, secret, dépôt Lead ou schéma backend n’est fourni. Les paramètres d’URL de navigation ne deviennent pas des endpoints API ou des colonnes de base par déduction.
+WhatsApp exige un contrat technique et une clarification de la propriété du compte/numéro, de la portabilité et des coûts. Un compte connecté dans Lead ne garantit pas l’accès de CFitness. Les intégrations à activer doivent être décidées avec le propriétaire et leurs coûts évalués.
+
+PREMIER TRAVAIL ATTENDU, AVANT CODE
+Produire une matrice option LEAD → écran CFitness → action → rôle/club → règle → preuve → recette → réserve/décision. Proposer navigation, périmètre de première version, modèle de données et ordre des lots. Identifier les choix nécessaires au lieu d’inventer les données manquantes.
+Présenter ce résultat au propriétaire et attendre sa validation. Ensuite seulement, développer par lots testables sur données fictives, en conservant les identifiants du registre. Ne pas utiliser les comptes réels comme banc de test.
+
+PÉRIMÈTRE D’AUDIT
+ADMIN, MANAGER et COMMERCIAL comparés ; deux clubs consultés en ADMIN ; aide officielle et treize transcriptions identifiées analysées. Les résultats d’envoi/paiement/publication/suppression/import et les apps natives ne sont pas testés. Les exemples absents et états conditionnels restent ouverts. Les comptes réels n’ont pas servi à déclencher une campagne ou un paiement.

@@ -1,0 +1,350 @@
+{
+  "date": "2026-11-17",
+  "profil": "ADMIN",
+  "entrees": [
+    {
+      "rubrique": "Prospects / filtre Statut mobile",
+      "option": "Dix statuts ; essai Froid seul",
+      "precision": "Menu avec recherche, Tout sélectionner/Tout effacer ; Client et Client enseigne non proposés ici, contrairement au ciblage de campagne. Filtre de consultation seulement ; aucune fiche changée.",
+      "format": "390×844",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Prospects / filtres mobile",
+      "option": "Assignation exclusive, sources multiples et segments",
+      "precision": "Assignation présentée en boutons radio ; Source présente 16 cases et Tout sélectionner/effacer ; Segment sans choix dans ce club. Combinaison de consultation Froid + Accueil Club.",
+      "format": "390×844",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Prospects / combinaison mobile",
+      "option": "Froid + Accueil Club + Jamais consulté",
+      "precision": "Source Accueil Club confirmée dans les lignes chargées avant le troisième critère ; ajout de Jamais consulté comme filtre de vue. Aucun contact ouvert ou modifié.",
+      "format": "390×844",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Prospects / tablette",
+      "option": "Barre de filtres visible à 820 px",
+      "precision": "Statut, Assigné à, Source, Segment et Jamais consulté affichés directement ; mobile 390 px regroupé dans Filtre. Retour à la vue initiale sans critères ajoutés.",
+      "format": "820×1180",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Prospects / ajout mobile et tablette",
+      "option": "Formulaire vide et calendrier de naissance",
+      "precision": "Même ensemble de champs dans les deux formats. Tablette : fenêtre 512 px, zone verticale défilante ; mobile : panneau 390 px en bas d’écran et défilement interne. Calendrier avec mois/année et navigation, ouvert sans choisir de date. Aucun champ saisi ni formulaire validé.",
+      "format": "390×844 et 820×1180",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Clients / filtres mobile",
+      "option": "Barre directe : Statut, Assigné à, Source, Segment",
+      "precision": "À 390 px, contrairement à Prospects, pas de bouton Filtre : critères directement visibles. Statut propose Client et Client enseigne. Consultation avec Client seul ; aucun statut modifié.",
+      "format": "390×844",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Clients / filtres tablette",
+      "option": "Source en fenêtre de sélection",
+      "precision": "Barre directe également en tablette. Menu Source ouvert sans changer sa sélection ; recherche et sélection multiple du composant commun.",
+      "format": "820×1180",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Clients / recherche mobile",
+      "option": "Recherche sans résultat puis effacement",
+      "precision": "Terme fictif saisi puis Entrée. Messages Il n’y a pas de résultats et 0 résultats confirmés après chargement ; retour à l’URL initiale sans recherche. Aucune donnée client modifiée.",
+      "format": "390×844",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Activités / panneau mobile",
+      "option": "Types d’activités et six vues temporelles",
+      "precision": "Panneau Filtre : catégories iconographiques, À faire/Aujourd’hui/Demain/Cette semaine/En retard/Faites, accordéons Statut/Assigné à/Segment. Vue Cette semaine ouverte sans traiter une ligne.",
+      "format": "390×844",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Activités / filtre Type mobile",
+      "option": "Type visible dans l’adresse : *",
+      "precision": "Sélection par le bouton intérieur de l’icône ; neuf filtres réellement activés et paramètre de vue contrôlé. Il s’agit de navigation, pas d’un appel API capturé.",
+      "format": "390×844",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Activités / filtre Type mobile",
+      "option": "Type visible dans l’adresse : APPOINTMENT",
+      "precision": "Sélection par le bouton intérieur de l’icône ; neuf filtres réellement activés et paramètre de vue contrôlé. Il s’agit de navigation, pas d’un appel API capturé.",
+      "format": "390×844",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Activités / filtre Type mobile",
+      "option": "Type visible dans l’adresse : CONTACT",
+      "precision": "Sélection par le bouton intérieur de l’icône ; neuf filtres réellement activés et paramètre de vue contrôlé. Il s’agit de navigation, pas d’un appel API capturé.",
+      "format": "390×844",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Activités / filtre Type mobile",
+      "option": "Type visible dans l’adresse : REVIEW",
+      "precision": "Sélection par le bouton intérieur de l’icône ; neuf filtres réellement activés et paramètre de vue contrôlé. Il s’agit de navigation, pas d’un appel API capturé.",
+      "format": "390×844",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Activités / filtre Type mobile",
+      "option": "Type visible dans l’adresse : SCHEDULED_CALL",
+      "precision": "Sélection par le bouton intérieur de l’icône ; neuf filtres réellement activés et paramètre de vue contrôlé. Il s’agit de navigation, pas d’un appel API capturé.",
+      "format": "390×844",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Activités / filtre Type mobile",
+      "option": "Type visible dans l’adresse : SCHEDULED_EMAIL",
+      "precision": "Sélection par le bouton intérieur de l’icône ; neuf filtres réellement activés et paramètre de vue contrôlé. Il s’agit de navigation, pas d’un appel API capturé.",
+      "format": "390×844",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Activités / filtre Type mobile",
+      "option": "Type visible dans l’adresse : MAIL",
+      "precision": "Sélection par le bouton intérieur de l’icône ; neuf filtres réellement activés et paramètre de vue contrôlé. Il s’agit de navigation, pas d’un appel API capturé.",
+      "format": "390×844",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Activités / filtre Type mobile",
+      "option": "Type visible dans l’adresse : SCHEDULED_SMS",
+      "precision": "Sélection par le bouton intérieur de l’icône ; neuf filtres réellement activés et paramètre de vue contrôlé. Il s’agit de navigation, pas d’un appel API capturé.",
+      "format": "390×844",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Activités / filtre Type mobile",
+      "option": "Type visible dans l’adresse : SMS",
+      "precision": "Sélection par le bouton intérieur de l’icône ; neuf filtres réellement activés et paramètre de vue contrôlé. Il s’agit de navigation, pas d’un appel API capturé.",
+      "format": "390×844",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Ventes / filtres mobile",
+      "option": "Assigné à, Abonnement, Date de fin d’abonnement",
+      "precision": "Menu Abonnement multisélection avec Tout sélectionner/effacer, 45 choix dans ce club au contrôle. Calendrier de fin d’abonnement ouvert sans date sélectionnée ; aucune vente modifiée.",
+      "format": "390×844",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Ventes / filtre tablette",
+      "option": "Filtrer par date : fin d’abonnement",
+      "precision": "Le libellé générique ouvre les bornes Se termine après/avant ; ce n’est pas une preuve de filtre sur la date de vente. Calendriers consultés sans choix.",
+      "format": "820×1180",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Planning / premier écran d’ajout",
+      "option": "Recherche de contact avant le rendez-vous",
+      "precision": "Bouton + vérifié par cible DOM visible. Fenêtre de recherche nom/mail ouverte en tablette et mobile ; aucune personne choisie, aucun rendez-vous créé.",
+      "format": "390×844 et 820×1180",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / raccourcis de période",
+      "option": "Le mois en cours",
+      "precision": "Plage observée le 17/11/2026 : 2026-11-01 au 2026-11-17. Application directe du raccourci, sans Valider. Aucun chiffre de gestion conservé.",
+      "format": "820×600 (interaction)",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / raccourcis de période",
+      "option": "La semaine dernière",
+      "precision": "Plage observée le 17/11/2026 : 2026-11-09 au 2026-11-15. Application directe du raccourci, sans Valider. Aucun chiffre de gestion conservé.",
+      "format": "820×600 (interaction)",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / raccourcis de période",
+      "option": "Le mois dernier",
+      "precision": "Plage observée le 17/11/2026 : 2026-10-01 au 2026-10-31. Application directe du raccourci, sans Valider. Aucun chiffre de gestion conservé.",
+      "format": "820×600 (interaction)",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / raccourcis de période",
+      "option": "30 derniers jours",
+      "precision": "Plage observée le 17/11/2026 : 2026-10-18 au 2026-11-17. Application directe du raccourci, sans Valider. Aucun chiffre de gestion conservé.",
+      "format": "820×600 (interaction)",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / raccourcis de période",
+      "option": "Depuis le début de l'année",
+      "precision": "Plage observée le 17/11/2026 : 2026-01-01 au 2026-11-17. Application directe du raccourci, sans Valider. Aucun chiffre de gestion conservé.",
+      "format": "820×600 (interaction)",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / filtres mobile",
+      "option": "Ignorer archivés et comparaison annuelle : paramètres distincts",
+      "precision": "Interrupteurs de consultation testés puis rétablis. ignoreArchived=false observé ; compareToPreviousYear=false puis true observé. compareTo=none n’est pas la preuve que la case annuelle est décochée. Aucun calcul ni donnée métier modifié.",
+      "format": "390×600 (interaction)",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / portée mobile",
+      "option": "Sélection de deux clubs, puis retour à Beynost seul",
+      "precision": "Cases Beynost et Lyon Carré de Soie ; Tout sélectionner/effacer. Passage visible de Club 1 sélectionné à Club 2 sélectionnés, puis restauration. Pas de chiffres copiés ni de preuve des calculs agrégés.",
+      "format": "390×600",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Formulaires / éditeur responsive",
+      "option": "Nom, Sauvegarder, Ajouter une section",
+      "precision": "Éditeur existant vide ouvert en tablette et mobile. Aucun nom saisi ni section ajoutée, aucune sauvegarde. Le manque d’exemple rempli reste un blocage de données.",
+      "format": "390×844 et 820×600",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Formulaires / limite mobile",
+      "option": "Bouton Ajouter une section partiellement hors cadre",
+      "precision": "Capture explicite 390×844 : colonne droite et bouton coupés. Le document garde 390 px ; cela ne suffit pas à prouver que tous les enfants sont utilisables. Prévoir une disposition verticale et une recette des débordements dans CFitness.",
+      "format": "390×844",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Campagne email / Cibler responsive",
+      "option": "Première étape, deux dates et portée nulle",
+      "precision": "Vue initiale ouverte en tablette et mobile, Suivant désactivé tant qu’aucune audience n’est choisie. Aucun statut/segment sélectionné, aucun passage d’étape, aucun enregistrement.",
+      "format": "390×844 et 820×600",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Campagne email / limite mobile",
+      "option": "En-tête et colonnes hors cadre",
+      "precision": "À 390 px, borne droite du bouton Suivant mesurée à environ 790 px ; capture montrant une partie seulement de l’assistant. Prévoir navigation compacte et colonnes empilées dans CFitness. Aucun passage d’étape.",
+      "format": "390×844",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Campagne SMS / anomalie mobile",
+      "option": "Erreur de rendu reproduite à 390 px",
+      "precision": "Formulaire chargé après rechargement à 820 px, puis erreur visible après passage à 390 px. Diagnostic lu : DialogClose doit être utilisé dans Dialog. Aucun champ saisi. Ne pas attribuer la cause au backend ni généraliser à tous les appareils.",
+      "format": "820×600 puis 390×844",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Scénarios / préparation responsive",
+      "option": "Nom, mode, ciblage, conditions et sources",
+      "precision": "Formulaire initial ouvert en tablette et mobile : zones internes défilantes. Aucun nom saisi, cible changée ni scénario créé. La comparaison de modes de la passe précédente reste valable ; cette passe vérifie la disposition.",
+      "format": "390×844 et 820×1180",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Modèles email / limite responsive",
+      "option": "Aperçu et champs hors cadre mobile",
+      "precision": "Fenêtre existante consultée sur les deux formats. À 390 px, Aperçu mesuré jusqu’à environ 583 px ; un seul champ d’en-tête visible contre trois en tablette. Ne pas conclure que les champs ont disparu : ils sortent du cadre. Aucun test email ni modification.",
+      "format": "390×844 et 820×1180",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "WhatsApp / boutons existants",
+      "option": "Type de bouton : Appeler un numéro",
+      "precision": "Valeurs réellement présentes dans un sélecteur natif grisé d’un modèle existant. Aucune sélection changée ni message envoyé.",
+      "format": "390×844 et 820×1180",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "WhatsApp / boutons existants",
+      "option": "Type de bouton : URL",
+      "precision": "Valeurs réellement présentes dans un sélecteur natif grisé d’un modèle existant. Aucune sélection changée ni message envoyé.",
+      "format": "390×844 et 820×1180",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "WhatsApp / boutons existants",
+      "option": "Type de bouton : Réponse rapide",
+      "precision": "Valeurs réellement présentes dans un sélecteur natif grisé d’un modèle existant. Aucune sélection changée ni message envoyé.",
+      "format": "390×844 et 820×1180",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "WhatsApp / boutons URL",
+      "option": "Mode d’URL : Statique",
+      "precision": "Deux boutons URL existants sont en mode Statique ; Dynamique est une option du sélecteur grisé. Paramétrage et résolution d’URL dynamique non testés, aucune URL privée copiée.",
+      "format": "390×844 et 820×1180",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "WhatsApp / boutons URL",
+      "option": "Mode d’URL : Dynamique",
+      "precision": "Deux boutons URL existants sont en mode Statique ; Dynamique est une option du sélecteur grisé. Paramétrage et résolution d’URL dynamique non testés, aucune URL privée copiée.",
+      "format": "390×844 et 820×1180",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "WhatsApp / modèle responsive",
+      "option": "Formulaire verrouillé et configuration incomplète",
+      "precision": "Modèle existant ouvert sur les deux formats. Libellés et champs repérés sans nom, description, média, footer ou bouton modifié. Les attributs DOM ne suffisent pas à certifier ce que le serveur accepte de sauvegarder.",
+      "format": "390×844 et 820×1180",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Paramètres / navigation mobile",
+      "option": "Menu Open menu : quatorze rubriques",
+      "precision": "Les quatorze liens de réglages sont proposés une fois dans les Paramètres ; ne pas confondre ce menu avec le menu principal mobile à huit entrées. Aucun réglage activé.",
+      "format": "390×600",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Paramètres / navigation tablette",
+      "option": "Quatorze pages consultées ; ouverture du menu non confirmée",
+      "precision": "Les 14 pages ont été chargées à 820 px avec leur titre. La commande Open menu est située au bord gauche ; les tentatives d’ouverture n’ont pas fourni de liste exploitable. Ne pas compter un menu 14 liens comme vérifié dans ce format. Aucun réglage actionné.",
+      "format": "820×600",
+      "etat": "observe",
+      "preuve": "Interface Lead, session ADMIN / Beynost, 17/11/2026"
+    }
+  ]
+}

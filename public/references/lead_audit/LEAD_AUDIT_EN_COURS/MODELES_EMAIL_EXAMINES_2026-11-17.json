@@ -1,0 +1,376 @@
+{
+  "limite": "Comparaison structurelle des modèles existants, sans modification ni copie de leur contenu. Les comptes d’images ne certifient pas les types de blocs.",
+  "modeles": [
+    {
+      "modele": "EMAIL RDV NON HONORE",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id",
+        "data-mail-editable"
+      ],
+      "iframes": 0,
+      "images": 3,
+      "richtext": 3
+    },
+    {
+      "modele": "EMAIL BIENVENUE - NOUVEAU CLIENT",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id",
+        "data-mail-editable"
+      ],
+      "iframes": 0,
+      "images": 3,
+      "richtext": 2
+    },
+    {
+      "modele": "EMAIL - VENU NON INSCRIT 2",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id",
+        "data-mail-editable"
+      ],
+      "iframes": 0,
+      "images": 3,
+      "richtext": 3
+    },
+    {
+      "modele": "EMAIL - VENU NON INSCRIT 1",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id",
+        "data-mail-editable"
+      ],
+      "iframes": 0,
+      "images": 3,
+      "richtext": 3
+    },
+    {
+      "modele": "EMAIL - SI PAS DE REPONSE APPEL",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id"
+      ],
+      "iframes": 1,
+      "images": 0,
+      "richtext": 0
+    },
+    {
+      "modele": "EMAIL - Seance essai Neyrolande",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id"
+      ],
+      "iframes": 1,
+      "images": 0,
+      "richtext": 0
+    },
+    {
+      "modele": "EMAIL - SEANCE DUO",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id",
+        "data-mail-editable"
+      ],
+      "iframes": 0,
+      "images": 3,
+      "richtext": 2
+    },
+    {
+      "modele": "EMAIL - RESIL QUESTIONNAIRE",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id",
+        "data-mail-editable"
+      ],
+      "iframes": 0,
+      "images": 3,
+      "richtext": 3
+    },
+    {
+      "modele": "EMAIL - RESA AFRO DANCE",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id",
+        "data-mail-editable"
+      ],
+      "iframes": 0,
+      "images": 3,
+      "richtext": 2
+    },
+    {
+      "modele": "EMAIL - PROSPECT WEB FORMULAIRE 3",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id",
+        "data-mail-editable"
+      ],
+      "iframes": 0,
+      "images": 3,
+      "richtext": 4
+    },
+    {
+      "modele": "EMAIL - PROSPECT WEB FORMULAIRE 2",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id",
+        "data-mail-editable"
+      ],
+      "iframes": 0,
+      "images": 3,
+      "richtext": 3
+    },
+    {
+      "modele": "EMAIL - PROSPECT WEB FORMULAIRE 1",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id",
+        "data-mail-editable"
+      ],
+      "iframes": 0,
+      "images": 3,
+      "richtext": 3
+    },
+    {
+      "modele": "EMAIL - NOUVEAU CLIENT SUIVI",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id"
+      ],
+      "iframes": 1,
+      "images": 0,
+      "richtext": 0
+    },
+    {
+      "modele": "EMAIL - MARKETING ANCIEN CLIENT",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id"
+      ],
+      "iframes": 1,
+      "images": 0,
+      "richtext": 0
+    },
+    {
+      "modele": "EMAIL - FROID 2",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id",
+        "data-mail-editable"
+      ],
+      "iframes": 0,
+      "images": 3,
+      "richtext": 2
+    },
+    {
+      "modele": "EMAIL - FROID 1",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id",
+        "data-mail-editable"
+      ],
+      "iframes": 0,
+      "images": 3,
+      "richtext": 2
+    },
+    {
+      "modele": "EMAIL - ESSAI PAS VENU / ESSAI ANNULE 2",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id",
+        "data-mail-editable"
+      ],
+      "iframes": 0,
+      "images": 3,
+      "richtext": 2
+    },
+    {
+      "modele": "EMAIL - ESSAI PAS VENU / ESSAI ANNULE 1",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id",
+        "data-mail-editable"
+      ],
+      "iframes": 0,
+      "images": 3,
+      "richtext": 2
+    },
+    {
+      "modele": "EMAIL - ESSAI A VENIR",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id",
+        "data-mail-editable"
+      ],
+      "iframes": 0,
+      "images": 3,
+      "richtext": 2
+    },
+    {
+      "modele": "EMAIL - CONFIRMATION RDV(HORS SEANCE D'ESSAI)",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id",
+        "data-mail-editable"
+      ],
+      "iframes": 0,
+      "images": 3,
+      "richtext": 2
+    },
+    {
+      "modele": "EMAIL - CONFIRMATION RDV SEANCE D'ESSAI",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id",
+        "data-mail-editable"
+      ],
+      "iframes": 0,
+      "images": 3,
+      "richtext": 2
+    },
+    {
+      "modele": "EMAIL - CONFIRMATION RDV BSP",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id"
+      ],
+      "iframes": 1,
+      "images": 0,
+      "richtext": 0
+    },
+    {
+      "modele": "EMAIL - ANCIEN CLIENT 2",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id"
+      ],
+      "iframes": 1,
+      "images": 0,
+      "richtext": 0
+    },
+    {
+      "modele": "EMAIL - ANCIEN CLIENT 1",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id"
+      ],
+      "iframes": 1,
+      "images": 0,
+      "richtext": 0
+    },
+    {
+      "modele": "EMAIL - A CONTACTER 2",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id",
+        "data-mail-editable"
+      ],
+      "iframes": 0,
+      "images": 3,
+      "richtext": 5
+    },
+    {
+      "modele": "EMAIL - A CONTACTER 1",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id",
+        "data-mail-editable"
+      ],
+      "iframes": 0,
+      "images": 3,
+      "richtext": 6
+    },
+    {
+      "modele": "EMAIL - 1 MOIS OFFERT",
+      "canvas": true,
+      "dataAttributes": [
+        "data-radix-scroll-area-viewport",
+        "data-jimo-target",
+        "data-block-row",
+        "data-block-id",
+        "data-mail-editable"
+      ],
+      "iframes": 0,
+      "images": 3,
+      "richtext": 2
+    }
+  ]
+}

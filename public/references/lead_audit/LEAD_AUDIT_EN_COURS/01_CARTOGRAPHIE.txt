@@ -1,0 +1,190 @@
+CARTOGRAPHIE CONNUE — LEAD, AUDIT EN COURS
+
+Chaque adresse avec {club}, {contact} ou {scenario} est un patron documentaire, pas une URL essayée par substitution. Aucune liste d’identifiants ne doit être parcourue.
+
+Rechercher un contact
+/club/{club}/search
+Entrée visible ; recherche détaillée non testée
+
+Prospects
+/club/{club}/lead
+Liste, filtres et formulaire vide partiellement observés ; fiches complètes à explorer
+
+Clients
+/club/{club}/client
+Liste et sélection multiple sans sélection observées ; fiche/vacances/décrochage à explorer
+
+Messagerie
+/club/{club}/messaging
+Liste, sélecteur et une conversation existante consultés sans envoi
+
+Activités
+/club/{club}/todos
+Liste et vues temporelles observées ; traitement individuel non testé
+
+Planning
+/club/{club}/planning
+Calendrier consulté ; parcours de réservation non validé
+
+Statistiques
+/club/{club}/statistics
+Filtres, indicateurs et quatre graphiques observés ; analyses détaillées restantes
+
+Ventes
+/club/{club}/sales
+Liste, filtres et colonnes observés ; vue sans résultat
+
+Formulaires
+/club/{club}/forms
+Liste observée ; éditeur et réponses individuelles non inspectés
+
+Communication / Modèles
+/club/{club}/template
+Liste et WhatsApp détaillés partiellement ; email/SMS à compléter
+
+Communication / Campagnes
+/club/{club}/campaign
+Liste observée ; parcours documentés seulement
+
+Communication / Campagnes UTM
+/club/{club}/utm_campaign
+Colonnes observées ; détail à explorer
+
+Communication / Scénarios
+/club/{club}/scenario
+Liste et un scénario existant observés ; aucune écriture
+
+Communication / SMS envoyés
+/club/{club}/sms
+Liste des statuts et colonnes observée ; aucune relance
+
+Communication / Emails échangés
+/club/{club}/email
+Liste des statuts et colonnes observée ; aucune réponse
+
+Préférences
+/club/{club}/settings/app-settings
+Langue et restriction des statistiques observées
+
+Crédits SMS
+/club/{club}/settings/sms
+Solde, achat et recharge visibles ; aucun achat ni activation
+
+Profil du Club
+/club/{club}/settings/marketing
+Champs et contraintes logo observés
+
+Utilisateurs
+/club/{club}/settings/users
+Liste et lien de gestion externe observés ; droits non modifiés
+
+Gestion rendez-vous
+/club/{club}/settings/meetings
+Réglages, nouveau type et indisponibilité consultés sans validation
+
+Email & SMS de service
+/club/{club}/settings/automation
+Six types de messages et état des interrupteurs observés ; éditeurs restants
+
+Gestion prospects
+/club/{club}/settings/prospects
+Assignation, décrochage et archivage observés
+
+Segments
+/club/{club}/settings/segments
+Liste vide ; responsive testé sur cette seule page
+
+Script de vente
+/club/{club}/settings/script
+Éditeur et barre de mise en forme observés
+
+Sources
+/club/{club}/settings/sources
+49 sources et 9 sélections de catégories relevées
+
+Passage statut client
+/club/{club}/settings/exclusions
+Liste des offres et cases observée ; origine technique à confirmer
+
+Notifications
+/club/{club}/settings/notifications
+Quatre familles et destinataire observés
+
+WhatsApp
+/club/{club}/settings/whatsapp
+Compte connecté et éléments du profil observés ; aucune modification Meta
+
+API partenaires
+/club/{club}/settings/partners
+Neuf cartes ; fiches hors WhatsApp ouvertes, aucun connecteur activé
+
+Fiche partenaire / STRIPE
+/club/{club}/settings/partners/STRIPE
+Fiche consultée ; connexion/configuration non exécutée
+
+Fiche partenaire / FACEBOOK
+/club/{club}/settings/partners/FACEBOOK
+Fiche consultée ; connexion/configuration non exécutée
+
+Fiche partenaire / GOOGLE
+/club/{club}/settings/partners/GOOGLE
+Fiche consultée ; connexion/configuration non exécutée
+
+Fiche partenaire / HEITZ
+/club/{club}/settings/partners/HEITZ
+Fiche consultée ; connexion/configuration non exécutée
+
+Fiche partenaire / RESAMANIA_2
+/club/{club}/settings/partners/RESAMANIA_2
+Fiche consultée ; connexion/configuration non exécutée
+
+Fiche partenaire / DECIPLUS
+/club/{club}/settings/partners/DECIPLUS
+Fiche consultée ; connexion/configuration non exécutée
+
+Fiche partenaire / CLICKFUNNELS
+/club/{club}/settings/partners/CLICKFUNNELS
+Fiche consultée ; connexion/configuration non exécutée
+
+Fiche partenaire / FUNNELO
+/club/{club}/settings/partners/FUNNELO
+Fiche consultée ; connexion/configuration non exécutée
+
+Fiche prospect
+/club/{club}/lead/{contact}
+Chemin visible ; parcours détaillé restant
+
+Conversation
+/club/{club}/messaging/{conversation}
+Un détail observé ; aucune saisie
+
+Scénario
+/club/{club}/scenario/{scenario}
+Un détail observé ; autres types restants
+
+Nouveau type de rendez-vous
+/club/{club}/settings/meetings/new
+Formulaire vide observé puis abandonné
+
+Nouveau segment
+/club/{club}/settings/segments/new
+Lien observé ; formulaire non ouvert
+
+Assistant WhatsApp
+/club/{club}/template/new?templateType=WHATSAPP
+Configuration et éditeur partiels ; INC-001, ne pas reprendre sur compte réel avant clarification
+
+Gestion des droits externe
+https://pro.masalledesport.com/club/{club}/users
+Lien observé ; non parcouru
+
+Application MaSalleDeSport
+https://pro.masalledesport.com/club/{club}
+Lien App observé ; produit distinct non audité ici
+
+Application ClubConnect
+https://clubconnect.masalledesport.com/club/null
+Valeur null observée ; fonctionnement non prouvé
+
+DERNIÈRE PASSE EN LECTURE SEULE — 17 NOVEMBRE
+Campagnes > Email > Nouvelle campagne : 1 Cibler (observé), 2 Composer, 3 Objet, 4 Vérifier (libellés observés, contenu non parcouru). Campagnes > Bilan email envoyé : métadonnées, quatre compteurs, aperçu et ciblage. Service : six variantes. Fiche mobile : Sommaire/Détails. Menu mobile : huit liens observés, distincts du menu ordinateur.

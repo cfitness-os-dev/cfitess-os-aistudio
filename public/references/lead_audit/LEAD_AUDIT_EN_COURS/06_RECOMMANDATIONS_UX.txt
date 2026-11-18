@@ -1,0 +1,29 @@
+RECOMMANDATIONS UX/UI POUR C.FITNESS OS — PROPOSITIONS À VALIDER
+
+1. Conserver les repères Lead : Prospects, Clients, Activités, Planning, Communication et Paramètres ; décider le nom et l’emplacement du module commercial dans l’OS. « Mon compte » a été convenu pour la RH, pas pour ce CRM.
+2. Appliquer le design sombre CFitness et son système d’icônes. Garder les structures familières sans recopier la feuille CSS ou le code source du produit.
+3. Limiter les annonces superposées. Un centre de nouveautés non bloquant et une aide contextuelle éviteront les clics interceptés observés pendant cet audit.
+4. Rendre chaque action identifiable au lecteur d’écran et au clavier ; expliquer les contrôles grisés. Des icônes sans libellé ont empêché de qualifier plusieurs actions.
+5. Mettre les informations de contact, prochaines actions et historique au même endroit ; éviter de perdre le contexte lors du passage fiche ↔ messagerie ↔ rendez-vous.
+6. Conserver recherche, filtres, tri et retour à la liste de manière prévisible ; proposer des vues enregistrées comme amélioration, pas comme capacité déjà prouvée de Lead.
+7. Sur mobile, afficher les actions essentielles dans le cadre, puis présenter les tableaux en cartes ou avec un défilement explicitement signalé. La page Segments à 390 px coupe des contenus et l’action d’ajout dans la vue initiale ; une seule page a été contrôlée.
+8. Séparer clairement brouillon, enregistrement, soumission Meta, publication et envoi. Signaler immédiatement toute création automatique. Un simple passage d’étape ne doit pas laisser une ambiguïté comme INC-001.
+9. Montrer la portée d’une action : contact, sélection, page, tous les résultats, club ou organisation. Donner un récapitulatif avant une action groupée.
+10. WhatsApp : rendre visibles le numéro expéditeur, la fenêtre de réponse, les modèles disponibles, les variables manquantes, le coût connu et les erreurs. Ne pas promettre un coût nul à partir de la seule fenêtre de conversation.
+11. Présenter le consentement, les exclusions, vacances et désabonnements avant l’envoi ; indiquer pourquoi un destinataire est exclu. La collecte et les règles applicables devront être validées par l’organisation.
+12. Versionner les scénarios et visualiser entrées, parcours en cours et arrêt ; distinguer activation et verrouillage. Prévenir les doubles scénarios concurrents.
+13. Expliquer les indicateurs : période, population, attribution, dénominateur et fraîcheur. L’écran observé annonce trente minutes d’actualisation ; aucune promesse de temps réel ne peut en être déduite.
+14. Pour les connecteurs, afficher la dernière synchronisation, le sens des flux, les erreurs et la reprise. Un badge « connecté » ne suffit pas à prouver que les données sont à jour.
+15. Distinguer réservation provisoire et confirmée, paiement reçu et abandonné ; ne pas confondre une vente ERP et un prospect converti.
+16. Corriger explicitement les incohérences de libellés : « Prénom » pour une liste de formulaires, résumé Funnelo citant ClickFunnels, date de recharge inactive en 1970. Les garder dans le relevé source, pas dans la conception cible sans raison.
+
+COMPLÉMENT ADMINISTRATEUR — 17 NOVEMBRE
+Pour CFitness, garder les repères métier mais rendre les listes utilisables sur mobile avec colonnes essentielles, détail de ligne et défilement explicite. Les tables source dépassent la largeur disponible dans des conteneurs horizontaux.
+Donner des noms accessibles aux icônes : le + mobile démarre une conversation, tandis que l’icône d’action d’un modèle WhatsApp est une suppression. Éviter les commandes ambiguës.
+Distinguer approbation Meta, complétude de configuration et capacité effective d’envoi. WA-02 relève une divergence liste/détail à expliquer avant de figer la règle métier.
+
+DERNIÈRE PASSE EN LECTURE SEULE — 17 NOVEMBRE
+Distinguer actif/inactif et ouvert/verrouillé des scénarios. Utiliser le parcours email actuel en quatre étapes comme référence visible, tout en validant les trois étapes non parcourues. Assurer l’accès aux fonctions nécessaires depuis le mobile : plusieurs liens de gestion sont absents du menu compact source. Les panneaux de fiche Sommaire/Détails sont une adaptation mobile, pas des droits différents.
+
+PASSE FILTRES ET RESPONSIVE — 17 NOVEMBRE
+Empiler les colonnes des éditeurs en mobile, rendre toutes les commandes visibles et accessibles, distinguer les dix statuts Prospects des deux statuts Clients et des douze statuts de ciblage/activité. Corriger les enveloppes de boutons imbriqués et donner un nom aux icônes. Tester les parcours en entrée directe et via menu, y compris la restauration des filtres et les états vides.

@@ -1,0 +1,79 @@
+{
+  "date": "2026-11-17",
+  "contexte": "Formats navigateur, session Commercial au début de la passe ; aucune application native ni écriture testée.",
+  "resultats": [
+    {
+      "page": "Prospects",
+      "width": 390,
+      "height": 844,
+      "actions": [],
+      "document": 390,
+      "fenetre": 390,
+      "main": 390,
+      "tables": [
+        {
+          "droite": 1078,
+          "gauche": 16,
+          "largeur": 1062,
+          "parents": [
+            {
+              "contenu": 1062,
+              "defilementX": "visible",
+              "largeur": 1062,
+              "tag": "DIV"
+            },
+            {
+              "contenu": 1062,
+              "defilementX": "scroll",
+              "largeur": 358,
+              "tag": "DIV"
+            },
+            {
+              "contenu": 358,
+              "defilementX": "hidden",
+              "largeur": 358,
+              "tag": "DIV"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "page": "Clients",
+      "width": 390,
+      "height": 844,
+      "actions": [],
+      "document": 390,
+      "fenetre": 390,
+      "main": 390,
+      "tables": [
+        {
+          "droite": 952,
+          "gauche": 16,
+          "largeur": 936,
+          "parents": [
+            {
+              "contenu": 936,
+              "defilementX": "visible",
+              "largeur": 936,
+              "tag": "DIV"
+            },
+            {
+              "contenu": 936,
+              "defilementX": "scroll",
+              "largeur": 358,
+              "tag": "DIV"
+            },
+            {
+              "contenu": 358,
+              "defilementX": "hidden",
+              "largeur": 358,
+              "tag": "DIV"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "limite": "Mesures de disposition de la vue initiale après chargement ; pas une recette complète de chaque interaction, clavier tactile ou appareil réel."
+}

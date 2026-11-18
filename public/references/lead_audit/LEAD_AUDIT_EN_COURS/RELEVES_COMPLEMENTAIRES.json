@@ -1,0 +1,2720 @@
+{
+  "date": "2026-11-16",
+  "acces_chrome": "Rétabli ; consultation reprise",
+  "entrees": [
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Sélectionner toute la catégorie",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Ma Salle De Sport",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Widget MSDS",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Club Connect",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Deciplus",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Heitz",
+      "etat": "observe",
+      "precision": "Case cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Resamania 1",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Resamania 2",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Resawod",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Sportigo",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Sélectionner toute la catégorie",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "RDV en ligne",
+      "etat": "observe",
+      "precision": "Case cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Reserve With Google",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Urban Challenge",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Urban Sports Club",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Sélectionner toute la catégorie",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Votre site web",
+      "etat": "observe",
+      "precision": "Case cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Formulaire Site Web",
+      "etat": "observe",
+      "precision": "Case cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Votre vente en ligne",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "ClickFunnels",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Swipe Pages",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Funnelo",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "FitnessBoost",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Formulaire lead",
+      "etat": "observe",
+      "precision": "Case cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "System IO",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Typeform",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "ChatGPT",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Newsletter Site Web",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Sélectionner toute la catégorie",
+      "etat": "observe",
+      "precision": "Case cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Google Ads",
+      "etat": "observe",
+      "precision": "Case cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Meta Ads",
+      "etat": "observe",
+      "precision": "Case cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Meta",
+      "etat": "observe",
+      "precision": "Case cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Instagram",
+      "etat": "observe",
+      "precision": "Case cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Agence",
+      "etat": "observe",
+      "precision": "Case cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Sélectionner toute la catégorie",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Facebook Messenger",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Lien Facebook",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Chatbot Instagram",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "WhatsApp",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Sélectionner toute la catégorie",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Google",
+      "etat": "observe",
+      "precision": "Case cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Avis Google My Business",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Sélectionner toute la catégorie",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Parrainage",
+      "etat": "observe",
+      "precision": "Case cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Parrainage Généré",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "We Love Customers",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Exo",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Inviter un ami",
+      "etat": "observe",
+      "precision": "Case cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Sélectionner toute la catégorie",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Active Campaign",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Leadfox",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Elevate Marketing",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Sélectionner toute la catégorie",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Accueil Club",
+      "etat": "observe",
+      "precision": "Case cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Appel Téléphonique",
+      "etat": "observe",
+      "precision": "Case cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Import Fichier",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Flyer",
+      "etat": "observe",
+      "precision": "Case cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Paramètres / Sources",
+      "option": "Relais colis",
+      "etat": "observe",
+      "precision": "Case non cochée au relevé ; aucune modification. Une source active ne prouve pas une connexion partenaire."
+    },
+    {
+      "rubrique": "Intégrations / Stripe",
+      "option": "Statut Non connectée",
+      "etat": "observe",
+      "precision": "Champs et explications visibles ; aucune clé saisie, affichée ou copiée ; aucun test ni enregistrement. Le résultat des paiements n’est pas testé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Stripe",
+      "option": "Clé publique",
+      "etat": "observe",
+      "precision": "Champs et explications visibles ; aucune clé saisie, affichée ou copiée ; aucun test ni enregistrement. Le résultat des paiements n’est pas testé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Stripe",
+      "option": "Clé secrète",
+      "etat": "observe",
+      "precision": "Champs et explications visibles ; aucune clé saisie, affichée ou copiée ; aucun test ni enregistrement. Le résultat des paiements n’est pas testé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Stripe",
+      "option": "Secret du webhook",
+      "etat": "observe",
+      "precision": "Champs et explications visibles ; aucune clé saisie, affichée ou copiée ; aucun test ni enregistrement. Le résultat des paiements n’est pas testé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Stripe",
+      "option": "Afficher la clé",
+      "etat": "observe",
+      "precision": "Champs et explications visibles ; aucune clé saisie, affichée ou copiée ; aucun test ni enregistrement. Le résultat des paiements n’est pas testé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Stripe",
+      "option": "Copier la clé / désactivé",
+      "etat": "observe",
+      "precision": "Champs et explications visibles ; aucune clé saisie, affichée ou copiée ; aucun test ni enregistrement. Le résultat des paiements n’est pas testé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Stripe",
+      "option": "Tester la connexion",
+      "etat": "observe",
+      "precision": "Champs et explications visibles ; aucune clé saisie, affichée ou copiée ; aucun test ni enregistrement. Le résultat des paiements n’est pas testé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Stripe",
+      "option": "Enregistrer / désactivé",
+      "etat": "observe",
+      "precision": "Champs et explications visibles ; aucune clé saisie, affichée ou copiée ; aucun test ni enregistrement. Le résultat des paiements n’est pas testé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Stripe",
+      "option": "URL de webhook propre au club",
+      "etat": "observe",
+      "precision": "Champs et explications visibles ; aucune clé saisie, affichée ou copiée ; aucun test ni enregistrement. Le résultat des paiements n’est pas testé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Stripe",
+      "option": "Copier l’URL",
+      "etat": "observe",
+      "precision": "Champs et explications visibles ; aucune clé saisie, affichée ou copiée ; aucun test ni enregistrement. Le résultat des paiements n’est pas testé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Stripe",
+      "option": "Parcours d’activation en trois étapes",
+      "etat": "observe",
+      "precision": "Champs et explications visibles ; aucune clé saisie, affichée ou copiée ; aucun test ni enregistrement. Le résultat des paiements n’est pas testé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Stripe",
+      "option": "Réservation conditionnée au paiement",
+      "etat": "observe",
+      "precision": "Champs et explications visibles ; aucune clé saisie, affichée ou copiée ; aucun test ni enregistrement. Le résultat des paiements n’est pas testé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Stripe",
+      "option": "Prospect conservé même si paiement abandonné ou échoué",
+      "etat": "observe",
+      "precision": "Champs et explications visibles ; aucune clé saisie, affichée ou copiée ; aucun test ni enregistrement. Le résultat des paiements n’est pas testé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Facebook",
+      "option": "Fiche de présentation",
+      "etat": "observe",
+      "precision": "Fiche lue ; Contactez-nous et Paramétrer non actionnés. Aucune connexion Meta.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Facebook",
+      "option": "Contactez-nous",
+      "etat": "observe",
+      "precision": "Fiche lue ; Contactez-nous et Paramétrer non actionnés. Aucune connexion Meta.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Facebook",
+      "option": "Lien site Facebook",
+      "etat": "observe",
+      "precision": "Fiche lue ; Contactez-nous et Paramétrer non actionnés. Aucune connexion Meta.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Facebook",
+      "option": "Connexion Facebook multi-club",
+      "etat": "observe",
+      "precision": "Fiche lue ; Contactez-nous et Paramétrer non actionnés. Aucune connexion Meta.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Facebook",
+      "option": "Paramétrer",
+      "etat": "observe",
+      "precision": "Fiche lue ; Contactez-nous et Paramétrer non actionnés. Aucune connexion Meta.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Google",
+      "option": "Reserve by Google : réservation depuis recherche ou Maps",
+      "etat": "observe",
+      "precision": "Présentation affichée ; aucun contact ni activation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Google",
+      "option": "Contactez-nous",
+      "etat": "observe",
+      "precision": "Présentation affichée ; aucun contact ni activation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Google",
+      "option": "Lien Google Maps Reserve",
+      "etat": "observe",
+      "precision": "Présentation affichée ; aucun contact ni activation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Heitz",
+      "option": "Fiche de présentation",
+      "etat": "observe",
+      "precision": "Fiche consultée, aucun contact. Pas de détail technique probant sur les flux. La fiche Funnelo reprend un résumé parlant de ClickFunnels : incohérence à faire clarifier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/004-partenaire-heitz.jpg"
+    },
+    {
+      "rubrique": "Intégrations / Heitz",
+      "option": "Retour API partenaires",
+      "etat": "observe",
+      "precision": "Fiche consultée, aucun contact. Pas de détail technique probant sur les flux. La fiche Funnelo reprend un résumé parlant de ClickFunnels : incohérence à faire clarifier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/004-partenaire-heitz.jpg"
+    },
+    {
+      "rubrique": "Intégrations / Heitz",
+      "option": "Contactez-nous",
+      "etat": "observe",
+      "precision": "Fiche consultée, aucun contact. Pas de détail technique probant sur les flux. La fiche Funnelo reprend un résumé parlant de ClickFunnels : incohérence à faire clarifier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/004-partenaire-heitz.jpg"
+    },
+    {
+      "rubrique": "Intégrations / Heitz",
+      "option": "Lien vers le site du partenaire",
+      "etat": "observe",
+      "precision": "Fiche consultée, aucun contact. Pas de détail technique probant sur les flux. La fiche Funnelo reprend un résumé parlant de ClickFunnels : incohérence à faire clarifier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/004-partenaire-heitz.jpg"
+    },
+    {
+      "rubrique": "Intégrations / Résamania V2",
+      "option": "Fiche de présentation",
+      "etat": "observe",
+      "precision": "Fiche consultée, aucun contact. Pas de détail technique probant sur les flux. La fiche Funnelo reprend un résumé parlant de ClickFunnels : incohérence à faire clarifier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Résamania V2",
+      "option": "Retour API partenaires",
+      "etat": "observe",
+      "precision": "Fiche consultée, aucun contact. Pas de détail technique probant sur les flux. La fiche Funnelo reprend un résumé parlant de ClickFunnels : incohérence à faire clarifier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Résamania V2",
+      "option": "Contactez-nous",
+      "etat": "observe",
+      "precision": "Fiche consultée, aucun contact. Pas de détail technique probant sur les flux. La fiche Funnelo reprend un résumé parlant de ClickFunnels : incohérence à faire clarifier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Résamania V2",
+      "option": "Lien vers le site du partenaire",
+      "etat": "observe",
+      "precision": "Fiche consultée, aucun contact. Pas de détail technique probant sur les flux. La fiche Funnelo reprend un résumé parlant de ClickFunnels : incohérence à faire clarifier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Deciplus",
+      "option": "Fiche de présentation",
+      "etat": "observe",
+      "precision": "Fiche consultée, aucun contact. Pas de détail technique probant sur les flux. La fiche Funnelo reprend un résumé parlant de ClickFunnels : incohérence à faire clarifier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Deciplus",
+      "option": "Retour API partenaires",
+      "etat": "observe",
+      "precision": "Fiche consultée, aucun contact. Pas de détail technique probant sur les flux. La fiche Funnelo reprend un résumé parlant de ClickFunnels : incohérence à faire clarifier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Deciplus",
+      "option": "Contactez-nous",
+      "etat": "observe",
+      "precision": "Fiche consultée, aucun contact. Pas de détail technique probant sur les flux. La fiche Funnelo reprend un résumé parlant de ClickFunnels : incohérence à faire clarifier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Deciplus",
+      "option": "Lien vers le site du partenaire",
+      "etat": "observe",
+      "precision": "Fiche consultée, aucun contact. Pas de détail technique probant sur les flux. La fiche Funnelo reprend un résumé parlant de ClickFunnels : incohérence à faire clarifier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Click Funnels",
+      "option": "Fiche de présentation",
+      "etat": "observe",
+      "precision": "Fiche consultée, aucun contact. Pas de détail technique probant sur les flux. La fiche Funnelo reprend un résumé parlant de ClickFunnels : incohérence à faire clarifier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Click Funnels",
+      "option": "Retour API partenaires",
+      "etat": "observe",
+      "precision": "Fiche consultée, aucun contact. Pas de détail technique probant sur les flux. La fiche Funnelo reprend un résumé parlant de ClickFunnels : incohérence à faire clarifier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Click Funnels",
+      "option": "Contactez-nous",
+      "etat": "observe",
+      "precision": "Fiche consultée, aucun contact. Pas de détail technique probant sur les flux. La fiche Funnelo reprend un résumé parlant de ClickFunnels : incohérence à faire clarifier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Click Funnels",
+      "option": "Lien vers le site du partenaire",
+      "etat": "observe",
+      "precision": "Fiche consultée, aucun contact. Pas de détail technique probant sur les flux. La fiche Funnelo reprend un résumé parlant de ClickFunnels : incohérence à faire clarifier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Funnelo",
+      "option": "Fiche de présentation",
+      "etat": "observe",
+      "precision": "Fiche consultée, aucun contact. Pas de détail technique probant sur les flux. La fiche Funnelo reprend un résumé parlant de ClickFunnels : incohérence à faire clarifier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Funnelo",
+      "option": "Retour API partenaires",
+      "etat": "observe",
+      "precision": "Fiche consultée, aucun contact. Pas de détail technique probant sur les flux. La fiche Funnelo reprend un résumé parlant de ClickFunnels : incohérence à faire clarifier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Funnelo",
+      "option": "Contactez-nous",
+      "etat": "observe",
+      "precision": "Fiche consultée, aucun contact. Pas de détail technique probant sur les flux. La fiche Funnelo reprend un résumé parlant de ClickFunnels : incohérence à faire clarifier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Intégrations / Funnelo",
+      "option": "Lien vers le site du partenaire",
+      "etat": "observe",
+      "precision": "Fiche consultée, aucun contact. Pas de détail technique probant sur les flux. La fiche Funnelo reprend un résumé parlant de ClickFunnels : incohérence à faire clarifier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Messagerie WhatsApp",
+      "option": "Recherche par nom ou numéro",
+      "etat": "observe",
+      "precision": "Aucune saisie ni envoi. Ouverture d’une conversation existante, puis sélecteur de modèles fermé sans sélection. L’écran affirme qu’aucun échange n’a encore eu lieu pour ce contact ; cela ne prouve pas une fenêtre de réponse libre active. Aucune identité ni conversation réelle conservée dans les documents.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Messagerie WhatsApp",
+      "option": "Liste des conversations",
+      "etat": "observe",
+      "precision": "Aucune saisie ni envoi. Ouverture d’une conversation existante, puis sélecteur de modèles fermé sans sélection. L’écran affirme qu’aucun échange n’a encore eu lieu pour ce contact ; cela ne prouve pas une fenêtre de réponse libre active. Aucune identité ni conversation réelle conservée dans les documents.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Messagerie WhatsApp",
+      "option": "Compteur de conversations et de non-lues",
+      "etat": "observe",
+      "precision": "Aucune saisie ni envoi. Ouverture d’une conversation existante, puis sélecteur de modèles fermé sans sélection. L’écran affirme qu’aucun échange n’a encore eu lieu pour ce contact ; cela ne prouve pas une fenêtre de réponse libre active. Aucune identité ni conversation réelle conservée dans les documents.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Messagerie WhatsApp",
+      "option": "Démarrer une conversation en choisissant un prospect",
+      "etat": "observe",
+      "precision": "Aucune saisie ni envoi. Ouverture d’une conversation existante, puis sélecteur de modèles fermé sans sélection. L’écran affirme qu’aucun échange n’a encore eu lieu pour ce contact ; cela ne prouve pas une fenêtre de réponse libre active. Aucune identité ni conversation réelle conservée dans les documents.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Messagerie WhatsApp",
+      "option": "Recherche de prospect / Source",
+      "etat": "observe",
+      "precision": "Aucune saisie ni envoi. Ouverture d’une conversation existante, puis sélecteur de modèles fermé sans sélection. L’écran affirme qu’aucun échange n’a encore eu lieu pour ce contact ; cela ne prouve pas une fenêtre de réponse libre active. Aucune identité ni conversation réelle conservée dans les documents.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Messagerie WhatsApp",
+      "option": "Recherche de prospect / Nom",
+      "etat": "observe",
+      "precision": "Aucune saisie ni envoi. Ouverture d’une conversation existante, puis sélecteur de modèles fermé sans sélection. L’écran affirme qu’aucun échange n’a encore eu lieu pour ce contact ; cela ne prouve pas une fenêtre de réponse libre active. Aucune identité ni conversation réelle conservée dans les documents.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Messagerie WhatsApp",
+      "option": "Recherche de prospect / Statut",
+      "etat": "observe",
+      "precision": "Aucune saisie ni envoi. Ouverture d’une conversation existante, puis sélecteur de modèles fermé sans sélection. L’écran affirme qu’aucun échange n’a encore eu lieu pour ce contact ; cela ne prouve pas une fenêtre de réponse libre active. Aucune identité ni conversation réelle conservée dans les documents.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Messagerie WhatsApp",
+      "option": "Recherche de prospect / Téléphone",
+      "etat": "observe",
+      "precision": "Aucune saisie ni envoi. Ouverture d’une conversation existante, puis sélecteur de modèles fermé sans sélection. L’écran affirme qu’aucun échange n’a encore eu lieu pour ce contact ; cela ne prouve pas une fenêtre de réponse libre active. Aucune identité ni conversation réelle conservée dans les documents.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Messagerie WhatsApp",
+      "option": "Recherche de prospect / Ajouté le",
+      "etat": "observe",
+      "precision": "Aucune saisie ni envoi. Ouverture d’une conversation existante, puis sélecteur de modèles fermé sans sélection. L’écran affirme qu’aucun échange n’a encore eu lieu pour ce contact ; cela ne prouve pas une fenêtre de réponse libre active. Aucune identité ni conversation réelle conservée dans les documents.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Messagerie WhatsApp",
+      "option": "Historique d’une conversation existante",
+      "etat": "observe",
+      "precision": "Aucune saisie ni envoi. Ouverture d’une conversation existante, puis sélecteur de modèles fermé sans sélection. L’écran affirme qu’aucun échange n’a encore eu lieu pour ce contact ; cela ne prouve pas une fenêtre de réponse libre active. Aucune identité ni conversation réelle conservée dans les documents.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Messagerie WhatsApp",
+      "option": "Choisir un modèle approuvé pour initier le contact",
+      "etat": "observe",
+      "precision": "Aucune saisie ni envoi. Ouverture d’une conversation existante, puis sélecteur de modèles fermé sans sélection. L’écran affirme qu’aucun échange n’a encore eu lieu pour ce contact ; cela ne prouve pas une fenêtre de réponse libre active. Aucune identité ni conversation réelle conservée dans les documents.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Messagerie WhatsApp",
+      "option": "Sélectionner un modèle",
+      "etat": "observe",
+      "precision": "Aucune saisie ni envoi. Ouverture d’une conversation existante, puis sélecteur de modèles fermé sans sélection. L’écran affirme qu’aucun échange n’a encore eu lieu pour ce contact ; cela ne prouve pas une fenêtre de réponse libre active. Aucune identité ni conversation réelle conservée dans les documents.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Messagerie WhatsApp",
+      "option": "Modèles",
+      "etat": "observe",
+      "precision": "Aucune saisie ni envoi. Ouverture d’une conversation existante, puis sélecteur de modèles fermé sans sélection. L’écran affirme qu’aucun échange n’a encore eu lieu pour ce contact ; cela ne prouve pas une fenêtre de réponse libre active. Aucune identité ni conversation réelle conservée dans les documents.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Messagerie WhatsApp",
+      "option": "Envoyer / désactivé sans contenu",
+      "etat": "observe",
+      "precision": "Aucune saisie ni envoi. Ouverture d’une conversation existante, puis sélecteur de modèles fermé sans sélection. L’écran affirme qu’aucun échange n’a encore eu lieu pour ce contact ; cela ne prouve pas une fenêtre de réponse libre active. Aucune identité ni conversation réelle conservée dans les documents.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Messagerie WhatsApp",
+      "option": "Panneau de renseignements du contact",
+      "etat": "observe",
+      "precision": "Aucune saisie ni envoi. Ouverture d’une conversation existante, puis sélecteur de modèles fermé sans sélection. L’écran affirme qu’aucun échange n’a encore eu lieu pour ce contact ; cela ne prouve pas une fenêtre de réponse libre active. Aucune identité ni conversation réelle conservée dans les documents.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Messagerie WhatsApp / choix modèle",
+      "option": "Créé le",
+      "etat": "observe",
+      "precision": "Liste observée, aucun modèle appliqué et aucun message envoyé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Messagerie WhatsApp / choix modèle",
+      "option": "Nom",
+      "etat": "observe",
+      "precision": "Liste observée, aucun modèle appliqué et aucun message envoyé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Messagerie WhatsApp / choix modèle",
+      "option": "Type WhatsApp",
+      "etat": "observe",
+      "precision": "Liste observée, aucun modèle appliqué et aucun message envoyé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Messagerie WhatsApp / choix modèle",
+      "option": "Fermer le sélecteur",
+      "etat": "observe",
+      "precision": "Liste observée, aucun modèle appliqué et aucun message envoyé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Scénarios / liste",
+      "option": "Copier vers un club",
+      "etat": "observe",
+      "precision": "Liste consultée ; création et copie non exécutées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Scénarios / liste",
+      "option": "Créer un scénario",
+      "etat": "observe",
+      "precision": "Liste consultée ; création et copie non exécutées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Scénarios / liste",
+      "option": "Recherche",
+      "etat": "observe",
+      "precision": "Liste consultée ; création et copie non exécutées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Scénarios / liste",
+      "option": "Filtre Cible",
+      "etat": "observe",
+      "precision": "Liste consultée ; création et copie non exécutées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Scénarios / liste",
+      "option": "Affichage",
+      "etat": "observe",
+      "precision": "Liste consultée ; création et copie non exécutées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Scénarios / liste",
+      "option": "Colonne Nom",
+      "etat": "observe",
+      "precision": "Liste consultée ; création et copie non exécutées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Scénarios / liste",
+      "option": "Colonne Actif",
+      "etat": "observe",
+      "precision": "Liste consultée ; création et copie non exécutées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Scénarios / liste",
+      "option": "Colonne Type",
+      "etat": "observe",
+      "precision": "Liste consultée ; création et copie non exécutées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Scénarios / liste",
+      "option": "Colonne Cible",
+      "etat": "observe",
+      "precision": "Liste consultée ; création et copie non exécutées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Scénarios / liste",
+      "option": "Colonne Créé le",
+      "etat": "observe",
+      "precision": "Liste consultée ; création et copie non exécutées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Scénarios / liste",
+      "option": "Colonne Action",
+      "etat": "observe",
+      "precision": "Liste consultée ; création et copie non exécutées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Scénarios / détail existant",
+      "option": "État Inactif",
+      "etat": "observe",
+      "precision": "Scénario existant consulté. Aucune étape ni interrupteur touché, aucune activation, modification ou suppression. Verrouillage décrit comme refusant les nouvelles entrées tout en laissant finir les parcours déjà engagés. Les minutes sont réellement affichées malgré une aide présentant les délais en jours.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/005-scenario-existant-consultation.jpg"
+    },
+    {
+      "rubrique": "Scénarios / détail existant",
+      "option": "Activer",
+      "etat": "observe",
+      "precision": "Scénario existant consulté. Aucune étape ni interrupteur touché, aucune activation, modification ou suppression. Verrouillage décrit comme refusant les nouvelles entrées tout en laissant finir les parcours déjà engagés. Les minutes sont réellement affichées malgré une aide présentant les délais en jours.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/005-scenario-existant-consultation.jpg"
+    },
+    {
+      "rubrique": "Scénarios / détail existant",
+      "option": "Étapes Envoyer un email",
+      "etat": "observe",
+      "precision": "Scénario existant consulté. Aucune étape ni interrupteur touché, aucune activation, modification ou suppression. Verrouillage décrit comme refusant les nouvelles entrées tout en laissant finir les parcours déjà engagés. Les minutes sont réellement affichées malgré une aide présentant les délais en jours.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/005-scenario-existant-consultation.jpg"
+    },
+    {
+      "rubrique": "Scénarios / détail existant",
+      "option": "Étapes Création d’une activité / appel",
+      "etat": "observe",
+      "precision": "Scénario existant consulté. Aucune étape ni interrupteur touché, aucune activation, modification ou suppression. Verrouillage décrit comme refusant les nouvelles entrées tout en laissant finir les parcours déjà engagés. Les minutes sont réellement affichées malgré une aide présentant les délais en jours.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/005-scenario-existant-consultation.jpg"
+    },
+    {
+      "rubrique": "Scénarios / détail existant",
+      "option": "Étapes Envoyer un SMS",
+      "etat": "observe",
+      "precision": "Scénario existant consulté. Aucune étape ni interrupteur touché, aucune activation, modification ou suppression. Verrouillage décrit comme refusant les nouvelles entrées tout en laissant finir les parcours déjà engagés. Les minutes sont réellement affichées malgré une aide présentant les délais en jours.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/005-scenario-existant-consultation.jpg"
+    },
+    {
+      "rubrique": "Scénarios / détail existant",
+      "option": "Interrupteur par étape",
+      "etat": "observe",
+      "precision": "Scénario existant consulté. Aucune étape ni interrupteur touché, aucune activation, modification ou suppression. Verrouillage décrit comme refusant les nouvelles entrées tout en laissant finir les parcours déjà engagés. Les minutes sont réellement affichées malgré une aide présentant les délais en jours.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/005-scenario-existant-consultation.jpg"
+    },
+    {
+      "rubrique": "Scénarios / détail existant",
+      "option": "Délai Immédiatement",
+      "etat": "observe",
+      "precision": "Scénario existant consulté. Aucune étape ni interrupteur touché, aucune activation, modification ou suppression. Verrouillage décrit comme refusant les nouvelles entrées tout en laissant finir les parcours déjà engagés. Les minutes sont réellement affichées malgré une aide présentant les délais en jours.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/005-scenario-existant-consultation.jpg"
+    },
+    {
+      "rubrique": "Scénarios / détail existant",
+      "option": "Délai observé Après 5 minutes",
+      "etat": "observe",
+      "precision": "Scénario existant consulté. Aucune étape ni interrupteur touché, aucune activation, modification ou suppression. Verrouillage décrit comme refusant les nouvelles entrées tout en laissant finir les parcours déjà engagés. Les minutes sont réellement affichées malgré une aide présentant les délais en jours.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/005-scenario-existant-consultation.jpg"
+    },
+    {
+      "rubrique": "Scénarios / détail existant",
+      "option": "Délais en jours",
+      "etat": "observe",
+      "precision": "Scénario existant consulté. Aucune étape ni interrupteur touché, aucune activation, modification ou suppression. Verrouillage décrit comme refusant les nouvelles entrées tout en laissant finir les parcours déjà engagés. Les minutes sont réellement affichées malgré une aide présentant les délais en jours.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/005-scenario-existant-consultation.jpg"
+    },
+    {
+      "rubrique": "Scénarios / détail existant",
+      "option": "Voir plus",
+      "etat": "observe",
+      "precision": "Scénario existant consulté. Aucune étape ni interrupteur touché, aucune activation, modification ou suppression. Verrouillage décrit comme refusant les nouvelles entrées tout en laissant finir les parcours déjà engagés. Les minutes sont réellement affichées malgré une aide présentant les délais en jours.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/005-scenario-existant-consultation.jpg"
+    },
+    {
+      "rubrique": "Scénarios / détail existant",
+      "option": "Commandes graphiques +, crayon et corbeille",
+      "etat": "observe",
+      "precision": "Scénario existant consulté. Aucune étape ni interrupteur touché, aucune activation, modification ou suppression. Verrouillage décrit comme refusant les nouvelles entrées tout en laissant finir les parcours déjà engagés. Les minutes sont réellement affichées malgré une aide présentant les délais en jours.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/005-scenario-existant-consultation.jpg"
+    },
+    {
+      "rubrique": "Scénarios / détail existant",
+      "option": "Dernière exécution",
+      "etat": "observe",
+      "precision": "Scénario existant consulté. Aucune étape ni interrupteur touché, aucune activation, modification ou suppression. Verrouillage décrit comme refusant les nouvelles entrées tout en laissant finir les parcours déjà engagés. Les minutes sont réellement affichées malgré une aide présentant les délais en jours.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/005-scenario-existant-consultation.jpg"
+    },
+    {
+      "rubrique": "Scénarios / détail existant",
+      "option": "Ciblage des prospects",
+      "etat": "observe",
+      "precision": "Scénario existant consulté. Aucune étape ni interrupteur touché, aucune activation, modification ou suppression. Verrouillage décrit comme refusant les nouvelles entrées tout en laissant finir les parcours déjà engagés. Les minutes sont réellement affichées malgré une aide présentant les délais en jours.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/005-scenario-existant-consultation.jpg"
+    },
+    {
+      "rubrique": "Scénarios / détail existant",
+      "option": "Sources",
+      "etat": "observe",
+      "precision": "Scénario existant consulté. Aucune étape ni interrupteur touché, aucune activation, modification ou suppression. Verrouillage décrit comme refusant les nouvelles entrées tout en laissant finir les parcours déjà engagés. Les minutes sont réellement affichées malgré une aide présentant les délais en jours.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/005-scenario-existant-consultation.jpg"
+    },
+    {
+      "rubrique": "Scénarios / détail existant",
+      "option": "Modifier le scénario",
+      "etat": "observe",
+      "precision": "Scénario existant consulté. Aucune étape ni interrupteur touché, aucune activation, modification ou suppression. Verrouillage décrit comme refusant les nouvelles entrées tout en laissant finir les parcours déjà engagés. Les minutes sont réellement affichées malgré une aide présentant les délais en jours.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/005-scenario-existant-consultation.jpg"
+    },
+    {
+      "rubrique": "Scénarios / détail existant",
+      "option": "Verrouillage",
+      "etat": "observe",
+      "precision": "Scénario existant consulté. Aucune étape ni interrupteur touché, aucune activation, modification ou suppression. Verrouillage décrit comme refusant les nouvelles entrées tout en laissant finir les parcours déjà engagés. Les minutes sont réellement affichées malgré une aide présentant les délais en jours.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/005-scenario-existant-consultation.jpg"
+    },
+    {
+      "rubrique": "Scénarios / détail existant",
+      "option": "Verrouiller",
+      "etat": "observe",
+      "precision": "Scénario existant consulté. Aucune étape ni interrupteur touché, aucune activation, modification ou suppression. Verrouillage décrit comme refusant les nouvelles entrées tout en laissant finir les parcours déjà engagés. Les minutes sont réellement affichées malgré une aide présentant les délais en jours.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/005-scenario-existant-consultation.jpg"
+    },
+    {
+      "rubrique": "Gestion prospects / assignation",
+      "option": "Assignation automatisée / inactive",
+      "etat": "observe",
+      "precision": "Consultation sans saisie ni validation métier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/006-gestion-prospects.jpg"
+    },
+    {
+      "rubrique": "Gestion prospects / assignation",
+      "option": "Désassignation automatisée / inactive",
+      "etat": "observe",
+      "precision": "Consultation sans saisie ni validation métier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/006-gestion-prospects.jpg"
+    },
+    {
+      "rubrique": "Gestion prospects / décrochage",
+      "option": "Seuil de décrochage par défaut / 21 jours",
+      "etat": "observe",
+      "precision": "Valeurs affichées seulement ; présence du champ ne prouve pas une collecte de badges active.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/006-gestion-prospects.jpg"
+    },
+    {
+      "rubrique": "Gestion prospects / décrochage",
+      "option": "Remise à zéro du compteur au badgeage",
+      "etat": "observe",
+      "precision": "Valeurs affichées seulement ; présence du champ ne prouve pas une collecte de badges active.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/006-gestion-prospects.jpg"
+    },
+    {
+      "rubrique": "Gestion prospects / décrochage",
+      "option": "Appliquer",
+      "etat": "observe",
+      "precision": "Valeurs affichées seulement ; présence du champ ne prouve pas une collecte de badges active.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/006-gestion-prospects.jpg"
+    },
+    {
+      "rubrique": "Gestion prospects / archivage",
+      "option": "Archivage automatisé / actif",
+      "etat": "observe",
+      "precision": "Aucun changement. L’interface indique explicitement que les emails, SMS et appels envoyés par le club ne réinitialisent pas le délai.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/012-archivage-prospects.jpg"
+    },
+    {
+      "rubrique": "Gestion prospects / archivage",
+      "option": "Statut cible Archivé",
+      "etat": "observe",
+      "precision": "Aucun changement. L’interface indique explicitement que les emails, SMS et appels envoyés par le club ne réinitialisent pas le délai.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/012-archivage-prospects.jpg"
+    },
+    {
+      "rubrique": "Gestion prospects / archivage",
+      "option": "Statut alternatif Froid",
+      "etat": "observe",
+      "precision": "Aucun changement. L’interface indique explicitement que les emails, SMS et appels envoyés par le club ne réinitialisent pas le délai.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/012-archivage-prospects.jpg"
+    },
+    {
+      "rubrique": "Gestion prospects / archivage",
+      "option": "Seuil 365 jours",
+      "etat": "observe",
+      "precision": "Aucun changement. L’interface indique explicitement que les emails, SMS et appels envoyés par le club ne réinitialisent pas le délai.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/012-archivage-prospects.jpg"
+    },
+    {
+      "rubrique": "Gestion prospects / archivage",
+      "option": "Appliquer",
+      "etat": "observe",
+      "precision": "Aucun changement. L’interface indique explicitement que les emails, SMS et appels envoyés par le club ne réinitialisent pas le délai.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/012-archivage-prospects.jpg"
+    },
+    {
+      "rubrique": "Gestion prospects / archivage",
+      "option": "Seule une réponse du prospect repousse l’archivage",
+      "etat": "observe",
+      "precision": "Aucun changement. L’interface indique explicitement que les emails, SMS et appels envoyés par le club ne réinitialisent pas le délai.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/012-archivage-prospects.jpg"
+    },
+    {
+      "rubrique": "Notifications",
+      "option": "Son nouveau prospect / inactif",
+      "etat": "observe",
+      "precision": "Réglages affichés seulement. Adresse réelle exclue. La notification WhatsApp porte sur acceptation ou rejet par Meta.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Notifications",
+      "option": "Email formulaire Lead / actif",
+      "etat": "observe",
+      "precision": "Réglages affichés seulement. Adresse réelle exclue. La notification WhatsApp porte sur acceptation ou rejet par Meta.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Notifications",
+      "option": "Adresse email de notification",
+      "etat": "observe",
+      "precision": "Réglages affichés seulement. Adresse réelle exclue. La notification WhatsApp porte sur acceptation ou rejet par Meta.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Notifications",
+      "option": "Enregistrer / désactivé sans changement",
+      "etat": "observe",
+      "precision": "Réglages affichés seulement. Adresse réelle exclue. La notification WhatsApp porte sur acceptation ou rejet par Meta.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Notifications",
+      "option": "Email arrivée nouvelle fiche prospect ou client / inactif",
+      "etat": "observe",
+      "precision": "Réglages affichés seulement. Adresse réelle exclue. La notification WhatsApp porte sur acceptation ou rejet par Meta.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Notifications",
+      "option": "Email changement de statut modèle WhatsApp / actif",
+      "etat": "observe",
+      "precision": "Réglages affichés seulement. Adresse réelle exclue. La notification WhatsApp porte sur acceptation ou rejet par Meta.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Segments / liste",
+      "option": "Ajouter un segment",
+      "etat": "observe",
+      "precision": "Consultation sans saisie ni validation métier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/007-segments-liste-vide.jpg"
+    },
+    {
+      "rubrique": "Segments / liste",
+      "option": "Rechercher un segment",
+      "etat": "observe",
+      "precision": "Consultation sans saisie ni validation métier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/007-segments-liste-vide.jpg"
+    },
+    {
+      "rubrique": "Segments / liste",
+      "option": "Colonne Nom",
+      "etat": "observe",
+      "precision": "Consultation sans saisie ni validation métier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/007-segments-liste-vide.jpg"
+    },
+    {
+      "rubrique": "Segments / liste",
+      "option": "Colonne Code",
+      "etat": "observe",
+      "precision": "Consultation sans saisie ni validation métier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/007-segments-liste-vide.jpg"
+    },
+    {
+      "rubrique": "Segments / liste",
+      "option": "Colonne Prospects",
+      "etat": "observe",
+      "precision": "Consultation sans saisie ni validation métier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/007-segments-liste-vide.jpg"
+    },
+    {
+      "rubrique": "Segments / liste",
+      "option": "Colonne Créé le",
+      "etat": "observe",
+      "precision": "Consultation sans saisie ni validation métier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/007-segments-liste-vide.jpg"
+    },
+    {
+      "rubrique": "Segments / liste",
+      "option": "Aucun résultat / 0 segment",
+      "etat": "observe",
+      "precision": "Consultation sans saisie ni validation métier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/007-segments-liste-vide.jpg"
+    },
+    {
+      "rubrique": "Segments / liste",
+      "option": "Lignes par page / 10",
+      "etat": "observe",
+      "precision": "Consultation sans saisie ni validation métier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/007-segments-liste-vide.jpg"
+    },
+    {
+      "rubrique": "Segments / liste",
+      "option": "Aller page",
+      "etat": "observe",
+      "precision": "Consultation sans saisie ni validation métier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/007-segments-liste-vide.jpg"
+    },
+    {
+      "rubrique": "Segments / liste",
+      "option": "Pagination",
+      "etat": "observe",
+      "precision": "Consultation sans saisie ni validation métier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/007-segments-liste-vide.jpg"
+    },
+    {
+      "rubrique": "Gestion rendez-vous",
+      "option": "URL de réservation du club",
+      "etat": "observe",
+      "precision": "Trois types existants affichés. Aucun réglage changé ; aucun identifiant de suivi copié dans le registre. Les quatre icônes par type ne sont pas toutes validées par une ouverture.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/008-parametres-rendez-vous.jpg"
+    },
+    {
+      "rubrique": "Gestion rendez-vous",
+      "option": "Copier l’URL",
+      "etat": "observe",
+      "precision": "Trois types existants affichés. Aucun réglage changé ; aucun identifiant de suivi copié dans le registre. Les quatre icônes par type ne sont pas toutes validées par une ouverture.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/008-parametres-rendez-vous.jpg"
+    },
+    {
+      "rubrique": "Gestion rendez-vous",
+      "option": "Couleur de l’application",
+      "etat": "observe",
+      "precision": "Trois types existants affichés. Aucun réglage changé ; aucun identifiant de suivi copié dans le registre. Les quatre icônes par type ne sont pas toutes validées par une ouverture.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/008-parametres-rendez-vous.jpg"
+    },
+    {
+      "rubrique": "Gestion rendez-vous",
+      "option": "Demander le consentement commercial / inactif",
+      "etat": "observe",
+      "precision": "Trois types existants affichés. Aucun réglage changé ; aucun identifiant de suivi copié dans le registre. Les quatre icônes par type ne sont pas toutes validées par une ouverture.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/008-parametres-rendez-vous.jpg"
+    },
+    {
+      "rubrique": "Gestion rendez-vous",
+      "option": "Identifiant Google Tag Manager",
+      "etat": "observe",
+      "precision": "Trois types existants affichés. Aucun réglage changé ; aucun identifiant de suivi copié dans le registre. Les quatre icônes par type ne sont pas toutes validées par une ouverture.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/008-parametres-rendez-vous.jpg"
+    },
+    {
+      "rubrique": "Gestion rendez-vous",
+      "option": "Ajouter un type de rendez-vous",
+      "etat": "observe",
+      "precision": "Trois types existants affichés. Aucun réglage changé ; aucun identifiant de suivi copié dans le registre. Les quatre icônes par type ne sont pas toutes validées par une ouverture.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/008-parametres-rendez-vous.jpg"
+    },
+    {
+      "rubrique": "Gestion rendez-vous",
+      "option": "Liste des types et durée",
+      "etat": "observe",
+      "precision": "Trois types existants affichés. Aucun réglage changé ; aucun identifiant de suivi copié dans le registre. Les quatre icônes par type ne sont pas toutes validées par une ouverture.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/008-parametres-rendez-vous.jpg"
+    },
+    {
+      "rubrique": "Gestion rendez-vous",
+      "option": "Réservable ou non par le prospect",
+      "etat": "observe",
+      "precision": "Trois types existants affichés. Aucun réglage changé ; aucun identifiant de suivi copié dans le registre. Les quatre icônes par type ne sont pas toutes validées par une ouverture.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/008-parametres-rendez-vous.jpg"
+    },
+    {
+      "rubrique": "Gestion rendez-vous",
+      "option": "Actions par type sans libellé accessibles",
+      "etat": "observe",
+      "precision": "Trois types existants affichés. Aucun réglage changé ; aucun identifiant de suivi copié dans le registre. Les quatre icônes par type ne sont pas toutes validées par une ouverture.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/008-parametres-rendez-vous.jpg"
+    },
+    {
+      "rubrique": "Gestion rendez-vous",
+      "option": "Ajouter une indisponibilité",
+      "etat": "observe",
+      "precision": "Trois types existants affichés. Aucun réglage changé ; aucun identifiant de suivi copié dans le registre. Les quatre icônes par type ne sont pas toutes validées par une ouverture.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/008-parametres-rendez-vous.jpg"
+    },
+    {
+      "rubrique": "Gestion rendez-vous",
+      "option": "Aucune période d’indisponibilité existante",
+      "etat": "observe",
+      "precision": "Trois types existants affichés. Aucun réglage changé ; aucun identifiant de suivi copié dans le registre. Les quatre icônes par type ne sont pas toutes validées par une ouverture.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/008-parametres-rendez-vous.jpg"
+    },
+    {
+      "rubrique": "Type de rendez-vous / formulaire vide",
+      "option": "Nom",
+      "etat": "observe",
+      "precision": "Formulaire neuf ouvert puis abandonné, sans saisie, changement de switch ni Appliquer. Les options conditionnelles restent non vérifiées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/009-type-rendez-vous-formulaire-vide.jpg"
+    },
+    {
+      "rubrique": "Type de rendez-vous / formulaire vide",
+      "option": "Durée / 15 minutes par défaut",
+      "etat": "observe",
+      "precision": "Formulaire neuf ouvert puis abandonné, sans saisie, changement de switch ni Appliquer. Les options conditionnelles restent non vérifiées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/009-type-rendez-vous-formulaire-vide.jpg"
+    },
+    {
+      "rubrique": "Type de rendez-vous / formulaire vide",
+      "option": "Fréquence / 15 minutes par défaut",
+      "etat": "observe",
+      "precision": "Formulaire neuf ouvert puis abandonné, sans saisie, changement de switch ni Appliquer. Les options conditionnelles restent non vérifiées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/009-type-rendez-vous-formulaire-vide.jpg"
+    },
+    {
+      "rubrique": "Type de rendez-vous / formulaire vide",
+      "option": "Description",
+      "etat": "observe",
+      "precision": "Formulaire neuf ouvert puis abandonné, sans saisie, changement de switch ni Appliquer. Les options conditionnelles restent non vérifiées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/009-type-rendez-vous-formulaire-vide.jpg"
+    },
+    {
+      "rubrique": "Type de rendez-vous / formulaire vide",
+      "option": "Modèle d’email associé",
+      "etat": "observe",
+      "precision": "Formulaire neuf ouvert puis abandonné, sans saisie, changement de switch ni Appliquer. Les options conditionnelles restent non vérifiées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/009-type-rendez-vous-formulaire-vide.jpg"
+    },
+    {
+      "rubrique": "Type de rendez-vous / formulaire vide",
+      "option": "Le prospect peut prendre ce rendez-vous / inactif",
+      "etat": "observe",
+      "precision": "Formulaire neuf ouvert puis abandonné, sans saisie, changement de switch ni Appliquer. Les options conditionnelles restent non vérifiées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/009-type-rendez-vous-formulaire-vide.jpg"
+    },
+    {
+      "rubrique": "Type de rendez-vous / formulaire vide",
+      "option": "Appliquer",
+      "etat": "observe",
+      "precision": "Formulaire neuf ouvert puis abandonné, sans saisie, changement de switch ni Appliquer. Les options conditionnelles restent non vérifiées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/009-type-rendez-vous-formulaire-vide.jpg"
+    },
+    {
+      "rubrique": "Type de rendez-vous / formulaire vide",
+      "option": "Retour à la gestion",
+      "etat": "observe",
+      "precision": "Formulaire neuf ouvert puis abandonné, sans saisie, changement de switch ni Appliquer. Les options conditionnelles restent non vérifiées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/009-type-rendez-vous-formulaire-vide.jpg"
+    },
+    {
+      "rubrique": "Indisponibilité / formulaire vide",
+      "option": "Type / Tous les types de rendez-vous",
+      "etat": "observe",
+      "precision": "Fenêtre ouverte puis fermée ; aucune date choisie ni validation. Les branches de récurrence n’ont pas été développées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Indisponibilité / formulaire vide",
+      "option": "Récurrence Une seule fois",
+      "etat": "observe",
+      "precision": "Fenêtre ouverte puis fermée ; aucune date choisie ni validation. Les branches de récurrence n’ont pas été développées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Indisponibilité / formulaire vide",
+      "option": "Récurrence Toutes les semaines",
+      "etat": "observe",
+      "precision": "Fenêtre ouverte puis fermée ; aucune date choisie ni validation. Les branches de récurrence n’ont pas été développées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Indisponibilité / formulaire vide",
+      "option": "Récurrence Tous les mois",
+      "etat": "observe",
+      "precision": "Fenêtre ouverte puis fermée ; aucune date choisie ni validation. Les branches de récurrence n’ont pas été développées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Indisponibilité / formulaire vide",
+      "option": "Récurrence Tous les ans",
+      "etat": "observe",
+      "precision": "Fenêtre ouverte puis fermée ; aucune date choisie ni validation. Les branches de récurrence n’ont pas été développées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Indisponibilité / formulaire vide",
+      "option": "Calendrier et navigation mois/année",
+      "etat": "observe",
+      "precision": "Fenêtre ouverte puis fermée ; aucune date choisie ni validation. Les branches de récurrence n’ont pas été développées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Indisponibilité / formulaire vide",
+      "option": "Heure de début",
+      "etat": "observe",
+      "precision": "Fenêtre ouverte puis fermée ; aucune date choisie ni validation. Les branches de récurrence n’ont pas été développées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Indisponibilité / formulaire vide",
+      "option": "Heure de fin",
+      "etat": "observe",
+      "precision": "Fenêtre ouverte puis fermée ; aucune date choisie ni validation. Les branches de récurrence n’ont pas été développées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Indisponibilité / formulaire vide",
+      "option": "Annuler",
+      "etat": "observe",
+      "precision": "Fenêtre ouverte puis fermée ; aucune date choisie ni validation. Les branches de récurrence n’ont pas été développées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Indisponibilité / formulaire vide",
+      "option": "Valider",
+      "etat": "observe",
+      "precision": "Fenêtre ouverte puis fermée ; aucune date choisie ni validation. Les branches de récurrence n’ont pas été développées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Indisponibilité / formulaire vide",
+      "option": "Fermer",
+      "etat": "observe",
+      "precision": "Fenêtre ouverte puis fermée ; aucune date choisie ni validation. Les branches de récurrence n’ont pas été développées.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Email & SMS de service",
+      "option": "SMS rappel 24h / inactif",
+      "etat": "observe",
+      "precision": "État affiché des interrupteurs seulement. Les éditeurs n’ont pas été ouverts ; aucune notification déclenchée. Désactivé signifie ici contrôle grisé dans cette session.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Email & SMS de service",
+      "option": "SMS modification / inactif et désactivé",
+      "etat": "observe",
+      "precision": "État affiché des interrupteurs seulement. Les éditeurs n’ont pas été ouverts ; aucune notification déclenchée. Désactivé signifie ici contrôle grisé dans cette session.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Email & SMS de service",
+      "option": "SMS annulation / inactif et désactivé",
+      "etat": "observe",
+      "precision": "État affiché des interrupteurs seulement. Les éditeurs n’ont pas été ouverts ; aucune notification déclenchée. Désactivé signifie ici contrôle grisé dans cette session.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Email & SMS de service",
+      "option": "Email rappel 24h / actif",
+      "etat": "observe",
+      "precision": "État affiché des interrupteurs seulement. Les éditeurs n’ont pas été ouverts ; aucune notification déclenchée. Désactivé signifie ici contrôle grisé dans cette session.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Email & SMS de service",
+      "option": "Email modification / inactif et désactivé",
+      "etat": "observe",
+      "precision": "État affiché des interrupteurs seulement. Les éditeurs n’ont pas été ouverts ; aucune notification déclenchée. Désactivé signifie ici contrôle grisé dans cette session.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Email & SMS de service",
+      "option": "Email annulation / inactif et désactivé",
+      "etat": "observe",
+      "precision": "État affiché des interrupteurs seulement. Les éditeurs n’ont pas été ouverts ; aucune notification déclenchée. Désactivé signifie ici contrôle grisé dans cette session.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Email & SMS de service",
+      "option": "Modifier le contenu de chacun des six messages",
+      "etat": "observe",
+      "precision": "État affiché des interrupteurs seulement. Les éditeurs n’ont pas été ouverts ; aucune notification déclenchée. Désactivé signifie ici contrôle grisé dans cette session.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Email & SMS de service",
+      "option": "Désactiver les emails de service MSDS pour éviter doublons / actif",
+      "etat": "observe",
+      "precision": "État affiché des interrupteurs seulement. Les éditeurs n’ont pas été ouverts ; aucune notification déclenchée. Désactivé signifie ici contrôle grisé dans cette session.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Passage statut client",
+      "option": "Offres importées",
+      "etat": "observe",
+      "precision": "Liste d’offres réellement affichée. Aucune case cochée ou décochée. Le statut Non connectée de la carte Heitz ne permet pas d’expliquer l’origine ou l’ancienneté de ces offres ; rapprochement technique nécessaire.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Passage statut client",
+      "option": "Case par offre activant le statut client",
+      "etat": "observe",
+      "precision": "Liste d’offres réellement affichée. Aucune case cochée ou décochée. Le statut Non connectée de la carte Heitz ne permet pas d’expliquer l’origine ou l’ancienneté de ces offres ; rapprochement technique nécessaire.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Crédits SMS",
+      "option": "Solde de crédits",
+      "etat": "observe",
+      "precision": "Aucun achat, aucune ouverture du paiement, aucune activation. Une date 01/01/1970 est affichée pour la dernière exécution inactive : ne pas la traiter comme une recharge réelle.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Crédits SMS",
+      "option": "Montant minimum de recharge affiché / 20 euros",
+      "etat": "observe",
+      "precision": "Aucun achat, aucune ouverture du paiement, aucune activation. Une date 01/01/1970 est affichée pour la dernière exécution inactive : ne pas la traiter comme une recharge réelle.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Crédits SMS",
+      "option": "Créditer le compte",
+      "etat": "observe",
+      "precision": "Aucun achat, aucune ouverture du paiement, aucune activation. Une date 01/01/1970 est affichée pour la dernière exécution inactive : ne pas la traiter comme une recharge réelle.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Crédits SMS",
+      "option": "Achat automatique / Inactif",
+      "etat": "observe",
+      "precision": "Aucun achat, aucune ouverture du paiement, aucune activation. Une date 01/01/1970 est affichée pour la dernière exécution inactive : ne pas la traiter comme une recharge réelle.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Crédits SMS",
+      "option": "Dernière exécution affichée",
+      "etat": "observe",
+      "precision": "Aucun achat, aucune ouverture du paiement, aucune activation. Une date 01/01/1970 est affichée pour la dernière exécution inactive : ne pas la traiter comme une recharge réelle.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Crédits SMS",
+      "option": "Activer la recharge automatique",
+      "etat": "observe",
+      "precision": "Aucun achat, aucune ouverture du paiement, aucune activation. Une date 01/01/1970 est affichée pour la dernière exécution inactive : ne pas la traiter comme une recharge réelle.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Crédits SMS",
+      "option": "Historique des recharges automatiques / désactivé",
+      "etat": "observe",
+      "precision": "Aucun achat, aucune ouverture du paiement, aucune activation. Une date 01/01/1970 est affichée pour la dernière exécution inactive : ne pas la traiter comme une recharge réelle.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Profil du club / Marketing",
+      "option": "Logo / import",
+      "etat": "observe",
+      "precision": "Champs lus sans modification, aucun fichier importé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Profil du club / Marketing",
+      "option": "Formats JPEG JPG PNG",
+      "etat": "observe",
+      "precision": "Champs lus sans modification, aucun fichier importé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Profil du club / Marketing",
+      "option": "Dimensions maximales 1024 × 1024 px",
+      "etat": "observe",
+      "precision": "Champs lus sans modification, aucun fichier importé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Profil du club / Marketing",
+      "option": "Poids maximal 2 Mo",
+      "etat": "observe",
+      "precision": "Champs lus sans modification, aucun fichier importé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Profil du club / Marketing",
+      "option": "Nom de l’émetteur des emails",
+      "etat": "observe",
+      "precision": "Champs lus sans modification, aucun fichier importé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Profil du club / Marketing",
+      "option": "URL Facebook du club",
+      "etat": "observe",
+      "precision": "Champs lus sans modification, aucun fichier importé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Profil du club / Marketing",
+      "option": "URL Instagram du club",
+      "etat": "observe",
+      "precision": "Champs lus sans modification, aucun fichier importé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Profil du club / Marketing",
+      "option": "Mettre à jour",
+      "etat": "observe",
+      "precision": "Champs lus sans modification, aucun fichier importé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Utilisateurs",
+      "option": "Liste Gestion des utilisateurs",
+      "etat": "observe",
+      "precision": "Aucun utilisateur ou droit modifié ; lien externe de gestion non ouvert. Identités et adresses exclues du dossier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Utilisateurs",
+      "option": "Colonne Utilisateurs",
+      "etat": "observe",
+      "precision": "Aucun utilisateur ou droit modifié ; lien externe de gestion non ouvert. Identités et adresses exclues du dossier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Utilisateurs",
+      "option": "Colonne Email",
+      "etat": "observe",
+      "precision": "Aucun utilisateur ou droit modifié ; lien externe de gestion non ouvert. Identités et adresses exclues du dossier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Utilisateurs",
+      "option": "Colonne Rôles",
+      "etat": "observe",
+      "precision": "Aucun utilisateur ou droit modifié ; lien externe de gestion non ouvert. Identités et adresses exclues du dossier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Utilisateurs",
+      "option": "Lien Gestion des droits utilisateurs vers MaSalleDeSport Pro",
+      "etat": "observe",
+      "precision": "Aucun utilisateur ou droit modifié ; lien externe de gestion non ouvert. Identités et adresses exclues du dossier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Utilisateurs",
+      "option": "Pagination",
+      "etat": "observe",
+      "precision": "Aucun utilisateur ou droit modifié ; lien externe de gestion non ouvert. Identités et adresses exclues du dossier.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Script de vente",
+      "option": "Zone de texte riche",
+      "etat": "observe",
+      "precision": "Aucun contenu saisi ni sauvegardé, aucune suppression.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Script de vente",
+      "option": "Styles de texte",
+      "etat": "observe",
+      "precision": "Aucun contenu saisi ni sauvegardé, aucune suppression.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Script de vente",
+      "option": "Gras",
+      "etat": "observe",
+      "precision": "Aucun contenu saisi ni sauvegardé, aucune suppression.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Script de vente",
+      "option": "Italique",
+      "etat": "observe",
+      "precision": "Aucun contenu saisi ni sauvegardé, aucune suppression.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Script de vente",
+      "option": "Souligné",
+      "etat": "observe",
+      "precision": "Aucun contenu saisi ni sauvegardé, aucune suppression.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Script de vente",
+      "option": "Aligner à gauche",
+      "etat": "observe",
+      "precision": "Aucun contenu saisi ni sauvegardé, aucune suppression.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Script de vente",
+      "option": "Centrer",
+      "etat": "observe",
+      "precision": "Aucun contenu saisi ni sauvegardé, aucune suppression.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Script de vente",
+      "option": "Aligner à droite",
+      "etat": "observe",
+      "precision": "Aucun contenu saisi ni sauvegardé, aucune suppression.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Script de vente",
+      "option": "Supprimer",
+      "etat": "observe",
+      "precision": "Aucun contenu saisi ni sauvegardé, aucune suppression.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Script de vente",
+      "option": "Enregistrer",
+      "etat": "observe",
+      "precision": "Aucun contenu saisi ni sauvegardé, aucune suppression.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "WhatsApp / preuve visuelle reprise",
+      "option": "Bandeau WhatsApp Connecté",
+      "etat": "observe",
+      "precision": "Capture dégagée vérifiée visuellement ; le reste du profil contient des coordonnées réelles exclues de la capture.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/010-whatsapp-bandeau-connecte.jpg"
+    },
+    {
+      "rubrique": "Activités / liste",
+      "option": "Recherche nom/prénom",
+      "etat": "observe",
+      "precision": "Aucune activité traitée. Les types associés aux neuf icônes restent à rapprocher de la documentation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Activités / liste",
+      "option": "Filtre Statut",
+      "etat": "observe",
+      "precision": "Aucune activité traitée. Les types associés aux neuf icônes restent à rapprocher de la documentation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Activités / liste",
+      "option": "Filtre Assigné à",
+      "etat": "observe",
+      "precision": "Aucune activité traitée. Les types associés aux neuf icônes restent à rapprocher de la documentation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Activités / liste",
+      "option": "Filtre Segment",
+      "etat": "observe",
+      "precision": "Aucune activité traitée. Les types associés aux neuf icônes restent à rapprocher de la documentation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Activités / liste",
+      "option": "Affichage",
+      "etat": "observe",
+      "precision": "Aucune activité traitée. Les types associés aux neuf icônes restent à rapprocher de la documentation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Activités / liste",
+      "option": "Neuf boutons de type sans libellé AX",
+      "etat": "observe",
+      "precision": "Aucune activité traitée. Les types associés aux neuf icônes restent à rapprocher de la documentation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Activités / liste",
+      "option": "À faire",
+      "etat": "observe",
+      "precision": "Aucune activité traitée. Les types associés aux neuf icônes restent à rapprocher de la documentation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Activités / liste",
+      "option": "Aujourd’hui",
+      "etat": "observe",
+      "precision": "Aucune activité traitée. Les types associés aux neuf icônes restent à rapprocher de la documentation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Activités / liste",
+      "option": "Demain",
+      "etat": "observe",
+      "precision": "Aucune activité traitée. Les types associés aux neuf icônes restent à rapprocher de la documentation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Activités / liste",
+      "option": "Cette semaine",
+      "etat": "observe",
+      "precision": "Aucune activité traitée. Les types associés aux neuf icônes restent à rapprocher de la documentation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Activités / liste",
+      "option": "En retard",
+      "etat": "observe",
+      "precision": "Aucune activité traitée. Les types associés aux neuf icônes restent à rapprocher de la documentation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Activités / liste",
+      "option": "Faites",
+      "etat": "observe",
+      "precision": "Aucune activité traitée. Les types associés aux neuf icônes restent à rapprocher de la documentation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Activités / liste",
+      "option": "Colonne Type",
+      "etat": "observe",
+      "precision": "Aucune activité traitée. Les types associés aux neuf icônes restent à rapprocher de la documentation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Activités / liste",
+      "option": "Colonne Échéance",
+      "etat": "observe",
+      "precision": "Aucune activité traitée. Les types associés aux neuf icônes restent à rapprocher de la documentation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Activités / liste",
+      "option": "Colonne Statut",
+      "etat": "observe",
+      "precision": "Aucune activité traitée. Les types associés aux neuf icônes restent à rapprocher de la documentation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Activités / liste",
+      "option": "Colonne Prospect",
+      "etat": "observe",
+      "precision": "Aucune activité traitée. Les types associés aux neuf icônes restent à rapprocher de la documentation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Activités / liste",
+      "option": "Colonne Segment",
+      "etat": "observe",
+      "precision": "Aucune activité traitée. Les types associés aux neuf icônes restent à rapprocher de la documentation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Activités / liste",
+      "option": "Colonne Numéros",
+      "etat": "observe",
+      "precision": "Aucune activité traitée. Les types associés aux neuf icônes restent à rapprocher de la documentation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Activités / liste",
+      "option": "Colonne Assigné à",
+      "etat": "observe",
+      "precision": "Aucune activité traitée. Les types associés aux neuf icônes restent à rapprocher de la documentation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Activités / liste",
+      "option": "Lignes par page",
+      "etat": "observe",
+      "precision": "Aucune activité traitée. Les types associés aux neuf icônes restent à rapprocher de la documentation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Activités / liste",
+      "option": "Aller page",
+      "etat": "observe",
+      "precision": "Aucune activité traitée. Les types associés aux neuf icônes restent à rapprocher de la documentation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Activités / liste",
+      "option": "Pagination",
+      "etat": "observe",
+      "precision": "Aucune activité traitée. Les types associés aux neuf icônes restent à rapprocher de la documentation.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Planning / vue principale",
+      "option": "Calendrier",
+      "etat": "observe",
+      "precision": "Vue consultée ; aucune réservation ouverte, déplacée ou créée. Les noms des contacts et leurs horaires individuels ne sont pas conservés.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Planning / vue principale",
+      "option": "Planning rendez-vous",
+      "etat": "observe",
+      "precision": "Vue consultée ; aucune réservation ouverte, déplacée ou créée. Les noms des contacts et leurs horaires individuels ne sont pas conservés.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Planning / vue principale",
+      "option": "Filtre Assigné à",
+      "etat": "observe",
+      "precision": "Vue consultée ; aucune réservation ouverte, déplacée ou créée. Les noms des contacts et leurs horaires individuels ne sont pas conservés.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Planning / vue principale",
+      "option": "Navigation précédente et suivante",
+      "etat": "observe",
+      "precision": "Vue consultée ; aucune réservation ouverte, déplacée ou créée. Les noms des contacts et leurs horaires individuels ne sont pas conservés.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Planning / vue principale",
+      "option": "Aujourd’hui",
+      "etat": "observe",
+      "precision": "Vue consultée ; aucune réservation ouverte, déplacée ou créée. Les noms des contacts et leurs horaires individuels ne sont pas conservés.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Planning / vue principale",
+      "option": "Ajouter",
+      "etat": "observe",
+      "precision": "Vue consultée ; aucune réservation ouverte, déplacée ou créée. Les noms des contacts et leurs horaires individuels ne sont pas conservés.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Planning / vue principale",
+      "option": "Créneaux et rendez-vous existants",
+      "etat": "observe",
+      "precision": "Vue consultée ; aucune réservation ouverte, déplacée ou créée. Les noms des contacts et leurs horaires individuels ne sont pas conservés.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "Plage de dates",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "Ignorer les prospects archivés / coché",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "Comparer avec l’année précédente / coché",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "Filtre Club",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "Rafraîchir",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "Nouveaux prospects",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "Rendez-vous pris",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "Taux de transformation",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "Abonnés parmi les nouveaux prospects",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "Abonnés total",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "RDV non honorés",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "Prospects passés en froid",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "Passages en club",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "Mails envoyés",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "SMS envoyés",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "Appels effectués",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "Défilement des indicateurs",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "Graphique Nouveaux prospects",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "Graphique Ventes",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "Détails des ventes",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "Graphique Rendez-vous",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "Graphique Taux de transformation",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "Export Excel des graphiques",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "Comparaison année courante/précédente",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / vue principale",
+      "option": "Mention actualisation toutes les 30 minutes",
+      "etat": "observe",
+      "precision": "Libellés observés, aucun chiffre commercial conservé dans le registre. Les exports ne sont pas téléchargés. Les tableaux détaillés présentés dans l’aide n’ont pas encore été retrouvés dans cette vue.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / périodes",
+      "option": "Le mois en cours",
+      "etat": "observe",
+      "precision": "Menu consulté puis fermé sans sélectionner une nouvelle période.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / périodes",
+      "option": "La semaine dernière",
+      "etat": "observe",
+      "precision": "Menu consulté puis fermé sans sélectionner une nouvelle période.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / périodes",
+      "option": "Le mois dernier",
+      "etat": "observe",
+      "precision": "Menu consulté puis fermé sans sélectionner une nouvelle période.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / périodes",
+      "option": "30 derniers jours",
+      "etat": "observe",
+      "precision": "Menu consulté puis fermé sans sélectionner une nouvelle période.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / périodes",
+      "option": "Depuis le début de l’année",
+      "etat": "observe",
+      "precision": "Menu consulté puis fermé sans sélectionner une nouvelle période.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Statistiques / périodes",
+      "option": "Calendrier et choix mois/année",
+      "etat": "observe",
+      "precision": "Menu consulté puis fermé sans sélectionner une nouvelle période.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Formulaires / liste",
+      "option": "Ajouter un formulaire",
+      "etat": "observe",
+      "precision": "Liste consultée. La première colonne porte visuellement le libellé Prénom, même si elle contient un nom de formulaire. Aucun éditeur ni réponse individuelle ouvert.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/011-formulaires-liste.jpg"
+    },
+    {
+      "rubrique": "Formulaires / liste",
+      "option": "Voir les réponses",
+      "etat": "observe",
+      "precision": "Liste consultée. La première colonne porte visuellement le libellé Prénom, même si elle contient un nom de formulaire. Aucun éditeur ni réponse individuelle ouvert.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/011-formulaires-liste.jpg"
+    },
+    {
+      "rubrique": "Formulaires / liste",
+      "option": "Créé le",
+      "etat": "observe",
+      "precision": "Liste consultée. La première colonne porte visuellement le libellé Prénom, même si elle contient un nom de formulaire. Aucun éditeur ni réponse individuelle ouvert.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/011-formulaires-liste.jpg"
+    },
+    {
+      "rubrique": "Formulaires / liste",
+      "option": "Statut Non publié",
+      "etat": "observe",
+      "precision": "Liste consultée. La première colonne porte visuellement le libellé Prénom, même si elle contient un nom de formulaire. Aucun éditeur ni réponse individuelle ouvert.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/011-formulaires-liste.jpg"
+    },
+    {
+      "rubrique": "Formulaires / liste",
+      "option": "Statut grisé dans cette vue",
+      "etat": "observe",
+      "precision": "Liste consultée. La première colonne porte visuellement le libellé Prénom, même si elle contient un nom de formulaire. Aucun éditeur ni réponse individuelle ouvert.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/011-formulaires-liste.jpg"
+    },
+    {
+      "rubrique": "Formulaires / liste",
+      "option": "Icône édition",
+      "etat": "observe",
+      "precision": "Liste consultée. La première colonne porte visuellement le libellé Prénom, même si elle contient un nom de formulaire. Aucun éditeur ni réponse individuelle ouvert.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/011-formulaires-liste.jpg"
+    },
+    {
+      "rubrique": "Formulaires / liste",
+      "option": "Icône aperçu",
+      "etat": "observe",
+      "precision": "Liste consultée. La première colonne porte visuellement le libellé Prénom, même si elle contient un nom de formulaire. Aucun éditeur ni réponse individuelle ouvert.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/011-formulaires-liste.jpg"
+    },
+    {
+      "rubrique": "Formulaires / liste",
+      "option": "Icône suppression",
+      "etat": "observe",
+      "precision": "Liste consultée. La première colonne porte visuellement le libellé Prénom, même si elle contient un nom de formulaire. Aucun éditeur ni réponse individuelle ouvert.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/011-formulaires-liste.jpg"
+    },
+    {
+      "rubrique": "Formulaires / liste",
+      "option": "Lignes par page",
+      "etat": "observe",
+      "precision": "Liste consultée. La première colonne porte visuellement le libellé Prénom, même si elle contient un nom de formulaire. Aucun éditeur ni réponse individuelle ouvert.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/011-formulaires-liste.jpg"
+    },
+    {
+      "rubrique": "Formulaires / liste",
+      "option": "Aller page",
+      "etat": "observe",
+      "precision": "Liste consultée. La première colonne porte visuellement le libellé Prénom, même si elle contient un nom de formulaire. Aucun éditeur ni réponse individuelle ouvert.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/011-formulaires-liste.jpg"
+    },
+    {
+      "rubrique": "Formulaires / liste",
+      "option": "Pagination",
+      "etat": "observe",
+      "precision": "Liste consultée. La première colonne porte visuellement le libellé Prénom, même si elle contient un nom de formulaire. Aucun éditeur ni réponse individuelle ouvert.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/011-formulaires-liste.jpg"
+    },
+    {
+      "rubrique": "Ventes / liste",
+      "option": "Partager cette vue",
+      "etat": "observe",
+      "precision": "Vue affichant zéro résultat dans le contexte courant ; pas preuve d’absence globale de ventes. Aucun lien partagé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Ventes / liste",
+      "option": "Recherche nom/prénom",
+      "etat": "observe",
+      "precision": "Vue affichant zéro résultat dans le contexte courant ; pas preuve d’absence globale de ventes. Aucun lien partagé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Ventes / liste",
+      "option": "Filtre Assigné à",
+      "etat": "observe",
+      "precision": "Vue affichant zéro résultat dans le contexte courant ; pas preuve d’absence globale de ventes. Aucun lien partagé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Ventes / liste",
+      "option": "Filtre Abonnement",
+      "etat": "observe",
+      "precision": "Vue affichant zéro résultat dans le contexte courant ; pas preuve d’absence globale de ventes. Aucun lien partagé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Ventes / liste",
+      "option": "Filtrer par date",
+      "etat": "observe",
+      "precision": "Vue affichant zéro résultat dans le contexte courant ; pas preuve d’absence globale de ventes. Aucun lien partagé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Ventes / liste",
+      "option": "Colonne Date de vente",
+      "etat": "observe",
+      "precision": "Vue affichant zéro résultat dans le contexte courant ; pas preuve d’absence globale de ventes. Aucun lien partagé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Ventes / liste",
+      "option": "Colonne Abonnement",
+      "etat": "observe",
+      "precision": "Vue affichant zéro résultat dans le contexte courant ; pas preuve d’absence globale de ventes. Aucun lien partagé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Ventes / liste",
+      "option": "Colonne Prospect",
+      "etat": "observe",
+      "precision": "Vue affichant zéro résultat dans le contexte courant ; pas preuve d’absence globale de ventes. Aucun lien partagé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Ventes / liste",
+      "option": "Colonne Assigné à",
+      "etat": "observe",
+      "precision": "Vue affichant zéro résultat dans le contexte courant ; pas preuve d’absence globale de ventes. Aucun lien partagé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Ventes / liste",
+      "option": "Colonne Tarif",
+      "etat": "observe",
+      "precision": "Vue affichant zéro résultat dans le contexte courant ; pas preuve d’absence globale de ventes. Aucun lien partagé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Ventes / liste",
+      "option": "Colonne Statut",
+      "etat": "observe",
+      "precision": "Vue affichant zéro résultat dans le contexte courant ; pas preuve d’absence globale de ventes. Aucun lien partagé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Ventes / liste",
+      "option": "Colonne Se finit le",
+      "etat": "observe",
+      "precision": "Vue affichant zéro résultat dans le contexte courant ; pas preuve d’absence globale de ventes. Aucun lien partagé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Ventes / liste",
+      "option": "Lignes par page",
+      "etat": "observe",
+      "precision": "Vue affichant zéro résultat dans le contexte courant ; pas preuve d’absence globale de ventes. Aucun lien partagé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Ventes / liste",
+      "option": "Aller page",
+      "etat": "observe",
+      "precision": "Vue affichant zéro résultat dans le contexte courant ; pas preuve d’absence globale de ventes. Aucun lien partagé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Ventes / liste",
+      "option": "Pagination",
+      "etat": "observe",
+      "precision": "Vue affichant zéro résultat dans le contexte courant ; pas preuve d’absence globale de ventes. Aucun lien partagé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Clients / liste",
+      "option": "Sélection multiple",
+      "etat": "observe",
+      "precision": "Aucune fiche client modifiée.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Clients / liste",
+      "option": "Recherche nom/mail/téléphone",
+      "etat": "observe",
+      "precision": "Aucune fiche client modifiée.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Clients / liste",
+      "option": "Filtre Statut",
+      "etat": "observe",
+      "precision": "Aucune fiche client modifiée.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Clients / liste",
+      "option": "Filtre Assigné à",
+      "etat": "observe",
+      "precision": "Aucune fiche client modifiée.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Clients / liste",
+      "option": "Filtre Source",
+      "etat": "observe",
+      "precision": "Aucune fiche client modifiée.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Clients / liste",
+      "option": "Filtre Segment",
+      "etat": "observe",
+      "precision": "Aucune fiche client modifiée.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Clients / liste",
+      "option": "Affichage",
+      "etat": "observe",
+      "precision": "Aucune fiche client modifiée.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Clients / liste",
+      "option": "Colonne Nom",
+      "etat": "observe",
+      "precision": "Aucune fiche client modifiée.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Clients / liste",
+      "option": "Colonne Activités",
+      "etat": "observe",
+      "precision": "Aucune fiche client modifiée.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Clients / liste",
+      "option": "Colonne Ancienneté",
+      "etat": "observe",
+      "precision": "Aucune fiche client modifiée.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Clients / liste",
+      "option": "Colonne Téléphone",
+      "etat": "observe",
+      "precision": "Aucune fiche client modifiée.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Clients / liste",
+      "option": "Colonne Segment",
+      "etat": "observe",
+      "precision": "Aucune fiche client modifiée.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Clients / liste",
+      "option": "Colonne Assigné à",
+      "etat": "observe",
+      "precision": "Aucune fiche client modifiée.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Clients / liste",
+      "option": "Lignes par page",
+      "etat": "observe",
+      "precision": "Aucune fiche client modifiée.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Clients / liste",
+      "option": "Aller page",
+      "etat": "observe",
+      "precision": "Aucune fiche client modifiée.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Clients / liste",
+      "option": "Pagination",
+      "etat": "observe",
+      "precision": "Aucune fiche client modifiée.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Clients / sélection multiple",
+      "option": "Tout sélectionner",
+      "etat": "observe",
+      "precision": "Mode ouvert puis refermé sans sélectionner de client ni affecter de segment.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Clients / sélection multiple",
+      "option": "Sélectionner toute la page",
+      "etat": "observe",
+      "precision": "Mode ouvert puis refermé sans sélectionner de client ni affecter de segment.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Clients / sélection multiple",
+      "option": "Sélectionner une ligne",
+      "etat": "observe",
+      "precision": "Mode ouvert puis refermé sans sélectionner de client ni affecter de segment.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Clients / sélection multiple",
+      "option": "Action Segment / désactivée sans sélection",
+      "etat": "observe",
+      "precision": "Mode ouvert puis refermé sans sélectionner de client ni affecter de segment.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Campagnes / liste",
+      "option": "Créer une campagne Mail",
+      "etat": "observe",
+      "precision": "Liste consultée ; aucun assistant de campagne ouvert et aucun envoi préparé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Campagnes / liste",
+      "option": "Créer une campagne SMS",
+      "etat": "observe",
+      "precision": "Liste consultée ; aucun assistant de campagne ouvert et aucun envoi préparé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Campagnes / liste",
+      "option": "Filtre Mail",
+      "etat": "observe",
+      "precision": "Liste consultée ; aucun assistant de campagne ouvert et aucun envoi préparé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Campagnes / liste",
+      "option": "Filtre SMS",
+      "etat": "observe",
+      "precision": "Liste consultée ; aucun assistant de campagne ouvert et aucun envoi préparé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Campagnes / liste",
+      "option": "Nom",
+      "etat": "observe",
+      "precision": "Liste consultée ; aucun assistant de campagne ouvert et aucun envoi préparé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Campagnes / liste",
+      "option": "Créée le",
+      "etat": "observe",
+      "precision": "Liste consultée ; aucun assistant de campagne ouvert et aucun envoi préparé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Campagnes / liste",
+      "option": "Pagination",
+      "etat": "observe",
+      "precision": "Liste consultée ; aucun assistant de campagne ouvert et aucun envoi préparé.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Campagnes UTM / liste",
+      "option": "Nom",
+      "etat": "observe",
+      "precision": "Colonnes observées, détails et calculs non ouverts.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Campagnes UTM / liste",
+      "option": "Première activité",
+      "etat": "observe",
+      "precision": "Colonnes observées, détails et calculs non ouverts.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Campagnes UTM / liste",
+      "option": "Dernière activité",
+      "etat": "observe",
+      "precision": "Colonnes observées, détails et calculs non ouverts.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Campagnes UTM / liste",
+      "option": "Lead atteints",
+      "etat": "observe",
+      "precision": "Colonnes observées, détails et calculs non ouverts.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Campagnes UTM / liste",
+      "option": "Conversion",
+      "etat": "observe",
+      "precision": "Colonnes observées, détails et calculs non ouverts.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "SMS envoyés",
+      "option": "Tous",
+      "etat": "observe",
+      "precision": "Aucun message relancé ni export téléchargé ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "SMS envoyés",
+      "option": "À envoyer",
+      "etat": "observe",
+      "precision": "Aucun message relancé ni export téléchargé ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "SMS envoyés",
+      "option": "Envoyé",
+      "etat": "observe",
+      "precision": "Aucun message relancé ni export téléchargé ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "SMS envoyés",
+      "option": "Pas assez de crédit",
+      "etat": "observe",
+      "precision": "Aucun message relancé ni export téléchargé ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "SMS envoyés",
+      "option": "Erreur",
+      "etat": "observe",
+      "precision": "Aucun message relancé ni export téléchargé ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "SMS envoyés",
+      "option": "Graphique SMS",
+      "etat": "observe",
+      "precision": "Aucun message relancé ni export téléchargé ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "SMS envoyés",
+      "option": "Exporter en Excel",
+      "etat": "observe",
+      "precision": "Aucun message relancé ni export téléchargé ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "SMS envoyés",
+      "option": "Colonne Prospect",
+      "etat": "observe",
+      "precision": "Aucun message relancé ni export téléchargé ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "SMS envoyés",
+      "option": "Colonne Téléphone",
+      "etat": "observe",
+      "precision": "Aucun message relancé ni export téléchargé ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "SMS envoyés",
+      "option": "Colonne Créé le",
+      "etat": "observe",
+      "precision": "Aucun message relancé ni export téléchargé ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "SMS envoyés",
+      "option": "Colonne Statut",
+      "etat": "observe",
+      "precision": "Aucun message relancé ni export téléchargé ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "SMS envoyés",
+      "option": "Colonne Informations",
+      "etat": "observe",
+      "precision": "Aucun message relancé ni export téléchargé ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "SMS envoyés",
+      "option": "Colonne Action",
+      "etat": "observe",
+      "precision": "Aucun message relancé ni export téléchargé ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "SMS envoyés",
+      "option": "Pagination",
+      "etat": "observe",
+      "precision": "Aucun message relancé ni export téléchargé ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Emails échangés",
+      "option": "Tous",
+      "etat": "observe",
+      "precision": "Aucun email envoyé, répondu ou exporté ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Emails échangés",
+      "option": "À envoyer",
+      "etat": "observe",
+      "precision": "Aucun email envoyé, répondu ou exporté ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Emails échangés",
+      "option": "Envoyé",
+      "etat": "observe",
+      "precision": "Aucun email envoyé, répondu ou exporté ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Emails échangés",
+      "option": "Erreur",
+      "etat": "observe",
+      "precision": "Aucun email envoyé, répondu ou exporté ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Emails échangés",
+      "option": "Reçu",
+      "etat": "observe",
+      "precision": "Aucun email envoyé, répondu ou exporté ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Emails échangés",
+      "option": "En cours d’envoi",
+      "etat": "observe",
+      "precision": "Aucun email envoyé, répondu ou exporté ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Emails échangés",
+      "option": "Graphique Mails",
+      "etat": "observe",
+      "precision": "Aucun email envoyé, répondu ou exporté ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Emails échangés",
+      "option": "Exporter en Excel",
+      "etat": "observe",
+      "precision": "Aucun email envoyé, répondu ou exporté ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Emails échangés",
+      "option": "Colonne Prospect",
+      "etat": "observe",
+      "precision": "Aucun email envoyé, répondu ou exporté ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Emails échangés",
+      "option": "Colonne Objet",
+      "etat": "observe",
+      "precision": "Aucun email envoyé, répondu ou exporté ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Emails échangés",
+      "option": "Colonne Créé le",
+      "etat": "observe",
+      "precision": "Aucun email envoyé, répondu ou exporté ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Emails échangés",
+      "option": "Colonne Statut",
+      "etat": "observe",
+      "precision": "Aucun email envoyé, répondu ou exporté ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Emails échangés",
+      "option": "Pagination",
+      "etat": "observe",
+      "precision": "Aucun email envoyé, répondu ou exporté ; les contenus et destinataires réels sont exclus.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026"
+    },
+    {
+      "rubrique": "Responsive / navigateur mobile",
+      "option": "Segments en 390 × 844",
+      "etat": "observe",
+      "precision": "Une seule page vide testée. La capture montre une vue tronquée horizontalement ; mécanisme de défilement et autres écrans non testés. Aucune application native simulée.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/013-segments-mobile-390x844.jpg"
+    },
+    {
+      "rubrique": "Responsive / navigateur mobile",
+      "option": "Menu latéral replié",
+      "etat": "observe",
+      "precision": "Une seule page vide testée. La capture montre une vue tronquée horizontalement ; mécanisme de défilement et autres écrans non testés. Aucune application native simulée.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/013-segments-mobile-390x844.jpg"
+    },
+    {
+      "rubrique": "Responsive / navigateur mobile",
+      "option": "Tableau et commande d’ajout partiellement hors du cadre initial",
+      "etat": "observe",
+      "precision": "Une seule page vide testée. La capture montre une vue tronquée horizontalement ; mécanisme de défilement et autres écrans non testés. Aucune application native simulée.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/013-segments-mobile-390x844.jpg"
+    },
+    {
+      "rubrique": "Responsive / navigateur tablette",
+      "option": "Segments en 820 × 1180",
+      "etat": "observe",
+      "precision": "Une seule page vide testée. Ne prouve pas la compatibilité de tous les formulaires et plannings. Taille habituelle restaurée après contrôle.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/014-segments-tablette-820x1180.jpg"
+    },
+    {
+      "rubrique": "Responsive / navigateur tablette",
+      "option": "Menu latéral replié",
+      "etat": "observe",
+      "precision": "Une seule page vide testée. Ne prouve pas la compatibilité de tous les formulaires et plannings. Taille habituelle restaurée après contrôle.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/014-segments-tablette-820x1180.jpg"
+    },
+    {
+      "rubrique": "Responsive / navigateur tablette",
+      "option": "Ajout, recherche et colonnes visibles",
+      "etat": "observe",
+      "precision": "Une seule page vide testée. Ne prouve pas la compatibilité de tous les formulaires et plannings. Taille habituelle restaurée après contrôle.",
+      "preuve": "Relevé interface ADMIN / Beynost, 16/11/2026 ; captures/014-segments-tablette-820x1180.jpg"
+    }
+  ]
+}

@@ -1,0 +1,155 @@
+EXEMPLES À RETROUVER DANS LES CLUBS — LEAD
+
+Commencer par EX01–EX05 : ils débloquent le plus d’écrans encore manquants. Un même formulaire ou modèle peut couvrir plusieurs cas. Aucun exemple n’est à créer pour l’audit. Si un cas n’existe pas, répondre absent et passer au suivant ; cette liste n’affirme pas que toutes ces variantes sont actives dans les clubs.
+
+Réponse pratique : EXxx — club — date/période — intitulé ou chemin — état affiché — prêt à consulter / absent / incertain. Il n’est pas nécessaire de recopier une identité, des coordonnées, une conversation, une clé ou un code de connexion.
+
+DÉJÀ DISPONIBLE, PAS À RECHERCHER À NOUVEAU
+Les trois profils actifs ; les types de rendez-vous ; modèles email existants et six types de blocs ; modèles WhatsApp Marketing/Utility avec image, réponses rapides et URL statiques ; campagnes email envoyées/annulées ; ventes renseignées ; détail UTM avec conversion à Beynost ; modèle Excel d’import vierge. Des tâches email déjà faites sont repérées, à distinguer d’une tâche en attente d’EX08.
+
+CAS SEMBLANT ABSENTS
+Formulaire et réponse remplis, avis, brouillon de campagne et campagne SMS n’ont pas été rencontrés dans les vues décrites. Si tu n’en connais pas déjà, ne perds pas du temps à les fabriquer : une démonstration fictive pourra couvrir ces points.
+
+EX01 — P1 — Formulaires
+Exemple : Un formulaire existant contenant plusieurs sections et champs.
+Où : Formulaires > crayon d’un formulaire déjà rempli dans l’éditeur.
+Constat actuel : Beynost : éditeur existant vide. Lyon : zéro formulaire rencontré.
+Ce que cela débloque : Types de champs, contraintes et disposition de sections.
+Référence utile : Club, intitulé du formulaire, nombre approximatif de sections et présence de champs.
+Consigne : Ne pas ajouter de champ, section ou publication pour cet audit.
+Ta référence : club ____ ; date/période ____ ; intitulé/chemin ____ ; état ____ ; disponibilité ____
+
+EX02 — P1 — Réponses de formulaires
+Exemple : Une réponse déjà reçue liée à un formulaire. Le même formulaire qu’EX01 peut suffire.
+Où : Formulaires > Réponses ; éventuellement fiche contact > Formulaires.
+Constat actuel : Aucune réponse renseignée rencontrée.
+Ce que cela débloque : Liste et détail d’une réponse, rattachement, valeurs manquantes et éventuel export.
+Référence utile : Club, intitulé du formulaire et date approximative de réponse ; aucun contenu personnel à recopier.
+Consigne : Ne pas remplir ou envoyer un nouveau formulaire réel.
+Ta référence : club ____ ; date/période ____ ; intitulé/chemin ____ ; état ____ ; disponibilité ____
+
+EX03 — P1 — Éditeur email
+Exemple : Un ou plusieurs modèles utilisant les blocs natifs Image, Image et texte, Fond image, Barre de navigation, Séparateur et Espace.
+Où : Communication > Modèles > Email > ouvrir un modèle existant.
+Constat actuel : 27 modèles de Beynost comparés ; six autres blocs détaillés. Les images à l’intérieur d’un bloc HTML ne sont pas des blocs Image natifs.
+Ce que cela débloque : Propriétés des six types de blocs encore non détaillés. Un modèle couvrant plusieurs types évite plusieurs recherches.
+Référence utile : Club, nom du modèle et blocs que tu sais déjà présents.
+Consigne : Ne pas insérer un bloc dans un modèle utilisé pour produire un exemple.
+Ta référence : club ____ ; date/période ____ ; intitulé/chemin ____ ; état ____ ; disponibilité ____
+
+EX04 — P1 — Campagne email préparée
+Exemple : Un brouillon ou une campagne en attente de validation déjà existants et ouvrables, avec audience/contenu déjà renseignés.
+Où : Communication > Campagnes > Mail.
+Constat actuel : Listes consultées des deux clubs : Envoyée et Annulée ; aucun brouillon rencontré.
+Ce que cela débloque : Écrans Composer, Objet et Vérifier du nouvel assistant, sans passage sur une audience neuve.
+Référence utile : Club, nom de la campagne, état affiché et date de création. Si absent, indiquer absent.
+Consigne : Ne pas créer un brouillon, demander un code ou publier pour l’audit. Un exemple absent relève d’une démonstration fictive.
+Ta référence : club ____ ; date/période ____ ; intitulé/chemin ____ ; état ____ ; disponibilité ____
+
+EX05 — P1 — WhatsApp : formats spéciaux
+Exemple : Modèle existant avec offre limitée, coupon ou carrousel ; modèle avec vidéo ou document déjà configuré. Un exemple par variante seulement si elle existe.
+Où : Communication > Modèles > WhatsApp.
+Constat actuel : Marketing et Utility, image, réponse rapide et boutons URL déjà consultés. Pas de preuve complète des formats spéciaux.
+Ce que cela débloque : Contenu conditionnel, médias, limites et aperçu de ces variantes.
+Référence utile : Club, nom du modèle, format, langue et état affiché.
+Consigne : Aucune création, modification de média, soumission Meta ou envoi.
+Ta référence : club ____ ; date/période ____ ; intitulé/chemin ____ ; état ____ ; disponibilité ____
+
+EX06 — P2 — WhatsApp : boutons et retours
+Exemple : Modèle déjà configuré avec appel de numéro ou URL dynamique ; modèle rejeté ou en échec si présent.
+Où : Communication > Modèles > WhatsApp ; statut de validation.
+Constat actuel : Types Appel/URL/Réponse rapide et modes Statique/Dynamique lus dans les listes grisées ; boutons statiques existants observés.
+Ce que cela débloque : Champs du numéro, variables d’URL dynamique et motifs visibles de rejet.
+Référence utile : Club, nom du modèle, type de bouton et état. Ne pas copier l’URL, le numéro ou une donnée de contact.
+Consigne : Ne pas changer le type de bouton ni relancer l’examen pour tester.
+Ta référence : club ____ ; date/période ____ ; intitulé/chemin ____ ; état ____ ; disponibilité ____
+
+EX07 — P2 — SMS entrant / activité SMS
+Exemple : Une activité déjà présente dans le filtre de type SMS, ou une réponse entrante SMS déjà reçue si cette réception est disponible.
+Où : Activités > type SMS > À faire ou Faites ; Communication > SMS envoyés et éventuelles réponses.
+Constat actuel : Des SMS sortants sont connus ; cela ne prouve pas une activité entrante. Aucun exemple entrant qualifié.
+Ce que cela débloque : Dialogue de traitement ou historique de réponse et distinction avec une tâche SMS planifiée.
+Référence utile : Club, date approximative, rubrique et type affiché ; pas le texte du message.
+Consigne : Ne pas envoyer de SMS, répondre, consigner ou clôturer une activité.
+Ta référence : club ____ ; date/période ____ ; intitulé/chemin ____ ; état ____ ; disponibilité ____
+
+EX08 — P2 — Tâche email planifiée
+Exemple : Une activité Envoyer un email encore en attente, idéalement issue d’un scénario existant.
+Où : Activités > type email planifié > À faire / En retard / période utile.
+Constat actuel : Aucune rencontrée dans À faire des deux clubs ; activité(s) déjà faite(s) repérée(s).
+Ce que cela débloque : Composeur et informations de tâche avant envoi ; distinction avec une demande email reçue.
+Référence utile : Club, date d’échéance et nom du scénario si connu.
+Consigne : Ne pas créer une tâche ni modifier son échéance pour la rendre visible.
+Ta référence : club ____ ; date/période ____ ; intitulé/chemin ____ ; état ____ ; disponibilité ____
+
+EX09 — P2 — Avis
+Exemple : Un avis existant en attente ou déjà traité.
+Où : Activités > icône avis > À faire ou Faites.
+Constat actuel : Filtres Avis vides dans les deux clubs lors des contrôles.
+Ce que cela débloque : Détail, éventuelle notation et choix de réponse/traitement.
+Référence utile : Club, date et état affiché. Si aucun avis n’existe, indiquer absent.
+Consigne : Ne pas publier un avis, solliciter un client ou traiter un avis pour l’audit.
+Ta référence : club ____ ; date/période ____ ; intitulé/chemin ____ ; état ____ ; disponibilité ____
+
+EX10 — P2 — Campagne SMS terminée
+Exemple : Une campagne SMS déjà envoyée, annulée, en échec ou en attente, si elle existe.
+Où : Communication > Campagnes > SMS, et non SMS envoyés individuellement.
+Constat actuel : Aucun exemple dans les filtres SMS des deux clubs au contrôle.
+Ce que cela débloque : Bilan SMS de campagne, programmation existante et états d’erreur.
+Référence utile : Club, nom, date et état de campagne.
+Consigne : Ne pas créer ou envoyer une campagne pour produire l’exemple.
+Ta référence : club ____ ; date/période ____ ; intitulé/chemin ____ ; état ____ ; disponibilité ____
+
+EX11 — P2 — Rendez-vous : issues et historique
+Exemple : Un rendez-vous existant modifié ou annulé, et un rendez-vous honoré/non honoré. Un historique réunissant plusieurs événements suffit.
+Où : Planning à une date connue ou fiche contact > historique.
+Constat actuel : Types et préparation de rendez-vous déjà lus ; résultats d’action non testés.
+Ce que cela débloque : Fenêtre d’un événement existant, événements de modification, présence et annulation.
+Référence utile : Club, jour, type de rendez-vous et état ; inutile de donner le nom du contact dans le chat.
+Consigne : Ne pas changer la présence, annuler, déplacer ni notifier le prospect.
+Ta référence : club ____ ; date/période ____ ; intitulé/chemin ____ ; état ____ ; disponibilité ____
+
+EX12 — P2 — Segments
+Exemple : Un segment déjà créé et, si possible, une fiche portant plusieurs segments.
+Où : Paramètres > Segments ; fiche contact > Segments.
+Constat actuel : Les filtres consultés ne proposaient pas de segment ; préparation de segmentation groupée lue sans application.
+Ce que cela débloque : Affichage multisegment, nom/code/pictogramme existants, affectations visibles.
+Référence utile : Club, intitulé du segment ; ouvrir toi-même la fiche si nécessaire.
+Consigne : Ne pas créer ni attribuer de segment pour cette collecte.
+Ta référence : club ____ ; date/période ____ ; intitulé/chemin ____ ; état ____ ; disponibilité ____
+
+EX13 — P3 — Abonnements / ventes
+Exemple : Un abonnement déjà terminé, futur, résilié ou autre état différent d’Actif, seulement si ces états existent dans Lead.
+Où : Clients > fiche > Abonnements ; Ventes.
+Constat actuel : Ventes renseignées et état Actif déjà observés ; les autres états ne sont pas présumés disponibles.
+Ce que cela débloque : Autres affichages d’abonnement, dates d’effet et relation avec la vente/ERP.
+Référence utile : Club, état affiché et période ; pas de montant ou contrat personnel à envoyer.
+Consigne : Ne pas suspendre, résilier, vendre ou modifier le logiciel de gestion.
+Ta référence : club ____ ; date/période ____ ; intitulé/chemin ____ ; état ____ ; disponibilité ____
+
+EX14 — P3 — Scénarios particuliers
+Exemple : Scénario manuel déjà affecté ; déclencheur Décrocheur déjà configuré, seulement s’il est disponible.
+Où : Communication > Scénarios ; fiche contact > scénario en cours.
+Constat actuel : Modes Manuel/Automatique et scénario actif verrouillé observés. Décrocheur documenté pour Résamania, disponibilité locale non établie.
+Ce que cela débloque : Affectation visible, état d’un inscrit et conditions spécifiques.
+Référence utile : Club, nom du scénario, type et état ; une référence de fiche suffit sans identité privée.
+Consigne : Ne pas lancer, affecter, activer, verrouiller ou modifier un scénario.
+Ta référence : club ____ ; date/période ____ ; intitulé/chemin ____ ; état ____ ; disponibilité ____
+
+EX15 — P3 — Messages en erreur
+Exemple : Un email/SMS/WhatsApp déjà en erreur, rejeté ou non livré ; un ancien retour STOP ou opposition si cette information est visible.
+Où : Communication > listes d’envois / Messagerie / historique de fiche selon le canal.
+Constat actuel : Compteurs et états généraux lus ; pas de recette de livraison, encodage ni reprise.
+Ce que cela débloque : Motif visible, statut, lien entre historique et envoi ; éventuellement présentation de l’opposition.
+Référence utile : Club, canal, date et état ; pas d’adresse, numéro, texte, clé ou jeton.
+Consigne : Ne pas relancer ou renvoyer le message, ni changer l’opposition.
+Ta référence : club ____ ; date/période ____ ; intitulé/chemin ____ ; état ____ ; disponibilité ____
+
+EX16 — P3 — Ancien import
+Exemple : Compte rendu ou fichier de rejet d’un import déjà réalisé, seulement si tu en disposes.
+Où : Ancien retour d’import ou dossier de suivi déjà conservé ; aucun historique d’import dans Lead n’est présumé.
+Constat actuel : Modèle Excel vierge et onze colonnes maintenant fournis ; validation serveur et dédoublonnage inconnus.
+Ce que cela débloque : Présentation des erreurs, traitement de doublons et rejets, sans nouveau chargement.
+Référence utile : Club, date et nature du résultat ; un résumé sans coordonnées peut suffire.
+Consigne : Ne pas réimporter un fichier réel pour obtenir ce résultat.
+Ta référence : club ____ ; date/période ____ ; intitulé/chemin ____ ; état ____ ; disponibilité ____

@@ -1,0 +1,36 @@
+FILTRES ET SOUS-ÉCRANS RESPONSIVE — DERNIÈRE PASSE DU 17 NOVEMBRE
+
+PÉRIMÈTRE ET PREUVES
+43 relevés ajoutés au registre ; 20 mesures ciblées de sous-écrans, six listes de communication sur deux largeurs, quatorze pages de paramètres sur deux largeurs. Ces unités ne s’additionnent pas en un pourcentage et ne prouvent pas toutes les interactions d’un module.
+Formats : 390×844 et 820×1180 pour plusieurs géométries ; hauteur compacte 600 px pour les interactions lorsque les clics des grands panneaux étaient non probants. Les captures importantes utilisent un cadrage explicite ; le mode par défaut produisait parfois une image de 390×222 alors que le DOM annonçait 390×844. Ce signal concerne l’outil, pas une règle du logiciel. Les essais écartés ne sont pas comptés comme des résultats vérifiés.
+Fichiers de preuve : FILTRES_ET_VARIANTES_RESPONSIVE_2026-11-17.json, SOUS_ECRANS_RESPONSIVE_2026-11-17.json, COMMUNICATION_RESPONSIVE_2026-11-17.json, PARAMETRES_RESPONSIVE_2026-11-17.json, FILTRES_ACTIVITES_MOBILE_VERIFIES_2026-11-17.json, PERIODES_STATISTIQUES_VERIFIEES_2026-11-17.json.
+
+FILTRES CONFIRMÉS
+• Prospects : dix statuts ; combinaison Froid + Accueil Club + Jamais consulté activée comme filtre de consultation puis URL initiale restaurée. Source affichée dans les résultats contrôlée, sans fiche changée. Mobile : panneau Filtre avec accordéons ; tablette : barre directe.
+• Clients : deux statuts, Client et Client enseigne ; barre directe sur mobile, Source en sélecteur sur tablette. Recherche avec terme fictif suivie d’Entrée : état Il n’y a pas de résultats / 0 résultats constaté, puis recherche retirée. Aucun destinataire ou contact créé.
+• Activités : neuf types réellement activés par les boutons intérieurs des icônes : *, APPOINTMENT, CONTACT, REVIEW, SCHEDULED_CALL, SCHEDULED_EMAIL, MAIL, SCHEDULED_SMS, SMS. Ce sont des paramètres de navigation, pas des appels API capturés. Six commandes temporelles parcourues : À faire, Aujourd’hui, Demain, Cette semaine, En retard, Faites. Statut propose douze choix. Les premiers clics sur les enveloppes sans effet ont été écartés.
+• Ventes : assignation et abonnements multiples ; le filtre générique Filtrer par date concerne la fin d’abonnement, avec Se termine après / Se termine avant. Ne pas le définir comme date de vente. Aucun choix d’abonnement ou date modifié pour enregistrer une vente.
+• Statistiques : les raccourcis appliquent immédiatement la plage et ferment la fenêtre. Exemples au 17 novembre : mois en cours 01/11–17/11 ; semaine précédente 09/11–15/11 ; mois précédent 01/10–31/10 ; 30 derniers jours 18/10–17/11 ; année en cours 01/01–17/11. L’inclusivité des bornes et les formules ne sont pas démontrées.
+• Ignorer les archivés et comparaison annuelle testés comme paramètres de vue puis rétablis. La case annuelle utilise compareToPreviousYear, indépendamment de compareTo. Sélecteur de clubs : Beynost et Lyon Carré de Soie choisis simultanément, badge Club 2 sélectionnés constaté, puis retour à Beynost seul. Aucune preuve des calculs d’agrégation ni de l’isolation serveur revendiquée.
+
+SOUS-ÉCRANS
+• Ajout de prospect : mêmes champs, fenêtre centrale sur tablette et panneau inférieur défilant sur mobile. Calendrier de naissance ouvert sans date choisie. Consentement commercial initialement coché : constat source, pas recommandation CFitness.
+• Planning : premier écran Nouveau rendez-vous, recherche nom/email, consulté sur les deux formats sans sélectionner de personne. Les flèches sont visibles ; l’effet exact de navigation de période n’est pas qualifié par les essais antérieurs de clics génériques.
+• Formulaire existant vide, nouvelle campagne email au premier écran seulement, préparation de scénario sans nom, éditeur email et modèle WhatsApp existants consultés sans validation. Les mesures ont conservé uniquement types, libellés et géométrie des champs, sans valeurs de contacts.
+• WhatsApp : options natives grisées constatées : Appeler un numéro, URL, Réponse rapide ; URL Statique / Dynamique. Deux boutons URL existants sont statiques. Aucun numéro ou URL privé copié ; le paramétrage dynamique reste à approfondir sur exemple approprié.
+• Six listes de communication parcourues à 390 et 820 px ; les premières captures de chargement sans commandes ont été reprises après apparition du titre.
+• Quatorze pages de réglages ouvertes sur les deux largeurs, avec titres confirmés après reprise de huit chargements. Cela n’autorise pas les achats, recharges, uploads, activations, connexions ou changements de notifications. Menu des Paramètres : quatorze liens confirmés à 390 px. À 820 px, Open menu est partiellement hors cadre (x=-8, largeur 28) et son ouverture n’a pas fourni de liste exploitable : ne pas le compter comme menu confirmé.
+
+DÉFAUTS ET LIMITES DE MISE EN PAGE
+RSP-01 : éditeur de formulaire mobile coupé ; bouton Ajouter une section dépasse le cadre dans un ancêtre overflow-x hidden.
+RSP-02 : assistant email mobile débordant ; Suivant hors cadre.
+RSP-03 : erreur de rendu campagne SMS reproduite en passage tablette → mobile ; message et diagnostic conservés, cause exacte inconnue.
+RSP-04 : éditeur de modèle email mobile, Aperçu et champs d’en-tête hors cadre.
+Les compteurs automatiques de commandes hors cadre dans les Paramètres ne sont pas des défauts certifiés : certains incluent le bouton Open menu. Les utiliser comme pistes de recette seulement.
+
+CE QUI RESTE
+Les prochains approfondissements nécessitent surtout des exemples déjà remplis (formulaire et réponses, avis, SMS entrants, formats WhatsApp particuliers, blocs email non utilisés), des étapes d’assistant nécessitant audience/contenu et les résultats réels des opérations. Conserver les blocs B01–B11 de 10_BLOCAGES_ET_AIDE_ATTENDUE.txt. Les captures de site responsive ne certifient pas une application native, un clavier tactile ou toutes les combinaisons de filtres, tailles et états de données.
+Certains sous-écrans existants peuvent encore révéler des variantes : les compteurs de pages ne signifient pas que chaque calendrier, menu contextuel, historique paginé ou chemin mobile est clos. Ces réserves restent au registre, sans les transformer en fonctions supposées ou en blocages fournisseur.
+
+ÉTAT FINAL
+Taille normale du navigateur restaurée ; session sur la liste Prospects de Beynost, sans formulaire ouvert. Aucun envoi, enregistrement métier, publication, création, clôture, suppression, achat ou changement de droits validé dans cette passe.

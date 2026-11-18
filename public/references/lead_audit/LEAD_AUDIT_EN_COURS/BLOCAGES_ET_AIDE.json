@@ -1,0 +1,87 @@
+{
+  "date": "2026-11-17",
+  "points": [
+    {
+      "id": "B01",
+      "nature": "Données absentes",
+      "blocage": "Formulaire avec sections/champs et réponses déjà enregistrées. Beynost offre un exemple vide ; le second club zéro formulaire.",
+      "aide": "Indiquer un formulaire existant avec son club, ou demander une démonstration remplie de données fictives. Ne pas remplir un formulaire réel pour cet audit.",
+      "limite": "Types de champs, logique conditionnelle éventuelle, réponse individuelle et export restent non établis."
+    },
+    {
+      "id": "B02",
+      "nature": "Exemples non rencontrés",
+      "blocage": "Avis : zéro en attente et traités dans les deux clubs. Exemples de SMS entrant, tâche email planifiée et campagne SMS envoyée encore à trouver.",
+      "aide": "Donner seulement club/date/type d’un exemple existant. Je le consulterai sans répondre ni le clôturer.",
+      "limite": "Ne pas créer ou envoyer de message réel uniquement pour produire un exemple."
+    },
+    {
+      "id": "B03",
+      "nature": "Préparation impliquant des données",
+      "blocage": "Campagne email : étapes Composer, Objet et Vérifier derrière une audience obligatoire ; première étape seule vérifiée.",
+      "aide": "Un brouillon déjà existant et ouvrable, ou un espace fictif/démonstration fournisseur.",
+      "limite": "La lecture de la formation ne remplace pas ces écrans actuels ; pas de passage d’étape sur une audience réelle pour cet audit."
+    },
+    {
+      "id": "B04",
+      "nature": "Variantes non configurées dans les exemples",
+      "blocage": "Blocs Image, Image et texte, Fond image, Barre de navigation, Séparateur et Espace : propriétés non détaillées. Les images contenues dans un bloc HTML ne sont pas des blocs Image natifs.",
+      "aide": "Indiquer un modèle existant utilisant ces blocs, ou obtenir une démonstration fictive où ils sont déjà présents.",
+      "limite": "27 modèles existants comparés sans insertion. Ne pas ajouter un bloc dans un modèle utilisé pour la seule vérification."
+    },
+    {
+      "id": "B05",
+      "nature": "Assistant de création et dépendance Meta",
+      "blocage": "WhatsApp : offre limitée, coupon, carrousel, autres médias/boutons, examen et retours réels.",
+      "aide": "Démonstration avec destinataires fictifs et compte Meta de test, ou modèles existants de ces formats.",
+      "limite": "Le premier assistant avait possiblement créé un brouillon automatiquement (INC-001). Ne pas multiplier les créations en production. Aucune preuve de facturation, délivrance ou portabilité."
+    },
+    {
+      "id": "B06",
+      "nature": "Limite des outils et documentation",
+      "blocage": "Pas de capture HTTP détaillée disponible dans la connexion actuelle ; contrat public de webhook entrant seulement, avec ambiguïté sur deux endpoints.",
+      "aide": "Demander au fournisseur une documentation complète OpenAPI/Swagger ou équivalent : schémas, authentification, périmètres, limites, pagination, erreurs, webhooks, export et reprises. Le dev peut fournir un relevé réseau nettoyé de ses secrets.",
+      "limite": "Ne pas envoyer de HAR brut, cookies, clés, jetons ou données de prospects. Ne pas créer une clé de production pour cette lecture."
+    },
+    {
+      "id": "B07",
+      "nature": "Résultats exigeant une écriture",
+      "blocage": "Envoi email/SMS/WhatsApp, validation par code, activation/exécution de scénario, import, paiement, suppression, publication et synchronisation.",
+      "aide": "Obtenir du fournisseur un espace/démonstration avec contacts et destinataires fictifs. Nous pourrons alors définir une recette précise avant toute action.",
+      "limite": "Avec les comptes réels et la consigne sans rien modifier, les résultats de ces opérations resteront non testés."
+    },
+    {
+      "id": "B08",
+      "nature": "Permissions serveur",
+      "blocage": "ADMIN, MANAGER et COMMERCIAL comparés en interface ; présence/absence de commandes ne démontre pas les autorisations serveur ou l’isolation entre clubs.",
+      "aide": "Matrice officielle des rôles et comptes fictifs de ces trois rôles pour une recette avec le développeur.",
+      "limite": "ACL-01 : corbeille visible en Commercial ; aucune suppression réelle tentée. Coach/Basic déclarés obsolètes : pas de nouveau profil à ouvrir pour le moment."
+    },
+    {
+      "id": "B09",
+      "nature": "Règles métier non démontrées",
+      "blocage": "Formules statistiques, collisions de rendez-vous, fuseau horaire, encodage SMS, réentrée/arrêt des scénarios, rapprochement des ventes/ERP.",
+      "aide": "Définitions écrites du fournisseur ou exemples fictifs avec résultats attendus ; préciser les règles CFitness à conserver/améliorer avant développement.",
+      "limite": "Les intitulés de colonnes et textes d’aide ne suffisent pas à certifier ces calculs et transitions."
+    },
+    {
+      "id": "B10",
+      "nature": "Applications natives et options non activées",
+      "blocage": "Le simulateur de largeur couvre le site responsive ; pas les apps natives, caméra, notifications système, hors-ligne ni modules inactifs.",
+      "aide": "Pour les apps natives, un appareil/simulateur dont l’écran est partageable et un accès de test ; pour les modules, une démonstration fournisseur.",
+      "limite": "Aucune activation de module, connexion de partenaire ou permission système effectuée."
+    },
+    {
+      "id": "B11",
+      "nature": "Écarts documentaires et états incohérents",
+      "blocage": "Histoire sportive non retrouvée, WhatsApp état liste/détail divergent, cartes de connecteurs contradictoires.",
+      "aide": "Faire confirmer DOC-02, WA-02, IN-01/02 et API-01 au fournisseur ; un exemple existant peut aussi clarifier certains points.",
+      "limite": "Ne pas transformer un écart d’affichage en règle métier ni le corriger sur les comptes réels."
+    }
+  ],
+  "complement_responsive_2026_11_17": {
+    "source": "12_FILTRES_ET_RESPONSIVE_2026-11-17.txt",
+    "etat": "Filtres et sous-écrans approfondis ; les comptes de pages ne prouvent pas toutes les interactions.",
+    "aide_prioritaire": "Exemples remplis déjà existants, puis espace fictif pour étapes et résultats métier. Aucun nouveau profil requis."
+  }
+}

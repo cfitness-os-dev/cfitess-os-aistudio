@@ -1,0 +1,411 @@
+[
+  {
+    "page": "Prospects",
+    "width": 390,
+    "height": 844,
+    "document": 390,
+    "fenetre": 390,
+    "main": 390,
+    "tables": [
+      {
+        "largeur": 1062,
+        "parents": [
+          {
+            "largeur": 1062,
+            "overflowX": "visible"
+          },
+          {
+            "largeur": 358,
+            "overflowX": "scroll"
+          }
+        ]
+      }
+    ],
+    "limite": "Géométrie du rendu initial ; pas une recette de tous les parcours. Les tableaux différés peuvent ne pas être chargés."
+  },
+  {
+    "page": "Clients",
+    "width": 390,
+    "height": 844,
+    "document": 390,
+    "fenetre": 390,
+    "main": 390,
+    "tables": [
+      {
+        "largeur": 936,
+        "parents": [
+          {
+            "largeur": 936,
+            "overflowX": "visible"
+          },
+          {
+            "largeur": 358,
+            "overflowX": "scroll"
+          }
+        ]
+      }
+    ],
+    "limite": "Géométrie du rendu initial ; pas une recette de tous les parcours. Les tableaux différés peuvent ne pas être chargés."
+  },
+  {
+    "page": "Messagerie",
+    "width": 390,
+    "height": 844,
+    "document": 390,
+    "fenetre": 390,
+    "main": 390,
+    "tables": [],
+    "limite": "Géométrie du rendu initial ; pas une recette de tous les parcours. Les tableaux différés peuvent ne pas être chargés."
+  },
+  {
+    "page": "Activités",
+    "width": 390,
+    "height": 844,
+    "document": 390,
+    "fenetre": 390,
+    "main": 390,
+    "tables": [
+      {
+        "largeur": 980,
+        "parents": [
+          {
+            "largeur": 980,
+            "overflowX": "visible"
+          },
+          {
+            "largeur": 358,
+            "overflowX": "scroll"
+          }
+        ]
+      }
+    ],
+    "limite": "Géométrie du rendu initial ; pas une recette de tous les parcours. Les tableaux différés peuvent ne pas être chargés."
+  },
+  {
+    "page": "Planning",
+    "width": 390,
+    "height": 844,
+    "document": 390,
+    "fenetre": 390,
+    "main": 390,
+    "tables": [
+      {
+        "largeur": 390,
+        "parents": [
+          {
+            "largeur": 390,
+            "overflowX": "visible"
+          },
+          {
+            "largeur": 390,
+            "overflowX": "visible"
+          }
+        ]
+      },
+      {
+        "largeur": 390,
+        "parents": [
+          {
+            "largeur": 390,
+            "overflowX": "visible"
+          },
+          {
+            "largeur": 390,
+            "overflowX": "hidden"
+          }
+        ]
+      },
+      {
+        "largeur": 389,
+        "parents": [
+          {
+            "largeur": 389,
+            "overflowX": "visible"
+          },
+          {
+            "largeur": 389,
+            "overflowX": "visible"
+          }
+        ]
+      },
+      {
+        "largeur": 389,
+        "parents": [
+          {
+            "largeur": 389,
+            "overflowX": "visible"
+          },
+          {
+            "largeur": 389,
+            "overflowX": "visible"
+          }
+        ]
+      }
+    ],
+    "limite": "Géométrie du rendu initial ; pas une recette de tous les parcours. Les tableaux différés peuvent ne pas être chargés."
+  },
+  {
+    "page": "Statistiques",
+    "width": 390,
+    "height": 844,
+    "document": 390,
+    "fenetre": 390,
+    "main": 390,
+    "tables": [],
+    "verification": "Reprise après ouverture par le menu et chargement ; première mesure prématurée écartée.",
+    "limite": "Géométrie du rendu initial ; pas une recette de tous les parcours. Les tableaux différés peuvent ne pas être chargés."
+  },
+  {
+    "page": "Ventes",
+    "width": 390,
+    "height": 844,
+    "document": 390,
+    "fenetre": 390,
+    "main": 390,
+    "tables": [
+      {
+        "largeur": 805,
+        "parents": [
+          {
+            "largeur": 805,
+            "overflowX": "visible"
+          },
+          {
+            "largeur": 358,
+            "overflowX": "scroll"
+          }
+        ]
+      }
+    ],
+    "limite": "Géométrie du rendu initial ; pas une recette de tous les parcours. Les tableaux différés peuvent ne pas être chargés."
+  },
+  {
+    "page": "Formulaires",
+    "width": 390,
+    "height": 844,
+    "document": 390,
+    "fenetre": 390,
+    "main": 390,
+    "tables": [
+      {
+        "largeur": 654.515625,
+        "parents": [
+          {
+            "largeur": 654.515625,
+            "overflowX": "visible"
+          },
+          {
+            "largeur": 326,
+            "overflowX": "scroll"
+          }
+        ]
+      }
+    ],
+    "limite": "Géométrie du rendu initial ; pas une recette de tous les parcours. Les tableaux différés peuvent ne pas être chargés."
+  },
+  {
+    "page": "Prospects",
+    "width": 820,
+    "height": 1180,
+    "document": 820,
+    "fenetre": 820,
+    "main": 820,
+    "tables": [
+      {
+        "largeur": 1062,
+        "parents": [
+          {
+            "largeur": 1062,
+            "overflowX": "visible"
+          },
+          {
+            "largeur": 788,
+            "overflowX": "scroll"
+          }
+        ]
+      }
+    ],
+    "limite": "Géométrie du rendu initial ; pas une recette de tous les parcours. Les tableaux différés peuvent ne pas être chargés."
+  },
+  {
+    "page": "Clients",
+    "width": 820,
+    "height": 1180,
+    "document": 820,
+    "fenetre": 820,
+    "main": 820,
+    "tables": [
+      {
+        "largeur": 936,
+        "parents": [
+          {
+            "largeur": 936,
+            "overflowX": "visible"
+          },
+          {
+            "largeur": 788,
+            "overflowX": "scroll"
+          }
+        ]
+      }
+    ],
+    "limite": "Géométrie du rendu initial ; pas une recette de tous les parcours. Les tableaux différés peuvent ne pas être chargés."
+  },
+  {
+    "page": "Messagerie",
+    "width": 820,
+    "height": 1180,
+    "document": 820,
+    "fenetre": 820,
+    "main": 820,
+    "tables": [],
+    "limite": "Géométrie du rendu initial ; pas une recette de tous les parcours. Les tableaux différés peuvent ne pas être chargés."
+  },
+  {
+    "page": "Activités",
+    "width": 820,
+    "height": 1180,
+    "document": 820,
+    "fenetre": 820,
+    "main": 820,
+    "tables": [
+      {
+        "largeur": 980,
+        "parents": [
+          {
+            "largeur": 980,
+            "overflowX": "visible"
+          },
+          {
+            "largeur": 788,
+            "overflowX": "scroll"
+          }
+        ]
+      }
+    ],
+    "limite": "Géométrie du rendu initial ; pas une recette de tous les parcours. Les tableaux différés peuvent ne pas être chargés."
+  },
+  {
+    "page": "Planning",
+    "width": 820,
+    "height": 1180,
+    "document": 820,
+    "fenetre": 820,
+    "main": 820,
+    "tables": [
+      {
+        "largeur": 820,
+        "parents": [
+          {
+            "largeur": 820,
+            "overflowX": "visible"
+          },
+          {
+            "largeur": 820,
+            "overflowX": "visible"
+          }
+        ]
+      },
+      {
+        "largeur": 820,
+        "parents": [
+          {
+            "largeur": 820,
+            "overflowX": "visible"
+          },
+          {
+            "largeur": 820,
+            "overflowX": "hidden"
+          }
+        ]
+      },
+      {
+        "largeur": 819,
+        "parents": [
+          {
+            "largeur": 819,
+            "overflowX": "visible"
+          },
+          {
+            "largeur": 819,
+            "overflowX": "visible"
+          }
+        ]
+      },
+      {
+        "largeur": 819,
+        "parents": [
+          {
+            "largeur": 819,
+            "overflowX": "visible"
+          },
+          {
+            "largeur": 819,
+            "overflowX": "visible"
+          }
+        ]
+      }
+    ],
+    "limite": "Géométrie du rendu initial ; pas une recette de tous les parcours. Les tableaux différés peuvent ne pas être chargés."
+  },
+  {
+    "page": "Statistiques",
+    "width": 820,
+    "height": 1180,
+    "document": 820,
+    "fenetre": 820,
+    "main": 820,
+    "tables": [],
+    "verification": "Reprise après ouverture par le menu et chargement ; première mesure prématurée écartée.",
+    "limite": "Géométrie du rendu initial ; pas une recette de tous les parcours. Les tableaux différés peuvent ne pas être chargés."
+  },
+  {
+    "page": "Ventes",
+    "width": 820,
+    "height": 1180,
+    "document": 820,
+    "fenetre": 820,
+    "main": 820,
+    "tables": [
+      {
+        "largeur": 1018.7578125,
+        "parents": [
+          {
+            "largeur": 1018.7578125,
+            "overflowX": "visible"
+          },
+          {
+            "largeur": 788,
+            "overflowX": "scroll"
+          }
+        ]
+      }
+    ],
+    "verification": "Mesure reprise après chargement",
+    "limite": "Géométrie du rendu initial ; pas une recette de tous les parcours. Les tableaux différés peuvent ne pas être chargés."
+  },
+  {
+    "page": "Formulaires",
+    "width": 820,
+    "height": 1180,
+    "document": 820,
+    "fenetre": 820,
+    "main": 820,
+    "tables": [
+      {
+        "largeur": 756,
+        "parents": [
+          {
+            "largeur": 756,
+            "overflowX": "visible"
+          },
+          {
+            "largeur": 756,
+            "overflowX": "scroll"
+          }
+        ]
+      }
+    ],
+    "limite": "Géométrie du rendu initial ; pas une recette de tous les parcours. Les tableaux différés peuvent ne pas être chargés."
+  }
+]

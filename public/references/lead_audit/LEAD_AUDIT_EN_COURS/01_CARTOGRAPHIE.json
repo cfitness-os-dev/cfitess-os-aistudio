@@ -1,0 +1,256 @@
+{
+  "date": "2026-11-17",
+  "portee": "Cartographie connue, non exhaustive",
+  "routes": [
+    {
+      "rubrique": "Rechercher un contact",
+      "chemin": "/club/{club}/search",
+      "etat": "Entrée visible ; recherche détaillée non testée"
+    },
+    {
+      "rubrique": "Prospects",
+      "chemin": "/club/{club}/lead",
+      "etat": "Liste, filtres, fiche et principaux dialogues préparatoires approfondis ; résultats métier non testés."
+    },
+    {
+      "rubrique": "Clients",
+      "chemin": "/club/{club}/client",
+      "etat": "Liste, sélection multiple, fiche et calendrier de vacances consultés sans enregistrement ; autres états restent ouverts."
+    },
+    {
+      "rubrique": "Messagerie",
+      "chemin": "/club/{club}/messaging",
+      "etat": "Liste, sélecteur et une conversation existante consultés sans envoi"
+    },
+    {
+      "rubrique": "Activités",
+      "chemin": "/club/{club}/todos",
+      "etat": "Vues, appel, demande contact/email et tâche SMS planifiée consultés sans traitement. Avis vides dans les deux clubs."
+    },
+    {
+      "rubrique": "Planning",
+      "chemin": "/club/{club}/planning",
+      "etat": "Calendrier consulté ; parcours de réservation non validé"
+    },
+    {
+      "rubrique": "Statistiques",
+      "chemin": "/club/{club}/statistics",
+      "etat": "Huit vues de tableaux et métriques avancées retrouvées après défilement ; calculs et exports non validés."
+    },
+    {
+      "rubrique": "Ventes",
+      "chemin": "/club/{club}/sales",
+      "etat": "Deux clubs, lignes renseignées et liens de fiche ; aucun détail de transaction distinct démontré."
+    },
+    {
+      "rubrique": "Formulaires",
+      "chemin": "/club/{club}/forms",
+      "etat": "Éditeur existant vide et réponses vides à Beynost, zéro formulaire au second club ; exemple rempli manquant."
+    },
+    {
+      "rubrique": "Communication / Modèles",
+      "chemin": "/club/{club}/template",
+      "etat": "27 emails existants comparés, modèles SMS/WhatsApp lus ; six types de blocs email détaillés, sans édition."
+    },
+    {
+      "rubrique": "Communication / Campagnes",
+      "chemin": "/club/{club}/campaign",
+      "etat": "Bilan email envoyé et SMS préparatoire différé consultés. Nouvel assistant email : premier écran seulement ; étapes suivantes non parcourues."
+    },
+    {
+      "rubrique": "Communication / Campagnes UTM",
+      "chemin": "/club/{club}/utm_campaign",
+      "etat": "Colonnes observées ; détail à explorer"
+    },
+    {
+      "rubrique": "Communication / Scénarios",
+      "chemin": "/club/{club}/scenario",
+      "etat": "Modes initiaux Automatique/Manuel, étapes, conditions et verrouillage approfondis ; aucune exécution déclenchée."
+    },
+    {
+      "rubrique": "Communication / SMS envoyés",
+      "chemin": "/club/{club}/sms",
+      "etat": "Liste des statuts et colonnes observée ; aucune relance"
+    },
+    {
+      "rubrique": "Communication / Emails échangés",
+      "chemin": "/club/{club}/email",
+      "etat": "Liste des statuts et colonnes observée ; aucune réponse"
+    },
+    {
+      "rubrique": "Préférences",
+      "chemin": "/club/{club}/settings/app-settings",
+      "etat": "Langue et restriction des statistiques observées"
+    },
+    {
+      "rubrique": "Crédits SMS",
+      "chemin": "/club/{club}/settings/sms",
+      "etat": "Solde, achat et recharge visibles ; aucun achat ni activation"
+    },
+    {
+      "rubrique": "Profil du Club",
+      "chemin": "/club/{club}/settings/marketing",
+      "etat": "Champs et contraintes logo observés"
+    },
+    {
+      "rubrique": "Utilisateurs",
+      "chemin": "/club/{club}/settings/users",
+      "etat": "Liste et lien de gestion externe observés ; droits non modifiés"
+    },
+    {
+      "rubrique": "Gestion rendez-vous",
+      "chemin": "/club/{club}/settings/meetings",
+      "etat": "Type réservable existant, capacité, fréquence, délais, notifications, jours, lien isolé et Stripe proposés ; aucun Appliquer."
+    },
+    {
+      "rubrique": "Email & SMS de service",
+      "chemin": "/club/{club}/settings/automation",
+      "etat": "Six éditeurs rappel/modification/annulation consultés sans changement ; variables contextuelles de rendez-vous."
+    },
+    {
+      "rubrique": "Gestion prospects",
+      "chemin": "/club/{club}/settings/prospects",
+      "etat": "Assignation, décrochage et archivage observés"
+    },
+    {
+      "rubrique": "Segments",
+      "chemin": "/club/{club}/settings/segments",
+      "etat": "Liste vide ; responsive testé sur cette seule page"
+    },
+    {
+      "rubrique": "Script de vente",
+      "chemin": "/club/{club}/settings/script",
+      "etat": "Éditeur et barre de mise en forme observés"
+    },
+    {
+      "rubrique": "Sources",
+      "chemin": "/club/{club}/settings/sources",
+      "etat": "49 sources et 9 sélections de catégories relevées"
+    },
+    {
+      "rubrique": "Passage statut client",
+      "chemin": "/club/{club}/settings/exclusions",
+      "etat": "Liste des offres et cases observée ; origine technique à confirmer"
+    },
+    {
+      "rubrique": "Notifications",
+      "chemin": "/club/{club}/settings/notifications",
+      "etat": "Quatre familles et destinataire observés"
+    },
+    {
+      "rubrique": "WhatsApp",
+      "chemin": "/club/{club}/settings/whatsapp",
+      "etat": "Compte connecté et éléments du profil observés ; aucune modification Meta"
+    },
+    {
+      "rubrique": "API partenaires",
+      "chemin": "/club/{club}/settings/partners",
+      "etat": "Neuf cartes ; fiches hors WhatsApp ouvertes, aucun connecteur activé"
+    },
+    {
+      "rubrique": "Fiche partenaire / STRIPE",
+      "chemin": "/club/{club}/settings/partners/STRIPE",
+      "etat": "Fiche consultée ; connexion/configuration non exécutée"
+    },
+    {
+      "rubrique": "Fiche partenaire / FACEBOOK",
+      "chemin": "/club/{club}/settings/partners/FACEBOOK",
+      "etat": "Fiche consultée ; connexion/configuration non exécutée"
+    },
+    {
+      "rubrique": "Fiche partenaire / GOOGLE",
+      "chemin": "/club/{club}/settings/partners/GOOGLE",
+      "etat": "Fiche consultée ; connexion/configuration non exécutée"
+    },
+    {
+      "rubrique": "Fiche partenaire / HEITZ",
+      "chemin": "/club/{club}/settings/partners/HEITZ",
+      "etat": "Fiche consultée ; connexion/configuration non exécutée"
+    },
+    {
+      "rubrique": "Fiche partenaire / RESAMANIA_2",
+      "chemin": "/club/{club}/settings/partners/RESAMANIA_2",
+      "etat": "Fiche consultée ; connexion/configuration non exécutée"
+    },
+    {
+      "rubrique": "Fiche partenaire / DECIPLUS",
+      "chemin": "/club/{club}/settings/partners/DECIPLUS",
+      "etat": "Fiche consultée ; connexion/configuration non exécutée"
+    },
+    {
+      "rubrique": "Fiche partenaire / CLICKFUNNELS",
+      "chemin": "/club/{club}/settings/partners/CLICKFUNNELS",
+      "etat": "Fiche consultée ; connexion/configuration non exécutée"
+    },
+    {
+      "rubrique": "Fiche partenaire / FUNNELO",
+      "chemin": "/club/{club}/settings/partners/FUNNELO",
+      "etat": "Fiche consultée ; connexion/configuration non exécutée"
+    },
+    {
+      "rubrique": "Fiche prospect",
+      "chemin": "/club/{club}/lead/{contact}",
+      "etat": "Dialogues principaux et panneaux mobile Sommaire/Détails lus ; Histoire sportive non retrouvée dans la fiche observée."
+    },
+    {
+      "rubrique": "Conversation",
+      "chemin": "/club/{club}/messaging/{conversation}",
+      "etat": "Un détail observé ; aucune saisie"
+    },
+    {
+      "rubrique": "Scénario",
+      "chemin": "/club/{club}/scenario/{scenario}",
+      "etat": "Actif et Verrouillé peuvent coexister ; verrouillage et désactivation distincts selon texte UI. Aucun état changé."
+    },
+    {
+      "rubrique": "Nouveau type de rendez-vous",
+      "chemin": "/club/{club}/settings/meetings/new",
+      "etat": "Formulaire vide observé puis abandonné"
+    },
+    {
+      "rubrique": "Nouveau segment",
+      "chemin": "/club/{club}/settings/segments/new",
+      "etat": "Lien observé ; formulaire non ouvert"
+    },
+    {
+      "rubrique": "Assistant WhatsApp",
+      "chemin": "/club/{club}/template/new?templateType=WHATSAPP",
+      "etat": "Configuration et éditeur partiels ; INC-001, ne pas reprendre sur compte réel avant clarification"
+    },
+    {
+      "rubrique": "Gestion des droits externe",
+      "chemin": "https://pro.masalledesport.com/club/{club}/users",
+      "etat": "Rôles lus. Permissions détaillées ClubConnect distinctes de Lead ; ADMIN/MANAGER/COMMERCIAL comparés en interface seulement."
+    },
+    {
+      "rubrique": "Application MaSalleDeSport",
+      "chemin": "https://pro.masalledesport.com/club/{club}",
+      "etat": "Lien App observé ; produit distinct non audité ici"
+    },
+    {
+      "rubrique": "Application ClubConnect",
+      "chemin": "https://clubconnect.masalledesport.com/club/null",
+      "etat": "Valeur null observée ; fonctionnement non prouvé"
+    }
+  ],
+  "complement_parcours_email": {
+    "entree": "Communication > Campagnes > Créer une campagne Mail",
+    "etapes": [
+      "Cibler",
+      "Composer",
+      "Objet",
+      "Vérifier"
+    ],
+    "contenu_observe": [
+      "Cibler"
+    ],
+    "limite": "Les quatre intitulés sont visibles ; les trois derniers contenus ne sont pas observés. Ne pas déduire leurs routes ou endpoints API."
+  },
+  "audit_responsive_17": {
+    "source": "12_FILTRES_ET_RESPONSIVE_2026-11-17.txt",
+    "mesures": "SOUS_ECRANS_RESPONSIVE_2026-11-17.json",
+    "listes_communication": "COMMUNICATION_RESPONSIVE_2026-11-17.json",
+    "parametres": "PARAMETRES_RESPONSIVE_2026-11-17.json",
+    "limite": "20 mesures ciblées et des listes consultées, pas chaque parcours de toutes les pages."
+  }
+}

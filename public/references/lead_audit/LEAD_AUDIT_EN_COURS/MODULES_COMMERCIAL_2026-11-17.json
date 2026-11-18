@@ -1,0 +1,150 @@
+{
+  "date": "2026-11-17",
+  "modules": [
+    {
+      "module": "Prospects",
+      "ui": [
+        "- button \"Assistance\":",
+        "- heading \"Prospects\" [level=4]",
+        "- button:",
+        "- button \"Ajouter un prospect\"",
+        "- textbox \"Recherche par nom, mail, téléphone\"",
+        "- button \"Statut 9 sélectionnés\":",
+        "- button \"Assigné à\":",
+        "- button \"Source\":",
+        "- button \"Segment\":",
+        "- button \"Jamais consulté\"",
+        "- combobox \"Basculer les colonnes\":",
+        "- columnheader \"Dernière activité\":",
+        "- columnheader \"Source\":",
+        "- columnheader \"Nom\":",
+        "- columnheader \"Statut\":",
+        "- columnheader \"Segment\":",
+        "- columnheader \"Téléphone\":",
+        "- columnheader \"Assigné à\":",
+        "- combobox:",
+        "- button [disabled]:",
+        "- button:"
+      ]
+    },
+    {
+      "module": "Clients",
+      "ui": [
+        "- button \"Assistance\":",
+        "- heading \"Clients\" [level=4]",
+        "- textbox \"Recherche par nom, mail, téléphone\"",
+        "- button \"Statut\":",
+        "- button \"Assigné à\":",
+        "- button \"Source\":",
+        "- button \"Segment\":",
+        "- combobox \"Basculer les colonnes\":",
+        "- columnheader \"Nom\":",
+        "- columnheader \"Activités\":",
+        "- columnheader \"Ancienneté\":",
+        "- columnheader \"Téléphone\":",
+        "- columnheader \"Segment\":",
+        "- columnheader \"Assigné à\":",
+        "- combobox:",
+        "- button [disabled]:",
+        "- button:"
+      ]
+    },
+    {
+      "module": "Activités",
+      "ui": [
+        "- button \"Assistance\":",
+        "- heading \"Activités\" [level=4]",
+        "- textbox \"Recherche par nom, prénom\"",
+        "- button \"Statut\":",
+        "- button \"Assigné à\":",
+        "- button \"Segment\":",
+        "- combobox \"Basculer les colonnes\":",
+        "- button:",
+        "- button:",
+        "- button:",
+        "- button:",
+        "- button:",
+        "- button:",
+        "- button:",
+        "- button:",
+        "- button:",
+        "- button \"À faire\"",
+        "- button \"Aujourd'hui\"",
+        "- button \"Demain\"",
+        "- button \"Cette semaine\"",
+        "- button \"En retard\"",
+        "- button \"Faites\"",
+        "- columnheader \"Type\":",
+        "- columnheader \"Echéance\":",
+        "- columnheader \"Statut\":",
+        "- columnheader \"Prospect\":",
+        "- columnheader \"Segment\":",
+        "- columnheader \"Numéros\":",
+        "- columnheader \"Assigné à\":",
+        "- combobox:",
+        "- button [disabled]:",
+        "- button [disabled]:"
+      ]
+    },
+    {
+      "module": "Planning",
+      "ui": [
+        "- button \"Assistance\":",
+        "- heading \"Calendrier\" [level=4]",
+        "- button \"Planning rendez-vous\":",
+        "- button \"Assigné à\":",
+        "- heading \"Novembre 2026\" [level=2]",
+        "- button:",
+        "- button \"Aujourd'hui\"",
+        "- button:",
+        "- button \"Ajouter\":",
+        "- columnheader \"November 16, 2026\":",
+        "- columnheader \"November 17, 2026\":",
+        "- columnheader \"November 18, 2026\":",
+        "- columnheader \"November 19, 2026\":",
+        "- columnheader \"November 20, 2026\":",
+        "- columnheader \"November 21, 2026\":",
+        "- columnheader \"November 22, 2026\":"
+      ]
+    },
+    {
+      "module": "Ventes",
+      "ui": [
+        "- button \"Assistance\":",
+        "- heading \"Ventes\" [level=4]",
+        "- button \"Partager cette vue\":",
+        "- textbox \"Recherche par nom, prénom\"",
+        "- button \"Assigné à\":",
+        "- button \"Ticket\":",
+        "- button \"Abonnement\":",
+        "- button \"Filtrer par date\":",
+        "- columnheader \"Date de vente\":",
+        "- columnheader \"Abonnement\":",
+        "- columnheader \"Prospect\":",
+        "- columnheader \"Assigné à\":",
+        "- columnheader \"Tarif\":",
+        "- columnheader \"Statut\":",
+        "- columnheader \"Se finit le\":",
+        "- combobox:",
+        "- button [disabled]:",
+        "- button [disabled]:"
+      ]
+    },
+    {
+      "module": "Formulaires",
+      "ui": [
+        "- button \"Assistance\":",
+        "- paragraph: Formulaires",
+        "- columnheader \"Prénom\":",
+        "- columnheader \"Réponses\":",
+        "- columnheader \"Créé le\":",
+        "- columnheader \"Statut\":",
+        "- columnheader \"Actions\":",
+        "- button [disabled]:",
+        "- button [disabled]:",
+        "- button [disabled]:"
+      ]
+    }
+  ],
+  "limite": "Visibilité et navigation, pas validation des droits d’écriture côté serveur."
+}

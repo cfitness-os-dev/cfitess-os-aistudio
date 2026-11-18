@@ -1,0 +1,37 @@
+INVENTAIRE DES COMPOSANTS UI — SOURCES OBSERVÉES ET PROPOSITION CFITNESS
+
+Référence détaillée : chaque champ, bouton et état est dans INVENTAIRE_LEAD.json. Cette fiche classe les familles ; elle ne remplace pas le registre.
+
+OBSERVÉ
+• Navigation latérale : recherche, club, modules, sous-menus repliables Communication/App, Paramètres, Assistance, compte et rôle.
+• Page liste : titre, actions principales, recherche, filtres multiples, tableau, affichage de colonnes, compteur, pagination, lignes par page et saisie de page.
+• Choix : menu de valeurs, recherche, cases multiples, sélection/effacement global, sélection par catégorie et état coché.
+• Saisie : texte, zone multiligne, nombre, date, heure, calendrier, sélection de modèle, couleur, import image et interrupteur.
+• Fenêtres : ajout prospect, choix canal, galerie WhatsApp, tags, recherche de contact, choix de modèle et indisponibilité.
+• Éditeurs : texte riche, commandes gras/italique/souligné/alignement, tags ; assistant WhatsApp en trois étapes et aperçu conversation.
+• Workflow : séquence d’étapes, délais, activation par étape, bouton d’ajout, icônes édition/suppression, panneau de cible, sources, dernière exécution et verrouillage.
+• Communication : colonne conversations, recherche, historique, sélection modèle, données contact, envoi grisé si rien à envoyer.
+• États : actif/inactif, connecté/non connecté, publié/non publié, contrôle grisé, résultat vide, confirmation de suppression.
+• Analyse : indicateurs, comparaison annuelle, graphiques et export ; calendrier avec blocs de rendez-vous.
+• Aide : annonces superposées, questionnaire et parcours guidés. Plusieurs annonces ont bloqué des clics et captures.
+
+À CONFIRMER
+Les menus de certaines icônes n’exposent aucun nom dans l’accessibilité. Ne pas inventer leur action. Les contenus conditionnels après un interrupteur, les erreurs de validation et les états de soumission n’ont pas tous été inspectés.
+
+MESURES SUR SEGMENTS, GRAND ÉCRAN
+Police calculée Inter ; titre 24 px / ligne 32 px / poids 500 ; texte tableau 14/20 ; recherche 320 × 40 px ; rayon recherche 6 px ; action d’ajout 28 px de haut, rayon 6 px, fond rgb(123,87,239), texte blanc. Ce sont des mesures d’un échantillon, pas les règles de tout Lead. Détail : ANALYSE_TECHNIQUE.json.
+
+PROPOSITION CFITNESS — À VALIDER
+Garder les repères des listes, filtres, panneau de contact, calendrier et workflow ; appliquer les couleurs sombres CFitness déjà choisies. Créer des composants communs à l’OS avec libellés accessibles, clavier, état désactivé expliqué, états de chargement/vide/erreur et confirmation explicite des actions à effet réel. Aucun code propriétaire ni feuille complète n’est repris.
+
+COMPLÉMENT ADMINISTRATEUR — 17 NOVEMBRE
+Messagerie étroite : bouton + sans le libellé desktop, menu hamburger, recherche et liste de conversations. Le + ouvre la recherche du prospect. Prévoir un nom accessible pour chaque icône.
+Campagne SMS : sélecteur de segments, douze cases de statut, dates Du/Au, avertissement d’exclusion des oppositions, compteur estimatif et bascule de campagne différée.
+Type de rendez-vous réservable : nombres durée/fréquence/délai/capacité, commutateurs de notification, lien isolé, horaires par jour et action Appliquer. Proposition Stripe si non connecté, sans activation auditée.
+WhatsApp approuvé : champs désactivés pour le contenu approuvé, configuration et média encore modifiables, statut d’approbation et alerte de complétude séparés. Image JPG/PNG 5 MB maximum observée ; autres médias non approfondis.
+
+DERNIÈRE PASSE EN LECTURE SEULE — 17 NOVEMBRE
+Ajouter au catalogue les étapes Cibler/Composer/Objet/Vérifier et le résumé de portée de campagne email. En-tête email : logo URL/import jpeg-jpg-png 2 Mo, taille, arrondi, fond, alignement, quatre marges. HTML : code, aperçu iframe, quatre marges. Les variables rdv-date/rdv-heure sont proposées dans les communications de service. Voir captures 017–020.
+
+PASSE FILTRES ET RESPONSIVE — 17 NOVEMBRE
+Distinguer les barres et panneaux de filtres selon module et largeur. Ne pas déduire l’utilisabilité des enfants de la seule largeur du document : Formulaires et assistant email coupent des commandes. Prévoir volets, champs et commandes accessibles sans débordement. Voir RSP-01 à RSP-04 et captures 021–026.

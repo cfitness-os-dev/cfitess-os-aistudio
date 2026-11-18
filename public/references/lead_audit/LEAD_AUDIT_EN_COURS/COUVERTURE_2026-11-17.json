@@ -1,0 +1,104 @@
+[
+  {
+    "domaine": "Prospects / Clients",
+    "etat": "approfondi_partiel",
+    "observe": "Listes, filtres, fiches et dialogues principaux ; import Excel décrit et modèle officiel vierge conservé ; sélection multiple et préparation de segments sans application.",
+    "reste": "Histoire sportive, formulaires liés remplis, autres états d’abonnement, règles de doublons/import/rejet, export complet, résultats serveur."
+  },
+  {
+    "domaine": "Email",
+    "etat": "approfondi_partiel",
+    "observe": "27 modèles existants comparés, composeurs, six types de blocs détaillés, trois emails de service, variables contextuelles ; premier écran du nouvel assistant de campagne et bilan envoyé.",
+    "reste": "Six blocs restants : Image, Image et texte, Fond image, Barre de navigation, Séparateur, Espace ; étapes email Composer/Objet/Vérifier, délivrabilité et erreurs."
+  },
+  {
+    "domaine": "SMS",
+    "etat": "approfondi_partiel",
+    "observe": "Composeur, modèles, étapes de scénario, trois SMS de service ; campagne avec segments, statuts, période, opposition ; calendrier et heure de programmation lus.",
+    "reste": "Règles horaires/fuseau exactes, calcul des segments/encodage après substitution, STOP, résultats prestataire et bilan de campagne SMS envoyée non trouvé à Beynost."
+  },
+  {
+    "domaine": "WhatsApp",
+    "etat": "approfondi_partiel",
+    "observe": "Compte connecté, galerie, modèle libre partiel, messagerie, étape avec replis ; modèles existants Marketing/Utility, verrouillages, image et réponses rapides.",
+    "reste": "Offre limitée, coupon, carrousel, autres médias/boutons détaillés, examen Meta, coûts, portabilité, statuts réels et réception. WA-02 : divergence liste/détail."
+  },
+  {
+    "domaine": "Scénarios",
+    "etat": "approfondi_partiel",
+    "observe": "Conditions, édition d’étape, six types, unités ; modes initial Automatique/Manuel ; scénario actif verrouillé et différence avec désactivation.",
+    "reste": "Déclencheur Décrocheur, règles d’arrêt/réentrée, affectation/exécution manuelle, effets réels de versions/verrouillage, exécutions et échecs."
+  },
+  {
+    "domaine": "Formulaires",
+    "etat": "partiel_donnees_manquantes",
+    "observe": "Liste, éditeur vide et réponses vides consultés ; droits comparés.",
+    "reste": "Formulaire avec sections/champs déjà constitués et réponses existantes ; branches non accessibles sans création."
+  },
+  {
+    "domaine": "Rendez-vous",
+    "etat": "approfondi_partiel",
+    "observe": "Direct/email, type neuf, indisponibilité et type existant réservable : capacité, délai, fréquence, notifications, lien isolé, jours et paiement Stripe proposés.",
+    "reste": "Autres configurations conditionnelles, collisions de ressources, détails d’issues et résultats de confirmation/paiement sans écriture."
+  },
+  {
+    "domaine": "Activités",
+    "etat": "approfondi_partiel",
+    "observe": "Vues et filtres, appels, demandes contact/email, tâche SMS planifiée et tâches email déjà faites repérées ; aucune tâche traitée.",
+    "reste": "Avis, SMS entrant, tâche email encore en attente non rencontrés ; autres issues et résultats d’envoi/clôture non testés."
+  },
+  {
+    "domaine": "Statistiques",
+    "etat": "approfondi_partiel",
+    "observe": "Tableaux retrouvés, huit vues, colonnes et métriques parcourues. Cinq raccourcis de période, filtres archivés/année et sélection multiclub consultés ; comparaison annuelle distinguée de compareTo.",
+    "reste": "Définitions détaillées, toutes les plages/combinaisons, preuves des calculs, exports et périmètres de données."
+  },
+  {
+    "domaine": "Ventes / UTM",
+    "etat": "partiel",
+    "observe": "Ventes renseignées, filtres de fin d’abonnement et liens de fiche ; détail UTM avec trois indicateurs et tableau des prospects/abonnements.",
+    "reste": "Transaction distincte non démontrée, autres états, définition des conversions/attribution, annulations et rapprochement ERP."
+  },
+  {
+    "domaine": "Rôles actifs",
+    "etat": "compare_ui_sans_ecriture",
+    "observe": "ADMIN, MANAGER et COMMERCIAL observés ; différences de navigation et formulaire consignées.",
+    "reste": "Contrôles serveur, délégation fine, autres clubs et réglages masquant des fonctions ; ACL-01 à clarifier."
+  },
+  {
+    "domaine": "Rôles obsolètes",
+    "etat": "non_teste",
+    "observe": "COACH/BASIC présents dans l’administration, déclarés obsolètes par l’aide.",
+    "reste": "Ne tester que si ces rôles existent réellement et restent dans le périmètre voulu."
+  },
+  {
+    "domaine": "Connecteurs / API",
+    "etat": "partiel_outil_limite",
+    "observe": "Cartes, présentations et paramètres accessibles lus ; webhook officiel synthétisé.",
+    "reste": "Documentation complète, flux actifs, traces HTTP sans secrets, erreurs/reprises, exports et limites. Aucun HAR exposé par l’outil."
+  },
+  {
+    "domaine": "Autres clubs",
+    "etat": "second_club_consulte",
+    "observe": "ADMIN : Beynost et Lyon Carré de Soie ; rendez-vous, campagnes SMS, modèles WhatsApp, formulaires vides et activités consultés dans le second.",
+    "reste": "Variantes de données encore non rencontrées ; pas de formulaire rempli trouvé dans les deux clubs."
+  },
+  {
+    "domaine": "Mobile / tablette",
+    "etat": "sous_ecrans_et_filtres_approfondis_sans_certification",
+    "observe": "20 mesures ciblées, 12 entrées de listes de communication, 28 entrées de pages Paramètres ; filtres, formulaires, éditeurs, défauts RSP-01 à RSP-04 et six captures supplémentaires.",
+    "reste": "Autres chemins, historiques, menus et combinaisons ; clavier tactile, applications natives, états remplis manquants et résultats de validation. Les surfaces consultées ne prouvent pas toutes les interactions."
+  },
+  {
+    "domaine": "Formation",
+    "etat": "index_identifie_transcrit",
+    "observe": "33 articles/pages lus ; les 13 vidéos identifiées ont une transcription automatique analysée.",
+    "reste": "Visionnage visuel détaillé ; contenus supplémentaires éventuellement hors des index. Certains parcours décrits ont changé dans l’interface actuelle."
+  },
+  {
+    "domaine": "Résultats métier",
+    "etat": "non_teste_sans_modification",
+    "observe": "Aucun résultat d’écriture revendiqué.",
+    "reste": "Environnement fictif ou démonstration fournisseur pour envois, paiement, publication, import, synchronisation et suppression."
+  }
+]

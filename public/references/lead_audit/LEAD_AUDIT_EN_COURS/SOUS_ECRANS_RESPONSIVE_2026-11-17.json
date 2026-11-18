@@ -1,0 +1,867 @@
+{
+  "limite": "20 relevés ciblés de sous-écrans ; pas une recette de toutes les combinaisons. Les signaux de débordement ont besoin d’une preuve ciblée ; les captures par défaut et clics non probants sont écartés.",
+  "ecrans": [
+    {
+      "ecran": "Ajouter un prospect",
+      "format": "820×1180",
+      "box": {
+        "height": 1062,
+        "width": 512,
+        "x": 154,
+        "y": 59
+      },
+      "dialog": true,
+      "documentWidth": 820,
+      "inputs": [
+        {
+          "disabled": false,
+          "placeholder": null,
+          "type": "radio"
+        },
+        {
+          "disabled": false,
+          "placeholder": null,
+          "type": "radio"
+        },
+        {
+          "disabled": false,
+          "placeholder": null,
+          "type": "radio"
+        },
+        {
+          "disabled": false,
+          "placeholder": null,
+          "type": "radio"
+        },
+        {
+          "disabled": false,
+          "placeholder": "John",
+          "type": "input"
+        },
+        {
+          "disabled": false,
+          "placeholder": "Doe",
+          "type": "input"
+        },
+        {
+          "disabled": false,
+          "placeholder": "john.doe@gmail.com",
+          "type": "input"
+        },
+        {
+          "disabled": false,
+          "placeholder": null,
+          "type": "select"
+        },
+        {
+          "disabled": false,
+          "placeholder": null,
+          "type": "checkbox"
+        },
+        {
+          "disabled": false,
+          "placeholder": "Téléphone",
+          "type": "tel"
+        },
+        {
+          "disabled": false,
+          "placeholder": "Adresse du prospect",
+          "type": "input"
+        },
+        {
+          "disabled": false,
+          "placeholder": "**/**/****",
+          "type": "input"
+        },
+        {
+          "disabled": false,
+          "placeholder": null,
+          "type": "select"
+        },
+        {
+          "disabled": false,
+          "placeholder": "Code postal",
+          "type": "input"
+        },
+        {
+          "disabled": false,
+          "placeholder": "Ville du prospect",
+          "type": "input"
+        },
+        {
+          "disabled": false,
+          "placeholder": "Écrire un commentaire",
+          "type": "textarea"
+        }
+      ],
+      "labels": [
+        "Madame",
+        "Monsieur",
+        "Inconnu",
+        "N/A",
+        "Nom",
+        "Prénom",
+        "Adresse mail",
+        "Source",
+        "Accepte les communications commerciales",
+        "Téléphone",
+        "Adresse",
+        "Date de naissance",
+        "Pays",
+        "Code postal",
+        "Ville"
+      ],
+      "scrollable": 1,
+      "viewport": {
+        "height": 1180,
+        "width": 820
+      }
+    },
+    {
+      "ecran": "Ajouter un prospect",
+      "format": "390×844",
+      "box": {
+        "height": 759.59375,
+        "width": 390,
+        "x": 0,
+        "y": 84.40625
+      },
+      "dialog": true,
+      "documentWidth": 390,
+      "inputs": [
+        {
+          "disabled": false,
+          "placeholder": null,
+          "type": "radio"
+        },
+        {
+          "disabled": false,
+          "placeholder": null,
+          "type": "radio"
+        },
+        {
+          "disabled": false,
+          "placeholder": null,
+          "type": "radio"
+        },
+        {
+          "disabled": false,
+          "placeholder": null,
+          "type": "radio"
+        },
+        {
+          "disabled": false,
+          "placeholder": "John",
+          "type": "input"
+        },
+        {
+          "disabled": false,
+          "placeholder": "Doe",
+          "type": "input"
+        },
+        {
+          "disabled": false,
+          "placeholder": "john.doe@gmail.com",
+          "type": "input"
+        },
+        {
+          "disabled": false,
+          "placeholder": null,
+          "type": "select"
+        },
+        {
+          "disabled": false,
+          "placeholder": null,
+          "type": "checkbox"
+        },
+        {
+          "disabled": false,
+          "placeholder": "Téléphone",
+          "type": "tel"
+        },
+        {
+          "disabled": false,
+          "placeholder": "Adresse du prospect",
+          "type": "input"
+        },
+        {
+          "disabled": false,
+          "placeholder": "**/**/****",
+          "type": "input"
+        },
+        {
+          "disabled": false,
+          "placeholder": null,
+          "type": "select"
+        },
+        {
+          "disabled": false,
+          "placeholder": "Code postal",
+          "type": "input"
+        },
+        {
+          "disabled": false,
+          "placeholder": "Ville du prospect",
+          "type": "input"
+        },
+        {
+          "disabled": false,
+          "placeholder": "Écrire un commentaire",
+          "type": "textarea"
+        }
+      ],
+      "labels": [
+        "Madame",
+        "Monsieur",
+        "Inconnu",
+        "N/A",
+        "Nom",
+        "Prénom",
+        "Adresse mail",
+        "Source",
+        "Accepte les communications commerciales",
+        "Téléphone",
+        "Adresse",
+        "Date de naissance",
+        "Pays",
+        "Code postal",
+        "Ville"
+      ],
+      "scrollable": 1,
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "ecran": "Campagne SMS / formulaire vide",
+      "format": "820×600",
+      "box": {
+        "height": 600,
+        "width": 820,
+        "x": 0,
+        "y": 0
+      },
+      "dialog": false,
+      "documentWidth": 820,
+      "inputs": [
+        {
+          "disabled": false,
+          "placeholder": "Nom de la campagne",
+          "type": "input"
+        },
+        {
+          "disabled": false,
+          "placeholder": "Tapez le contenu du SMS ici",
+          "type": "textarea"
+        },
+        {
+          "disabled": false,
+          "placeholder": "**/**/****",
+          "type": "input"
+        },
+        {
+          "disabled": false,
+          "placeholder": "**/**/****",
+          "type": "input"
+        }
+      ],
+      "labels": [],
+      "root": "document",
+      "scrollable": 1,
+      "viewport": {
+        "height": 600,
+        "width": 820
+      }
+    },
+    {
+      "ecran": "Campagne SMS / formulaire vide",
+      "format": "390×844",
+      "box": {
+        "height": 44,
+        "width": 390,
+        "x": 0,
+        "y": 0
+      },
+      "dialog": false,
+      "documentWidth": 390,
+      "inputs": [],
+      "labels": [],
+      "root": "document",
+      "scrollable": 0,
+      "viewport": {
+        "height": 844,
+        "width": 390
+      },
+      "etat": "Erreur applicative visible, pas un formulaire volontairement vide."
+    },
+    {
+      "ecran": "Scénarios / nouveau formulaire",
+      "format": "820×1180",
+      "box": {
+        "height": 1062,
+        "width": 792,
+        "x": 14,
+        "y": 59
+      },
+      "dialog": true,
+      "documentWidth": 820,
+      "inputs": [
+        {
+          "disabled": false,
+          "placeholder": null,
+          "type": "input"
+        },
+        {
+          "disabled": false,
+          "placeholder": "Rechercher une source",
+          "type": "text"
+        }
+      ],
+      "labels": [
+        ""
+      ],
+      "root": "dialog",
+      "scrollable": 2,
+      "viewport": {
+        "height": 1180,
+        "width": 820
+      }
+    },
+    {
+      "ecran": "Scénarios / nouveau formulaire",
+      "format": "390×844",
+      "box": {
+        "height": 759.59375,
+        "width": 390,
+        "x": 0,
+        "y": 84.40625
+      },
+      "dialog": true,
+      "documentWidth": 390,
+      "inputs": [
+        {
+          "disabled": false,
+          "placeholder": null,
+          "type": "input"
+        },
+        {
+          "disabled": false,
+          "placeholder": "Rechercher une source",
+          "type": "text"
+        }
+      ],
+      "labels": [
+        ""
+      ],
+      "root": "dialog",
+      "scrollable": 2,
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "ecran": "Modèle email / éditeur existant",
+      "format": "820×1180",
+      "box": {
+        "height": 1062,
+        "width": 770.796875,
+        "x": 24.6015625,
+        "y": 59
+      },
+      "dialog": true,
+      "documentWidth": 820,
+      "inputs": [
+        {
+          "disabled": false,
+          "placeholder": "Ex. Relance essai gratuit",
+          "type": "input"
+        },
+        {
+          "disabled": false,
+          "placeholder": "%prenom%, votre séance d'essai vous attend",
+          "type": "input"
+        },
+        {
+          "disabled": false,
+          "placeholder": "Lu après l'objet dans la boîte de réception",
+          "type": "input"
+        }
+      ],
+      "labels": [],
+      "root": "dialog",
+      "scrollable": 0,
+      "viewport": {
+        "height": 1180,
+        "width": 820
+      }
+    },
+    {
+      "ecran": "Modèle email / éditeur existant",
+      "format": "390×844",
+      "box": {
+        "height": 759.59375,
+        "width": 366.59375,
+        "x": 0,
+        "y": 84.40625
+      },
+      "dialog": true,
+      "documentWidth": 390,
+      "inputs": [
+        {
+          "disabled": false,
+          "placeholder": "Ex. Relance essai gratuit",
+          "type": "input"
+        }
+      ],
+      "labels": [],
+      "root": "dialog",
+      "scrollable": 0,
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "ecran": "WhatsApp / modèle existant",
+      "format": "820×1180",
+      "box": {
+        "height": 1180,
+        "width": 820,
+        "x": 0,
+        "y": 0
+      },
+      "dialog": false,
+      "documentWidth": 820,
+      "inputs": [
+        {
+          "disabled": false,
+          "placeholder": "Saisissez le nom du modèle ici...",
+          "type": "input"
+        },
+        {
+          "disabled": false,
+          "placeholder": "Saisissez la description du modèle ici...",
+          "type": "textarea"
+        },
+        {
+          "disabled": false,
+          "placeholder": "Entrez un footer ici...",
+          "type": "text"
+        },
+        {
+          "disabled": true,
+          "placeholder": null,
+          "type": "select"
+        },
+        {
+          "disabled": true,
+          "placeholder": "Saisissez le texte du bouton",
+          "type": "input"
+        },
+        {
+          "disabled": true,
+          "placeholder": null,
+          "type": "select"
+        },
+        {
+          "disabled": true,
+          "placeholder": "Entrez l'URL",
+          "type": "input"
+        },
+        {
+          "disabled": true,
+          "placeholder": "Saisissez le texte du bouton",
+          "type": "input"
+        },
+        {
+          "disabled": true,
+          "placeholder": null,
+          "type": "select"
+        },
+        {
+          "disabled": true,
+          "placeholder": "Entrez l'URL",
+          "type": "input"
+        },
+        {
+          "disabled": true,
+          "placeholder": "Écrivez votre message...",
+          "type": "input"
+        }
+      ],
+      "labels": [
+        "Nom du modèle",
+        "Description du modèle",
+        "Format du titre",
+        "Corps",
+        "Type d'URL",
+        "Type d'URL"
+      ],
+      "root": "document",
+      "scrollable": 1,
+      "viewport": {
+        "height": 1180,
+        "width": 820
+      }
+    },
+    {
+      "ecran": "WhatsApp / modèle existant",
+      "format": "390×844",
+      "box": {
+        "height": 844,
+        "width": 390,
+        "x": 0,
+        "y": 0
+      },
+      "dialog": false,
+      "documentWidth": 390,
+      "inputs": [
+        {
+          "disabled": false,
+          "placeholder": "Saisissez le nom du modèle ici...",
+          "type": "input"
+        },
+        {
+          "disabled": false,
+          "placeholder": "Saisissez la description du modèle ici...",
+          "type": "textarea"
+        },
+        {
+          "disabled": false,
+          "placeholder": "Entrez un footer ici...",
+          "type": "text"
+        },
+        {
+          "disabled": true,
+          "placeholder": null,
+          "type": "select"
+        },
+        {
+          "disabled": true,
+          "placeholder": "Saisissez le texte du bouton",
+          "type": "input"
+        },
+        {
+          "disabled": true,
+          "placeholder": null,
+          "type": "select"
+        },
+        {
+          "disabled": true,
+          "placeholder": "Entrez l'URL",
+          "type": "input"
+        },
+        {
+          "disabled": true,
+          "placeholder": "Saisissez le texte du bouton",
+          "type": "input"
+        },
+        {
+          "disabled": true,
+          "placeholder": null,
+          "type": "select"
+        },
+        {
+          "disabled": true,
+          "placeholder": "Entrez l'URL",
+          "type": "input"
+        },
+        {
+          "disabled": true,
+          "placeholder": "Écrivez votre message...",
+          "type": "input"
+        }
+      ],
+      "labels": [
+        "Nom du modèle",
+        "Description du modèle",
+        "Format du titre",
+        "Corps",
+        "Type d'URL",
+        "Type d'URL"
+      ],
+      "root": "document",
+      "scrollable": 1,
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "ecran": "Clients / menu Source",
+      "format": "820×1180",
+      "viewport": {
+        "width": 820,
+        "height": 1180
+      },
+      "documentWidth": 820,
+      "dialog": true,
+      "box": {
+        "x": 298,
+        "y": 140,
+        "width": 200,
+        "height": 385
+      },
+      "inputs": [
+        {
+          "type": "text",
+          "placeholder": "Source",
+          "disabled": false
+        }
+      ],
+      "scrollable": 1,
+      "source": "Mesure affichée par l’outil pendant cette passe, consolidée depuis le relevé.",
+      "limite": "Ancien collecteur : dialogue ou main ; ne prouve pas que tous les enfants sont dans le cadre."
+    },
+    {
+      "ecran": "Ventes / fin d’abonnement",
+      "format": "820×1180",
+      "viewport": {
+        "width": 820,
+        "height": 1180
+      },
+      "documentWidth": 820,
+      "dialog": true,
+      "box": {
+        "x": 132,
+        "y": 132,
+        "width": 560,
+        "height": 420.1875
+      },
+      "inputs": [],
+      "scrollable": 0,
+      "source": "Mesure affichée par l’outil pendant cette passe, consolidée depuis le relevé.",
+      "limite": "Ancien collecteur : dialogue ou main ; ne prouve pas que tous les enfants sont dans le cadre."
+    },
+    {
+      "ecran": "Planning / Nouveau rendez-vous / recherche",
+      "format": "820×1180",
+      "viewport": {
+        "width": 820,
+        "height": 1180
+      },
+      "documentWidth": 820,
+      "dialog": true,
+      "box": {
+        "x": 154,
+        "y": 356,
+        "width": 512,
+        "height": 468
+      },
+      "inputs": [
+        {
+          "type": "input",
+          "placeholder": "Rechercher ici par nom ou mail...",
+          "disabled": false
+        }
+      ],
+      "scrollable": 0,
+      "source": "Mesure affichée par l’outil pendant cette passe, consolidée depuis le relevé.",
+      "limite": "Ancien collecteur : dialogue ou main ; ne prouve pas que tous les enfants sont dans le cadre."
+    },
+    {
+      "ecran": "Planning / Nouveau rendez-vous / recherche",
+      "format": "390×844",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "documentWidth": 390,
+      "dialog": true,
+      "box": {
+        "x": 0,
+        "y": 355,
+        "width": 390,
+        "height": 489
+      },
+      "inputs": [
+        {
+          "type": "input",
+          "placeholder": "Rechercher ici par nom ou mail...",
+          "disabled": false
+        }
+      ],
+      "scrollable": 0,
+      "source": "Mesure affichée par l’outil pendant cette passe, consolidée depuis le relevé.",
+      "limite": "Ancien collecteur : dialogue ou main ; ne prouve pas que tous les enfants sont dans le cadre."
+    },
+    {
+      "ecran": "Statistiques / Sélectionner une période",
+      "format": "820×1180",
+      "viewport": {
+        "width": 820,
+        "height": 1180
+      },
+      "documentWidth": 820,
+      "dialog": true,
+      "box": {
+        "x": 0,
+        "y": 619,
+        "width": 820,
+        "height": 561
+      },
+      "inputs": [
+        {
+          "type": "date",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "type": "date",
+          "placeholder": null,
+          "disabled": false
+        }
+      ],
+      "scrollable": 0,
+      "source": "Mesure affichée par l’outil pendant cette passe, consolidée depuis le relevé.",
+      "limite": "Ancien collecteur : dialogue ou main ; ne prouve pas que tous les enfants sont dans le cadre."
+    },
+    {
+      "ecran": "Statistiques / Sélectionner une période",
+      "format": "390×844",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "documentWidth": 390,
+      "dialog": true,
+      "box": {
+        "x": 0,
+        "y": 283,
+        "width": 390,
+        "height": 561
+      },
+      "inputs": [
+        {
+          "type": "date",
+          "placeholder": null,
+          "disabled": false
+        },
+        {
+          "type": "date",
+          "placeholder": null,
+          "disabled": false
+        }
+      ],
+      "scrollable": 0,
+      "source": "Mesure affichée par l’outil pendant cette passe, consolidée depuis le relevé.",
+      "limite": "Ancien collecteur : dialogue ou main ; ne prouve pas que tous les enfants sont dans le cadre."
+    },
+    {
+      "ecran": "Formulaires / éditeur existant vide",
+      "format": "820×600",
+      "viewport": {
+        "width": 820,
+        "height": 600
+      },
+      "documentWidth": 820,
+      "dialog": false,
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 820,
+        "height": 600
+      },
+      "inputs": [
+        {
+          "type": "input",
+          "placeholder": "Nom du formulaire",
+          "disabled": false
+        }
+      ],
+      "scrollable": 0,
+      "source": "Mesure affichée par l’outil pendant cette passe, consolidée depuis le relevé.",
+      "limite": "Ancien collecteur : dialogue ou main ; ne prouve pas que tous les enfants sont dans le cadre."
+    },
+    {
+      "ecran": "Formulaires / éditeur existant vide",
+      "format": "390×844",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "documentWidth": 390,
+      "dialog": false,
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "inputs": [
+        {
+          "type": "input",
+          "placeholder": "Nom du formulaire",
+          "disabled": false
+        }
+      ],
+      "scrollable": 0,
+      "source": "Mesure affichée par l’outil pendant cette passe, consolidée depuis le relevé.",
+      "limite": "Ancien collecteur : dialogue ou main ; ne prouve pas que tous les enfants sont dans le cadre."
+    },
+    {
+      "ecran": "Campagne email / Cibler",
+      "format": "820×600",
+      "viewport": {
+        "width": 820,
+        "height": 600
+      },
+      "documentWidth": 820,
+      "dialog": false,
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 820,
+        "height": 600
+      },
+      "inputs": [
+        {
+          "type": "input",
+          "placeholder": "**/**/****",
+          "disabled": false
+        },
+        {
+          "type": "input",
+          "placeholder": "**/**/****",
+          "disabled": false
+        }
+      ],
+      "scrollable": 1,
+      "source": "Mesure affichée par l’outil pendant cette passe, consolidée depuis le relevé.",
+      "limite": "Ancien collecteur : dialogue ou main ; ne prouve pas que tous les enfants sont dans le cadre."
+    },
+    {
+      "ecran": "Campagne email / Cibler",
+      "format": "390×844",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "documentWidth": 390,
+      "dialog": false,
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "inputs": [
+        {
+          "type": "input",
+          "placeholder": "**/**/****",
+          "disabled": false
+        },
+        {
+          "type": "input",
+          "placeholder": "**/**/****",
+          "disabled": false
+        }
+      ],
+      "scrollable": 0,
+      "source": "Mesure affichée par l’outil pendant cette passe, consolidée depuis le relevé.",
+      "limite": "Ancien collecteur : dialogue ou main ; ne prouve pas que tous les enfants sont dans le cadre."
+    }
+  ]
+}

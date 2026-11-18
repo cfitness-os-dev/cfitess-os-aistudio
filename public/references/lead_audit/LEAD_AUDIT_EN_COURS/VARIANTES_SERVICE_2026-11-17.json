@@ -1,0 +1,564 @@
+[
+  {
+    "variante": "SMS modification",
+    "buttons": [
+      {
+        "aria": "Open menu",
+        "disabled": false,
+        "label": ""
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Email & SMS de service"
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Sélectionner un modèle"
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Annuler"
+      },
+      {
+        "aria": null,
+        "disabled": true,
+        "label": "Enregistrer"
+      }
+    ],
+    "editable": 0,
+    "heading": [
+      "Editer le SMS de modification"
+    ],
+    "labels": [],
+    "selects": 1,
+    "tags": [
+      "%prenom%",
+      "%nom%",
+      "%club%",
+      "%telephone-club%",
+      "%adresse-club%",
+      "%url-rdv-club%",
+      "%rdv-heure%",
+      "%rdv-date%"
+    ]
+  },
+  {
+    "variante": "SMS annulation",
+    "buttons": [
+      {
+        "aria": "Open menu",
+        "disabled": false,
+        "label": ""
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Email & SMS de service"
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Sélectionner un modèle"
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Annuler"
+      },
+      {
+        "aria": null,
+        "disabled": true,
+        "label": "Enregistrer"
+      }
+    ],
+    "editable": 0,
+    "heading": [
+      "Editer le SMS d'annulation"
+    ],
+    "labels": [],
+    "selects": 1,
+    "tags": [
+      "%prenom%",
+      "%nom%",
+      "%club%",
+      "%telephone-club%",
+      "%adresse-club%",
+      "%url-rdv-club%",
+      "%rdv-heure%",
+      "%rdv-date%"
+    ]
+  },
+  {
+    "variante": "Email rappel",
+    "buttons": [
+      {
+        "aria": "Open menu",
+        "disabled": false,
+        "label": ""
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Email & SMS de service"
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "C.Fitness Carré de Soie"
+      },
+      {
+        "aria": "Ajouter du contenu",
+        "disabled": false,
+        "label": ""
+      },
+      {
+        "aria": "Styles du mail",
+        "disabled": false,
+        "label": ""
+      },
+      {
+        "aria": "Tags",
+        "disabled": false,
+        "label": ""
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Blocs"
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Modèles"
+      },
+      {
+        "aria": "Texte",
+        "disabled": false,
+        "label": "Texte"
+      },
+      {
+        "aria": "Image",
+        "disabled": false,
+        "label": "Image"
+      },
+      {
+        "aria": "Bouton",
+        "disabled": false,
+        "label": "Bouton"
+      },
+      {
+        "aria": "En-tête",
+        "disabled": false,
+        "label": "En-tête"
+      },
+      {
+        "aria": "Image et texte",
+        "disabled": false,
+        "label": "Image et texte"
+      },
+      {
+        "aria": "Fond image",
+        "disabled": false,
+        "label": "Fond image"
+      },
+      {
+        "aria": "Barre de navigation",
+        "disabled": false,
+        "label": "Barre de navigation"
+      },
+      {
+        "aria": "Séparateur",
+        "disabled": false,
+        "label": "Séparateur"
+      },
+      {
+        "aria": "Espace",
+        "disabled": false,
+        "label": "Espace"
+      },
+      {
+        "aria": "Réseaux sociaux",
+        "disabled": false,
+        "label": "Réseaux sociaux"
+      },
+      {
+        "aria": "Pied de page",
+        "disabled": false,
+        "label": "Pied de page"
+      },
+      {
+        "aria": "HTML",
+        "disabled": false,
+        "label": "HTML"
+      },
+      {
+        "aria": "Annuler",
+        "disabled": true,
+        "label": ""
+      },
+      {
+        "aria": "Rétablir",
+        "disabled": true,
+        "label": ""
+      },
+      {
+        "aria": "Ordinateur",
+        "disabled": false,
+        "label": "Ordinateur"
+      },
+      {
+        "aria": "Mobile",
+        "disabled": false,
+        "label": "Mobile"
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Aperçu"
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Envoyer un email test"
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Annuler"
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Enregistrer"
+      }
+    ],
+    "editable": 2,
+    "heading": [
+      "Editer l'email de rappel",
+      "Contenu"
+    ],
+    "labels": [],
+    "selects": 0,
+    "tags": [
+      "%prenom%",
+      "%rdv-date%",
+      "%rdv-heure%",
+      "%telephone-club%",
+      "%club%",
+      "%adresse-club%"
+    ]
+  },
+  {
+    "variante": "Email modification",
+    "buttons": [
+      {
+        "aria": "Open menu",
+        "disabled": false,
+        "label": ""
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Email & SMS de service"
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "C.Fitness Carré de Soie"
+      },
+      {
+        "aria": "Ajouter du contenu",
+        "disabled": false,
+        "label": ""
+      },
+      {
+        "aria": "Styles du mail",
+        "disabled": false,
+        "label": ""
+      },
+      {
+        "aria": "Tags",
+        "disabled": false,
+        "label": ""
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Blocs"
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Modèles"
+      },
+      {
+        "aria": "Texte",
+        "disabled": false,
+        "label": "Texte"
+      },
+      {
+        "aria": "Image",
+        "disabled": false,
+        "label": "Image"
+      },
+      {
+        "aria": "Bouton",
+        "disabled": false,
+        "label": "Bouton"
+      },
+      {
+        "aria": "En-tête",
+        "disabled": false,
+        "label": "En-tête"
+      },
+      {
+        "aria": "Image et texte",
+        "disabled": false,
+        "label": "Image et texte"
+      },
+      {
+        "aria": "Fond image",
+        "disabled": false,
+        "label": "Fond image"
+      },
+      {
+        "aria": "Barre de navigation",
+        "disabled": false,
+        "label": "Barre de navigation"
+      },
+      {
+        "aria": "Séparateur",
+        "disabled": false,
+        "label": "Séparateur"
+      },
+      {
+        "aria": "Espace",
+        "disabled": false,
+        "label": "Espace"
+      },
+      {
+        "aria": "Réseaux sociaux",
+        "disabled": false,
+        "label": "Réseaux sociaux"
+      },
+      {
+        "aria": "Pied de page",
+        "disabled": false,
+        "label": "Pied de page"
+      },
+      {
+        "aria": "HTML",
+        "disabled": false,
+        "label": "HTML"
+      },
+      {
+        "aria": "Annuler",
+        "disabled": true,
+        "label": ""
+      },
+      {
+        "aria": "Rétablir",
+        "disabled": true,
+        "label": ""
+      },
+      {
+        "aria": "Ordinateur",
+        "disabled": false,
+        "label": "Ordinateur"
+      },
+      {
+        "aria": "Mobile",
+        "disabled": false,
+        "label": "Mobile"
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Aperçu"
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Envoyer un email test"
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Annuler"
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Enregistrer"
+      }
+    ],
+    "editable": 1,
+    "heading": [
+      "Editer l'email de modification",
+      "Contenu"
+    ],
+    "tags": [
+      "%club%",
+      "%adresse-club%",
+      "%telephone-club%"
+    ]
+  },
+  {
+    "variante": "Email annulation",
+    "buttons": [
+      {
+        "aria": "Open menu",
+        "disabled": false,
+        "label": ""
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Email & SMS de service"
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "C.Fitness Carré de Soie"
+      },
+      {
+        "aria": "Ajouter du contenu",
+        "disabled": false,
+        "label": ""
+      },
+      {
+        "aria": "Styles du mail",
+        "disabled": false,
+        "label": ""
+      },
+      {
+        "aria": "Tags",
+        "disabled": false,
+        "label": ""
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Blocs"
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Modèles"
+      },
+      {
+        "aria": "Texte",
+        "disabled": false,
+        "label": "Texte"
+      },
+      {
+        "aria": "Image",
+        "disabled": false,
+        "label": "Image"
+      },
+      {
+        "aria": "Bouton",
+        "disabled": false,
+        "label": "Bouton"
+      },
+      {
+        "aria": "En-tête",
+        "disabled": false,
+        "label": "En-tête"
+      },
+      {
+        "aria": "Image et texte",
+        "disabled": false,
+        "label": "Image et texte"
+      },
+      {
+        "aria": "Fond image",
+        "disabled": false,
+        "label": "Fond image"
+      },
+      {
+        "aria": "Barre de navigation",
+        "disabled": false,
+        "label": "Barre de navigation"
+      },
+      {
+        "aria": "Séparateur",
+        "disabled": false,
+        "label": "Séparateur"
+      },
+      {
+        "aria": "Espace",
+        "disabled": false,
+        "label": "Espace"
+      },
+      {
+        "aria": "Réseaux sociaux",
+        "disabled": false,
+        "label": "Réseaux sociaux"
+      },
+      {
+        "aria": "Pied de page",
+        "disabled": false,
+        "label": "Pied de page"
+      },
+      {
+        "aria": "HTML",
+        "disabled": false,
+        "label": "HTML"
+      },
+      {
+        "aria": "Annuler",
+        "disabled": true,
+        "label": ""
+      },
+      {
+        "aria": "Rétablir",
+        "disabled": true,
+        "label": ""
+      },
+      {
+        "aria": "Ordinateur",
+        "disabled": false,
+        "label": "Ordinateur"
+      },
+      {
+        "aria": "Mobile",
+        "disabled": false,
+        "label": "Mobile"
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Aperçu"
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Envoyer un email test"
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Annuler"
+      },
+      {
+        "aria": null,
+        "disabled": false,
+        "label": "Enregistrer"
+      }
+    ],
+    "editable": 1,
+    "heading": [
+      "Editer l'email d'annulation",
+      "Contenu"
+    ],
+    "tags": [
+      "%club%",
+      "%adresse-club%",
+      "%telephone-club%"
+    ]
+  }
+]

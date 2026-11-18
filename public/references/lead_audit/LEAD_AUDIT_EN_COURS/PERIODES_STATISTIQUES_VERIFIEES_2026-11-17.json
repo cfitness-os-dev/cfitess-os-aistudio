@@ -1,0 +1,41 @@
+{
+  "dateObservation": "2026-11-17",
+  "periodes": [
+    {
+      "raccourci": "Le mois en cours",
+      "du": "2026-11-01",
+      "au": "2026-11-17",
+      "format": "820×600",
+      "methode": "Commande d’accessibilité ciblée, en remplacement des essais de clics non probants."
+    },
+    {
+      "raccourci": "La semaine dernière",
+      "du": "2026-11-09",
+      "au": "2026-11-15",
+      "format": "820×600",
+      "methode": "Commande d’accessibilité ciblée, en remplacement des essais de clics non probants."
+    },
+    {
+      "raccourci": "Le mois dernier",
+      "du": "2026-10-01",
+      "au": "2026-10-31",
+      "format": "820×600",
+      "methode": "Commande d’accessibilité ciblée, en remplacement des essais de clics non probants."
+    },
+    {
+      "raccourci": "30 derniers jours",
+      "du": "2026-10-18",
+      "au": "2026-11-17",
+      "format": "820×600",
+      "methode": "Commande d’accessibilité ciblée, en remplacement des essais de clics non probants."
+    },
+    {
+      "raccourci": "Depuis le début de l'année",
+      "du": "2026-01-01",
+      "au": "2026-11-17",
+      "format": "820×600",
+      "methode": "Commande d’accessibilité ciblée, en remplacement des essais de clics non probants."
+    }
+  ],
+  "limite": "Plages de filtre, pas preuve de bornes inclusives ni des calculs métier. Essais initiaux par coordonnées écartés."
+}

@@ -1,0 +1,71 @@
+COUVERTURE AU 17 NOVEMBRE — PAS DE CERTIFICATION 100 %
+
+Le registre recense options, contrôles, variantes et références. Les documents 10 et 14 précisent les exemples et les blocages.
+
+Prospects / Clients | approfondi_partiel
+Observé : Listes, filtres, fiches et dialogues principaux ; import Excel décrit et modèle officiel vierge conservé ; sélection multiple et préparation de segments sans application.
+Reste : Histoire sportive, formulaires liés remplis, autres états d’abonnement, règles de doublons/import/rejet, export complet, résultats serveur.
+
+Email | approfondi_partiel
+Observé : 27 modèles existants comparés, composeurs, six types de blocs détaillés, trois emails de service, variables contextuelles ; premier écran du nouvel assistant de campagne et bilan envoyé.
+Reste : Six blocs restants : Image, Image et texte, Fond image, Barre de navigation, Séparateur, Espace ; étapes email Composer/Objet/Vérifier, délivrabilité et erreurs.
+
+SMS | approfondi_partiel
+Observé : Composeur, modèles, étapes de scénario, trois SMS de service ; campagne avec segments, statuts, période, opposition ; calendrier et heure de programmation lus.
+Reste : Règles horaires/fuseau exactes, calcul des segments/encodage après substitution, STOP, résultats prestataire et bilan de campagne SMS envoyée non trouvé à Beynost.
+
+WhatsApp | approfondi_partiel
+Observé : Compte connecté, galerie, modèle libre partiel, messagerie, étape avec replis ; modèles existants Marketing/Utility, verrouillages, image et réponses rapides.
+Reste : Offre limitée, coupon, carrousel, autres médias/boutons détaillés, examen Meta, coûts, portabilité, statuts réels et réception. WA-02 : divergence liste/détail.
+
+Scénarios | approfondi_partiel
+Observé : Conditions, édition d’étape, six types, unités ; modes initial Automatique/Manuel ; scénario actif verrouillé et différence avec désactivation.
+Reste : Déclencheur Décrocheur, règles d’arrêt/réentrée, affectation/exécution manuelle, effets réels de versions/verrouillage, exécutions et échecs.
+
+Formulaires | partiel_donnees_manquantes
+Observé : Liste, éditeur vide et réponses vides consultés ; droits comparés.
+Reste : Formulaire avec sections/champs déjà constitués et réponses existantes ; branches non accessibles sans création.
+
+Rendez-vous | approfondi_partiel
+Observé : Direct/email, type neuf, indisponibilité et type existant réservable : capacité, délai, fréquence, notifications, lien isolé, jours et paiement Stripe proposés.
+Reste : Autres configurations conditionnelles, collisions de ressources, détails d’issues et résultats de confirmation/paiement sans écriture.
+
+Activités | approfondi_partiel
+Observé : Vues et filtres, appels, demandes contact/email, tâche SMS planifiée et tâches email déjà faites repérées ; aucune tâche traitée.
+Reste : Avis, SMS entrant, tâche email encore en attente non rencontrés ; autres issues et résultats d’envoi/clôture non testés.
+
+Statistiques | approfondi_partiel
+Observé : Tableaux retrouvés, huit vues, colonnes et métriques parcourues. Cinq raccourcis de période, filtres archivés/année et sélection multiclub consultés ; comparaison annuelle distinguée de compareTo.
+Reste : Définitions détaillées, toutes les plages/combinaisons, preuves des calculs, exports et périmètres de données.
+
+Ventes / UTM | partiel
+Observé : Ventes renseignées, filtres de fin d’abonnement et liens de fiche ; détail UTM avec trois indicateurs et tableau des prospects/abonnements.
+Reste : Transaction distincte non démontrée, autres états, définition des conversions/attribution, annulations et rapprochement ERP.
+
+Rôles actifs | compare_ui_sans_ecriture
+Observé : ADMIN, MANAGER et COMMERCIAL observés ; différences de navigation et formulaire consignées.
+Reste : Contrôles serveur, délégation fine, autres clubs et réglages masquant des fonctions ; ACL-01 à clarifier.
+
+Rôles obsolètes | non_teste
+Observé : COACH/BASIC présents dans l’administration, déclarés obsolètes par l’aide.
+Reste : Ne tester que si ces rôles existent réellement et restent dans le périmètre voulu.
+
+Connecteurs / API | partiel_outil_limite
+Observé : Cartes, présentations et paramètres accessibles lus ; webhook officiel synthétisé.
+Reste : Documentation complète, flux actifs, traces HTTP sans secrets, erreurs/reprises, exports et limites. Aucun HAR exposé par l’outil.
+
+Autres clubs | second_club_consulte
+Observé : ADMIN : Beynost et Lyon Carré de Soie ; rendez-vous, campagnes SMS, modèles WhatsApp, formulaires vides et activités consultés dans le second.
+Reste : Variantes de données encore non rencontrées ; pas de formulaire rempli trouvé dans les deux clubs.
+
+Mobile / tablette | sous_ecrans_et_filtres_approfondis_sans_certification
+Observé : 20 mesures ciblées, 12 entrées de listes de communication, 28 entrées de pages Paramètres ; filtres, formulaires, éditeurs, défauts RSP-01 à RSP-04 et six captures supplémentaires.
+Reste : Autres chemins, historiques, menus et combinaisons ; clavier tactile, applications natives, états remplis manquants et résultats de validation. Les surfaces consultées ne prouvent pas toutes les interactions.
+
+Formation | index_identifie_transcrit
+Observé : 33 articles/pages lus ; les 13 vidéos identifiées ont une transcription automatique analysée.
+Reste : Visionnage visuel détaillé ; contenus supplémentaires éventuellement hors des index. Certains parcours décrits ont changé dans l’interface actuelle.
+
+Résultats métier | non_teste_sans_modification
+Observé : Aucun résultat d’écriture revendiqué.
+Reste : Environnement fictif ou démonstration fournisseur pour envois, paiement, publication, import, synchronisation et suppression.

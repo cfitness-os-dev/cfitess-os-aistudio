@@ -1,0 +1,90 @@
+CAHIER DES CHARGES FONCTIONNEL ET TECHNIQUE — MODULE COMMERCIAL
+Version consolidée 0.4 — 17/11/2026 — À VALIDER AVANT DÉVELOPPEMENT
+
+STATUT
+Ce document propose une architecture et des critères de recette à partir d’un audit partiel. Il ne certifie ni exhaustivité de Lead, ni parité fonctionnelle, ni conformité juridique de la future application. Aucun développement de CFitness n’a commencé. Les choix de pile devront respecter le dépôt existant, non analysé dans cette passe.
+
+1. PÉRIMÈTRE ET ORGANISATION
+Le module regroupe acquisition, suivi prospect, relation client, tâches, rendez-vous, communication, ventes et pilotage. La RH reste dans Mon compte selon la décision antérieure. Le Planning global de l’OS pourra agréger rendez-vous commerciaux, planning sportif, temps RH et tâches avec origine et droits clairement affichés. Ce regroupement ne doit pas fusionner les règles des différents métiers.
+Décisions à valider : nom du module, menu d’entrée, priorités de livraison, rôles CFitness, niveau de reprise des historiques et intégrations nécessaires dès le départ.
+
+2. PRINCIPES DE PARITÉ
+Chaque exigence reprend un identifiant LEAD ou DOC. Pour chaque écran : rôle, club, champs, choix conditionnels, règles, validations, résultat, erreurs, retour et preuve de recette. Les données documentées et les hypothèses restent étiquetées. Les points ECARTS_ET_QUESTIONS.json doivent être clarifiés ou acceptés explicitement avant de coder les règles concernées. Distinguer les faits observés, les éléments documentés, les propositions CFitness et les réserves.
+
+3. CONTACTS ET CLIENTS
+Prévoir identité, coordonnées, source, UTM, statut, assignation, segments multiples, consentements datés, événements et liens éventuels avec l’ERP. Préserver les distinctions Client/Client enseigne/anciens clients tant que leur sens exact n’est pas validé.
+Listes : recherche, filtres combinés, colonnes, pagination et accès fiche. Actions groupées avec périmètre explicite. Fiche : résumé, activités futures, historique multicanal et rendez-vous ; étendre ensuite les formulaires, histoire sportive et abonnements après vérification.
+Recette : retrouver un contact fictif par nom/email/téléphone, combiner filtres, contrôler la portée interclubs, vérifier qu’un refus commercial empêche l’inclusion dans une campagne. Import : onze colonnes, format et modèle officiel relevés dans le document 13 ; erreurs, déduplication et résultats serveur restent à spécifier. Fusion et export complet ne sont pas démontrés.
+
+4. ACTIVITÉS ET ARCHIVAGE
+Neuf filtres observés : Toutes les activités (*) puis APPOINTMENT, CONTACT, REVIEW, SCHEDULED_CALL, SCHEDULED_EMAIL, MAIL, SCHEDULED_SMS, SMS. L’astérisque est un filtre global, pas un type métier à stocker. Ces paramètres de navigation ne sont pas un schéma API interne. Vues temporelles, assignation, échéance, commentaire, traitement et journal des changements.
+L’archivage doit distinguer communication sortante et réponse entrante : l’écran source indique que seule la réponse repousse l’archivage. Définir précisément les événements éligibles, fuseau horaire, délai, suppression de responsable et attribution automatique.
+Recette : événements fictifs avant/après seuil ; aucun report de délai par un simple message sortant ; affectation sans fuite entre clubs. La purge des retards requiert un récapitulatif et une journalisation.
+
+5. RENDEZ-VOUS ET DISPONIBILITÉS
+Types, durée, fréquence, descriptif, modèle de confirmation, réservation autonome, indisponibilités par type et récurrence. Distinguer rendez-vous public, rendez-vous interne et créneau sportif importé. Prévenir les collisions, changements de fuseau et réservation simultanée.
+Recette : choix de créneau et tentative concurrente sur données fictives ; indisponibilité respectée ; changement/annulation notifié une seule fois ; état de présence explicite. La présence par défaut indiquée dans l’aide doit être une décision validée pour CFitness, pas une règle reproduite sans discussion.
+
+6. PAIEMENT STRIPE
+Connecteur dédié, configuration par club, secrets hors navigateur et journaux, confirmation par événement vérifié, gestion idempotente. Un contact peut être capté avant paiement ; le créneau définitif exige le statut de paiement attendu. Réservation expirée, paiement échoué, double notification, annulation et remboursement doivent être spécifiés.
+Recette exclusivement en mode test : paiement accepté/refusé/abandonné, notification dupliquée, reprise après panne. Les politiques de remboursement et les conditions contractuelles ne sont pas connues.
+
+7. COMMUNICATION EMAIL ET SMS
+Modèles, variables typées, aperçu fictif, suivi d’envoi et erreurs. Campagnes avec audience estimée, exclusions, brouillon, test vers destinataire fictif, programmation et confirmation finale explicite. Bibliothèque de douze blocs observée ; propriétés détaillées pour Texte, Bouton, En-tête, Réseaux sociaux, Pied de page et HTML. Six autres blocs restent à approfondir. La création email actuelle utilise Cibler, Composer, Objet, Vérifier ; seul le premier contenu est observé. La vidéo montre un parcours ancien. La validation par code email est documentée, pas exécutée.
+Séparer messages commerciaux et messages de service. Documenter l’encodage SMS et la consommation après substitution des tags : les guides divergent sur 159/160 caractères. Gérer STOP et oppositions sans dépendre d’une mention manuelle oubliable.
+Recette : exclusion des refus et vacances ; audience finale recalculée ; double validation sans double envoi ; annulation d’une programmation ; erreur prestataire visible et reprise contrôlée.
+
+8. WHATSAPP BUSINESS — DÉPENDANCE BLOQUANTE POUR LA PARITÉ
+Établir la propriété et l’administration du compte Meta, du numéro, des modèles et du prestataire. Vérifier la possibilité de migrer le numéro et les modèles, les contrats et coûts. L’état Connecté dans Lead ne donne pas automatiquement à CFitness un accès API.
+Prévoir connexion par club, mapping du numéro, modèles Marketing/Service, langues, variables, pièces jointes et boutons. La galerie et les formats spéciaux doivent être complétés avant spécification finale. Séparer sauvegarde interne et soumission Meta ; conserver les états et motifs d’échec.
+Messagerie : historique, sélection de contact, modèles approuvés, fenêtre de réponse calculée sur réception, messages et statuts, gestion des médias et consentements. Vérifier le contrat technique du fournisseur et les règles Meta courantes avant intégration ; aucune règle de facturation n’est codée sur simple supposition.
+Scénarios : modèle approuvé et variables ; prévoir le Message direct décrit en interface et ses trois replis si la fenêtre de réponse est fermée : ne pas envoyer, modèle ou SMS. La résolution et le coût du repli restent non testés. Recette sur destinataires fictifs : fenêtre ouverte/expirée, numéro invalide, modèle rejeté, variable absente, réponse entrante, notification dupliquée et panne de prestataire. Aucun envoi réel pendant la recette.
+
+9. SCÉNARIOS ET FIDÉLISATION
+Définir manuel/automatique, conditions d’entrée, source/statut/assignation, unités de délai, étapes, arrêt, réentrée et concurrence. Versionner les parcours ; distinguer inactif, actif, verrouillé et terminé. Verrouillé interdit de nouvelles entrées tout en laissant finir les contacts déjà engagés.
+Prévoir les vacances client comme exception de communication, sans suspension d’abonnement ; conserver début/fin et auteur. Le décrochage dépend de données de présence fiables : l’aide Lead le réserve à Résamania ; un équivalent Heitz est une amélioration CFitness à spécifier, pas une fonction source prouvée.
+Recette : version ancienne terminée sans double traitement ; exclusion en vacances ; réponse ou changement de statut pris en compte selon une règle validée ; reprise de tâches après indisponibilité sans envoi en double.
+
+10. FORMULAIRES ET ACQUISITION
+Éditeur par sections avec les neuf types documentés, contraintes et publication explicite. Réponses liées au contact, consentements et provenance ; suppression avec conséquence annoncée. Copies interclubs avec contrôle des droits.
+Connecteurs entrants : source, UTM, identité externe, offre et données complémentaires. Le webhook officiel est un contrat d’entrée limité, pas une API complète de migration. Requêtes idempotentes, validation, anti-spam et journalisation à concevoir pour CFitness.
+Recette : données manquantes, champs supplémentaires, répétition d’événement, refus commercial, formulaire non publié, panne/reprise et traçabilité de la source. Aucune requête de test vers le compte réel.
+
+11. VENTES ET STATISTIQUES
+Distinguer vente, abonnement et conversion du contact. Prévoir source d’autorité de chaque donnée, date d’effet, fin, montant et état. Des ventes renseignées ont été consultées. Un détail de transaction distinct n’est pas démontré. Le filtre de date observé concerne la fin d’abonnement (Se termine après/avant), pas nécessairement la date de vente.
+Définir chaque indicateur, cohorte, période, club, source, attribution et rafraîchissement. Huit vues de tableaux statistiques ont été parcourues ; préserver leurs repères. Le détail UTM propose Prospects, Abonnés, Conversion et les contacts rattachés avec abonnement. Formules et attribution restent à valider. Export limité aux droits de l’utilisateur avec trace de téléchargement si demandé par l’organisation.
+Recette sur jeu fictif dont les résultats sont calculés à la main : conversion, visite spontanée, rendez-vous non honoré, changement de commercial, annulation et comparaison annuelle. Ne pas valider des chiffres seulement parce qu’un graphique s’affiche.
+
+12. ARCHITECTURE CIBLE PROPOSÉE — INDÉPENDANTE DU CODE LEAD
+S’intégrer à l’authentification, au design et aux conventions du dépôt CFitness après inspection autorisée. Commencer par un module métier clairement isolé, plutôt qu’imposer plusieurs services sans besoin prouvé.
+Domaines : contacts/qualification ; tâches ; rendez-vous ; communication ; scénarios ; acquisition ; ventes ; analyses ; paramètres/droits. Interfaces d’adaptateurs distinctes pour ERP, Meta/WhatsApp, email, SMS et paiement.
+Stockage relationnel avec séparation organisation/club et identifiants externes. Historique d’événements métier ; traitement différé durable pour envois, scénarios et synchronisations. Proposition : file de travail, boîte d’envoi transactionnelle et clés d’idempotence, à adapter à l’existant. Ne pas déduire que Lead utilise cette architecture.
+Entités candidates : Organization, Club, User, Role, Permission, Contact, ContactClub, ConsentEvent, Source, Segment, ContactSegment, Activity, AppointmentType, AvailabilityRule, Appointment, Sale, SubscriptionReference, Conversation, Message, TemplateVersion, Campaign, AudienceSnapshot, ScenarioVersion, Enrollment, ScheduledAction, VacationPeriod, IntegrationConnection, ExternalMapping, AuditEvent.
+Les noms sont une proposition. Le schéma réel exige de fixer les cardinalités, contraintes, règles d’effacement, historique et source d’autorité. Ne pas coder une base à partir de cette seule liste.
+
+13. DROITS ET PROTECTION DES DONNÉES
+Matrice par action et périmètre : lire, créer, modifier, supprimer, assigner, envoyer, publier, exporter, gérer modèles/scénarios et gérer intégrations. Rôles ADMIN, MANAGER et COMMERCIAL observés en interface ; permissions serveur et autres périmètres à vérifier. Faire respecter les contrôles côté serveur, pas seulement dans les menus.
+Séparer secrets des champs métier ; aucun secret dans le frontend, le cahier de recette ou les captures. Paramétrer les durées de conservation, oppositions, export et effacement selon les décisions validées de l’organisation. Données réelles exclues des tests et des exemples remis à l’IA.
+
+14. QUALITÉ ET EXPLOITATION
+Définir budgets de chargement et d’interaction après mesure, sans inventer un gain chiffré. Tests fonctionnels utiles sur règles et effets ; tests des connecteurs fictifs ; accessibilité/clavier ; formats bureau, tablette et mobile sur chaque parcours critique. RSP-01–04 documentent des commandes coupées et une erreur mobile SMS : ne pas les reproduire dans CFitness.
+Supervision : synchronisation réussie/échouée, dernier événement, file bloquée, doublons, envoi en erreur et reprise manuelle contrôlée. Sauvegarde et restauration testées avant migration. Une absence ponctuelle d’erreurs console n’est pas une preuve de robustesse.
+
+15. MIGRATION ET CRITÈRES D’ACCEPTATION
+Avant import : formats d’export autorisés, contacts/doublons, consentements, statuts, segments, notes, rendez-vous, historique, abonnements et objets externes. Définir les données qui ne sont pas exportables et la méthode de consultation historique.
+Réconcilier les comptes par club et contrôler un échantillon significatif ; essai sur données anonymisées ; bascule réversible et période de suivi. La portabilité des conversations et modèles WhatsApp reste un point ouvert.
+Chaque fonctionnalité retenue possède une correspondance source → CFitness → droit → test → preuve ; chaque différence est une décision acceptée. Aucune mention « exhaustif » avant clôture des points ouverts et couverture des profils/modules réellement disponibles.
+
+16. VALIDATION ATTENDUE AVANT CODE
+Faire valider l’analyse, l’emplacement du module, le périmètre de première version, les droits, les améliorations et les écarts acceptés. Les éléments encore non observés restent des réserves ; ils ne disparaissent pas du registre après validation d’un premier lot. Le présent document n’autorise aucune mise en production ni modification des comptes Lead.
+
+CONSOLIDATION DE TRANSMISSION — 17 NOVEMBRE
+Rendez-vous : type réservable déjà configuré avec fréquence, délai minimum, capacité (0 sans limite), notifications prospect/commercial assigné/club, lien isolé, horaires par jour et proposition Stripe. Les disponibilités indépendantes des types sont documentées ; une prévention des collisions entre types serait une décision CFitness à valider.
+Scénarios : mode Automatique ou Manuel, six types d’étapes, unités Minutes/Heures/Jours. Le type/délai d’une étape existante est grisé, tandis que le contenu du mail peut être ouvert séparément. Actif et Verrouillé sont des états distincts ; le verrouillage empêche les nouvelles entrées et laisse finir les inscrits selon le texte UI. Arrêt/réentrée/concurrence exigent une recette fictive.
+Communication : six éditeurs de service rappel/modification/annulation email et SMS consultés. Les variables rdv-date et rdv-heure sont contextuelles. Le SMS affiche une estimation à 159 caractères/crédit, non une preuve d’encodage final. Campagne différée : calendrier et heure observés ; bornes, fuseau et validations restent ouverts.
+WhatsApp : catégories Marketing et Utility, verrouillages et configuration incomplète observés. Champs et limites affichés : nom 100, description/corps 1024, footer 60, réponse rapide 25 caractères, dix boutons maximum, image JPG/PNG 5 MB. Options de bouton observées dans des listes grisées : appel, URL, réponse rapide ; URL statique/dynamique. Les états liste/détail divergent sur un exemple (WA-02) ; ne pas affirmer que tout champ non grisé est sauvegardable sur un modèle approuvé.
+Statistiques : cinq raccourcis appliquent directement la période ; le bouton Valider concerne la saisie de plage manuelle. compareToPreviousYear est distinct de compareTo ; le second ne suffit pas à déduire la case annuelle. Archivés et portée multiclub ont été testés comme filtres de consultation, sans preuve des calculs ou de l’isolation serveur.
+Responsive : vingt mesures ciblées, six listes de communication sur deux largeurs et quatorze pages de réglages sur deux largeurs. Ces comptes ne prouvent pas toutes les interactions. Sur mobile, certains éditeurs débordent ; le nouveau formulaire SMS produit une erreur dans la session testée. Les mesures/captures et limites sont dans le document 12.
+Migration : modèle d’import officiel vierge joint, onze colonnes ordonnées et première ligne ignorée. Aucune donnée réelle exportée ni réimportée. Définir séparément les exports autorisés, la déduplication, le rapprochement ERP et les données WhatsApp non portables ou non documentées.
+Permissions : ADMIN, MANAGER et COMMERCIAL ont été comparés ; les cases fines de ClubConnect ne sont pas des permissions Lead certifiées. Coach/Basic sont déclarés obsolètes dans la formation. Toute opération CFitness doit être contrôlée au serveur ; absence de lien mobile ne prouve pas un refus serveur.
+Les exemples EX01–EX16 du document 14 ferment les principaux manques de données. Si un exemple n’existe pas, garder le point ouvert pour une démonstration fictive ; ne pas fabriquer de données dans les clubs réels.

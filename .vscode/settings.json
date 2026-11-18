@@ -85,7 +85,15 @@
     "webrtc",
     "YEASTAR",
     "Yeastar",
-    "yeastar"
+    "yeastar",
+    "Resamania",
+    "Résamania",
+    "Deciplus",
+    "ClickFunnels",
+    "Funnelo",
+    "offername",
+    "utm",
+    "RDV"
   ],
   "cSpell.ignoreRegExpList": [
     "\\bACCES\\b",
@@ -98,7 +106,9 @@
     "src-rust/target/**",
     "cfitess-os/node_modules/**",
     "cfitess-os/dist/**",
-    "cfitess-os/src-rust/target/**"
+    "cfitess-os/src-rust/target/**",
+    "cfitess-os/public/references/lead_audit/**",
+    "public/references/lead_audit/**"
   ],
   "docker.lsp.experimental.vulnerabilityScanning": false
 }

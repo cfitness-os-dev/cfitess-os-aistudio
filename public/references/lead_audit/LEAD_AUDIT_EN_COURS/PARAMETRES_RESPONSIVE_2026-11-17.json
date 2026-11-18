@@ -1,0 +1,430 @@
+[
+  {
+    "rubrique": "Préférences de l'app",
+    "width": 390,
+    "height": 600,
+    "titres": [
+      "Préférences de l'app"
+    ],
+    "documentWidth": 390,
+    "horsCadreHorizontal": 1,
+    "largeur": 390,
+    "nbBoutons": 1,
+    "nbChamps": 0,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "Gestion crédits SMS",
+    "width": 390,
+    "height": 600,
+    "titres": [
+      "Crédits SMS"
+    ],
+    "documentWidth": 390,
+    "horsCadreHorizontal": 0,
+    "largeur": 390,
+    "nbBoutons": 0,
+    "nbChamps": 0,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "reprise": "Deuxième relevé après attente du titre connu",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "Profil du Club",
+    "width": 390,
+    "height": 600,
+    "titres": [
+      "Marketing"
+    ],
+    "documentWidth": 390,
+    "horsCadreHorizontal": 1,
+    "largeur": 390,
+    "nbBoutons": 1,
+    "nbChamps": 0,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "Utilisateurs",
+    "width": 390,
+    "height": 600,
+    "titres": [
+      "Gestion des utilisateurs"
+    ],
+    "documentWidth": 390,
+    "horsCadreHorizontal": 2,
+    "largeur": 390,
+    "nbBoutons": 2,
+    "nbChamps": 0,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "Gestion rendez-vous",
+    "width": 390,
+    "height": 600,
+    "titres": [
+      "Gestion de vos rendez-vous"
+    ],
+    "documentWidth": 390,
+    "horsCadreHorizontal": 1,
+    "largeur": 390,
+    "nbBoutons": 1,
+    "nbChamps": 0,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "Email & SMS de service",
+    "width": 390,
+    "height": 600,
+    "titres": [
+      "Emails & SMS de service"
+    ],
+    "documentWidth": 390,
+    "horsCadreHorizontal": 0,
+    "largeur": 390,
+    "nbBoutons": 0,
+    "nbChamps": 0,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "reprise": "Deuxième relevé après attente du titre connu",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "Gestion prospects",
+    "width": 390,
+    "height": 600,
+    "titres": [
+      "Gestion prospects"
+    ],
+    "documentWidth": 390,
+    "horsCadreHorizontal": 0,
+    "largeur": 390,
+    "nbBoutons": 0,
+    "nbChamps": 0,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "reprise": "Deuxième relevé après attente du titre connu",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "Segments",
+    "width": 390,
+    "height": 600,
+    "titres": [
+      "Segments"
+    ],
+    "documentWidth": 390,
+    "horsCadreHorizontal": 0,
+    "largeur": 390,
+    "nbBoutons": 0,
+    "nbChamps": 0,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "reprise": "Deuxième relevé après attente du titre connu",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "Script de vente",
+    "width": 390,
+    "height": 600,
+    "titres": [
+      "Script de vente"
+    ],
+    "documentWidth": 390,
+    "horsCadreHorizontal": 1,
+    "largeur": 390,
+    "nbBoutons": 2,
+    "nbChamps": 0,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "Sources",
+    "width": 390,
+    "height": 600,
+    "titres": [
+      "Sources"
+    ],
+    "documentWidth": 390,
+    "horsCadreHorizontal": 1,
+    "largeur": 390,
+    "nbBoutons": 1,
+    "nbChamps": 0,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "Passage statut client",
+    "width": 390,
+    "height": 600,
+    "titres": [
+      "Statut client"
+    ],
+    "documentWidth": 390,
+    "horsCadreHorizontal": 1,
+    "largeur": 390,
+    "nbBoutons": 1,
+    "nbChamps": 0,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "Notifications",
+    "width": 390,
+    "height": 600,
+    "titres": [
+      "Notifications"
+    ],
+    "documentWidth": 390,
+    "horsCadreHorizontal": 1,
+    "largeur": 390,
+    "nbBoutons": 1,
+    "nbChamps": 0,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "WhatsApp",
+    "width": 390,
+    "height": 600,
+    "titres": [
+      "WhatsApp"
+    ],
+    "documentWidth": 390,
+    "horsCadreHorizontal": 1,
+    "largeur": 390,
+    "nbBoutons": 1,
+    "nbChamps": 0,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "API partenaires",
+    "width": 390,
+    "height": 600,
+    "titres": [
+      "API partenaires"
+    ],
+    "documentWidth": 390,
+    "horsCadreHorizontal": 1,
+    "largeur": 390,
+    "nbBoutons": 1,
+    "nbChamps": 0,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "Préférences de l'app",
+    "width": 820,
+    "height": 600,
+    "titres": [
+      "Préférences de l'app"
+    ],
+    "documentWidth": 820,
+    "horsCadreHorizontal": 1,
+    "largeur": 820,
+    "nbBoutons": 2,
+    "nbChamps": 0,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "Gestion crédits SMS",
+    "width": 820,
+    "height": 600,
+    "titres": [
+      "Crédits SMS"
+    ],
+    "documentWidth": 820,
+    "horsCadreHorizontal": 0,
+    "largeur": 820,
+    "nbBoutons": 0,
+    "nbChamps": 0,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "reprise": "Deuxième relevé après attente du titre connu",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "Profil du Club",
+    "width": 820,
+    "height": 600,
+    "titres": [
+      "Marketing"
+    ],
+    "documentWidth": 820,
+    "horsCadreHorizontal": 1,
+    "largeur": 820,
+    "nbBoutons": 3,
+    "nbChamps": 3,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "Utilisateurs",
+    "width": 820,
+    "height": 600,
+    "titres": [
+      "Gestion des utilisateurs"
+    ],
+    "documentWidth": 820,
+    "horsCadreHorizontal": 1,
+    "largeur": 820,
+    "nbBoutons": 4,
+    "nbChamps": 0,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "Gestion rendez-vous",
+    "width": 820,
+    "height": 600,
+    "titres": [
+      "Gestion de vos rendez-vous"
+    ],
+    "documentWidth": 820,
+    "horsCadreHorizontal": 1,
+    "largeur": 820,
+    "nbBoutons": 13,
+    "nbChamps": 1,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "Email & SMS de service",
+    "width": 820,
+    "height": 600,
+    "titres": [
+      "Emails & SMS de service"
+    ],
+    "documentWidth": 820,
+    "horsCadreHorizontal": 0,
+    "largeur": 820,
+    "nbBoutons": 0,
+    "nbChamps": 0,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "reprise": "Deuxième relevé après attente du titre connu",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "Gestion prospects",
+    "width": 820,
+    "height": 600,
+    "titres": [
+      "Gestion prospects"
+    ],
+    "documentWidth": 820,
+    "horsCadreHorizontal": 1,
+    "largeur": 820,
+    "nbBoutons": 6,
+    "nbChamps": 2,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "Segments",
+    "width": 820,
+    "height": 600,
+    "titres": [
+      "Segments"
+    ],
+    "documentWidth": 820,
+    "horsCadreHorizontal": 1,
+    "largeur": 820,
+    "nbBoutons": 3,
+    "nbChamps": 1,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "Script de vente",
+    "width": 820,
+    "height": 600,
+    "titres": [
+      "Script de vente"
+    ],
+    "documentWidth": 820,
+    "horsCadreHorizontal": 1,
+    "largeur": 820,
+    "nbBoutons": 2,
+    "nbChamps": 0,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "Sources",
+    "width": 820,
+    "height": 600,
+    "titres": [
+      "Sources"
+    ],
+    "documentWidth": 820,
+    "horsCadreHorizontal": 1,
+    "largeur": 820,
+    "nbBoutons": 59,
+    "nbChamps": 58,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "Passage statut client",
+    "width": 820,
+    "height": 600,
+    "titres": [
+      "Statut client"
+    ],
+    "documentWidth": 820,
+    "horsCadreHorizontal": 0,
+    "largeur": 820,
+    "nbBoutons": 0,
+    "nbChamps": 0,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "reprise": "Deuxième relevé après attente du titre connu",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "Notifications",
+    "width": 820,
+    "height": 600,
+    "titres": [
+      "Notifications"
+    ],
+    "documentWidth": 820,
+    "horsCadreHorizontal": 1,
+    "largeur": 820,
+    "nbBoutons": 6,
+    "nbChamps": 1,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "WhatsApp",
+    "width": 820,
+    "height": 600,
+    "titres": [
+      "WhatsApp"
+    ],
+    "documentWidth": 820,
+    "horsCadreHorizontal": 0,
+    "largeur": 820,
+    "nbBoutons": 0,
+    "nbChamps": 0,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "reprise": "Deuxième relevé après attente du titre connu",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  },
+  {
+    "rubrique": "API partenaires",
+    "width": 820,
+    "height": 600,
+    "titres": [
+      "API partenaires"
+    ],
+    "documentWidth": 820,
+    "horsCadreHorizontal": 1,
+    "largeur": 820,
+    "nbBoutons": 1,
+    "nbChamps": 0,
+    "limite": "Page et disposition initiale consultées ; aucun réglage actionné ni sauvegardé. Les compteurs ne prouvent pas la couverture de toutes les options.",
+    "debordementAutomatique": "Signal non qualifié : peut inclure un bouton de menu hors cadre ; ne pas déclarer un défaut sans capture ou mesure ciblée."
+  }
+]

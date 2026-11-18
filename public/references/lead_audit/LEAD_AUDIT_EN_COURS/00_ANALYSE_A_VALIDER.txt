@@ -1,0 +1,57 @@
+LEAD / MA SALLE DE SPORT → C.FITNESS OS
+Analyse à valider avant développement — version 0.3 du 17/11/2026
+
+Le site retenu est Lead / Ma Salle de Sport, dans la continuité de la demande. Le champ [INSÉRER L’URL] du modèle de mission n’a pas été interprété comme un nouveau site. Sessions consultées : ADMIN, MANAGER, COMMERCIAL à Beynost ; second club Lyon Carré de Soie consulté en ADMIN.
+
+L’accès Chrome a été rétabli. Cette passe a repris messagerie WhatsApp, scénarios, paramètres, sources, connecteurs et listes des modules principaux, sans envoi, achat, changement de droit, activation ou sauvegarde métier intentionnelle. INC-001 reste ouvert : le premier assistant WhatsApp a peut-être créé automatiquement un brouillon vide sans clic Enregistrer. Aucune suppression n’a été validée.
+
+LES SEPT LIVRABLES
+1. 01_CARTOGRAPHIE.txt / .json : pages connues, adresses observées et profondeur de contrôle.
+2. 02_COMPOSANTS_UI.txt : composants, états, mesures et points non identifiés.
+3. 03_TECHNOLOGIES_ET_LIMITES.txt + ANALYSE_TECHNIQUE.json : observations et inférences séparées.
+4. 04_RELEVE_API.txt / .json : zéro trace HTTP capturée ; webhook officiel et réglage Stripe documentés séparément.
+5. 05_PARCOURS_UTILISATEURS.txt : parcours et leurs limites de validation.
+6. 06_RECOMMANDATIONS_UX.txt : améliorations proposées, sans les faire passer pour des capacités Lead.
+7. 07_CAHIER_DES_CHARGES_CFITNESS_OS.txt : cadrage fonctionnel, architecture proposée, recettes, migration et décisions à valider.
+
+RÉFÉRENCES
+INDEX_LEAD.html : consultation avec recherche, filtres et galerie des captures.
+INVENTAIRE_LEAD.json / .txt : registre option par option ; identifiants conservés.
+DOCUMENTATION_OFFICIELLE.json : synthèses de 33 pages officielles, sources cliquables dans le HTML.
+ECARTS_ET_QUESTIONS.json : écarts, clarifications et questions restantes : SMS, WhatsApp, API, campagnes et données ERP.
+RELEVES_COMPLEMENTAIRES.json : preuves UI de cette reprise.
+captures/ : 24 captures vérifiées et 2 premières tentatives masquées, non probantes. Les captures sont des portions d’écran ; aucune liste de contacts ou conversation réelle n’est fournie.
+
+L’EXHAUSTIVITÉ N’EST PAS ATTEINTE
+Il reste notamment : fiches et actions détaillées, variantes WhatsApp, éditeurs, résultats d’enregistrement/envoi, périmètres serveur et états de rôles non testés, définitions statistiques, détails de ventes, intégrations actives, visionnage visuel détaillé et réseau HTTP. Le registre de pistes reste ouvert même lorsqu’une partie a été documentée. Son total ne mesure pas un pourcentage de couverture.
+Le contrôle mobile/tablette porte sur le rendu initial de huit vues, les Segments et quelques panneaux/commandes de messagerie, planning et fiche. Il ne certifie ni tous les sous-écrans et parcours responsive ni une application native.
+
+AIDE NÉCESSAIRE, AU MOMENT UTILE
+• Manager et Commercial ont été fournis et comparés ; la session ADMIN a été rétablie et utilisée pour les variantes suivantes. Les droits serveur restent non testés.
+• Identifier des exemples déjà présents pour les états non rencontrés, sans créer d’enregistrements réels.
+• Pour les résultats d’envoi/paiement/synchronisation, obtenir un environnement fictif ou une démonstration fournisseur ; aucune simulation avec de vrais destinataires.
+• Pour les API et WhatsApp, faire préciser le contrat technique complet, les droits/contrats du compte, les exports autorisés et la portabilité. Aucun secret à envoyer dans le chat ou au développeur.
+• Pour les requêtes HTTP et performances, disposer d’un moyen de lecture réseau autorisé excluant secrets et données personnelles.
+
+AVANT DE CODER
+Valider ce dossier de cadrage, le rangement du module commercial et les priorités. Le cahier des charges restera versionné pour compléter les réserves. Aucun développement ni changement dans le dépôt CFitness n’a été effectué.
+
+MISE À JOUR DU 17 NOVEMBRE — PRIORITAIRE
+Lire 08_REPRISE_ET_DROITS_2026-11-17.txt et 09_COUVERTURE_ET_BLOCAGES.txt avant d’utiliser les réserves de la version précédente.
+Les rôles Manager et Commercial ont été observés. Les huit vues statistiques ont été retrouvées ; les modèles email/SMS et dialogues de fiche ont été approfondis. Les treize transcriptions identifiées sont maintenant analysées.
+WhatsApp direct doit prévoir la fenêtre fermée après 24h sans message entrant et les trois replis : ne pas envoyer, modèle ou SMS. Le repli SMS, son contenu, son coût et son résultat exigent une recette fictive.
+Le scénario permet une édition de contenu d’étape ; le type et le délai de l’étape existante sont grisés. Une nouvelle étape offre Minutes, Heures et Jours. Ne pas confondre ces deux modes.
+Les types de rendez-vous ont, selon la formation, des disponibilités indépendantes : la prévention de collisions entre types est une amélioration à valider. Les options avancées sont maintenant relevées sur un type déjà réservable : capacité, délai, fréquence, notifications, lien isolé, horaires par jour et proposition Stripe. Aucun résultat d’enregistrement ou paiement testé.
+Le formulaire de campagne SMS confirme segments, statuts, période de statut et exclusion des refus commerciaux. Les modèles WhatsApp approuvés verrouillent le corps et les boutons mais laissent configuration et médias modifiables ; distinguer validation Meta et complétude technique avant envoi. Voir WA-02 pour la divergence liste/détail.
+Deux clubs sont accessibles en ADMIN. Les huit vues principales ont des mesures initiales mobile/tablette ; cela ne certifie pas tous les parcours sur ces appareils.
+Ne pas copier les permissions ClubConnect comme si elles étaient les actions de Lead. La corbeille visible en Commercial reste un point à clarifier, pas un droit de suppression validé.
+La validation du cadrage n’interrompt pas l’audit. Aucun développement de CFitness ni résultat d’action métier n’est revendiqué.
+
+DERNIÈRE PASSE EN LECTURE SEULE — 17 NOVEMBRE
+Lire 11_COMPLEMENT_FONCTIONNEL_2026-11-17.txt et 10_BLOCAGES_ET_AIDE_ATTENDUE.txt. Les 13 vidéos identifiées sont transcrites. La création email observée est un assistant en quatre étapes ; la vidéo décrit un ancien parcours. Seule la première étape actuelle est vérifiée. Aucune certification 100 % et aucun début de développement.
+
+PASSE FILTRES ET RESPONSIVE — 17 NOVEMBRE
+Dernier complément : 12_FILTRES_ET_RESPONSIVE_2026-11-17.txt. Le contrôle mobile/tablette dépasse désormais le rendu initial : filtres, formulaires, éditeurs et navigation ont été consultés. Six captures supplémentaires et quatre écarts de rendu qualifiés. Les résultats de validation/envoi et la couverture native restent non établis.
+
+CONSOLIDATION DE TRANSMISSION — 17 NOVEMBRE
+Transmission version 0.4 : point d’entrée LIRE_EN_PREMIER_DEV_IA.txt, fichier de départ DOSSIER_UNIQUE_DEV_IA.txt et cahier 07 consolidé. Le registre complet et les preuves demeurent nécessaires. Derniers chemins document 13 ; exemples manquants document 14. Analyse prête à remettre pour décision, sans certification d’exhaustivité ni début de code.

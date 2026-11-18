@@ -1,0 +1,152 @@
+[
+  {
+    "page": "Modèles",
+    "width": 390,
+    "height": 600,
+    "commandes": [
+      "heading Modèles",
+      "pop up button (collapsed) Nouveau modèle, Secondary Actions: Expand",
+      "text field (settable)",
+      "button SMS",
+      "button Email",
+      "button WhatsApp"
+    ],
+    "limite": "Commandes d’entrée et filtres seulement ; aucun message ouvert, relancé, exporté ou supprimé.",
+    "reprise": "Après attente du titre visible"
+  },
+  {
+    "page": "Campagnes",
+    "width": 390,
+    "height": 600,
+    "commandes": [
+      "heading Campagnes",
+      "button Créer une campagne Mail",
+      "button Créer une campagne SMS",
+      "button Mail",
+      "button SMS",
+      "button (disabled) Précédent",
+      "button (disabled) Suivant"
+    ],
+    "limite": "Commandes d’entrée et filtres seulement ; aucun message ouvert, relancé, exporté ou supprimé.",
+    "reprise": "Après attente du titre visible"
+  },
+  {
+    "page": "Campagnes UTM",
+    "width": 390,
+    "height": 600,
+    "commandes": [
+      "heading Campagnes UTM"
+    ],
+    "limite": "Commandes d’entrée et filtres seulement ; aucun message ouvert, relancé, exporté ou supprimé."
+  },
+  {
+    "page": "Scénarios",
+    "width": 390,
+    "height": 600,
+    "commandes": [
+      "heading Scénarios",
+      "pop up button (collapsed) Copier vers un club, Secondary Actions: Expand",
+      "pop up button (collapsed) Créer un scénario, Secondary Actions: Expand",
+      "text field (settable)",
+      "pop up button (collapsed) Cible, Secondary Actions: Expand",
+      "button (disabled) Précédent",
+      "button (disabled) Suivant"
+    ],
+    "limite": "Commandes d’entrée et filtres seulement ; aucun message ouvert, relancé, exporté ou supprimé."
+  },
+  {
+    "page": "SMS envoyés",
+    "width": 390,
+    "height": 600,
+    "commandes": [
+      "button SMS",
+      "button (disabled) Précédent",
+      "button (disabled) Suivant"
+    ],
+    "limite": "Commandes d’entrée et filtres seulement ; aucun message ouvert, relancé, exporté ou supprimé."
+  },
+  {
+    "page": "Emails envoyés / reçus",
+    "width": 390,
+    "height": 600,
+    "commandes": [
+      "button (disabled) Précédent",
+      "button (disabled) Suivant"
+    ],
+    "limite": "Commandes d’entrée et filtres seulement ; aucun message ouvert, relancé, exporté ou supprimé."
+  },
+  {
+    "page": "Modèles",
+    "width": 820,
+    "height": 600,
+    "commandes": [
+      "heading Modèles",
+      "pop up button (collapsed) Nouveau modèle, Secondary Actions: Expand",
+      "text field (settable)",
+      "button SMS",
+      "button Email"
+    ],
+    "limite": "Commandes d’entrée et filtres seulement ; aucun message ouvert, relancé, exporté ou supprimé."
+  },
+  {
+    "page": "Campagnes",
+    "width": 820,
+    "height": 600,
+    "commandes": [
+      "heading Campagnes",
+      "button Créer une campagne Mail",
+      "button Créer une campagne SMS",
+      "button Mail",
+      "button SMS",
+      "button (disabled) Précédent",
+      "button (disabled) Suivant"
+    ],
+    "limite": "Commandes d’entrée et filtres seulement ; aucun message ouvert, relancé, exporté ou supprimé.",
+    "reprise": "Après attente du titre visible"
+  },
+  {
+    "page": "Campagnes UTM",
+    "width": 820,
+    "height": 600,
+    "commandes": [
+      "heading Campagnes UTM"
+    ],
+    "limite": "Commandes d’entrée et filtres seulement ; aucun message ouvert, relancé, exporté ou supprimé."
+  },
+  {
+    "page": "Scénarios",
+    "width": 820,
+    "height": 600,
+    "commandes": [
+      "heading Scénarios",
+      "pop up button (collapsed) Copier vers un club, Secondary Actions: Expand",
+      "pop up button (collapsed) Créer un scénario, Secondary Actions: Expand",
+      "text field (settable)",
+      "pop up button (collapsed) Cible, Secondary Actions: Expand",
+      "button (disabled) Précédent",
+      "button (disabled) Suivant"
+    ],
+    "limite": "Commandes d’entrée et filtres seulement ; aucun message ouvert, relancé, exporté ou supprimé."
+  },
+  {
+    "page": "SMS envoyés",
+    "width": 820,
+    "height": 600,
+    "commandes": [
+      "button SMS",
+      "button (disabled) Précédent",
+      "button (disabled) Suivant"
+    ],
+    "limite": "Commandes d’entrée et filtres seulement ; aucun message ouvert, relancé, exporté ou supprimé."
+  },
+  {
+    "page": "Emails envoyés / reçus",
+    "width": 820,
+    "height": 600,
+    "commandes": [
+      "button (disabled) Précédent",
+      "button (disabled) Suivant"
+    ],
+    "limite": "Commandes d’entrée et filtres seulement ; aucun message ouvert, relancé, exporté ou supprimé."
+  }
+]

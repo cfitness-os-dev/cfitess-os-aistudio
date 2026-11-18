@@ -1,0 +1,463 @@
+{
+  "date": "2026-11-16",
+  "sources": [
+    {
+      "id": "DOC-001",
+      "titre": "WhatsApp : usages et activation",
+      "url": "https://support.masalledesport.com/helpcenter/communiquer-avec-vos-prospects-sur-whatsapp-directement-depuis-lead",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Trois accès : fiche contact, messagerie centrale, scénario automatique.",
+        "Un modèle approuvé sert à ouvrir le premier échange ; la réponse du contact ouvre une période de conversation de 24 heures.",
+        "L’aide décrit un numéro dédié et un accompagnement du fournisseur pour créer le compte technique, vérifier Meta et configurer Lead.",
+        "Ne pas transposer ce parcours à CFitness sans établir la propriété du compte, du numéro et la possibilité de migration."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-002",
+      "titre": "WhatsApp : modèles, conversations, étapes",
+      "url": "https://support.masalledesport.com/helpcenter/comment-utiliser-whatsapp-dans-lead-pour-communiquer-avec-vos-prospects-et-membres-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "La description du modèle est interne ; image, vidéo, document, corps, pied de page et boutons sont prévus.",
+        "États documentés : Actif, Non validé, En attente de validation.",
+        "La fenêtre de réponse libre est calculée depuis le dernier message reçu ; hors fenêtre, réengagement par modèle approuvé.",
+        "L’étape de scénario décrit un délai, un choix de modèle et une option Message direct.",
+        "Abonnement spécifique annoncé ; tarification et accès contractuel restent à établir."
+      ],
+      "limite": "Le guide général des scénarios exige pourtant un modèle WhatsApp approuvé. Clarifier la portée de Message direct avant de coder."
+    },
+    {
+      "id": "DOC-003",
+      "titre": "Webhook : formulaires externes",
+      "url": "https://support.masalledesport.com/helpcenter/comment-int%C3%A9grer-lead-via-webhook-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "POST JSON documenté sur https://lead.masalledesport.com/api/lead/webhooks/clubEntry ; aucune requête exécutée.",
+        "Champs requis contact : apiKey, club, email, lastname, firstname. Essai : offername également requis.",
+        "Champs facultatifs : gender (M/F), birthdate (YYYY-MM-DD), zipcode, city, street, country, message, source, utm_source, utm_campaign, utm_medium, isWix.",
+        "Pour essai : phone, source_url ; champs supplémentaires rendus dans le message d’activité, sans interprétation métier.",
+        "Sources API : GOOGLE, META_ADS, MSDS_EXTERN_REFERER, MSDS, WEBSITE_FORM, WIDGET, ACTIVE_CAMPAIGN, TYPEFORM, AGENCE, EXO, VEL.",
+        "Clé d’organisation et valeur club à demander au support ; aucune clé obtenue. Wix utilise isWix sous forme de chaîne true."
+      ],
+      "limite": "Le texte annonce deux endpoints distincts mais affiche la même URL. API d’entrée uniquement : cela ne documente ni export complet, ni lecture de contacts, ni webhooks sortants, ni reprise sur erreur."
+    },
+    {
+      "id": "DOC-004",
+      "titre": "Planning Deciplus",
+      "url": "https://support.masalledesport.com/helpcenter/comment-connecter-le-planning-deciplus-%C3%A0-lead-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Configuration préalable d’une prestation d’essai dans Deciplus, puis liaison par le support Lead.",
+        "Réservation depuis Lead : rendez-vous et statut prospect synchronisés selon le guide.",
+        "Réservation depuis Deciplus : visible au planning mais sans changement automatique de statut Lead.",
+        "Ancien prospect : réattribution manuelle de la carte d’essai potentiellement nécessaire."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-005",
+      "titre": "Fiche prospect et interactions",
+      "url": "https://support.masalledesport.com/helpcenter/comment-cr%C3%A9er-suivre-et-contacter-vos-prospects-dans-lead-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Recherche nom, email ou téléphone ; filtre de statut incluant Client et Client enseigne dans l’aide.",
+        "Fiche : histoire sportive, statut, assignation, scénarios manuels, formulaires et abonnements.",
+        "Historique filtrable : commentaires, appels, rendez-vous, emails/SMS, ventes, autres ; scénarios et échéances tracés.",
+        "Activités téléphone, SMS, email : date/heure, commentaire, modification, suppression, réalisation.",
+        "Envoi email : objet, texte riche, modèle, HTML, test et tags ; SMS : modèle, tags et crédits.",
+        "Rendez-vous direct ou invitation email ; commentaire, passage au club et interaction passée."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-006",
+      "titre": "Traitement des activités",
+      "url": "https://support.masalledesport.com/helpcenter/comment-g%C3%A9rer-les-activit%C3%A9s-dans-lead-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Types : rendez-vous, demande de contact, avis à traiter, appel, email/SMS à envoyer et réponse attendue.",
+        "Vues À faire, Aujourd’hui, Demain, Cette semaine, En retard, Faites ; purge des activités en retard.",
+        "Appel : réponse oui/non, message laissé oui/non et commentaire.",
+        "Demande reçue : répondre email, SMS, appeler ou clôturer sans réponse ; SMS bloqué si numéro invalide.",
+        "Rendez-vous : présence, absence, modification, annulation, commentaire et conséquences sur statut/relances.",
+        "Éditeur email avec HTML, aperçu bureau/mobile et test ; SMS avec tags et coût."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-007",
+      "titre": "Statistiques : analyses détaillées",
+      "url": "https://support.masalledesport.com/helpcenter/comment-comprendre-et-utiliser-les-statistiques-de-votre-club-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Filtres période, clubs, comparaison annuelle et exclusion des archivés.",
+        "Indicateurs, évolutions quotidiennes et tunnel nouveau contact → rendez-vous → venue → inscription.",
+        "Analyses par source, type de rendez-vous et commercial ; affectations et ventes par commercial.",
+        "Distinction visites spontanées/rendez-vous dans la transformation des passages.",
+        "Détail quotidien par commercial, choix de métrique et export Excel."
+      ],
+      "limite": "Une partie de ces tableaux n’a pas encore été retrouvée dans la vue consultée ; ne pas les déclarer observés."
+    },
+    {
+      "id": "DOC-008",
+      "titre": "Planning : parcours et ERP",
+      "url": "https://support.masalledesport.com/helpcenter/comment-planifier-et-suivre-vos-rendez-vous-depuis-le-planning-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Vue hebdomadaire, affectation, navigation de dates et ajout de rendez-vous.",
+        "Recherche du contact, type, intervenant, durée, note interne et notification email optionnelle.",
+        "Réservation directe ou lien envoyé au contact ; email personnalisable et test avant confirmation.",
+        "Présence, absence, modification et annulation ; présence indiquée comme issue par défaut après rendez-vous sans action.",
+        "ERP : consultation de planning en lecture seule ou intégration avancée des disponibilités et échanges de données, selon activation."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-009",
+      "titre": "Formulaires : édition et diffusion",
+      "url": "https://support.masalledesport.com/helpcenter/comment-cr%C3%A9er-et-g%C3%A9rer-vos-formulaires-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Sections et champs : réponse courte, paragraphe, choix multiple, choix unique, prénom, nom, email, téléphone, disponibilité.",
+        "Champ : titre, description, obligatoire, titre masqué et suppression.",
+        "Publication, lien propre, aperçu, copie vers un club, réponses en liste et détail individuel.",
+        "Supprimer un formulaire supprime aussi ses réponses selon le guide."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-010",
+      "titre": "Campagne email : nouvel éditeur",
+      "url": "https://support.masalledesport.com/helpcenter/comment-cr%C3%A9er-une-campagne-email-avec-le-nouvel-%C3%A9diteur-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Quatre étapes : ciblage, composition, objet, vérification. Audience par statuts, segments (union), période ; décrocheurs Résamania en option. Refus commerciaux exclus.",
+        "Blocs : texte, image, bouton, titre, image/texte, fond image, navigation, séparateur, espace, réseaux, pied de page, HTML.",
+        "Ajout, déplacement, montée/descente, duplication, suppression, annuler/rétablir ; modèles existants convertis.",
+        "Style global : police, interligne, couleurs texte/boutons, fond, arrondis, fond extérieur. Image JPG/JPEG/PNG, 2 Mo ; lien de réservation automatique.",
+        "Tags prénom, nom, club, téléphone/adresse club et URL réservation ; aperçu bureau/mobile avec données d’exemple.",
+        "Objet obligatoire, expéditeur, pré-en-tête et nom interne ; zone légale non modifiable dans Lead.",
+        "Test adressé à l’utilisateur ; envoi immédiat ou programmation par demi-heures ; validation email à six chiffres, renvoi après délai.",
+        "Suivi : à envoyer, envoyée, refusée, annulée ; annuler une programmation ou renommer."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-011",
+      "titre": "Clients décrocheurs",
+      "url": "https://support.masalledesport.com/helpcenter/cr%C3%A9er-un-sc%C3%A9nario-automatique-pour-relancer-vos-adh%C3%A9rents-absents",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Déclencheur fondé sur les badgeages Résamania ; autres ERP non pris en charge selon cet article.",
+        "Contact Client et au moins un badgeage antérieur requis.",
+        "Seuil de jours réglable, puis email, SMS ou tâche ; colonne Décrocheurs dans Clients."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-012",
+      "titre": "Client en vacances",
+      "url": "https://support.masalledesport.com/helpcenter/comment-marquer-un-client-en-vacances-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Période début/fin réservée au statut Client ; elle suspend le décompte de décrochage et exclut campagnes/scénarios pendant l’absence.",
+        "Elle ne suspend pas l’abonnement, ne modifie pas le statut et ne décale pas les contrats.",
+        "Avant départ : modifier ou annuler. En cours : début figé, fin prolongeable ou retour à aujourd’hui. Après : période non annulable.",
+        "Badge orange, parasol et historique horodaté avec auteur et action."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-013",
+      "titre": "Verrouillage des scénarios",
+      "url": "https://support.masalledesport.com/helpcenter/comment-changer-de-sc%C3%A9nario-sans-perdre-les-prospects-d%C3%A9j%C3%A0-en-cours-de-traitement-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Verrouillé : nouvelles entrées bloquées, parcours déjà engagés maintenus ; badge distinct de l’état actif.",
+        "Déverrouillage réouvre les inscriptions ; deux scénarios concurrents peuvent doubler les messages.",
+        "Transition conseillée par l’aide : nouvelle version, verrouillage ancienne, activation nouvelle puis fin des anciens parcours."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-014",
+      "titre": "Scénarios : types et étapes",
+      "url": "https://support.masalledesport.com/helpcenter/comment-cr%C3%A9er-des-sc%C3%A9narios-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Manuel ou automatique ; ciblage par statuts/sources et condition d’assignation commerciale.",
+        "Étapes email/SMS, tâches email/SMS/appel et WhatsApp par modèle approuvé.",
+        "Délai documenté en jours après événement précédent ; zéro immédiat ; commentaire interne.",
+        "Activation, version, dernière exécution, ciblage et copie interclub.",
+        "L’aide demande de supprimer/recréer une étape plutôt que la modifier directement."
+      ],
+      "limite": "Les minutes et une icône crayon sont visibles en session réelle : le guide peut être incomplet ou daté. Aucune action sur ces contrôles."
+    },
+    {
+      "id": "DOC-015",
+      "titre": "Campagne SMS",
+      "url": "https://support.masalledesport.com/helpcenter/comment-cr%C3%A9er-une-campagne-email-ou-sms-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Nom interne, audience par statuts/période, estimation destinataires et exclusion des refus commerciaux.",
+        "Modèle ou texte libre, tags, caractères et crédits ; longueur après substitution variable.",
+        "Envoi immédiat ou différé ; enregistrer brouillon séparé de publication.",
+        "Numéro court, STOP traité automatiquement ; mention STOP non ajoutée par le prestataire selon le guide.",
+        "Suivi envoyée, refusée ou annulée."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-016",
+      "titre": "Modèles email et SMS",
+      "url": "https://support.masalledesport.com/helpcenter/comment-cr%C3%A9er-des-mod%C3%A8les-de-communication-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Nom interne, contenu ; objet pour email ; texte riche, HTML et test email.",
+        "SMS : caractères et crédits ; six tags de base contact/club/réservation.",
+        "Copie vers un club par PlaceId, suppression et réutilisation en campagne, scénario, rendez-vous ou contact.",
+        "Ce guide présente seulement email/SMS ; les modèles WhatsApp sont décrits séparément."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-017",
+      "titre": "Journal SMS",
+      "url": "https://support.masalledesport.com/helpcenter/comment-suivre-ma-consommation-de-sms-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "États : tous, à envoyer, envoyé, crédit insuffisant, erreur.",
+        "Compteur tous statuts, graphique annuel comparatif et détail contact, téléphone, création, statut, crédits, action.",
+        "Export Excel des séries selon filtres.",
+        "Ce guide parle de 160 caractères par crédit, contre 159 dans d’autres articles : calcul exact à faire confirmer."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-018",
+      "titre": "Journal email",
+      "url": "https://support.masalledesport.com/helpcenter/comment-suivre-mes-emails-%C3%A9chang%C3%A9s-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "États : tous, à envoyer, envoyé, erreur, reçu, en cours d’envoi.",
+        "Compteur envoyé/reçu, graphique comparatif et détail contact, objet, création, date du statut.",
+        "Export Excel selon filtres ; distinction des échecs et réponses."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-019",
+      "titre": "Rendez-vous payants Stripe",
+      "url": "https://support.masalledesport.com/helpcenter/comment-faire-payer-vos-s%C3%A9ances-dessai-en-ligne-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Coordonnées collectées avant paiement : contact conservé même en cas d’abandon.",
+        "Créneau réservé après paiement ; confirmation et email ; règlement sur Stripe du club.",
+        "Clés publique/secrète, signature webhook, test puis sauvegarde ; secrets non réaffichés après enregistrement selon le guide.",
+        "Choix des types payants, prix en euros, modification/retrait et déconnexion.",
+        "Parcours public annoncé sur ordinateur et smartphone ; jamais testé ici avec paiement."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-020",
+      "titre": "Tracking des réservations",
+      "url": "https://support.masalledesport.com/helpcenter/installer-un-pixel-de-suivi-meta-google-sur-votre-prise-de-rendez-vous-en-ligne",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Conteneur Google Tag Manager configurable pour Meta, Google Ads ou Analytics ; paramétrage des balises extérieur à Lead.",
+        "Événements documentés : rendez-vous-form-success, survey-form-success, partner-form-success, SubmitForm, form_submit, PageView, ViewContent.",
+        "Contexte transmis : page, club, source. Conteneur dédié recommandé.",
+        "Aucune balise publiée, donnée de prospect transmise ni réservation test effectuée."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-021",
+      "titre": "Segments : qualification et ciblage",
+      "url": "https://support.masalledesport.com/helpcenter/comment-cr%C3%A9er-et-utiliser-des-segments-pour-qualifier-et-cibler-vos-prospects-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Administration réservée Admin/Manager ; étiquettes multiples par contact.",
+        "Nom et code généré, couleur, emoji, icône ou pastille ; recherche, modification, suppression.",
+        "Affectation depuis la fiche, filtre liste et audience email combinée aux statuts."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-022",
+      "titre": "Acquisition Meta et intervention du fournisseur",
+      "url": "https://support.masalledesport.com/helpcenter/comment-donner-acc%C3%A8s-%C3%A0-votre-portefeuille-meta-%C3%A0-l%C3%A9quipe-masalledesport-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Liaison Facebook/Instagram et WhatsApp accompagnée par l’équipe fournisseur.",
+        "Des accès Meta et parfois un raccordement CRM via Make sont décrits ; aucune invitation exécutée.",
+        "La procédure du prestataire n’autorise pas l’IA à accorder ces accès et ne décrit pas l’architecture de CFitness."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-023",
+      "titre": "Notifications internes",
+      "url": "https://support.masalledesport.com/helpcenter/comment-configurer-les-notifications-internes-dans-lead-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Alerte sonore de nouveau prospect, email de formulaire et email de nouvelle fiche.",
+        "Destinataire club ou adresse renseignée selon le type ; combinaison des alertes.",
+        "La notification de validation WhatsApp vue en session n’est pas détaillée dans cet article."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-024",
+      "titre": "Offres et conversion Client",
+      "url": "https://support.masalledesport.com/helpcenter/comment-configurer-le-passage-au-statut-client-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Offres importées de Résamania/Deciplus ; cases déterminant les souscriptions qui déclenchent Client.",
+        "Offres d’essai et abonnements peuvent être traités différemment ; nouvelles offres à revoir.",
+        "Ne pas conclure que la liaison est active à Beynost à partir du seul guide."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-025",
+      "titre": "Sources d’acquisition",
+      "url": "https://support.masalledesport.com/helpcenter/comment-configurer-mes-sources-de-prospects-dans-lead-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Neuf familles : interne, réservation, web, publicité, messageries, organique, recommandation, marketing automatisé et import/manuelles.",
+        "Case par source ou sélection d’une catégorie ; disponibilité dans filtres, rapports et création manuelle.",
+        "La session réelle comporte aussi Sportigo, Newsletter Site Web et Inviter un ami ; le catalogue de l’aide n’est donc pas suffisant."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-026",
+      "titre": "Script de vente",
+      "url": "https://support.masalledesport.com/helpcenter/comment-configurer-son-script-de-vente-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Éditeur d’accroches partagé, style et alignement ; enregistrer ou supprimer.",
+        "Les variables entre crochets sont des recommandations de rédaction, pas une substitution automatique démontrée."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-027",
+      "titre": "Réglages des rendez-vous",
+      "url": "https://support.masalledesport.com/helpcenter/comment-configurer-la-gestion-des-rendez-vous-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "URL publique, couleur, consentement commercial et identifiant GTM.",
+        "Types : nom, durée, fréquence, description, email associé et réservation autonome.",
+        "Aperçu, lien spécifique, édition, suppression ; indisponibilités par types, dates, horaires et récurrences."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-028",
+      "titre": "Profil marketing",
+      "url": "https://support.masalledesport.com/helpcenter/comment-configurer-le-profil-de-mon-club-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Logo JPEG/JPG/PNG, 2 Mo ; nom d’expéditeur email et URL Facebook/Instagram.",
+        "Mettre à jour sauvegarde ; l’interface ajoute une limite 1024 × 1024 px non citée dans le texte d’aide."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-029",
+      "titre": "Crédits SMS",
+      "url": "https://support.masalledesport.com/helpcenter/comment-g%C3%A9rer-ses-cr%C3%A9dits-sms-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Solde, achat manuel, recharge automatique et dernière exécution.",
+        "Recharge : volume et plafond mensuel documentés ; aucun achat ni réglage testé.",
+        "Crédit insuffisant peut empêcher les envois."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-030",
+      "titre": "Règles prospects",
+      "url": "https://support.masalledesport.com/helpcenter/comment-configurer-la-gestion-des-prospects-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Assignation automatique aux commerciaux et désassignation des utilisateurs supprimés.",
+        "Archivage : activation, cible, délai et application.",
+        "Option avancée de statut Prospect décrite mais absente de la vue consultée ; seuil de décrochage présent en session mais non détaillé ici."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-031",
+      "titre": "Messages de service",
+      "url": "https://support.masalledesport.com/helpcenter/comment-configurer-les-emails-et-sms-automatiques-pour-vos-rendez-vous-",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Pour SMS et email : rappel 24h, modification et annulation ; activation séparée et éditeur de contenu.",
+        "Tags de base plus date/heure du rendez-vous ; modèle et aperçu bureau/mobile pour email.",
+        "Option supprimant les doublons de messages MSDS ; la polarité du libellé doit être respectée."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-032",
+      "titre": "Formation commerciaux",
+      "url": "https://support.masalledesport.com/helpcenter/lead-vid%C3%A9os-de-formation",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Page lue ; quatre liens vidéo pour prospects, activités, planning et formulaires.",
+        "Les vidéos elles-mêmes n’ont pas été regardées et leurs transcriptions ne sont pas encore analysées."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    },
+    {
+      "id": "DOC-033",
+      "titre": "Formation managers et administrateurs",
+      "url": "https://support.masalledesport.com/helpcenter/lead-vid%C3%A9os-de-formation-0",
+      "lecture": "Corps de l’article consulté le 16/11/2026",
+      "etat": "documente",
+      "points": [
+        "Page lue ; vidéos et articles pour CRM, modèles, campagnes, scénarios, rendez-vous, segments, notifications, crédits et utilisateurs.",
+        "La page indique que des contenus restent en création. Vidéos non visionnées : ne pas certifier la couverture e-learning."
+      ],
+      "limite": "À confronter à la session réelle ; aucun résultat d’écriture testé."
+    }
+  ]
+}

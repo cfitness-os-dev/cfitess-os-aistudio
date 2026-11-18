@@ -1,0 +1,121 @@
+{
+  "date": "2026-11-17",
+  "profil": "MANAGER",
+  "angles": [
+    {
+      "groupe": "Tunnel de conversion",
+      "onglet": "Par type de RDV",
+      "colonnes": [
+        "Type de rendez-vous",
+        "Nouveaux prospects",
+        "Rendez-vous pris",
+        "--->",
+        "RDV honorés",
+        "--->",
+        "Abonnés suite à un RDV",
+        "Taux de transformation"
+      ]
+    },
+    {
+      "groupe": "Tunnel de conversion",
+      "onglet": "Par commercial",
+      "colonnes": [
+        "",
+        "Commercial",
+        "Nouveaux prospects",
+        "--->",
+        "Ayant pris un RDV",
+        "--->",
+        "Venus",
+        "--->",
+        "Abonnés+",
+        "Abonnés directs=",
+        "Abonnés total",
+        "Taux de transformation"
+      ]
+    },
+    {
+      "groupe": "Tunnel de conversion",
+      "onglet": "Par UTM",
+      "colonnes": [
+        "#",
+        "Campagne UTM",
+        "Nouveaux prospects",
+        "--->",
+        "Ayant pris un RDV",
+        "--->",
+        "Venus",
+        "--->",
+        "Abonnés+",
+        "Abonnés directs=",
+        "Abonnés total",
+        "Taux de transformation"
+      ]
+    },
+    {
+      "groupe": "Tunnel de conversion",
+      "onglet": "Par source",
+      "colonnes": [
+        "#",
+        "Source",
+        "Nouveaux prospects",
+        "--->",
+        "Ayant pris un RDV",
+        "--->",
+        "Venus",
+        "--->",
+        "Abonnés+",
+        "Abonnés directs=",
+        "Abonnés total",
+        "Taux de transformation"
+      ]
+    },
+    {
+      "groupe": "Activité commerciale",
+      "onglet": "Par type de RDV",
+      "colonnes": [
+        "Type de rendez-vous",
+        "Rendez-vous pris",
+        "Venus",
+        "Abonnés total"
+      ]
+    },
+    {
+      "groupe": "Activité commerciale",
+      "onglet": "Par commercial",
+      "colonnes": [
+        "",
+        "Commercial",
+        "Nouveaux prospects",
+        "Rendez-vous pris",
+        "Venus",
+        "Abonnés total"
+      ]
+    },
+    {
+      "groupe": "Activité commerciale",
+      "onglet": "Par UTM",
+      "colonnes": [
+        "#",
+        "Campagne UTM",
+        "Nouveaux prospects",
+        "Rendez-vous pris",
+        "Venus",
+        "Abonnés total"
+      ]
+    },
+    {
+      "groupe": "Activité commerciale",
+      "onglet": "Par source",
+      "colonnes": [
+        "#",
+        "Source",
+        "Nouveaux prospects",
+        "Rendez-vous pris",
+        "Venus",
+        "Abonnés total"
+      ]
+    }
+  ],
+  "limite": "Vues et en-têtes observés, pas validation de la formule des indicateurs."
+}

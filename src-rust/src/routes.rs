@@ -132,6 +132,12 @@ pub struct RestoreBackupPayload {
 pub fn api_router(state: SharedState) -> Router {
     Router::new()
         .route("/api/health", get(health))
+        .route("/api/lead/registry", get(get_lead_registry))
+        .route("/api/lead/webhooks/clubEntry", post(post_lead_webhook_club_entry))
+        .route(
+            "/api/v2/appointment/webhooks/stripe/:club",
+            post(post_stripe_appointment_webhook),
+        )
         .route("/api/auth/login", post(post_local_auth_login))
         .route("/api/heitz/gate-check", post(post_heitz_gate_check))
         .route("/api/ats/ingest-email", post(post_ats_ingest_email))
@@ -473,6 +479,126 @@ fn append_audit(
     );
 }
 
+#[derive(Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub struct LeadClubEntryWebhookPayload {
+    pub api_key: Option<String>,
+    pub club: Option<String>,
+    pub email: Option<String>,
+    pub lastname: Option<String>,
+    pub firstname: Option<String>,
+    pub offername: Option<String>,
+    pub phone: Option<String>,
+    pub source: Option<String>,
+    pub utm_source: Option<String>,
+    pub utm_campaign: Option<String>,
+    pub utm_medium: Option<String>,
+}
+
+#[derive(Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub struct StripeAppointmentWebhookPayload {
+    pub payment_status: Option<String>,
+}
+
+async fn get_lead_registry() -> Json<Value> {
+    Json(json!({
+        "version": "0.4",
+        "date": "2026-11-17",
+        "totalFiles": 84,
+        "totalEntries": 1682,
+        "observedCount": 1410,
+        "documentedCount": 157,
+        "toVerifyCount": 115,
+        "ecartsCount": 23,
+        "blocagesCount": 11,
+        "exemplesCount": 16,
+        "settingsTabsCount": 14,
+        "partnersCount": 9,
+        "traceabilityGroupsCount": 28,
+        "familiesCount": 63
+    }))
+}
+
+async fn post_lead_webhook_club_entry(
+    Json(payload): Json<LeadClubEntryWebhookPayload>,
+) -> impl IntoResponse {
+    let api_key = payload.api_key.unwrap_or_default();
+    let club = payload.club.unwrap_or_default();
+    let email = payload.email.unwrap_or_default();
+    let lastname = payload.lastname.unwrap_or_default();
+    let firstname = payload.firstname.unwrap_or_default();
+
+    if api_key.trim().is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "ok": false, "error": "Clé apiKey manquante." })),
+        );
+    }
+    if club.trim().is_empty()
+        || email.trim().is_empty()
+        || lastname.trim().is_empty()
+        || firstname.trim().is_empty()
+    {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "ok": false,
+                "error": "Champs requis manquants : club, email, lastname, firstname."
+            })),
+        );
+    }
+
+    let entry_type = if payload
+        .offername
+        .as_deref()
+        .map(|s| !s.trim().is_empty())
+        .unwrap_or(false)
+    {
+        "demande_essai"
+    } else {
+        "demande_contact"
+    };
+    let idempotency_key = format!("WH-{}-{}-{}", club.trim(), email.trim().to_lowercase(), entry_type);
+    let _ = (&payload.phone, &payload.source, &payload.utm_source, &payload.utm_campaign, &payload.utm_medium);
+
+    (
+        StatusCode::OK,
+        Json(json!({
+            "ok": true,
+            "entryType": entry_type,
+            "idempotencyKey": idempotency_key,
+            "receivedAtUtc": Utc::now().to_rfc3339(),
+            "contact": {
+                "club": club,
+                "email": email,
+                "firstname": firstname,
+                "lastname": lastname,
+                "offername": payload.offername
+            }
+        })),
+    )
+}
+
+async fn post_stripe_appointment_webhook(
+    Path(club): Path<String>,
+    Json(payload): Json<StripeAppointmentWebhookPayload>,
+) -> impl IntoResponse {
+    let payment_status = payload.payment_status.unwrap_or_else(|| "pending".to_string());
+    let confirmed = payment_status == "paid";
+    (
+        StatusCode::OK,
+        Json(json!({
+            "ok": true,
+            "club": club,
+            "paymentStatus": payment_status,
+            "bookingStatus": if confirmed { "confirme" } else { "provisoire_attente_paiement" },
+            "slotBlocked": confirmed,
+            "verifiedAtUtc": Utc::now().to_rfc3339()
+        })),
+    )
+}
+
 async fn health() -> Json<Value> {
     let heitz_ws_endpoint = std::env::var("HEITZ_WS_URL")
         .unwrap_or_else(|_| "http://10.10.0.20:8080/api/heitz-ws".to_string());
@@ -494,6 +620,7 @@ async fn health() -> Json<Value> {
         "heitzWsEndpoint": heitz_ws_endpoint,
         "yeastarGsm07Gateway": yeastar_gateway,
         "rhV116Registry": "91 écrans / 1605 entrées / 117 fichiers références",
+        "leadAuditV04": "84 fichiers / 1682 entrées LEAD / 9 modules + 6 comm + 14 paramètres",
         "timestampUtc": Utc::now().to_rfc3339()
     }))
 }

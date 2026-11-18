@@ -1,0 +1,9 @@
+RELEVÉ API — DISTINCTION IMPÉRATIVE
+
+ZÉRO APPEL HTTP CAPTURÉ : l’outil actuel ne donne pas accès à un journal réseau ni à un HAR. Ne pas transformer les routes /club/... en API. Les états affichés ne certifient pas un code HTTP ou une réponse JSON.
+
+Une intégration entrante est décrite par l’aide officielle : demande de contact ou d’essai via POST JSON /api/lead/webhooks/clubEntry. Le contrat synthétisé est dans 04_RELEVE_API.json et DOC-003. Aucune requête n’a été envoyée et aucune clé n’a été demandée ni extraite.
+
+La fiche Stripe expose une URL de webhook du club et trois champs d’authentification. Aucun test, affichage de clé, copie ni sauvegarde n’a été exécuté. Cela prouve la présence d’un réglage, pas la réception correcte d’un paiement.
+
+Pour compléter les traces techniques, il faudra un outil de développement pouvant observer les requêtes de la session autorisée, avec exclusion des tokens, cookies, en-têtes d’authentification, identités et contenus personnels. Une capture n’autorisera pas leur rejeu. L’aide annonce deux endpoints contact/essai mais répète la même adresse : clarification nécessaire.

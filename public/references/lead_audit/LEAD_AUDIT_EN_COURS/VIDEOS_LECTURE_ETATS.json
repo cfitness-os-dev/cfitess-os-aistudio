@@ -1,0 +1,58 @@
+{
+  "date": "2026-11-17",
+  "videos": [
+    {
+      "id": "DnmP2lSCnws",
+      "titre": "Gérer Vos Prospects Efficacement",
+      "etat": "transcription_analysee"
+    },
+    {
+      "id": "KHA7TVkhUag",
+      "titre": "Lead - Gérer les Activités",
+      "etat": "transcription_analysee"
+    },
+    {
+      "id": "2RSaCtuvg10",
+      "titre": "Guide Utilisation Module Planning",
+      "etat": "transcription_analysee"
+    },
+    {
+      "id": "Mv2m7qgM_Wo",
+      "titre": "Guide Création Formulaires Prospects",
+      "etat": "transcription_analysee"
+    },
+    {
+      "id": "fsrpikclUng",
+      "titre": "Lead - Gestion des Modèles de Communication",
+      "etat": "transcription_analysee"
+    },
+    {
+      "id": "LmUCOaVZjxk",
+      "titre": "Lead - Créer Campagnes Email et SMS",
+      "etat": "transcription_analysee",
+      "raison": "Error: Timed out waiting for captions for this YouTube video"
+    },
+    {
+      "id": "Bzvh4ucbKdw",
+      "titre": "Lead - Comment créer des Scénarios ?",
+      "etat": "transcription_analysee"
+    },
+    {
+      "id": "RafHgj3Usiw",
+      "titre": "Lead - Configurer Gestion Rendez vous Leads",
+      "etat": "transcription_analysee"
+    },
+    {
+      "id": "moYFRPlcPD0",
+      "titre": "Lead - Guide d’Utilisation des Segments",
+      "etat": "transcription_analysee"
+    },
+    {
+      "id": "RB1eslykFyQ",
+      "titre": "Lead - Ajouter Utilisateurs à l’Interface",
+      "etat": "transcription_analysee",
+      "raison": "Error: Timed out waiting for captions for this YouTube video"
+    }
+  ],
+  "limite": "Export des sous-titres automatiques ; aucun visionnage image par image et aucun verbatim intégral livré."
+}

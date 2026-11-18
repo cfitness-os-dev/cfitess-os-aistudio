@@ -1,0 +1,741 @@
+{
+  "date": "2026-11-17",
+  "entrees": [
+    {
+      "rubrique": "Préférences / langues",
+      "option": "Français",
+      "etat": "observe",
+      "precision": "Menu ouvert puis fermé sans changer la langue du second club.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Préférences / langues",
+      "option": "English",
+      "etat": "observe",
+      "precision": "Menu ouvert puis fermé sans changer la langue du second club.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Préférences / langues",
+      "option": "Español",
+      "etat": "observe",
+      "precision": "Menu ouvert puis fermé sans changer la langue du second club.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Préférences / langues",
+      "option": "Português",
+      "etat": "observe",
+      "precision": "Menu ouvert puis fermé sans changer la langue du second club.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Communications de service / SMS de rappel",
+      "option": "Variables %rdv-date% au format DD/MM/YYYY",
+      "etat": "observe",
+      "precision": "Éditeur de rappel ouvert sans saisie. Huit variables dont les six communes. Aucun Enregistrer.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Communications de service / SMS de rappel",
+      "option": "Variable %rdv-heure% au format HH:mm",
+      "etat": "observe",
+      "precision": "Éditeur de rappel ouvert sans saisie. Huit variables dont les six communes. Aucun Enregistrer.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Communications de service / SMS de rappel",
+      "option": "Sélecteur de modèle",
+      "etat": "observe",
+      "precision": "Éditeur de rappel ouvert sans saisie. Huit variables dont les six communes. Aucun Enregistrer.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Communications de service / SMS de rappel",
+      "option": "Texte, estimation de crédits, Annuler, Enregistrer",
+      "etat": "observe",
+      "precision": "Éditeur de rappel ouvert sans saisie. Huit variables dont les six communes. Aucun Enregistrer.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Communications de service / cinq variantes",
+      "option": "SMS modification",
+      "etat": "observe",
+      "precision": "SMS modification/annulation : huit tags de base et rendez-vous, modèle, texte et compteur. Trois emails de service : éditeur par blocs complet. Interrupteurs de modification/annulation grisés sur la page parent, mais éditeurs consultables. Tous quittés sans saisie ni enregistrement.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Communications de service / cinq variantes",
+      "option": "SMS annulation",
+      "etat": "observe",
+      "precision": "SMS modification/annulation : huit tags de base et rendez-vous, modèle, texte et compteur. Trois emails de service : éditeur par blocs complet. Interrupteurs de modification/annulation grisés sur la page parent, mais éditeurs consultables. Tous quittés sans saisie ni enregistrement.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Communications de service / cinq variantes",
+      "option": "Email rappel",
+      "etat": "observe",
+      "precision": "SMS modification/annulation : huit tags de base et rendez-vous, modèle, texte et compteur. Trois emails de service : éditeur par blocs complet. Interrupteurs de modification/annulation grisés sur la page parent, mais éditeurs consultables. Tous quittés sans saisie ni enregistrement.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Communications de service / cinq variantes",
+      "option": "Email modification",
+      "etat": "observe",
+      "precision": "SMS modification/annulation : huit tags de base et rendez-vous, modèle, texte et compteur. Trois emails de service : éditeur par blocs complet. Interrupteurs de modification/annulation grisés sur la page parent, mais éditeurs consultables. Tous quittés sans saisie ni enregistrement.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Communications de service / cinq variantes",
+      "option": "Email annulation",
+      "etat": "observe",
+      "precision": "SMS modification/annulation : huit tags de base et rendez-vous, modèle, texte et compteur. Trois emails de service : éditeur par blocs complet. Interrupteurs de modification/annulation grisés sur la page parent, mais éditeurs consultables. Tous quittés sans saisie ni enregistrement.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Communications de service / email / variables",
+      "option": "Huit variables : prénom, nom, club, téléphone-club, adresse-club, url-rdv-club, rdv-date, rdv-heure",
+      "etat": "observe",
+      "precision": "Menu Tags réellement ouvert dans un email de rappel. Les variables de rendez-vous sont contextuelles ; elles ne sont pas proposées dans tous les composeurs individuels. Aucune insertion.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Email / bloc En-tête existant",
+      "option": "Logo par URL",
+      "etat": "observe",
+      "precision": "Bloc existant sélectionné dans un rappel. Aucun upload, URL, curseur, couleur, marge ou action de bloc changé.",
+      "preuve": "captures/018_email_entete_proprietes.png et relevé UI",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Email / bloc En-tête existant",
+      "option": "Importer une image : jpeg/jpg/png, 2 Mo maximum",
+      "etat": "observe",
+      "precision": "Bloc existant sélectionné dans un rappel. Aucun upload, URL, curseur, couleur, marge ou action de bloc changé.",
+      "preuve": "captures/018_email_entete_proprietes.png et relevé UI",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Email / bloc En-tête existant",
+      "option": "Taille du logo en pixels",
+      "etat": "observe",
+      "precision": "Bloc existant sélectionné dans un rappel. Aucun upload, URL, curseur, couleur, marge ou action de bloc changé.",
+      "preuve": "captures/018_email_entete_proprietes.png et relevé UI",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Email / bloc En-tête existant",
+      "option": "Arrondi du logo en pixels",
+      "etat": "observe",
+      "precision": "Bloc existant sélectionné dans un rappel. Aucun upload, URL, curseur, couleur, marge ou action de bloc changé.",
+      "preuve": "captures/018_email_entete_proprietes.png et relevé UI",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Email / bloc En-tête existant",
+      "option": "Fond de l’en-tête et Défaut",
+      "etat": "observe",
+      "precision": "Bloc existant sélectionné dans un rappel. Aucun upload, URL, curseur, couleur, marge ou action de bloc changé.",
+      "preuve": "captures/018_email_entete_proprietes.png et relevé UI",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Email / bloc En-tête existant",
+      "option": "Alignement gauche/centre/droite",
+      "etat": "observe",
+      "precision": "Bloc existant sélectionné dans un rappel. Aucun upload, URL, curseur, couleur, marge ou action de bloc changé.",
+      "preuve": "captures/018_email_entete_proprietes.png et relevé UI",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Email / bloc En-tête existant",
+      "option": "Marges intérieures quatre côtés",
+      "etat": "observe",
+      "precision": "Bloc existant sélectionné dans un rappel. Aucun upload, URL, curseur, couleur, marge ou action de bloc changé.",
+      "preuve": "captures/018_email_entete_proprietes.png et relevé UI",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Email / bloc En-tête existant",
+      "option": "Monter/Descendre/Dupliquer/Supprimer visibles",
+      "etat": "observe",
+      "precision": "Bloc existant sélectionné dans un rappel. Aucun upload, URL, curseur, couleur, marge ou action de bloc changé.",
+      "preuve": "captures/018_email_entete_proprietes.png et relevé UI",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Scénarios / verrouillage et cible Ancien client",
+      "option": "Verrouiller : ne plus inscrire de nouveaux prospects mais laisser terminer ceux en cours",
+      "etat": "observe",
+      "precision": "Scénario existant consulté, sans activation, verrouillage ni modification. Les délais sont un exemple de configuration, pas une règle produit fixe.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Scénarios / verrouillage et cible Ancien client",
+      "option": "État global Inactif indépendant des interrupteurs d’étapes cochés",
+      "etat": "observe",
+      "precision": "Scénario existant consulté, sans activation, verrouillage ni modification. Les délais sont un exemple de configuration, pas une règle produit fixe.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Scénarios / verrouillage et cible Ancien client",
+      "option": "Dates relatives Après 45 jours et Après 90 jours dans cet exemple",
+      "etat": "observe",
+      "precision": "Scénario existant consulté, sans activation, verrouillage ni modification. Les délais sont un exemple de configuration, pas une règle produit fixe.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Scénarios / verrouillage et cible Ancien client",
+      "option": "Cible et sources en lecture ; Modifier le scénario",
+      "etat": "observe",
+      "precision": "Scénario existant consulté, sans activation, verrouillage ni modification. Les délais sont un exemple de configuration, pas une règle produit fixe.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Scénarios / verrouillage et cible Ancien client",
+      "option": "Dernière exécution affichée",
+      "etat": "observe",
+      "precision": "Scénario existant consulté, sans activation, verrouillage ni modification. Les délais sont un exemple de configuration, pas une règle produit fixe.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Scénarios / variante déjà verrouillée",
+      "option": "Actif et Verrouillé simultanément",
+      "etat": "observe",
+      "precision": "Scénario déprécié existant lu. Le nom déprécié appartient au club, ce n’est pas un type produit établi. Aucune activation, désactivation, modification ni sortie de verrouillage.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Scénarios / variante déjà verrouillée",
+      "option": "Désactiver disponible",
+      "etat": "observe",
+      "precision": "Scénario déprécié existant lu. Le nom déprécié appartient au club, ce n’est pas un type produit établi. Aucune activation, désactivation, modification ni sortie de verrouillage.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Scénarios / variante déjà verrouillée",
+      "option": "Déverrouiller disponible",
+      "etat": "observe",
+      "precision": "Scénario déprécié existant lu. Le nom déprécié appartient au club, ce n’est pas un type produit établi. Aucune activation, désactivation, modification ni sortie de verrouillage.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Scénarios / variante déjà verrouillée",
+      "option": "Modifier le scénario reste visible",
+      "etat": "observe",
+      "precision": "Scénario déprécié existant lu. Le nom déprécié appartient au club, ce n’est pas un type produit établi. Aucune activation, désactivation, modification ni sortie de verrouillage.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Scénarios / variante déjà verrouillée",
+      "option": "Texte explicite : aucune nouvelle inscription",
+      "etat": "observe",
+      "precision": "Scénario déprécié existant lu. Le nom déprécié appartient au club, ce n’est pas un type produit établi. Aucune activation, désactivation, modification ni sortie de verrouillage.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Scénarios / présence des exemples",
+      "option": "22 scénarios du second club parcourus sur deux pages",
+      "etat": "observe",
+      "precision": "Constat de données du second club seulement : aucun exemple Manuel ou Décrocheur trouvé dans ces 22 lignes. Pas une preuve que ces types sont absents du logiciel.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Scénarios / présence des exemples",
+      "option": "Tous les types de la liste consultée sont Automatique",
+      "etat": "observe",
+      "precision": "Constat de données du second club seulement : aucun exemple Manuel ou Décrocheur trouvé dans ces 22 lignes. Pas une preuve que ces types sont absents du logiciel.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Scénarios / nouveau formulaire / modes",
+      "option": "Automatique : démarrage à l’ajout dans un statut",
+      "etat": "observe",
+      "precision": "Seule la présentation du formulaire vide a été alternée ; aucune saisie, aucun scénario créé, aucune étape ajoutée. La liste réelle ne contenait aucun exemple manuel ; son exécution reste non testée.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Scénarios / nouveau formulaire / modes",
+      "option": "Manuel : assignation manuelle",
+      "etat": "observe",
+      "precision": "Seule la présentation du formulaire vide a été alternée ; aucune saisie, aucun scénario créé, aucune étape ajoutée. La liste réelle ne contenait aucun exemple manuel ; son exécution reste non testée.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Scénarios / nouveau formulaire / modes",
+      "option": "Douze statuts de ciblage",
+      "etat": "observe",
+      "precision": "Seule la présentation du formulaire vide a été alternée ; aucune saisie, aucun scénario créé, aucune étape ajoutée. La liste réelle ne contenait aucun exemple manuel ; son exécution reste non testée.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Scénarios / nouveau formulaire / modes",
+      "option": "Automatique : condition commercial assigné et choix des sources",
+      "etat": "observe",
+      "precision": "Seule la présentation du formulaire vide a été alternée ; aucune saisie, aucun scénario créé, aucune étape ajoutée. La liste réelle ne contenait aucun exemple manuel ; son exécution reste non testée.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Scénarios / nouveau formulaire / modes",
+      "option": "Manuel : le panneau des conditions et sources disparaît",
+      "etat": "observe",
+      "precision": "Seule la présentation du formulaire vide a été alternée ; aucune saisie, aucun scénario créé, aucune étape ajoutée. La liste réelle ne contenait aucun exemple manuel ; son exécution reste non testée.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Scénarios / nouveau formulaire / modes",
+      "option": "Créer désactivé sans nom ; Annuler",
+      "etat": "observe",
+      "precision": "Seule la présentation du formulaire vide a été alternée ; aucune saisie, aucun scénario créé, aucune étape ajoutée. La liste réelle ne contenait aucun exemple manuel ; son exécution reste non testée.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Campagne SMS / programmation différée",
+      "option": "Calendrier mois/année",
+      "etat": "observe",
+      "precision": "Bascule de présentation activée uniquement dans le formulaire neuf vide, puis formulaire abandonné. Aucune date/heure saisie, aucun destinataire choisi, aucune campagne créée. La politique de fuseau et l’envoi effectif ne sont pas démontrés.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Campagne SMS / programmation différée",
+      "option": "Navigation mois précédent/suivant",
+      "etat": "observe",
+      "precision": "Bascule de présentation activée uniquement dans le formulaire neuf vide, puis formulaire abandonné. Aucune date/heure saisie, aucun destinataire choisi, aucune campagne créée. La politique de fuseau et l’envoi effectif ne sont pas démontrés.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Campagne SMS / programmation différée",
+      "option": "Dates antérieures grisées ; date du jour sélectionnable",
+      "etat": "observe",
+      "precision": "Bascule de présentation activée uniquement dans le formulaire neuf vide, puis formulaire abandonné. Aucune date/heure saisie, aucun destinataire choisi, aucune campagne créée. La politique de fuseau et l’envoi effectif ne sont pas démontrés.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Campagne SMS / programmation différée",
+      "option": "Champ heure",
+      "etat": "observe",
+      "precision": "Bascule de présentation activée uniquement dans le formulaire neuf vide, puis formulaire abandonné. Aucune date/heure saisie, aucun destinataire choisi, aucune campagne créée. La politique de fuseau et l’envoi effectif ne sont pas démontrés.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Campagne SMS / programmation différée",
+      "option": "Enregistrer et Enregistrer et publier restent désactivés sans contenu",
+      "etat": "observe",
+      "precision": "Bascule de présentation activée uniquement dans le formulaire neuf vide, puis formulaire abandonné. Aucune date/heure saisie, aucun destinataire choisi, aucune campagne créée. La politique de fuseau et l’envoi effectif ne sont pas démontrés.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Mobile / Planning / filtre",
+      "option": "Panneau Filtre",
+      "etat": "observe",
+      "precision": "Vue 390×844, panneau ouvert puis fermé sans sélectionner de personne. Aucun nom ou identifiant d’intervenant conservé dans le dossier.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Mobile / Planning / filtre",
+      "option": "Accordéon Chargé du RDV",
+      "etat": "observe",
+      "precision": "Vue 390×844, panneau ouvert puis fermé sans sélectionner de personne. Aucun nom ou identifiant d’intervenant conservé dans le dossier.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Mobile / Planning / filtre",
+      "option": "Choix individuel des intervenants dont Moi",
+      "etat": "observe",
+      "precision": "Vue 390×844, panneau ouvert puis fermé sans sélectionner de personne. Aucun nom ou identifiant d’intervenant conservé dans le dossier.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Mobile / Planning / filtre",
+      "option": "Effacer le filtre",
+      "etat": "observe",
+      "precision": "Vue 390×844, panneau ouvert puis fermé sans sélectionner de personne. Aucun nom ou identifiant d’intervenant conservé dans le dossier.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Mobile / Planning / filtre",
+      "option": "Fermer le panneau",
+      "etat": "observe",
+      "precision": "Vue 390×844, panneau ouvert puis fermé sans sélectionner de personne. Aucun nom ou identifiant d’intervenant conservé dans le dossier.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Mobile / menu ADMIN",
+      "option": "Rechercher, Prospects, Clients, Messagerie, Activités, Planning, Statistiques, Ventes",
+      "etat": "observe",
+      "precision": "Inventaire du menu réellement ouvert à 390×844. Ne pas assimiler l’absence de liens à un refus serveur ; certaines pages restent accessibles par leurs liens desktop connus.",
+      "preuve": "captures/019_menu_mobile.png",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Mobile / menu ADMIN",
+      "option": "Sélecteur de club",
+      "etat": "observe",
+      "precision": "Inventaire du menu réellement ouvert à 390×844. Ne pas assimiler l’absence de liens à un refus serveur ; certaines pages restent accessibles par leurs liens desktop connus.",
+      "preuve": "captures/019_menu_mobile.png",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Mobile / menu ADMIN",
+      "option": "Formulaires, Communication, App et Paramètres non proposés dans ce menu 390 px",
+      "etat": "observe",
+      "precision": "Inventaire du menu réellement ouvert à 390×844. Ne pas assimiler l’absence de liens à un refus serveur ; certaines pages restent accessibles par leurs liens desktop connus.",
+      "preuve": "captures/019_menu_mobile.png",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Activités / demande email existante",
+      "option": "Répondre par mail",
+      "etat": "observe",
+      "precision": "Dialogue Répondre au mail ouvert depuis une ligne en attente du filtre MAIL. Aucun choix de réponse ou de clôture exécuté ; activité laissée en attente.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Activités / demande email existante",
+      "option": "Répondre par SMS",
+      "etat": "observe",
+      "precision": "Dialogue Répondre au mail ouvert depuis une ligne en attente du filtre MAIL. Aucun choix de réponse ou de clôture exécuté ; activité laissée en attente.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Activités / demande email existante",
+      "option": "Appeler",
+      "etat": "observe",
+      "precision": "Dialogue Répondre au mail ouvert depuis une ligne en attente du filtre MAIL. Aucun choix de réponse ou de clôture exécuté ; activité laissée en attente.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Activités / demande email existante",
+      "option": "Traiter sans répondre",
+      "etat": "observe",
+      "precision": "Dialogue Répondre au mail ouvert depuis une ligne en attente du filtre MAIL. Aucun choix de réponse ou de clôture exécuté ; activité laissée en attente.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Activités / demande email existante",
+      "option": "Fermer",
+      "etat": "observe",
+      "precision": "Dialogue Répondre au mail ouvert depuis une ligne en attente du filtre MAIL. Aucun choix de réponse ou de clôture exécuté ; activité laissée en attente.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Activités / tâche SMS planifiée",
+      "option": "Dialogue Envoyer un SMS",
+      "etat": "observe",
+      "precision": "Tâche réelle ouverte depuis SCHEDULED_SMS sans saisie ni envoi. Même principe de composeur que la fiche ; aucune activité traitée.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Activités / tâche SMS planifiée",
+      "option": "Sélecteur de modèle, texte et compteur de crédits",
+      "etat": "observe",
+      "precision": "Tâche réelle ouverte depuis SCHEDULED_SMS sans saisie ni envoi. Même principe de composeur que la fiche ; aucune activité traitée.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Activités / tâche SMS planifiée",
+      "option": "Annuler ; Valider grisé à vide",
+      "etat": "observe",
+      "precision": "Tâche réelle ouverte depuis SCHEDULED_SMS sans saisie ni envoi. Même principe de composeur que la fiche ; aucune activité traitée.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Activités / demande de contact",
+      "option": "Répondre par mail",
+      "etat": "observe",
+      "precision": "Dialogue Répondre à la demande de contact confirmé sur une demande CONTACT existante. Aucune option de réponse ni clôture actionnée.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Activités / demande de contact",
+      "option": "Répondre par SMS",
+      "etat": "observe",
+      "precision": "Dialogue Répondre à la demande de contact confirmé sur une demande CONTACT existante. Aucune option de réponse ni clôture actionnée.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Activités / demande de contact",
+      "option": "Appeler",
+      "etat": "observe",
+      "precision": "Dialogue Répondre à la demande de contact confirmé sur une demande CONTACT existante. Aucune option de réponse ni clôture actionnée.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Activités / demande de contact",
+      "option": "Traiter sans répondre",
+      "etat": "observe",
+      "precision": "Dialogue Répondre à la demande de contact confirmé sur une demande CONTACT existante. Aucune option de réponse ni clôture actionnée.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Activités / Avis / second club",
+      "option": "Aucun avis en attente après chargement",
+      "etat": "observe",
+      "precision": "Filtres REVIEW À faire puis Faites réellement vides à Lyon Carré de Soie. Les compteurs pris juste après changement de filtre ont été écartés.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Activités / Avis / second club",
+      "option": "Aucun avis traité après chargement",
+      "etat": "observe",
+      "precision": "Filtres REVIEW À faire puis Faites réellement vides à Lyon Carré de Soie. Les compteurs pris juste après changement de filtre ont été écartés.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Activités / Avis / Beynost",
+      "option": "Aucun avis en attente",
+      "etat": "observe",
+      "precision": "État vide confirmé séparément après chargement dans chacun des deux filtres, en complément du second club. Aucun avis créé pour l’audit.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Activités / Avis / Beynost",
+      "option": "Aucun avis traité",
+      "etat": "observe",
+      "precision": "État vide confirmé séparément après chargement dans chacun des deux filtres, en complément du second club. Aucun avis créé pour l’audit.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Campagnes / email déjà envoyé",
+      "option": "Métadonnées création et auteur, état Envoyée",
+      "etat": "observe",
+      "precision": "Bilan existant lu sans copie des chiffres, auteur ou contenu dans le dossier. Aucun renommage, destinataire, case de ciblage, lien ou relance actionné. Pas de détail individuel ni de code d’erreur démontré par les cartes.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Campagnes / email déjà envoyé",
+      "option": "Compteurs Envoyés, Reçus, Ouverts, Erreurs",
+      "etat": "observe",
+      "precision": "Bilan existant lu sans copie des chiffres, auteur ou contenu dans le dossier. Aucun renommage, destinataire, case de ciblage, lien ou relance actionné. Pas de détail individuel ni de code d’erreur démontré par les cartes.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Campagnes / email déjà envoyé",
+      "option": "Objet et aperçu du message dans une iframe",
+      "etat": "observe",
+      "precision": "Bilan existant lu sans copie des chiffres, auteur ou contenu dans le dossier. Aucun renommage, destinataire, case de ciblage, lien ou relance actionné. Pas de détail individuel ni de code d’erreur démontré par les cartes.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Campagnes / email déjà envoyé",
+      "option": "Ciblage par statuts et début de période affichés",
+      "etat": "observe",
+      "precision": "Bilan existant lu sans copie des chiffres, auteur ou contenu dans le dossier. Aucun renommage, destinataire, case de ciblage, lien ou relance actionné. Pas de détail individuel ni de code d’erreur démontré par les cartes.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Campagnes / email déjà envoyé",
+      "option": "Renommer la campagne ; bouton Modifier le nom désactivé tant que non édité",
+      "etat": "observe",
+      "precision": "Bilan existant lu sans copie des chiffres, auteur ou contenu dans le dossier. Aucun renommage, destinataire, case de ciblage, lien ou relance actionné. Pas de détail individuel ni de code d’erreur démontré par les cartes.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Campagne email / nouvel assistant initial",
+      "option": "Quatre étapes : Cibler, Composer, Objet, Vérifier",
+      "etat": "observe",
+      "precision": "Premier écran uniquement. Aucun statut ou segment choisi, aucune saisie ni étape suivante. Le contenu de ciblage est dans un panneau voisin du main de l’en-tête ; un relevé limité à main le manquerait. La formation décrit un ancien parcours en une page.",
+      "preuve": "captures/020_campagne_email_ciblage.png",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Campagne email / nouvel assistant initial",
+      "option": "Test désactivé, Annuler, Suivant désactivé sans audience",
+      "etat": "observe",
+      "precision": "Premier écran uniquement. Aucun statut ou segment choisi, aucune saisie ni étape suivante. Le contenu de ciblage est dans un panneau voisin du main de l’en-tête ; un relevé limité à main le manquerait. La formation décrit un ancien parcours en une page.",
+      "preuve": "captures/020_campagne_email_ciblage.png",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Campagne email / nouvel assistant initial",
+      "option": "Douze statuts dans un menu de cases à cocher",
+      "etat": "observe",
+      "precision": "Premier écran uniquement. Aucun statut ou segment choisi, aucune saisie ni étape suivante. Le contenu de ciblage est dans un panneau voisin du main de l’en-tête ; un relevé limité à main le manquerait. La formation décrit un ancien parcours en une page.",
+      "preuve": "captures/020_campagne_email_ciblage.png",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Campagne email / nouvel assistant initial",
+      "option": "Segments facultatifs : appartenance à au moins un segment",
+      "etat": "observe",
+      "precision": "Premier écran uniquement. Aucun statut ou segment choisi, aucune saisie ni étape suivante. Le contenu de ciblage est dans un panneau voisin du main de l’en-tête ; un relevé limité à main le manquerait. La formation décrit un ancien parcours en une page.",
+      "preuve": "captures/020_campagne_email_ciblage.png",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Campagne email / nouvel assistant initial",
+      "option": "Les segments affinent les statuts choisis",
+      "etat": "observe",
+      "precision": "Premier écran uniquement. Aucun statut ou segment choisi, aucune saisie ni étape suivante. Le contenu de ciblage est dans un panneau voisin du main de l’en-tête ; un relevé limité à main le manquerait. La formation décrit un ancien parcours en une page.",
+      "preuve": "captures/020_campagne_email_ciblage.png",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Campagne email / nouvel assistant initial",
+      "option": "Période optionnelle du statut Du/Au",
+      "etat": "observe",
+      "precision": "Premier écran uniquement. Aucun statut ou segment choisi, aucune saisie ni étape suivante. Le contenu de ciblage est dans un panneau voisin du main de l’en-tête ; un relevé limité à main le manquerait. La formation décrit un ancien parcours en une page.",
+      "preuve": "captures/020_campagne_email_ciblage.png",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Campagne email / nouvel assistant initial",
+      "option": "Portée estimée et résumé des statuts/segments",
+      "etat": "observe",
+      "precision": "Premier écran uniquement. Aucun statut ou segment choisi, aucune saisie ni étape suivante. Le contenu de ciblage est dans un panneau voisin du main de l’en-tête ; un relevé limité à main le manquerait. La formation décrit un ancien parcours en une page.",
+      "preuve": "captures/020_campagne_email_ciblage.png",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Email / bloc HTML existant",
+      "option": "Zone Code HTML",
+      "etat": "observe",
+      "precision": "Bloc HTML préexistant sélectionné dans un ancien modèle. Aucun code édité ni copié dans le dossier ; ni action de bloc ni test email. Ne pas attribuer au framework de Lead les styles ou bibliothèques figurant dans le contenu HTML d’un email.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Email / bloc HTML existant",
+      "option": "Aperçu rendu dans une iframe",
+      "etat": "observe",
+      "precision": "Bloc HTML préexistant sélectionné dans un ancien modèle. Aucun code édité ni copié dans le dossier ; ni action de bloc ni test email. Ne pas attribuer au framework de Lead les styles ou bibliothèques figurant dans le contenu HTML d’un email.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Email / bloc HTML existant",
+      "option": "Marges intérieures quatre côtés",
+      "etat": "observe",
+      "precision": "Bloc HTML préexistant sélectionné dans un ancien modèle. Aucun code édité ni copié dans le dossier ; ni action de bloc ni test email. Ne pas attribuer au framework de Lead les styles ou bibliothèques figurant dans le contenu HTML d’un email.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Email / bloc HTML existant",
+      "option": "Déplacer, dupliquer, supprimer : commandes de bloc visibles",
+      "etat": "observe",
+      "precision": "Bloc HTML préexistant sélectionné dans un ancien modèle. Aucun code édité ni copié dans le dossier ; ni action de bloc ni test email. Ne pas attribuer au framework de Lead les styles ou bibliothèques figurant dans le contenu HTML d’un email.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Email / recherche de variantes dans les exemples",
+      "option": "27 modèles email de Beynost ouverts et refermés sans édition",
+      "etat": "observe",
+      "precision": "Comparaison structurelle : comptes d’images et de zones éditables, sans contenu conservé. Ces comptes ne prouvent pas l’absence des autres types de blocs. Propriétés détaillées désormais lues pour Texte, Bouton, En-tête, Réseaux sociaux, Pied de page et HTML.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Email / recherche de variantes dans les exemples",
+      "option": "Deux organisations rencontrées : contenu par blocs et contenu HTML dans une iframe",
+      "etat": "observe",
+      "precision": "Comparaison structurelle : comptes d’images et de zones éditables, sans contenu conservé. Ces comptes ne prouvent pas l’absence des autres types de blocs. Propriétés détaillées désormais lues pour Texte, Bouton, En-tête, Réseaux sociaux, Pied de page et HTML.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Mobile / fiche prospect",
+      "option": "Onglet Sommaire pour le fil d’activité",
+      "etat": "observe",
+      "precision": "Onglets visibles uniquement dans la mise en page étroite observée ; éléments DOM cachés sur ordinateur. Aucune information personnelle modifiée ni conservée dans le dossier.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Mobile / fiche prospect",
+      "option": "Onglet Détails pour les données et panneaux de fiche",
+      "etat": "observe",
+      "precision": "Onglets visibles uniquement dans la mise en page étroite observée ; éléments DOM cachés sur ordinateur. Aucune information personnelle modifiée ni conservée dans le dossier.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Mobile / fiche prospect",
+      "option": "Détails : commandes de modification, statut, source, scénarios, segments, formulaires, abonnements",
+      "etat": "observe",
+      "precision": "Onglets visibles uniquement dans la mise en page étroite observée ; éléments DOM cachés sur ordinateur. Aucune information personnelle modifiée ni conservée dans le dossier.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Mobile / fiche prospect",
+      "option": "Mention de synchronisation des abonnements avec le logiciel de gestion",
+      "etat": "observe",
+      "precision": "Onglets visibles uniquement dans la mise en page étroite observée ; éléments DOM cachés sur ordinateur. Aucune information personnelle modifiée ni conservée dans le dossier.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    },
+    {
+      "rubrique": "Contacts / écart documentaire Histoire sportive",
+      "option": "Rubrique non retrouvée dans les deux panneaux de la fiche observée",
+      "etat": "observe",
+      "precision": "L’aide mentionne histoire sportive ; libellé absent de la fiche consultée en affichage ordinateur et mobile. Ne pas en déduire sa suppression pour tous les comptes. Confirmation fournisseur ou exemple préexistant nécessaire.",
+      "preuve": "Interface ADMIN, 17/11/2026",
+      "profil": "ADMIN"
+    }
+  ]
+}

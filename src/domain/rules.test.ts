@@ -11,6 +11,24 @@ import {
   SOURCE_SCREENS,
   TOTAL_HISTORICAL_ENTRIES,
 } from './referenceRegistry';
+import {
+  computeSmsSegmentMetrics,
+  evaluateLeadModuleAccess,
+  evaluateProspectAutoArchive,
+  ingestLeadClubEntryWebhook,
+  LEAD_11_BLOCAGES,
+  LEAD_16_EXEMPLES,
+  LEAD_23_ECARTS,
+  LEAD_26_CAPTURES,
+  LEAD_28_TRACEABILITY_GROUPS,
+  LEAD_AUDIT_META,
+  LEAD_IMPORT_COLUMNS_11,
+  LEAD_PARTNERS_9,
+  LEAD_SETTINGS_TABS_14,
+  resolveWhatsAppSendDecision,
+  validateAndParseLeadImportRows,
+  validateAppointmentBooking,
+} from './leadAuditRegistry';
 import { AMBIGUITIES_BASELINE } from './seed';
 import {
   CFITNESS_LEGAL_IDENTITY,
@@ -1014,4 +1032,166 @@ test('Internal zero-cost electronic signature proof, Unified multi-source planni
   assert.equal(kpiSummary.totalRevenueTtcEur > 180, true);
   assert.equal(kpiSummary.totalSilaeCommissionsEur > 40, true);
   assert.equal(kpiSummary.byEmployeeSeller.length >= 3, true);
+});
+
+test('LEAD-TST01 — Intégrité du registre Lead v0.4 (1682 entrées, 28 groupes, 23 écarts, 11 blocages, 16 exemples)', () => {
+  assert.equal(
+    LEAD_AUDIT_META.observedCount + LEAD_AUDIT_META.documentedCount + LEAD_AUDIT_META.toVerifyCount,
+    LEAD_AUDIT_META.totalEntries
+  );
+  assert.equal(LEAD_AUDIT_META.totalEntries, 1682);
+  assert.equal(LEAD_28_TRACEABILITY_GROUPS.length, 28);
+  const groupSum = LEAD_28_TRACEABILITY_GROUPS.reduce((acc, g) => acc + g.count, 0);
+  assert.equal(groupSum, 1682);
+  assert.equal(LEAD_23_ECARTS.length, 23);
+  assert.equal(LEAD_11_BLOCAGES.length, 11);
+  assert.equal(LEAD_16_EXEMPLES.length, 16);
+  assert.equal(LEAD_SETTINGS_TABS_14.length, 14);
+  assert.equal(LEAD_PARTNERS_9.length, 9);
+  assert.equal(LEAD_26_CAPTURES.length, 26);
+  assert.equal(LEAD_IMPORT_COLUMNS_11.length, 11);
+});
+
+test('LEAD-TST02 — Contrôle RBAC serveur ADMIN / MANAGER / COMMERCIAL & ACL-01', () => {
+  assert.equal(evaluateLeadModuleAccess('admin', 'communication').httpStatus, 200);
+  assert.equal(evaluateLeadModuleAccess('manager', 'settings').httpStatus, 200);
+
+  const commBlocked = evaluateLeadModuleAccess('commercial', 'communication');
+  assert.equal(commBlocked.allowed, false);
+  assert.equal(commBlocked.httpStatus, 403);
+
+  const settingsBlocked = evaluateLeadModuleAccess('commercial', 'settings');
+  assert.equal(settingsBlocked.allowed, false);
+  assert.equal(settingsBlocked.httpStatus, 403);
+
+  // ACL-01 : corbeille formulaire bloquée en 403 pour COMMERCIAL
+  const acl01 = evaluateLeadModuleAccess('commercial', 'form_delete');
+  assert.equal(acl01.allowed, false);
+  assert.equal(acl01.httpStatus, 403);
+  assert.equal(acl01.reason.includes('ACL-01'), true);
+
+  // COACH et BASIC obsolètes refusés en 403
+  assert.equal(evaluateLeadModuleAccess('coach', 'prospects').httpStatus, 403);
+  assert.equal(evaluateLeadModuleAccess('basic', 'prospects').httpStatus, 403);
+});
+
+test('LEAD-TST03 — Import Excel officiel 11 colonnes (Email requis, doublons, RGPD false par défaut)', () => {
+  const rows: string[][] = [
+    [...LEAD_IMPORT_COLUMNS_11],
+    ['F', 'Camille', 'Test', 'camille@fictif.fr', '0611223344', '1 Rue Test', '69120', 'Vaulx-en-Velin', '15/05/1995', '', 'Sans consentement -> false'],
+    ['M', 'Dupont', 'Invalide', 'pas-un-email', '0622334455', '2 Rue Test', '01700', 'Beynost', '01/01/1990', 'VRAI', 'Rejet email'],
+    ['F', 'Claire', 'Doublon', 'existant@club.fr', '0699887766', '3 Rue Test', '69120', 'Vaulx-en-Velin', '10/03/1992', 'VRAI', 'Doublon email'],
+  ];
+
+  const summary = validateAndParseLeadImportRows(rows, ['existant@club.fr'], ['0600000000']);
+  assert.equal(summary.totalDataRows, 3);
+  assert.equal(summary.validCount, 1);
+  assert.equal(summary.rejectedCount, 1);
+  assert.equal(summary.duplicateCount, 1);
+  assert.equal(summary.results[0].consentGranted, false);
+});
+
+test('LEAD-TST04 — Archivage prospect (réponse entrante uniquement) & exclusion Vacances client', () => {
+  // Envoi sortant à J-1 ne repousse PAS l'archivage si aucune réponse entrante depuis 35 jours
+  const archive = evaluateProspectAutoArchive(35, 1, 30, false);
+  assert.equal(archive.shouldArchive, true);
+  assert.equal(archive.excludedFromCampaigns, true);
+
+  // Réponse entrante à J-5 repousse l'archivage
+  const keepActive = evaluateProspectAutoArchive(5, 1, 30, false);
+  assert.equal(keepActive.shouldArchive, false);
+
+  // Vacances client actives : exclu des campagnes sans archivage
+  const vacation = evaluateProspectAutoArchive(35, 1, 30, true);
+  assert.equal(vacation.shouldArchive, false);
+  assert.equal(vacation.excludedFromCampaigns, true);
+});
+
+test('LEAD-TST05 — WhatsApp 24h & replis WA-01/WA-02/INC-001, collisions RDV-01, SMS-01 & webhook API-01', () => {
+  // INC-001 : sans explicitSave, aucun brouillon créé
+  const openWin = resolveWhatsAppSendDecision({
+    hoursSinceLastInboundMessage: 10,
+    templateMetaApproved: true,
+    requiredMediaAttached: true,
+    fallbackPolicy: 'ne_pas_envoyer',
+    explicitSave: false,
+  });
+  assert.equal(openWin.window24hOpen, true);
+  assert.equal(openWin.deliveryChannel, 'whatsapp_direct');
+  assert.equal(openWin.draftCreated, false);
+
+  // WA-01 : fenêtre expirée -> repli SMS
+  const closedSms = resolveWhatsAppSendDecision({
+    hoursSinceLastInboundMessage: 30,
+    templateMetaApproved: true,
+    requiredMediaAttached: true,
+    fallbackPolicy: 'sms_repli',
+    explicitSave: true,
+  });
+  assert.equal(closedSms.window24hOpen, false);
+  assert.equal(closedSms.deliveryChannel, 'sms_repli');
+  assert.equal(closedSms.draftCreated, true);
+
+  // WA-02 : média manquant bloque l'envoi même si Meta approuvé
+  const missingMedia = resolveWhatsAppSendDecision({
+    hoursSinceLastInboundMessage: 12,
+    templateMetaApproved: true,
+    requiredMediaAttached: false,
+    fallbackPolicy: 'modele_approuve',
+    explicitSave: false,
+  });
+  assert.equal(missingMedia.deliveryChannel, 'bloque');
+  assert.equal(missingMedia.validationErrors[0].includes('WA-02'), true);
+
+  // RDV-01 : collision inter-types refusée sur même créneau/coach
+  const rdvCollision = validateAppointmentBooking(
+    [
+      {
+        id: 's1',
+        clubId: 'carre-de-soie',
+        coachId: 'emp-karim',
+        typeName: 'Bilan Checkup',
+        date: '2026-11-20',
+        startTime: '10:00',
+        durationMinutes: 45,
+        capacityMax: 1,
+        currentBookedCount: 1,
+        paidRequired: false,
+        paymentStatus: 'non_requis',
+      },
+    ],
+    {
+      clubId: 'carre-de-soie',
+      coachId: 'emp-karim',
+      typeName: 'Coaching Découverte',
+      date: '2026-11-20',
+      startTime: '10:00',
+      hoursBeforeSlot: 6,
+      minDelayHours: 2,
+      capacityMax: 1,
+      requiresStripePayment: true,
+      stripePaidConfirmed: false,
+    },
+    true
+  );
+  assert.equal(rdvCollision.accepted, false);
+  assert.equal(rdvCollision.collisionDetected, true);
+
+  // SMS-01 : GSM-7 vs UCS-2
+  assert.equal(computeSmsSegmentMetrics('Bonjour C.Fitness').maxPerSms, 160);
+  assert.equal(computeSmsSegmentMetrics('Bonjour C.Fitness 💪').encoding, 'UCS-2');
+
+  // API-01 : Webhook clubEntry contact vs essai
+  const whTrial = ingestLeadClubEntryWebhook({
+    apiKey: 'secret-demo',
+    club: 'beynost',
+    email: 'test@fictif.fr',
+    lastname: 'Test',
+    firstname: 'Lucas',
+    offername: 'Pass 7 jours',
+  });
+  assert.equal(whTrial.status, 200);
+  assert.equal(whTrial.entryType, 'demande_essai');
+  const whMissing = ingestLeadClubEntryWebhook({ apiKey: 'secret-demo', club: 'beynost' });
+  assert.equal(whMissing.status, 400);
 });

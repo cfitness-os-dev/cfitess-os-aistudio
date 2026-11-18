@@ -1,0 +1,131 @@
+{
+  "date": "2026-11-17",
+  "entrees": [
+    {
+      "rubrique": "Import prospects / Excel",
+      "option": "Colonne 1 : Genre HOMME/FEMME/INCONNU",
+      "precision": "Ordre imposé ; première ligne ignorée. Modèle officiel vierge téléchargé, aucune sélection de fichier, aucun import.",
+      "etat": "observe",
+      "preuve": "Interface ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Import prospects / Excel",
+      "option": "Colonne 2 : Prénom",
+      "precision": "Ordre imposé ; première ligne ignorée. Modèle officiel vierge téléchargé, aucune sélection de fichier, aucun import.",
+      "etat": "observe",
+      "preuve": "Interface ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Import prospects / Excel",
+      "option": "Colonne 3 : Nom",
+      "precision": "Ordre imposé ; première ligne ignorée. Modèle officiel vierge téléchargé, aucune sélection de fichier, aucun import.",
+      "etat": "observe",
+      "preuve": "Interface ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Import prospects / Excel",
+      "option": "Colonne 4 : Email requis",
+      "precision": "Ordre imposé ; première ligne ignorée. Modèle officiel vierge téléchargé, aucune sélection de fichier, aucun import.",
+      "etat": "observe",
+      "preuve": "Interface ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Import prospects / Excel",
+      "option": "Colonne 5 : Téléphone",
+      "precision": "Ordre imposé ; première ligne ignorée. Modèle officiel vierge téléchargé, aucune sélection de fichier, aucun import.",
+      "etat": "observe",
+      "preuve": "Interface ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Import prospects / Excel",
+      "option": "Colonne 6 : Rue",
+      "precision": "Ordre imposé ; première ligne ignorée. Modèle officiel vierge téléchargé, aucune sélection de fichier, aucun import.",
+      "etat": "observe",
+      "preuve": "Interface ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Import prospects / Excel",
+      "option": "Colonne 7 : Code postal",
+      "precision": "Ordre imposé ; première ligne ignorée. Modèle officiel vierge téléchargé, aucune sélection de fichier, aucun import.",
+      "etat": "observe",
+      "preuve": "Interface ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Import prospects / Excel",
+      "option": "Colonne 8 : Ville",
+      "precision": "Ordre imposé ; première ligne ignorée. Modèle officiel vierge téléchargé, aucune sélection de fichier, aucun import.",
+      "etat": "observe",
+      "preuve": "Interface ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Import prospects / Excel",
+      "option": "Colonne 9 : Date de naissance DD/MM/YYYY",
+      "precision": "Ordre imposé ; première ligne ignorée. Modèle officiel vierge téléchargé, aucune sélection de fichier, aucun import.",
+      "etat": "observe",
+      "preuve": "Interface ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Import prospects / Excel",
+      "option": "Colonne 10 : Consentement VRAI/FAUX",
+      "precision": "Ordre imposé ; première ligne ignorée. Modèle officiel vierge téléchargé, aucune sélection de fichier, aucun import.",
+      "etat": "observe",
+      "preuve": "Interface ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Import prospects / Excel",
+      "option": "Colonne 11 : Commentaire",
+      "precision": "Ordre imposé ; première ligne ignorée. Modèle officiel vierge téléchargé, aucune sélection de fichier, aucun import.",
+      "etat": "observe",
+      "preuve": "Interface ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Prospects / sélection multiple",
+      "option": "Segment : désactivé à zéro sélection, actif après sélection",
+      "precision": "Une ligne sélectionnée pour lecture du dialogue Ajouter des segments ; aucun segment choisi ni ajouté. Commandes Tout sélectionner et Ajouter un segment visibles. Sélection annulée par retour à la vue initiale.",
+      "etat": "observe",
+      "preuve": "Interface ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Campagnes UTM / détail existant",
+      "option": "Liste des prospects rattachés avec abonnement",
+      "precision": "Détail ouvert depuis une campagne existante. Colonnes Prospect, Première activité, Dernière activité, Abonnement. Aucun prospect, identifiant publicitaire, valeur ou nombre réel conservé dans le dossier ; aucune création de tracking testée.",
+      "etat": "observe",
+      "preuve": "Interface ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Campagnes UTM / détail existant",
+      "option": "Indicateur Prospects",
+      "precision": "Indicateurs observés dans le résumé d’une campagne réelle. Les chiffres et la formule de calcul ne sont pas copiés ni validés.",
+      "etat": "observe",
+      "preuve": "Interface ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Campagnes UTM / détail existant",
+      "option": "Indicateur Abonnés",
+      "precision": "Indicateurs observés dans le résumé d’une campagne réelle. Les chiffres et la formule de calcul ne sont pas copiés ni validés.",
+      "etat": "observe",
+      "preuve": "Interface ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Campagnes UTM / détail existant",
+      "option": "Indicateur Conversion",
+      "precision": "Indicateurs observés dans le résumé d’une campagne réelle. Les chiffres et la formule de calcul ne sont pas copiés ni validés.",
+      "etat": "observe",
+      "preuve": "Interface ADMIN / Beynost, 17/11/2026"
+    },
+    {
+      "rubrique": "Campagnes / recherche d’exemples",
+      "option": "Aucun brouillon rencontré dans les deux listes consultées",
+      "precision": "Beynost et Lyon Carré de Soie : une page chacune, états Envoyée et Annulée dans la liste consultée. Ne pas demander de créer un brouillon réel pour l’audit ; les étapes de préparation restantes nécessitent un exemple préexistant ou une démonstration fictive.",
+      "etat": "observe",
+      "preuve": "Interface ADMIN / Beynost et Lyon Carré de Soie, 17/11/2026"
+    },
+    {
+      "rubrique": "Activités / recherche de tâche email",
+      "option": "Tâche terminée trouvée ; aucune tâche email en attente rencontrée",
+      "precision": "Lyon Carré de Soie : une activité Envoyer un email dans Faites, sans ouverture ni changement de case. Filtres À faire vides dans les deux clubs. Les historiques et les envois restent distincts d’un essai d’exécution.",
+      "etat": "observe",
+      "preuve": "Interface ADMIN / Beynost et Lyon Carré de Soie, 17/11/2026"
+    }
+  ]
+}

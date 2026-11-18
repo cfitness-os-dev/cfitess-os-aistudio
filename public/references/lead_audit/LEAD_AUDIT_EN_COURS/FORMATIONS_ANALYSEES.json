@@ -1,0 +1,161 @@
+{
+  "date": "2026-11-17",
+  "videos": [
+    {
+      "id": "DnmP2lSCnws",
+      "titre": "Prospects",
+      "url": "https://www.youtube.com/watch?v=DnmP2lSCnws",
+      "duree_transcription": "5:21",
+      "etat": "transcription_analysee",
+      "constats": [
+        "Le fil d’historique inclut aussi WhatsApp, en plus des appels, rendez-vous, emails/SMS, commentaires, ventes et autres événements.",
+        "La fiche regroupe informations latérales, interactions, activités futures, scénarios, formulaires et abonnements ; le rendez-vous dispose de deux modes."
+      ],
+      "limite": "Sous-titres automatiques lus intégralement ; pas de visionnage image par image."
+    },
+    {
+      "id": "KHA7TVkhUag",
+      "titre": "Activités",
+      "url": "https://www.youtube.com/watch?v=KHA7TVkhUag",
+      "duree_transcription": "5:28",
+      "etat": "transcription_analysee",
+      "constats": [
+        "Les demandes de contact se traitent par email, SMS, appel ou clôture sans réponse. Un numéro invalide peut bloquer le SMS.",
+        "L’appel comporte réponse, message vocal et commentaire. Présence ou absence d’un rendez-vous se valide séparément ; aucun résultat réel testé."
+      ],
+      "limite": "Sous-titres automatiques lus intégralement ; pas de visionnage image par image."
+    },
+    {
+      "id": "2RSaCtuvg10",
+      "titre": "Planning",
+      "url": "https://www.youtube.com/watch?v=2RSaCtuvg10",
+      "duree_transcription": "4:07",
+      "etat": "transcription_analysee",
+      "constats": [
+        "La formation distingue créneau réservé, présence et absence par couleur, puis décrit la modification, l’annulation et le commentaire.",
+        "Les connecteurs de planning peuvent fournir une consultation simple ou une intégration de disponibilités et données ; le niveau dépend de l’activation."
+      ],
+      "limite": "Sous-titres automatiques lus intégralement ; pas de visionnage image par image."
+    },
+    {
+      "id": "Mv2m7qgM_Wo",
+      "titre": "Formulaires",
+      "url": "https://www.youtube.com/watch?v=Mv2m7qgM_Wo",
+      "duree_transcription": "4:03",
+      "etat": "transcription_analysee",
+      "constats": [
+        "Les champs de choix prévoient leurs propres valeurs de réponse, en plus du libellé, de l’aide, du caractère obligatoire et du titre masqué.",
+        "Publication, aperçu, duplication interclub par identifiant, liste de réponses et détail individuel sont décrits. Ces résultats ne sont pas testés sur le compte réel."
+      ],
+      "limite": "Sous-titres automatiques lus intégralement ; pas de visionnage image par image."
+    },
+    {
+      "id": "fsrpikclUng",
+      "titre": "Modèles de communication",
+      "url": "https://www.youtube.com/watch?v=fsrpikclUng",
+      "duree_transcription": "4:25",
+      "etat": "transcription_analysee",
+      "constats": [
+        "La vidéo décrit bien l’éditeur email par blocs et sa bibliothèque complète, contrairement à certains textes d’aide présentant encore un éditeur plus ancien.",
+        "Elle précise la copie interclub avec recherche du club, sélection de modèles ou ensemble de la liste, puis confirmation. Aucune copie exécutée."
+      ],
+      "limite": "Sous-titres automatiques lus intégralement ; pas de visionnage image par image."
+    },
+    {
+      "id": "Bzvh4ucbKdw",
+      "titre": "Scénarios",
+      "url": "https://www.youtube.com/watch?v=Bzvh4ucbKdw",
+      "duree_transcription": "6:50",
+      "etat": "transcription_analysee",
+      "constats": [
+        "Sont décrits la source, le statut, l’assignation comme condition, les étapes différées, les tâches et la copie interclub.",
+        "Le déclenchement lié à l’absence est présenté pour Résamania, avec statut Client et au moins un badgeage préalable. Le libellé a évolué vers Décrocheur dans l’aide récente."
+      ],
+      "limite": "Sous-titres automatiques lus intégralement ; pas de visionnage image par image."
+    },
+    {
+      "id": "RafHgj3Usiw",
+      "titre": "Réglages de rendez-vous",
+      "url": "https://www.youtube.com/watch?v=RafHgj3Usiw",
+      "duree_transcription": "4:14",
+      "etat": "transcription_analysee",
+      "constats": [
+        "La réservation autonome ouvre des options supplémentaires : délai minimum, capacité d’un créneau et notifications au prospect, au commercial et au club.",
+        "Un rendez-vous peut disposer d’un lien isolé et de plages propres à chaque jour.",
+        "La formation indique que les disponibilités de deux types ne se bloquent pas mutuellement : un contrôle commun des ressources serait une amélioration CFitness, pas une parité source établie."
+      ],
+      "limite": "Sous-titres automatiques lus intégralement ; pas de visionnage image par image."
+    },
+    {
+      "id": "moYFRPlcPD0",
+      "titre": "Segments",
+      "url": "https://www.youtube.com/watch?v=moYFRPlcPD0",
+      "duree_transcription": "3:48",
+      "etat": "transcription_analysee",
+      "constats": [
+        "Administration des segments réservée aux administrateurs et managers ; représentation par couleur, pictogramme, emoji ou aucun repère.",
+        "Affectation multiple par fiche et combinaison avec les statuts pour le ciblage. La vidéo mentionne aussi le SMS : présence et logique actuelles de ce ciblage restent à confronter au formulaire de campagne."
+      ],
+      "limite": "Sous-titres automatiques lus intégralement ; pas de visionnage image par image."
+    },
+    {
+      "id": "LmUCOaVZjxk",
+      "titre": "Campagnes email et SMS",
+      "url": "https://www.youtube.com/watch?v=LmUCOaVZjxk",
+      "duree_transcription": "4:22",
+      "etat": "transcription_analysee",
+      "constats": [
+        "Ciblage par statuts et période, estimation d’audience et exclusion des oppositions ; contenu personnalisé ou modèle, test et programmation différée.",
+        "La publication est décrite avec un code de validation envoyé par email. États décrits : en attente de validation, à envoyer et envoyée ; résultats envoyés, reçus, ouverts, erreurs.",
+        "La vidéo montre un parcours ancien en une page. L’interface actuelle de création email présente Cibler, Composer, Objet et Vérifier : ne pas reproduire la vidéo comme maquette actuelle. Aucun code de publication demandé ou saisi."
+      ],
+      "limite": "Nouvelle tentative réussie : sous-titres automatiques lus intégralement, sans visionnage image par image."
+    },
+    {
+      "id": "RB1eslykFyQ",
+      "titre": "Ajout des utilisateurs",
+      "url": "https://www.youtube.com/watch?v=RB1eslykFyQ",
+      "duree_transcription": "1:45",
+      "etat": "transcription_analysee",
+      "constats": [
+        "Création depuis la gestion centralisée : identité, email, rôle, puis confirmation et initialisation d’accès par réinitialisation de mot de passe.",
+        "Admin et Manager disposent des paramètres ; Commercial est limité aux rubriques métier. Coach et Basic sont déclarés obsolètes.",
+        "La vidéo renvoie au support pour changer le nom ou prénom. Cette restriction est documentée ; l’édition et l’enregistrement réels ne sont pas testés. Aucune invitation ou réinitialisation envoyée."
+      ],
+      "limite": "Nouvelle tentative réussie : sous-titres automatiques lus intégralement, sans visionnage image par image."
+    },
+    {
+      "id": "Nbf0G1HiQtM",
+      "titre": "WhatsApp : modèles",
+      "url": "https://www.youtube.com/watch?v=Nbf0G1HiQtM",
+      "duree_transcription": "3:03",
+      "etat": "transcription_analysee",
+      "constats": [
+        "Galerie, catégories, dispositions, contenu, examen Meta et statuts."
+      ],
+      "limite": "Sous-titres automatiques lus ; observations déjà détaillées dans REPRISE_2026-11-17.json."
+    },
+    {
+      "id": "WEHDv3wKEvM",
+      "titre": "WhatsApp : conversations",
+      "url": "https://www.youtube.com/watch?v=WEHDv3wKEvM",
+      "duree_transcription": "1:12",
+      "etat": "transcription_analysee",
+      "constats": [
+        "Historique, fenêtre de conversation et réengagement par modèle après expiration."
+      ],
+      "limite": "Sous-titres automatiques lus ; observations déjà détaillées dans REPRISE_2026-11-17.json."
+    },
+    {
+      "id": "vhUKy-LfW7I",
+      "titre": "WhatsApp : scénarios",
+      "url": "https://www.youtube.com/watch?v=vhUKy-LfW7I",
+      "duree_transcription": "1:12",
+      "etat": "transcription_analysee",
+      "constats": [
+        "Étape par modèle ou message direct, délai, création puis activation."
+      ],
+      "limite": "Sous-titres automatiques lus ; observations déjà détaillées dans REPRISE_2026-11-17.json."
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "vues": [
+    {
+      "vue": "À faire",
+      "url": "https://lead.masalledesport.com/club/13919/todos?filter=todo",
+      "format": "390×844",
+      "precision": "Adresse reprise après chargement, après retour final À faire."
+    },
+    {
+      "vue": "Aujourd'hui",
+      "url": "https://lead.masalledesport.com/club/13919/todos?filter=today",
+      "format": "390×844"
+    },
+    {
+      "vue": "Demain",
+      "url": "https://lead.masalledesport.com/club/13919/todos?filter=tomorrow",
+      "format": "390×844"
+    },
+    {
+      "vue": "Cette semaine",
+      "url": "https://lead.masalledesport.com/club/13919/todos?filter=currentWeek",
+      "format": "390×844"
+    },
+    {
+      "vue": "En retard",
+      "url": "https://lead.masalledesport.com/club/13919/todos?filter=late",
+      "format": "390×844"
+    },
+    {
+      "vue": "Faites",
+      "url": "https://lead.masalledesport.com/club/13919/todos?filter=done",
+      "format": "390×844"
+    }
+  ],
+  "types": [
+    {
+      "icone": "fa-rectangle-history",
+      "type": "*",
+      "format": "390×844"
+    },
+    {
+      "icone": "fa-calendar-day",
+      "type": "APPOINTMENT",
+      "format": "390×844"
+    },
+    {
+      "icone": "fa-hand",
+      "type": "CONTACT",
+      "format": "390×844"
+    },
+    {
+      "icone": "fa-star-sharp-half-stroke",
+      "type": "REVIEW",
+      "format": "390×844"
+    },
+    {
+      "icone": "fa-phone-arrow-up-right",
+      "type": "SCHEDULED_CALL",
+      "format": "390×844"
+    },
+    {
+      "icone": "fa-paper-plane",
+      "type": "SCHEDULED_EMAIL",
+      "format": "390×844"
+    },
+    {
+      "icone": "fa-inbox",
+      "type": "MAIL",
+      "format": "390×844"
+    },
+    {
+      "icone": "fa-message-pen",
+      "type": "SCHEDULED_SMS",
+      "format": "390×844"
+    },
+    {
+      "icone": "fa-message-lines",
+      "type": "SMS",
+      "format": "390×844"
+    }
+  ],
+  "limite": "Filtres de consultation uniquement ; aucune activité traitée. Les neuf essais AX initiaux sans effet sont écartés."
+}

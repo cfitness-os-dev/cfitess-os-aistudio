@@ -1,0 +1,20 @@
+DERNIERS CHEMINS CONSULTÉS — 17 NOVEMBRE 2026
+
+IMPORT EXCEL
+Le bouton d’en-tête non libellé avec icône d’upload ouvre Importer des prospects. Le dialogue demande le modèle Excel, ignore sa première ligne et impose l’ordre des onze colonnes : genre, prénom, nom, email requis, téléphone, rue, code postal, ville, date de naissance DD/MM/YYYY, consentement VRAI/FAUX, commentaire. Les seules exigences obligatoires ici sont celles explicitement indiquées : ne pas inventer les validations serveur.
+Le lien officiel template-import-prospects.xlsx a été téléchargé. En-têtes concordants et absence de données après la première ligne vérifiés ; original non modifié conservé dans sources/ avec URL et empreinte. Aucun fichier n’a été sélectionné pour import, aucun import exécuté. Le modèle d’import n’est ni un export de données ni une API de migration.
+
+SÉLECTION MULTIPLE
+L’icône double coche ouvre la sélection multiple. Sans sélection, Segment est désactivé ; après sélection d’une ligne, il devient actif. Le dialogue Ajouter des segments indique le nombre sélectionné et propose Ajouter un segment, Annuler et Ajouter. Ajouter reste désactivé tant qu’aucun segment n’est choisi. Une sélection de ligne est un état d’affichage, pas un changement de contact. Le dialogue a été annulé et la sélection effacée par retour à la liste initiale. Aucun segment n’a été attribué.
+
+DÉTAIL UTM
+Une campagne UTM existante de Beynost a été ouverte. Résumé : Prospects, Abonnés, Conversion ; tableau : Prospect, Première activité, Dernière activité, Abonnement. Aucune identité, valeur chiffrée ou identifiant publicitaire copié dans le dossier. Le calcul et l’attribution ne sont pas validés par la simple présence de ces indicateurs.
+
+RECHERCHE D’EXEMPLES
+Les listes de campagnes consultées des deux clubs tiennent sur une page et présentent des campagnes Envoyée/Annulée ; pas de brouillon rencontré. Le filtre SMS du second club est vide, comme celui de Beynost lors de la passe précédente. Les tâches email planifiées À faire sont vides dans les deux clubs ; des tâches déjà faites sont repérées, dont une ligne Envoyer un email confirmée à Lyon. Les cases d’état des tâches faites n’ont pas été touchées.
+Ces constats guident la liste EX01–EX16 ; ils ne démontrent pas une absence universelle dans tout compte, toute période et toute offre du logiciel.
+
+TRANSMISSION
+LIRE_EN_PREMIER_DEV_IA.txt donne l’ordre de lecture. Le cahier des charges 07 a été consolidé pour intégrer les dernières observations sans obliger l’IA à reconstituer une chronologie. DOSSIER_UNIQUE_DEV_IA.txt regroupe les instructions et pièces de cadrage principales ; le registre option par option et les captures restent des annexes nécessaires. Aucun code de CFitness n’a été modifié.
+
+Les rôles serveur, états non rencontrés, parcours nécessitant envoi/publication/paiement et applications natives ne sont pas certifiés. Le dossier est transmissible comme analyse et base de spécification ; il n’est pas un certificat de clone complet ni une autorisation de coder sans validation du périmètre.

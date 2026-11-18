@@ -1,0 +1,417 @@
+[
+  {
+    "fichier": "00_ANALYSE_A_VALIDER.txt",
+    "octets": 7316,
+    "sha256": "75197dd859d1ef9b6af71a945a75555b186aa1a2733e80fbc16d362125fb0aeb"
+  },
+  {
+    "fichier": "01_CARTOGRAPHIE.json",
+    "octets": 9827,
+    "sha256": "4ed026a4070888c489708436e7da8444c258e47279d975d8a8bff940e16b927f"
+  },
+  {
+    "fichier": "01_CARTOGRAPHIE.txt",
+    "octets": 5694,
+    "sha256": "c445358c2f7adb4bd32f7c047aa3c47480348557bdab68d021be347fd7915b33"
+  },
+  {
+    "fichier": "02_COMPOSANTS_UI.txt",
+    "octets": 4474,
+    "sha256": "89b3636b7cdcd4be4e9ad89bc303d1cec08d1290809ac8cf55f756a00ab096a3"
+  },
+  {
+    "fichier": "03_TECHNOLOGIES_ET_LIMITES.txt",
+    "octets": 3481,
+    "sha256": "f37f060b12f68cf18be95c7bce523865261cd383abca22291089b8bacd7ed3cc"
+  },
+  {
+    "fichier": "04_RELEVE_API.json",
+    "octets": 2011,
+    "sha256": "2741796025a951d3f3223511275bacd6fe59bd459236d0c8c15187cf3fa1fe2b"
+  },
+  {
+    "fichier": "04_RELEVE_API.txt",
+    "octets": 1192,
+    "sha256": "569f83120012a17f741c2a71335ab710725435d2f74059ebcbce84c656421978"
+  },
+  {
+    "fichier": "05_PARCOURS_UTILISATEURS.txt",
+    "octets": 7866,
+    "sha256": "ae3c2fe61bd65dd014705393a21f80712c990509e6846f22613d8be03eb24cb5"
+  },
+  {
+    "fichier": "06_RECOMMANDATIONS_UX.txt",
+    "octets": 4836,
+    "sha256": "ce398d9baf6ec7d10d8915e934b31dff6d3186a53e1a7197c524faea41871e03"
+  },
+  {
+    "fichier": "07_CAHIER_DES_CHARGES_CFITNESS_OS.txt",
+    "octets": 17412,
+    "sha256": "f512abe4b5374f4f791b380f67ca39873dfb1d76aa8bf84e23728d09f57183c8"
+  },
+  {
+    "fichier": "08_REPRISE_ET_DROITS_2026-11-17.txt",
+    "octets": 11767,
+    "sha256": "0c48b794f9f3c1f559d32f52efd7023edb638f1e572ac24a7ee7659012808657"
+  },
+  {
+    "fichier": "09_COUVERTURE_ET_BLOCAGES.txt",
+    "octets": 5845,
+    "sha256": "4ab1d6591df87d4246f9916e2cff574a9a1421f5e6533ade864c5d2f6da91602"
+  },
+  {
+    "fichier": "10_BLOCAGES_ET_AIDE_ATTENDUE.txt",
+    "octets": 7504,
+    "sha256": "0f4ede06a04fc23ff16abd3c21527ac478790e0f150545fc961abb1ad918b355"
+  },
+  {
+    "fichier": "11_COMPLEMENT_FONCTIONNEL_2026-11-17.txt",
+    "octets": 3170,
+    "sha256": "f4b94d2a14a10f7080f1c7c99bf73fb0f5f1ccfedaa10a10b1b70fe14ff93a03"
+  },
+  {
+    "fichier": "12_FILTRES_ET_RESPONSIVE_2026-11-17.txt",
+    "octets": 6712,
+    "sha256": "1bfc07d77c928ee00ea69836fb656fb7828e66a10df24b6d164d0a6aef54249e"
+  },
+  {
+    "fichier": "13_DERNIERS_CHEMINS_ET_TRANSMISSION.txt",
+    "octets": 3217,
+    "sha256": "653c3c0cd7a2b82bf71c68c883aa9892e64707ee779710d8775e5575d6bb3a44"
+  },
+  {
+    "fichier": "14_EXEMPLES_A_RETROUVER_DANS_LES_CLUBS.txt",
+    "octets": 13249,
+    "sha256": "1509a5f8f76225bd7d3fc54af844ff35030546ee90d7f8d7121b112151912d9f"
+  },
+  {
+    "fichier": "ANALYSE_TECHNIQUE.json",
+    "octets": 7165,
+    "sha256": "da32b88cb5c88107495752f827b042b498a4de64ba4e4f4d04a0cc76622e040d"
+  },
+  {
+    "fichier": "BLOCAGES_ET_AIDE.json",
+    "octets": 6380,
+    "sha256": "fb28ec9e41ca2d20e5c0f5bd30d90e3c856dce993a821c7cb29e6fe06fa91adf"
+  },
+  {
+    "fichier": "COMMUNICATION_RESPONSIVE_2026-11-17.json",
+    "octets": 4693,
+    "sha256": "dc3edb953b57817f6d82b83f24970a631221281f979c8e38a245d3037ab5d622"
+  },
+  {
+    "fichier": "COMPARAISON_MANAGER_2026-11-17.json",
+    "octets": 4418,
+    "sha256": "6e16d85c980c1d4cd4da80f735a25ec5cd66298422ed5707dfc7c8d1e9c422f8"
+  },
+  {
+    "fichier": "COUVERTURE_2026-11-17.json",
+    "octets": 6559,
+    "sha256": "98450ecac127f010579ad40e90d0207bf6d3e28731cdaa6ad6f83694011f60df"
+  },
+  {
+    "fichier": "DERNIERS_CHEMINS_2026-11-17.json",
+    "octets": 6750,
+    "sha256": "391c76f36c823f9dd5cbff3f974be06c00e614b51621ad210631ea051baf1b8e"
+  },
+  {
+    "fichier": "DOCUMENTATION_OFFICIELLE.json",
+    "octets": 28046,
+    "sha256": "2139f47cc0d10d234ff1571a6fd22c13b65e2a3780806e5c72dc8c297697a29a"
+  },
+  {
+    "fichier": "DOSSIER_UNIQUE_DEV_IA.txt",
+    "octets": 49049,
+    "sha256": "c707621ea2b8148ab88edfc5f4a42441f824f5140005b1c432df4b2cdd6d4dec"
+  },
+  {
+    "fichier": "ECARTS_ET_QUESTIONS.json",
+    "octets": 8613,
+    "sha256": "2517873eb8f5224fc05dd29fc3603338a590fab86675bf87981cfbf46751f83c"
+  },
+  {
+    "fichier": "EXEMPLES_A_RETROUVER.json",
+    "octets": 14904,
+    "sha256": "aaf8edec00bf31439c760d74e557b4f2f0e33ad15cc29c39fb591b8a743c8541"
+  },
+  {
+    "fichier": "FILTRES_ACTIVITES_2026-11-17.json",
+    "octets": 887,
+    "sha256": "805defecdac80c42f6af71d32fa86831109bc33f1c7323c034e814ca52f19881"
+  },
+  {
+    "fichier": "FILTRES_ACTIVITES_MOBILE_VERIFIES_2026-11-17.json",
+    "octets": 2034,
+    "sha256": "88cdb5c2c6534934b0a7ec7d4c3d80eee99d31e60a19e03f1af4c06cbde3149f"
+  },
+  {
+    "fichier": "FILTRES_ET_VARIANTES_RESPONSIVE_2026-11-17.json",
+    "octets": 19862,
+    "sha256": "5954b46d13e8fc578cc3884df65cca78fe3a9c95ad84d13fd76610a0b8724fc0"
+  },
+  {
+    "fichier": "FORMATIONS_ANALYSEES.json",
+    "octets": 8759,
+    "sha256": "184c9c70032244c51766edd7d167be52aba1251ece3b30a583413a468aad8426"
+  },
+  {
+    "fichier": "INDEX_LEAD.html",
+    "octets": 627308,
+    "sha256": "6d2cad36afa2f0817b94293623239f044a0d723d0e8b16ae8c7e71e52ce92d9e"
+  },
+  {
+    "fichier": "INSTRUCTIONS_DEV_IA.txt",
+    "octets": 3335,
+    "sha256": "18da5fe00c8d36571cbf556965ee701d4d9a1d2345543531b5e56bb558ca504e"
+  },
+  {
+    "fichier": "INVENTAIRE_LEAD.json",
+    "octets": 680333,
+    "sha256": "f8e622bd7b05968d6e8436669aefbe8b8a28f8a63b0fc5abb24213e1de148057"
+  },
+  {
+    "fichier": "INVENTAIRE_LEAD.txt",
+    "octets": 484912,
+    "sha256": "40cee3cbacee8f37a446f0e04ff3e39bde34e6aa94a7c06ed73d0a1df3812fe3"
+  },
+  {
+    "fichier": "LIRE_EN_PREMIER_DEV_IA.txt",
+    "octets": 3863,
+    "sha256": "cdce86ce88e1e169133ee896d6312c6d1a0b03a4519fff77d88e5077a5964319"
+  },
+  {
+    "fichier": "MODELES_EMAIL_EXAMINES_2026-11-17.json",
+    "octets": 8822,
+    "sha256": "ff0b9b9994b56b99004c619783381cc188b44f8deda8ba9851b9bec8ce5348c9"
+  },
+  {
+    "fichier": "MODULES_COMMERCIAL_2026-11-17.json",
+    "octets": 4746,
+    "sha256": "fc3637114503f3aaf94438807ccd9efe95a2c25da946930fd982990d9b42721f"
+  },
+  {
+    "fichier": "MODULES_MANAGER_2026-11-17.json",
+    "octets": 3691,
+    "sha256": "597c16266da17af7bbde96733fd07df6969c6c8893d5fd6b4ff6c6fdf3914d99"
+  },
+  {
+    "fichier": "MODULES_METIER_MANAGER_2026-11-17.json",
+    "octets": 6416,
+    "sha256": "abb00b99fe8be2662c7855f6faae2cc6a9287d790b2db8810008896090b18b8c"
+  },
+  {
+    "fichier": "OPTIONS_PAYS_OBSERVEES.json",
+    "octets": 3460,
+    "sha256": "1a23a45e4cf2faf04d9bb351716d07bbb442162ea6b5a8ca11e84067eadbc89b"
+  },
+  {
+    "fichier": "PARAMETRES_RESPONSIVE_2026-11-17.json",
+    "octets": 16503,
+    "sha256": "0d444dc3d81e2d1fe9abfdf75fbd5d2d2aae4c052c549376971de11d1f3b0670"
+  },
+  {
+    "fichier": "PASSE_COMPLEMENTAIRE_2026-11-17.json",
+    "octets": 39816,
+    "sha256": "b47a892b814c801dbd0f8f69ef4dbca2dc1cb86426b92aa48a0f22a185133781"
+  },
+  {
+    "fichier": "PERIODES_STATISTIQUES_VERIFIEES_2026-11-17.json",
+    "octets": 1396,
+    "sha256": "8e2ca4497d63e480c956c1e6774e63475795179bf39bbf08e58cbba629aaf36e"
+  },
+  {
+    "fichier": "PROMPT_DEMARRAGE_IA.txt",
+    "octets": 2486,
+    "sha256": "449234eb3637ba66d586140c0b7d238abb4dfa0b1b088597af6778b1ef4e27da"
+  },
+  {
+    "fichier": "RECHERCHE_EXEMPLES_2026-11-17.json",
+    "octets": 585,
+    "sha256": "eb5b6020bfb0b1b056b8c254198771e911f6afd2f8165cf34a1a2397dd82dac2"
+  },
+  {
+    "fichier": "RELEVES_COMPLEMENTAIRES.json",
+    "octets": 135733,
+    "sha256": "03e6052061edea23fcd38ad46992736da4483fe55020e00e23f974dbbfc4f5fe"
+  },
+  {
+    "fichier": "REPRISE_2026-11-17.json",
+    "octets": 287253,
+    "sha256": "3a9770e51e07d70fd4372bbdf32c840f4d7ee4c84964832fca2e1f886b971dee"
+  },
+  {
+    "fichier": "RESPONSIVE_2026-11-17.json",
+    "octets": 1913,
+    "sha256": "44b511c6a4b8100ad357cb0413341c792e02729745ab8c055213ada49f1c6dfe"
+  },
+  {
+    "fichier": "RESPONSIVE_2026-11-17_COMPLEMENT.json",
+    "octets": 9413,
+    "sha256": "2c93dca95064bf0bc99d53bb74b913f4f3a0535443ae6d498325f400f4903685"
+  },
+  {
+    "fichier": "SOUS_ECRANS_RESPONSIVE_2026-11-17.json",
+    "octets": 20603,
+    "sha256": "fddecf619098cab7248ea7fbc75040b2a0be070d5ceb05809adf761f934682d9"
+  },
+  {
+    "fichier": "STATISTIQUES_ANGLES_2026-11-17.json",
+    "octets": 2579,
+    "sha256": "2d938f3cab7089d4c5add8da3ad9b9a75dfbda82b060c8d2684f3a05bdd4c4f9"
+  },
+  {
+    "fichier": "VARIANTES_SERVICE_2026-11-17.json",
+    "octets": 10961,
+    "sha256": "841667f4f5c7ba1d96fbcb48528645dd9b4ba128a7afb4a4e4f5871f8f75c9b5"
+  },
+  {
+    "fichier": "VIDEOS_FORMATION_INDEX.json",
+    "octets": 1664,
+    "sha256": "8cd5e768cb2e6da528608d0099467dfcede2c957837516cc8700258894d1dd14"
+  },
+  {
+    "fichier": "VIDEOS_LECTURE_ETATS.json",
+    "octets": 1693,
+    "sha256": "df8854ca68da459a166b3bde3412b32aa4bb55fe5820592823bafe02faa2c0d1"
+  },
+  {
+    "fichier": "captures/001-formulaire-prospect-masque-par-annonce.jpg",
+    "octets": 64919,
+    "sha256": "4e4f58c923e4dd2c97edf1d78f7c1abe7b371308e9d3ab2e1b6d547b4b7cdda7"
+  },
+  {
+    "fichier": "captures/002-zone-whatsapp-masquee-par-annonce.jpg",
+    "octets": 4678,
+    "sha256": "fc6f4b70a2f20e565f5e1f3010c8f7d6b6f428f16aa0efb7c130654f532021fd"
+  },
+  {
+    "fichier": "captures/003-api-partenaires-haut.jpg",
+    "octets": 33262,
+    "sha256": "612e385784eb947d5d851032a899d573996dff206d1f71b536c728339e4c1e8e"
+  },
+  {
+    "fichier": "captures/004-partenaire-heitz.jpg",
+    "octets": 63333,
+    "sha256": "29c013c595ef4518c8465bdfd66461a9becad559824bf8c03b6879d4625259ff"
+  },
+  {
+    "fichier": "captures/005-scenario-existant-consultation.jpg",
+    "octets": 67714,
+    "sha256": "b21cf500a37181282c5fa19e5f3c41cdecc4a461b12076bc866fba2238393408"
+  },
+  {
+    "fichier": "captures/006-gestion-prospects.jpg",
+    "octets": 42232,
+    "sha256": "4576aa1295de2d6a4f7f076f22ff14231ec389d9718182fa8237b11c69a14a85"
+  },
+  {
+    "fichier": "captures/007-segments-liste-vide.jpg",
+    "octets": 22391,
+    "sha256": "1e2a9c0561a441ed650580552f7d18fb017a03511aad4b5916d67dc258e966c3"
+  },
+  {
+    "fichier": "captures/008-parametres-rendez-vous.jpg",
+    "octets": 55977,
+    "sha256": "5895952380f943f9ac753468e0c57002e158c928fcfe0b312288f838b68b1fe6"
+  },
+  {
+    "fichier": "captures/009-type-rendez-vous-formulaire-vide.jpg",
+    "octets": 39615,
+    "sha256": "b6a46ae7cab196e7c54fd1a111548f05bfae0b28eebbc3a096e35260fcdac138"
+  },
+  {
+    "fichier": "captures/010-whatsapp-bandeau-connecte.jpg",
+    "octets": 6938,
+    "sha256": "c965a68166b7780615ebada243e7a48f984d5b287dfd4106313327771c77642c"
+  },
+  {
+    "fichier": "captures/011-formulaires-liste.jpg",
+    "octets": 28813,
+    "sha256": "7be733ef4842cbd927b0d7bb45ad8f92a2331b6308ab446dec7086c3af99eb60"
+  },
+  {
+    "fichier": "captures/012-archivage-prospects.jpg",
+    "octets": 43681,
+    "sha256": "25f32c342a0b3ccaee3b615e035ae10aea35c25075f03f66b2e6a0b0e458ed3e"
+  },
+  {
+    "fichier": "captures/013-segments-mobile-390x844.jpg",
+    "octets": 12268,
+    "sha256": "8c172d9a7cc5da3ba1040e2f3f22aa1d92e54fcf5f1e544738657de5affa1d7e"
+  },
+  {
+    "fichier": "captures/014-segments-tablette-820x1180.jpg",
+    "octets": 20902,
+    "sha256": "3819b3d600f8f2b3451ca3b58ed7663611d968b92b80d7f860f0d4b274fdaf5f"
+  },
+  {
+    "fichier": "captures/015_messagerie_mobile_commandes.png",
+    "octets": 7180,
+    "sha256": "951c809088aeeb6e31f38e258bbbbcfa983e23fd18271a936048ca566d677f46"
+  },
+  {
+    "fichier": "captures/016_whatsapp_service_existant.png",
+    "octets": 56482,
+    "sha256": "c9de0938f6a6fcf73beae641fd406f6bd7768fd18fe58641cf9602a2a9029754"
+  },
+  {
+    "fichier": "captures/017_email_service_variables.png",
+    "octets": 56664,
+    "sha256": "b46a5df0976cf19091b498152c9e6fe55cac6132958f0f7ab4af10d351364dd6"
+  },
+  {
+    "fichier": "captures/018_email_entete_proprietes.png",
+    "octets": 59943,
+    "sha256": "e028657088afa460c854e30bff454d46bfff4c7e1caeba70178f59ee4de25117"
+  },
+  {
+    "fichier": "captures/019_menu_mobile.png",
+    "octets": 8890,
+    "sha256": "df2150d5a7d0251ef7af4f6df0ad59d34cbefd4782e763adb6cbe38b808abdca"
+  },
+  {
+    "fichier": "captures/020_campagne_email_ciblage.png",
+    "octets": 42857,
+    "sha256": "428c4db56bbf114378f80d6e25768aea13688268573645d40b7cf5419b866533"
+  },
+  {
+    "fichier": "captures/021_prospect_tablette_formulaire_vide.jpg",
+    "octets": 45732,
+    "sha256": "f7cf53af11e4d3c9b85284373339e028968f802a0f1a8c97a77593b58522935e"
+  },
+  {
+    "fichier": "captures/022_prospect_mobile_formulaire_vide.jpg",
+    "octets": 30282,
+    "sha256": "70c3233826d7e7ee8122d2bbb5fe6531f309f2214d70b1f575e10370f8813bc7"
+  },
+  {
+    "fichier": "captures/023_statistiques_periode_mobile.jpg",
+    "octets": 21126,
+    "sha256": "aacd5783e83c102c200b719229f5a55e6aee0553fe4f1764a9bbc6f1275c2a6b"
+  },
+  {
+    "fichier": "captures/024_formulaire_existant_vide_mobile.jpg",
+    "octets": 18918,
+    "sha256": "b1cf59dfc35d081acaac879bec13a31e9ecfc4362735d676300effedbed55e99"
+  },
+  {
+    "fichier": "captures/025_campagne_email_mobile_ciblage.jpg",
+    "octets": 11855,
+    "sha256": "03cc8b1858dd6fdbc41d3138c468862322fa2f60a92ce4b7c5a4066e7ce38de3"
+  },
+  {
+    "fichier": "captures/026_campagne_sms_mobile_erreur.jpg",
+    "octets": 4137,
+    "sha256": "dec08e78321d42fda33d658881c78d25d71e562b126a6a00d9a3b97a5ac91e84"
+  },
+  {
+    "fichier": "sources/template_import_prospects_officiel.provenance.json",
+    "octets": 591,
+    "sha256": "1e56d4c0ef65f691c5efaffc7bd8e8f08eafa67b4b55dbbe8e3c6ea80b847e37"
+  },
+  {
+    "fichier": "sources/template_import_prospects_officiel.xlsx",
+    "octets": 13677,
+    "sha256": "9c1557ae14a78dac50ee6d8b9e5e7230d3be4c6308c24690866b72378dfa4562"
+  }
+]

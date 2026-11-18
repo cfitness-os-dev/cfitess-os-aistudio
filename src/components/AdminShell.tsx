@@ -75,10 +75,19 @@ const VISUAL_SIDEBAR_ITEMS: VisualNavItem[] = [
   },
   {
     id: 'nav-crm',
-    label: 'CRM & Ventes',
+    label: 'CRM & Ventes (Lead)',
     icon: TrendingUp,
     iconColor: 'text-emerald-500',
     sectionId: 'crm',
+    hasChevron: true,
+  },
+  {
+    id: 'nav-lead-trace',
+    label: 'Traçabilité Lead (1682)',
+    icon: Compass,
+    iconColor: 'text-emerald-400',
+    sectionId: 'crm',
+    subTarget: 'lead-traceability',
     hasChevron: true,
   },
   {
@@ -263,7 +272,9 @@ export function AdminShell() {
     } else if (activeSection === 'devices') {
       setSelectedNavId(navSubTarget === 'finances' ? 'nav-finances' : 'nav-adherents');
     } else if (activeSection === 'crm') {
-      setSelectedNavId('nav-crm');
+      setSelectedNavId(
+        navSubTarget === 'lead-traceability' ? 'nav-lead-trace' : 'nav-crm'
+      );
     } else if (activeSection === 'planning-hr') {
       setSelectedNavId(navSubTarget === 'cours-collectifs' ? 'nav-cours' : 'nav-planning');
     } else if (activeSection === 'my-day') {
@@ -1049,7 +1060,7 @@ export function AdminShell() {
               <TelephonyView />
             </div>
           )}
-          {activeSection === 'crm' && <CrmView />}
+          {activeSection === 'crm' && <CrmView subTarget={navSubTarget} />}
           {activeSection === 'ats' && (
             <div className="space-y-4">
               <div className="cf-card p-3 flex flex-wrap items-center justify-between gap-2 text-xs">

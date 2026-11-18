@@ -1,0 +1,293 @@
+{
+  "date": "2026-11-17",
+  "exemples": [
+    {
+      "id": "EX01",
+      "priorite": "P1",
+      "module": "Formulaires",
+      "exemple": "Un formulaire existant contenant plusieurs sections et champs.",
+      "ou_chercher": "Formulaires > crayon d’un formulaire déjà rempli dans l’éditeur.",
+      "etat_audit": "Beynost : éditeur existant vide. Lyon : zéro formulaire rencontré.",
+      "debloque": "Types de champs, contraintes et disposition de sections.",
+      "reference_a_donner": "Club, intitulé du formulaire, nombre approximatif de sections et présence de champs.",
+      "consigne": "Ne pas ajouter de champ, section ou publication pour cet audit.",
+      "reponse": {
+        "club": "",
+        "date_ou_periode": "",
+        "intitule_ou_reference": "",
+        "etat_affiche": "",
+        "disponibilite": "à renseigner"
+      }
+    },
+    {
+      "id": "EX02",
+      "priorite": "P1",
+      "module": "Réponses de formulaires",
+      "exemple": "Une réponse déjà reçue liée à un formulaire. Le même formulaire qu’EX01 peut suffire.",
+      "ou_chercher": "Formulaires > Réponses ; éventuellement fiche contact > Formulaires.",
+      "etat_audit": "Aucune réponse renseignée rencontrée.",
+      "debloque": "Liste et détail d’une réponse, rattachement, valeurs manquantes et éventuel export.",
+      "reference_a_donner": "Club, intitulé du formulaire et date approximative de réponse ; aucun contenu personnel à recopier.",
+      "consigne": "Ne pas remplir ou envoyer un nouveau formulaire réel.",
+      "reponse": {
+        "club": "",
+        "date_ou_periode": "",
+        "intitule_ou_reference": "",
+        "etat_affiche": "",
+        "disponibilite": "à renseigner"
+      }
+    },
+    {
+      "id": "EX03",
+      "priorite": "P1",
+      "module": "Éditeur email",
+      "exemple": "Un ou plusieurs modèles utilisant les blocs natifs Image, Image et texte, Fond image, Barre de navigation, Séparateur et Espace.",
+      "ou_chercher": "Communication > Modèles > Email > ouvrir un modèle existant.",
+      "etat_audit": "27 modèles de Beynost comparés ; six autres blocs détaillés. Les images à l’intérieur d’un bloc HTML ne sont pas des blocs Image natifs.",
+      "debloque": "Propriétés des six types de blocs encore non détaillés. Un modèle couvrant plusieurs types évite plusieurs recherches.",
+      "reference_a_donner": "Club, nom du modèle et blocs que tu sais déjà présents.",
+      "consigne": "Ne pas insérer un bloc dans un modèle utilisé pour produire un exemple.",
+      "reponse": {
+        "club": "",
+        "date_ou_periode": "",
+        "intitule_ou_reference": "",
+        "etat_affiche": "",
+        "disponibilite": "à renseigner"
+      }
+    },
+    {
+      "id": "EX04",
+      "priorite": "P1",
+      "module": "Campagne email préparée",
+      "exemple": "Un brouillon ou une campagne en attente de validation déjà existants et ouvrables, avec audience/contenu déjà renseignés.",
+      "ou_chercher": "Communication > Campagnes > Mail.",
+      "etat_audit": "Listes consultées des deux clubs : Envoyée et Annulée ; aucun brouillon rencontré.",
+      "debloque": "Écrans Composer, Objet et Vérifier du nouvel assistant, sans passage sur une audience neuve.",
+      "reference_a_donner": "Club, nom de la campagne, état affiché et date de création. Si absent, indiquer absent.",
+      "consigne": "Ne pas créer un brouillon, demander un code ou publier pour l’audit. Un exemple absent relève d’une démonstration fictive.",
+      "reponse": {
+        "club": "",
+        "date_ou_periode": "",
+        "intitule_ou_reference": "",
+        "etat_affiche": "",
+        "disponibilite": "à renseigner"
+      }
+    },
+    {
+      "id": "EX05",
+      "priorite": "P1",
+      "module": "WhatsApp : formats spéciaux",
+      "exemple": "Modèle existant avec offre limitée, coupon ou carrousel ; modèle avec vidéo ou document déjà configuré. Un exemple par variante seulement si elle existe.",
+      "ou_chercher": "Communication > Modèles > WhatsApp.",
+      "etat_audit": "Marketing et Utility, image, réponse rapide et boutons URL déjà consultés. Pas de preuve complète des formats spéciaux.",
+      "debloque": "Contenu conditionnel, médias, limites et aperçu de ces variantes.",
+      "reference_a_donner": "Club, nom du modèle, format, langue et état affiché.",
+      "consigne": "Aucune création, modification de média, soumission Meta ou envoi.",
+      "reponse": {
+        "club": "",
+        "date_ou_periode": "",
+        "intitule_ou_reference": "",
+        "etat_affiche": "",
+        "disponibilite": "à renseigner"
+      }
+    },
+    {
+      "id": "EX06",
+      "priorite": "P2",
+      "module": "WhatsApp : boutons et retours",
+      "exemple": "Modèle déjà configuré avec appel de numéro ou URL dynamique ; modèle rejeté ou en échec si présent.",
+      "ou_chercher": "Communication > Modèles > WhatsApp ; statut de validation.",
+      "etat_audit": "Types Appel/URL/Réponse rapide et modes Statique/Dynamique lus dans les listes grisées ; boutons statiques existants observés.",
+      "debloque": "Champs du numéro, variables d’URL dynamique et motifs visibles de rejet.",
+      "reference_a_donner": "Club, nom du modèle, type de bouton et état. Ne pas copier l’URL, le numéro ou une donnée de contact.",
+      "consigne": "Ne pas changer le type de bouton ni relancer l’examen pour tester.",
+      "reponse": {
+        "club": "",
+        "date_ou_periode": "",
+        "intitule_ou_reference": "",
+        "etat_affiche": "",
+        "disponibilite": "à renseigner"
+      }
+    },
+    {
+      "id": "EX07",
+      "priorite": "P2",
+      "module": "SMS entrant / activité SMS",
+      "exemple": "Une activité déjà présente dans le filtre de type SMS, ou une réponse entrante SMS déjà reçue si cette réception est disponible.",
+      "ou_chercher": "Activités > type SMS > À faire ou Faites ; Communication > SMS envoyés et éventuelles réponses.",
+      "etat_audit": "Des SMS sortants sont connus ; cela ne prouve pas une activité entrante. Aucun exemple entrant qualifié.",
+      "debloque": "Dialogue de traitement ou historique de réponse et distinction avec une tâche SMS planifiée.",
+      "reference_a_donner": "Club, date approximative, rubrique et type affiché ; pas le texte du message.",
+      "consigne": "Ne pas envoyer de SMS, répondre, consigner ou clôturer une activité.",
+      "reponse": {
+        "club": "",
+        "date_ou_periode": "",
+        "intitule_ou_reference": "",
+        "etat_affiche": "",
+        "disponibilite": "à renseigner"
+      }
+    },
+    {
+      "id": "EX08",
+      "priorite": "P2",
+      "module": "Tâche email planifiée",
+      "exemple": "Une activité Envoyer un email encore en attente, idéalement issue d’un scénario existant.",
+      "ou_chercher": "Activités > type email planifié > À faire / En retard / période utile.",
+      "etat_audit": "Aucune rencontrée dans À faire des deux clubs ; activité(s) déjà faite(s) repérée(s).",
+      "debloque": "Composeur et informations de tâche avant envoi ; distinction avec une demande email reçue.",
+      "reference_a_donner": "Club, date d’échéance et nom du scénario si connu.",
+      "consigne": "Ne pas créer une tâche ni modifier son échéance pour la rendre visible.",
+      "reponse": {
+        "club": "",
+        "date_ou_periode": "",
+        "intitule_ou_reference": "",
+        "etat_affiche": "",
+        "disponibilite": "à renseigner"
+      }
+    },
+    {
+      "id": "EX09",
+      "priorite": "P2",
+      "module": "Avis",
+      "exemple": "Un avis existant en attente ou déjà traité.",
+      "ou_chercher": "Activités > icône avis > À faire ou Faites.",
+      "etat_audit": "Filtres Avis vides dans les deux clubs lors des contrôles.",
+      "debloque": "Détail, éventuelle notation et choix de réponse/traitement.",
+      "reference_a_donner": "Club, date et état affiché. Si aucun avis n’existe, indiquer absent.",
+      "consigne": "Ne pas publier un avis, solliciter un client ou traiter un avis pour l’audit.",
+      "reponse": {
+        "club": "",
+        "date_ou_periode": "",
+        "intitule_ou_reference": "",
+        "etat_affiche": "",
+        "disponibilite": "à renseigner"
+      }
+    },
+    {
+      "id": "EX10",
+      "priorite": "P2",
+      "module": "Campagne SMS terminée",
+      "exemple": "Une campagne SMS déjà envoyée, annulée, en échec ou en attente, si elle existe.",
+      "ou_chercher": "Communication > Campagnes > SMS, et non SMS envoyés individuellement.",
+      "etat_audit": "Aucun exemple dans les filtres SMS des deux clubs au contrôle.",
+      "debloque": "Bilan SMS de campagne, programmation existante et états d’erreur.",
+      "reference_a_donner": "Club, nom, date et état de campagne.",
+      "consigne": "Ne pas créer ou envoyer une campagne pour produire l’exemple.",
+      "reponse": {
+        "club": "",
+        "date_ou_periode": "",
+        "intitule_ou_reference": "",
+        "etat_affiche": "",
+        "disponibilite": "à renseigner"
+      }
+    },
+    {
+      "id": "EX11",
+      "priorite": "P2",
+      "module": "Rendez-vous : issues et historique",
+      "exemple": "Un rendez-vous existant modifié ou annulé, et un rendez-vous honoré/non honoré. Un historique réunissant plusieurs événements suffit.",
+      "ou_chercher": "Planning à une date connue ou fiche contact > historique.",
+      "etat_audit": "Types et préparation de rendez-vous déjà lus ; résultats d’action non testés.",
+      "debloque": "Fenêtre d’un événement existant, événements de modification, présence et annulation.",
+      "reference_a_donner": "Club, jour, type de rendez-vous et état ; inutile de donner le nom du contact dans le chat.",
+      "consigne": "Ne pas changer la présence, annuler, déplacer ni notifier le prospect.",
+      "reponse": {
+        "club": "",
+        "date_ou_periode": "",
+        "intitule_ou_reference": "",
+        "etat_affiche": "",
+        "disponibilite": "à renseigner"
+      }
+    },
+    {
+      "id": "EX12",
+      "priorite": "P2",
+      "module": "Segments",
+      "exemple": "Un segment déjà créé et, si possible, une fiche portant plusieurs segments.",
+      "ou_chercher": "Paramètres > Segments ; fiche contact > Segments.",
+      "etat_audit": "Les filtres consultés ne proposaient pas de segment ; préparation de segmentation groupée lue sans application.",
+      "debloque": "Affichage multisegment, nom/code/pictogramme existants, affectations visibles.",
+      "reference_a_donner": "Club, intitulé du segment ; ouvrir toi-même la fiche si nécessaire.",
+      "consigne": "Ne pas créer ni attribuer de segment pour cette collecte.",
+      "reponse": {
+        "club": "",
+        "date_ou_periode": "",
+        "intitule_ou_reference": "",
+        "etat_affiche": "",
+        "disponibilite": "à renseigner"
+      }
+    },
+    {
+      "id": "EX13",
+      "priorite": "P3",
+      "module": "Abonnements / ventes",
+      "exemple": "Un abonnement déjà terminé, futur, résilié ou autre état différent d’Actif, seulement si ces états existent dans Lead.",
+      "ou_chercher": "Clients > fiche > Abonnements ; Ventes.",
+      "etat_audit": "Ventes renseignées et état Actif déjà observés ; les autres états ne sont pas présumés disponibles.",
+      "debloque": "Autres affichages d’abonnement, dates d’effet et relation avec la vente/ERP.",
+      "reference_a_donner": "Club, état affiché et période ; pas de montant ou contrat personnel à envoyer.",
+      "consigne": "Ne pas suspendre, résilier, vendre ou modifier le logiciel de gestion.",
+      "reponse": {
+        "club": "",
+        "date_ou_periode": "",
+        "intitule_ou_reference": "",
+        "etat_affiche": "",
+        "disponibilite": "à renseigner"
+      }
+    },
+    {
+      "id": "EX14",
+      "priorite": "P3",
+      "module": "Scénarios particuliers",
+      "exemple": "Scénario manuel déjà affecté ; déclencheur Décrocheur déjà configuré, seulement s’il est disponible.",
+      "ou_chercher": "Communication > Scénarios ; fiche contact > scénario en cours.",
+      "etat_audit": "Modes Manuel/Automatique et scénario actif verrouillé observés. Décrocheur documenté pour Résamania, disponibilité locale non établie.",
+      "debloque": "Affectation visible, état d’un inscrit et conditions spécifiques.",
+      "reference_a_donner": "Club, nom du scénario, type et état ; une référence de fiche suffit sans identité privée.",
+      "consigne": "Ne pas lancer, affecter, activer, verrouiller ou modifier un scénario.",
+      "reponse": {
+        "club": "",
+        "date_ou_periode": "",
+        "intitule_ou_reference": "",
+        "etat_affiche": "",
+        "disponibilite": "à renseigner"
+      }
+    },
+    {
+      "id": "EX15",
+      "priorite": "P3",
+      "module": "Messages en erreur",
+      "exemple": "Un email/SMS/WhatsApp déjà en erreur, rejeté ou non livré ; un ancien retour STOP ou opposition si cette information est visible.",
+      "ou_chercher": "Communication > listes d’envois / Messagerie / historique de fiche selon le canal.",
+      "etat_audit": "Compteurs et états généraux lus ; pas de recette de livraison, encodage ni reprise.",
+      "debloque": "Motif visible, statut, lien entre historique et envoi ; éventuellement présentation de l’opposition.",
+      "reference_a_donner": "Club, canal, date et état ; pas d’adresse, numéro, texte, clé ou jeton.",
+      "consigne": "Ne pas relancer ou renvoyer le message, ni changer l’opposition.",
+      "reponse": {
+        "club": "",
+        "date_ou_periode": "",
+        "intitule_ou_reference": "",
+        "etat_affiche": "",
+        "disponibilite": "à renseigner"
+      }
+    },
+    {
+      "id": "EX16",
+      "priorite": "P3",
+      "module": "Ancien import",
+      "exemple": "Compte rendu ou fichier de rejet d’un import déjà réalisé, seulement si tu en disposes.",
+      "ou_chercher": "Ancien retour d’import ou dossier de suivi déjà conservé ; aucun historique d’import dans Lead n’est présumé.",
+      "etat_audit": "Modèle Excel vierge et onze colonnes maintenant fournis ; validation serveur et dédoublonnage inconnus.",
+      "debloque": "Présentation des erreurs, traitement de doublons et rejets, sans nouveau chargement.",
+      "reference_a_donner": "Club, date et nature du résultat ; un résumé sans coordonnées peut suffire.",
+      "consigne": "Ne pas réimporter un fichier réel pour obtenir ce résultat.",
+      "reponse": {
+        "club": "",
+        "date_ou_periode": "",
+        "intitule_ou_reference": "",
+        "etat_affiche": "",
+        "disponibilite": "à renseigner"
+      }
+    }
+  ]
+}

@@ -12,6 +12,16 @@ import {
   TOTAL_HISTORICAL_ENTRIES,
 } from './src/domain/referenceRegistry';
 import type { Organization, ProfileId, Scope, UserPreferences } from './src/domain/types';
+import {
+  ingestLeadClubEntryWebhook,
+  LEAD_11_BLOCAGES,
+  LEAD_16_EXEMPLES,
+  LEAD_23_ECARTS,
+  LEAD_28_TRACEABILITY_GROUPS,
+  LEAD_AUDIT_META,
+  LEAD_PARTNERS_9,
+  LEAD_SETTINGS_TABS_14,
+} from './src/domain/leadAuditRegistry';
 
 function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
@@ -77,7 +87,77 @@ function registerApiRoutes(middlewares: Connect.Server, engine: CFitnessApiEngin
           heitzWsEndpoint: process.env.HEITZ_WS_URL ?? 'http://10.10.0.20:8080/api/heitz-ws',
           yeastarGsm07Gateway: process.env.YEASTAR_TG400_SIP_GATEWAY ?? '10.10.0.14:5060',
           rhV116Registry: '91 écrans / 1605 entrées / 117 fichiers références',
+          leadAuditV04: '84 fichiers / 1682 entrées LEAD / 9 modules + 6 comm + 14 paramètres',
           timestampUtc: new Date().toISOString(),
+        });
+        return;
+      }
+
+      if (method === 'GET' && path === '/api/lead/registry') {
+        sendJson(res, 200, {
+          meta: LEAD_AUDIT_META,
+          groups: LEAD_28_TRACEABILITY_GROUPS,
+          ecarts: LEAD_23_ECARTS,
+          blocages: LEAD_11_BLOCAGES,
+          exemples: LEAD_16_EXEMPLES,
+          settingsTabs: LEAD_SETTINGS_TABS_14,
+          partners: LEAD_PARTNERS_9,
+        });
+        return;
+      }
+
+      if (method === 'POST' && path === '/api/lead/webhooks/clubEntry') {
+        const body = await readJsonBody(req);
+        const webhookRes = ingestLeadClubEntryWebhook({
+          apiKey: typeof body.apiKey === 'string' ? body.apiKey : undefined,
+          club: typeof body.club === 'string' ? body.club : undefined,
+          email: typeof body.email === 'string' ? body.email : undefined,
+          lastname: typeof body.lastname === 'string' ? body.lastname : undefined,
+          firstname: typeof body.firstname === 'string' ? body.firstname : undefined,
+          offername: typeof body.offername === 'string' ? body.offername : undefined,
+          phone: typeof body.phone === 'string' ? body.phone : undefined,
+          source: typeof body.source === 'string' ? body.source : undefined,
+          utm_source: typeof body.utm_source === 'string' ? body.utm_source : undefined,
+          utm_campaign: typeof body.utm_campaign === 'string' ? body.utm_campaign : undefined,
+          utm_medium: typeof body.utm_medium === 'string' ? body.utm_medium : undefined,
+          isWix: body.isWix === true,
+        });
+        sendJson(
+          res,
+          webhookRes.status,
+          webhookRes.ok
+            ? {
+                ok: true,
+                entryType: webhookRes.entryType,
+                idempotencyKey: webhookRes.idempotencyKey,
+                receivedAtUtc: new Date().toISOString(),
+                contact: {
+                  club: body.club,
+                  email: body.email,
+                  firstname: body.firstname,
+                  lastname: body.lastname,
+                  offername: body.offername ?? null,
+                  utmSource: body.utm_source ?? null,
+                  utmCampaign: body.utm_campaign ?? null,
+                },
+              }
+            : { ok: false, error: webhookRes.error }
+        );
+        return;
+      }
+
+      if (method === 'POST' && path.startsWith('/api/v2/appointment/webhooks/stripe/')) {
+        const clubSlug = decodeURIComponent(path.replace('/api/v2/appointment/webhooks/stripe/', ''));
+        const body = await readJsonBody(req);
+        const paymentStatus = typeof body.paymentStatus === 'string' ? body.paymentStatus : 'pending';
+        const bookingConfirmed = paymentStatus === 'paid';
+        sendJson(res, 200, {
+          ok: true,
+          club: clubSlug || 'beynost',
+          paymentStatus,
+          bookingStatus: bookingConfirmed ? 'confirme' : 'provisoire_attente_paiement',
+          slotBlocked: bookingConfirmed,
+          verifiedAtUtc: new Date().toISOString(),
         });
         return;
       }

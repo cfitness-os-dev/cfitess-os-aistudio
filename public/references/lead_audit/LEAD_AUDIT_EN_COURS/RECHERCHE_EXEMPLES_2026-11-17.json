@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-17",
+  "tachesEmail": [
+    {
+      "club": "Lyon Carré de Soie",
+      "vue": "À faire",
+      "lignes": 1,
+      "vide": true
+    },
+    {
+      "club": "Lyon Carré de Soie",
+      "vue": "Faites",
+      "lignes": 1,
+      "vide": false
+    },
+    {
+      "club": "Beynost",
+      "vue": "À faire",
+      "lignes": 1,
+      "vide": true
+    },
+    {
+      "club": "Beynost",
+      "vue": "Faites",
+      "lignes": 1,
+      "vide": false
+    }
+  ],
+  "limite": "Recherche ciblée de références existantes ; aucune tâche créée, clôturée ou renvoyée."
+}

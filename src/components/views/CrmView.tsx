@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { ClubId, Prospect, ProspectStage } from '../../types/cfos';
 import { formatClubName } from '../../domain/rules';
+import { LeadCommercialHubView } from './LeadCommercialHubView';
 
 const STAGES: ProspectStage[] = [
   'Nouveau',
@@ -41,7 +42,7 @@ const CFITNESS_SUBSCRIPTION_FORMULAS = [
 // Annualized value of a fitness membership (12 months * 39.90€ + 49€ joining fee ~ 528 €)
 const DEAL_ANNUAL_VALUE_EUR = 478.8;
 
-export function CrmView() {
+export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
   const {
     clubFilter,
     prospects,
@@ -83,7 +84,7 @@ export function CrmView() {
   );
   const [source, setSource] = useState<Prospect['source']>('Tablette accueil');
   const [goal, setGoal] = useState('Remise en forme & Biocircuit Technogym');
-  const [rgpdConsent, setRgpdConsent] = useState(true);
+  const [rgpdConsent, setRgpdConsent] = useState(false);
 
   const filteredProspects = prospects.filter((p) => {
     if (clubFilter !== 'all' && p.clubId !== clubFilter) return false;
@@ -184,7 +185,10 @@ export function CrmView() {
   const totalPipelineValueEur = Math.round(filteredProspects.length * DEAL_ANNUAL_VALUE_EUR);
 
   return (
-    <div className="space-y-4">
+    <LeadCommercialHubView
+      subTarget={subTarget}
+      pipelineChildren={
+        <div className="space-y-4">
       {/* ===================================================================== */}
       {/* EN-TÊTE UNIFIÉ C.FITNESS OS — CRM PROSPECTS & ADHÉSIONS               */}
       {/* ===================================================================== */}
@@ -1111,6 +1115,8 @@ export function CrmView() {
           </form>
         </div>
       )}
-    </div>
+        </div>
+      }
+    />
   );
 }

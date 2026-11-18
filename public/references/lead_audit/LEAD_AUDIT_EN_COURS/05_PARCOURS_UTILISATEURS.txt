@@ -1,0 +1,65 @@
+PARCOURS UTILISATEURS — À RELIER AUX ENTRÉES LEAD ET DOC
+
+P01 — Accueillir et qualifier un contact
+Liste → recherche/filtres → formulaire prospect → fiche → statut/assignation/segment → interaction → historique.
+Observé : liste, filtres et formulaire vide. Documenté : fiche et interactions. Non testé : création, modifications, doublons, validations et effets sur les scénarios. Attention au consentement précoché du formulaire source : constat, pas règle à reproduire sans décision.
+
+P02 — Traiter une activité
+Activités → vue temporelle → filtre de type et commercial → détail → appel/email/SMS ou traitement sans réponse → historique.
+Observé : liste et contrôles. Documenté : réponses appel, clôture, avertissement numéro invalide et issue du rendez-vous. Non testé : validation et conséquences. La purge des retards est une action métier, pas une simple navigation.
+
+P03 — Réserver un rendez-vous
+Planning ou fiche → contact → type/durée/assignation → disponibilité → email éventuel → confirmation → issue présence/absence/annulation.
+Observé : calendrier et paramètres de types, formulaire neuf abandonné. Documenté : réservation directe ou lien email, modèles et présence par défaut. Les effets de présence et absence sont à tester avec données fictives.
+
+P04 — Réserver et payer
+Page publique → type/créneau → coordonnées → paiement Stripe → confirmation.
+Documenté et présentation Stripe observée ; aucun paiement testé. Le contact peut exister même si le paiement est abandonné. Ne pas créer de réservation définitive sans statut de paiement confirmé. Gestion d’annulation/remboursement non établie.
+
+P05 — Converser sur WhatsApp
+Messagerie ou fiche → conversation → modèle approuvé pour initier → réponse entrante → échanges libres pendant la fenêtre autorisée → réengagement après expiration.
+Observé : liste, ouverture d’un fil et sélecteur de modèles fermé sans sélection. Documenté : calcul des 24 heures. Non testé : envoi, réponse reçue, médias, statuts et erreur. Aucun message réel envoyé.
+
+P06 — Préparer un modèle WhatsApp
+Canal → galerie ou modèle neuf → langue/catégorie/disposition → contenu/variables/médias/boutons → enregistrement → examen Meta → statut.
+Observé partiellement jusqu’à l’éditeur vide. INC-001 : une étape peut avoir créé un brouillon automatiquement ; l’assistant ne sera pas poursuivi sur le compte réel. Service, carrousel, code promo et offre limitée restent incomplets.
+
+P07 — Automatiser un suivi
+Scénario → manuel/automatique → critères et assignation → étapes/délais → activation → exécutions et historique.
+Observé : liste et un scénario existant inactif, sans modification. Documenté : création et activation. Verrouiller bloque l’entrée sans arrêter les parcours en cours. Les règles d’arrêt, de réentrée et de concurrence restent à établir.
+
+P08 — Diffuser une campagne
+Liste → audience → contenu → objet/expéditeur pour email → vérification → programmation ou immédiat → confirmation → suivi.
+Liste observée, parcours documentés seulement. L’email comporte une validation par code ; SMS distingue brouillon et publication. Aucune campagne créée, test envoyée ou code demandé. Segment, consentement et vacances doivent être appliqués à l’audience.
+
+P09 — Fidéliser un client
+Liste Clients → fiche → décrochage ou vacances → exclusion temporaire/relance → historique et analyse.
+Liste observée ; règles de vacances et décrochage documentées. Aucun client marqué en vacances. L’aide réserve le décrochage aux badgeages Résamania. Ce n’est ni un congé RH, ni une suspension contractuelle.
+
+P10 — Acquérir par un formulaire externe
+Formulaire/annonce → webhook documenté → contact/activité → source/UTM → attribution → scénario.
+Contrat d’entrée lu, aucune requête effectuée. Consentement, déduplication, erreurs, attribution et réconciliation restent à confirmer. Les sources affichées ne suffisent pas à établir la connexion active.
+
+P11 — Piloter et gérer les accès
+Statistiques/Ventes → période/club → indicateurs → analyse détaillée/export ; Paramètres → Utilisateurs → gestion externe des droits.
+Listes et paramètres partiels observés. Aucun export, partage de vue, invitation ou changement de rôle. Les vues Manager/Commercial sont maintenant comparées ; le contrôle serveur reste non testé.
+
+MISE À JOUR DU 17 NOVEMBRE — PRIORITAIRE
+Lire 08_REPRISE_ET_DROITS_2026-11-17.txt et 09_COUVERTURE_ET_BLOCAGES.txt avant d’utiliser les réserves de la version précédente.
+Les rôles Manager et Commercial ont été observés. Les huit vues statistiques ont été retrouvées ; les modèles email/SMS et dialogues de fiche ont été approfondis. Les treize transcriptions identifiées sont maintenant analysées.
+WhatsApp direct doit prévoir la fenêtre fermée après 24h sans message entrant et les trois replis : ne pas envoyer, modèle ou SMS. Le repli SMS, son contenu, son coût et son résultat exigent une recette fictive.
+Le scénario permet une édition de contenu d’étape ; le type et le délai de l’étape existante sont grisés. Une nouvelle étape offre Minutes, Heures et Jours. Ne pas confondre ces deux modes.
+Les types de rendez-vous ont, selon la formation, des disponibilités indépendantes : la prévention de collisions entre types est une amélioration à valider. Les options avancées sont maintenant relevées sur un type déjà réservable : capacité, délai, fréquence, notifications, lien isolé, horaires par jour et proposition Stripe. Aucun résultat d’enregistrement ou paiement testé.
+Le formulaire de campagne SMS confirme segments, statuts, période de statut et exclusion des refus commerciaux. Les modèles WhatsApp approuvés verrouillent le corps et les boutons mais laissent configuration et médias modifiables ; distinguer validation Meta et complétude technique avant envoi. Voir WA-02 pour la divergence liste/détail.
+Deux clubs sont accessibles en ADMIN. Les huit vues principales ont des mesures initiales mobile/tablette ; cela ne certifie pas tous les parcours sur ces appareils.
+Ne pas copier les permissions ClubConnect comme si elles étaient les actions de Lead. La corbeille visible en Commercial reste un point à clarifier, pas un droit de suppression validé.
+La validation du cadrage n’interrompt pas l’audit. Aucun développement de CFitness ni résultat d’action métier n’est revendiqué.
+
+DERNIÈRE PASSE EN LECTURE SEULE — 17 NOVEMBRE
+Parcours observés : ouverture puis abandon des six modèles de service ; demande contact/email > dialogue de choix (sans traiter) ; tâche SMS > composeur (annulé) ; campagne SMS > programmation (abandonnée) ; email envoyé > bilan. Parcours décrit seulement : publication > code email > attente ou envoi. Parcours actuel incomplet : nouvel assistant email après Cibler. Aucun résultat de ces actions finales testé.
+
+PASSE FILTRES ET RESPONSIVE — 17 NOVEMBRE
+Les filtres de consultation peuvent être testés sans changer les contacts. Combinaisons, recherche sans résultat, neuf types d’activités, six échéances, cinq périodes statistiques, archivés/comparaison annuelle et sélection multiclub observés. Les opérations de traitement et d’envoi restent non exécutées. Détails et réserves dans le document 12.
+
+CONSOLIDATION DE TRANSMISSION — 17 NOVEMBRE
+Import : onze colonnes, modèle vierge et formulaire consultés, jamais exécuté. Sélection multiple : Segment activé après sélection d’une ligne, dialogue abandonné sans ajout. UTM : détail d’une campagne existante avec contacts et abonnements consulté sans enregistrement.

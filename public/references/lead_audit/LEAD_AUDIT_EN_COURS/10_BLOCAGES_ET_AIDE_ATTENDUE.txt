@@ -1,0 +1,70 @@
+CE QUI RESTE BLOQUÉ ET COMMENT AIDER — 17 NOVEMBRE 2026
+
+Priorité pratique : conserver la session ADMIN actuelle. Aucun changement de droits supplémentaire n’est demandé. Deux apports débloquent le plus de travail : des références d’exemples déjà présents (club/date/type) et une démonstration fictive du fournisseur. Aucune communication au fournisseur n’a été envoyée par l’assistant.
+
+Ce document sépare les limites réelles des points simplement non vérifiés. Il ne certifie ni une exploration de tous les états possibles ni 100 % du logiciel.
+B01 — Données absentes
+Manque : Formulaire avec sections/champs et réponses déjà enregistrées. Beynost offre un exemple vide ; le second club zéro formulaire.
+Ton aide : Indiquer un formulaire existant avec son club, ou demander une démonstration remplie de données fictives. Ne pas remplir un formulaire réel pour cet audit.
+Limite : Types de champs, logique conditionnelle éventuelle, réponse individuelle et export restent non établis.
+
+B02 — Exemples non rencontrés
+Manque : Avis : zéro en attente et traités dans les deux clubs. Exemples de SMS entrant, tâche email planifiée et campagne SMS envoyée encore à trouver.
+Ton aide : Donner seulement club/date/type d’un exemple existant. Je le consulterai sans répondre ni le clôturer.
+Limite : Ne pas créer ou envoyer de message réel uniquement pour produire un exemple.
+
+B03 — Préparation impliquant des données
+Manque : Campagne email : étapes Composer, Objet et Vérifier derrière une audience obligatoire ; première étape seule vérifiée.
+Ton aide : Un brouillon déjà existant et ouvrable, ou un espace fictif/démonstration fournisseur.
+Limite : La lecture de la formation ne remplace pas ces écrans actuels ; pas de passage d’étape sur une audience réelle pour cet audit.
+
+B04 — Variantes non configurées dans les exemples
+Manque : Blocs Image, Image et texte, Fond image, Barre de navigation, Séparateur et Espace : propriétés non détaillées. Les images contenues dans un bloc HTML ne sont pas des blocs Image natifs.
+Ton aide : Indiquer un modèle existant utilisant ces blocs, ou obtenir une démonstration fictive où ils sont déjà présents.
+Limite : 27 modèles existants comparés sans insertion. Ne pas ajouter un bloc dans un modèle utilisé pour la seule vérification.
+
+B05 — Assistant de création et dépendance Meta
+Manque : WhatsApp : offre limitée, coupon, carrousel, autres médias/boutons, examen et retours réels.
+Ton aide : Démonstration avec destinataires fictifs et compte Meta de test, ou modèles existants de ces formats.
+Limite : Le premier assistant avait possiblement créé un brouillon automatiquement (INC-001). Ne pas multiplier les créations en production. Aucune preuve de facturation, délivrance ou portabilité.
+
+B06 — Limite des outils et documentation
+Manque : Pas de capture HTTP détaillée disponible dans la connexion actuelle ; contrat public de webhook entrant seulement, avec ambiguïté sur deux endpoints.
+Ton aide : Demander au fournisseur une documentation complète OpenAPI/Swagger ou équivalent : schémas, authentification, périmètres, limites, pagination, erreurs, webhooks, export et reprises. Le dev peut fournir un relevé réseau nettoyé de ses secrets.
+Limite : Ne pas envoyer de HAR brut, cookies, clés, jetons ou données de prospects. Ne pas créer une clé de production pour cette lecture.
+
+B07 — Résultats exigeant une écriture
+Manque : Envoi email/SMS/WhatsApp, validation par code, activation/exécution de scénario, import, paiement, suppression, publication et synchronisation.
+Ton aide : Obtenir du fournisseur un espace/démonstration avec contacts et destinataires fictifs. Nous pourrons alors définir une recette précise avant toute action.
+Limite : Avec les comptes réels et la consigne sans rien modifier, les résultats de ces opérations resteront non testés.
+
+B08 — Permissions serveur
+Manque : ADMIN, MANAGER et COMMERCIAL comparés en interface ; présence/absence de commandes ne démontre pas les autorisations serveur ou l’isolation entre clubs.
+Ton aide : Matrice officielle des rôles et comptes fictifs de ces trois rôles pour une recette avec le développeur.
+Limite : ACL-01 : corbeille visible en Commercial ; aucune suppression réelle tentée. Coach/Basic déclarés obsolètes : pas de nouveau profil à ouvrir pour le moment.
+
+B09 — Règles métier non démontrées
+Manque : Formules statistiques, collisions de rendez-vous, fuseau horaire, encodage SMS, réentrée/arrêt des scénarios, rapprochement des ventes/ERP.
+Ton aide : Définitions écrites du fournisseur ou exemples fictifs avec résultats attendus ; préciser les règles CFitness à conserver/améliorer avant développement.
+Limite : Les intitulés de colonnes et textes d’aide ne suffisent pas à certifier ces calculs et transitions.
+
+B10 — Applications natives et options non activées
+Manque : Le simulateur de largeur couvre le site responsive ; pas les apps natives, caméra, notifications système, hors-ligne ni modules inactifs.
+Ton aide : Pour les apps natives, un appareil/simulateur dont l’écran est partageable et un accès de test ; pour les modules, une démonstration fournisseur.
+Limite : Aucune activation de module, connexion de partenaire ou permission système effectuée.
+
+B11 — Écarts documentaires et états incohérents
+Manque : Histoire sportive non retrouvée, WhatsApp état liste/détail divergent, cartes de connecteurs contradictoires.
+Ton aide : Faire confirmer DOC-02, WA-02, IN-01/02 et API-01 au fournisseur ; un exemple existant peut aussi clarifier certains points.
+Limite : Ne pas transformer un écart d’affichage en règle métier ni le corriger sur les comptes réels.
+
+CONSULTATIONS ENCORE POSSIBLES SANS AIDE SPÉCIALE
+La session actuelle permet encore des variantes de filtres, dates, tris, pages de listes et dispositions de sous-écrans sur mobile/tablette. Ces variantes ne sont pas requalifiées en blocages. Les combinaisons de données et dimensions sont nombreuses : l’inventaire recense des options distinctes, pas chaque combinaison possible. Les propriétés supplémentaires pourront être relevées si un exemple existant les expose ; les menus identiques ne seront pas comptés comme fonctions nouvelles.
+
+Le document 09 donne le reste par domaine ; le document 11 détaille la dernière passe. Les décisions de design, de priorité et d’architecture de CFitness restent à valider avant développement.
+
+PASSE FILTRES ET RESPONSIVE — 17 NOVEMBRE
+Les variantes de filtres et sous-écrans ont été approfondies : voir document 12. Les défauts responsive identifiés peuvent déjà guider le design de CFitness sans solliciter le fournisseur. B01–B11 restent utiles pour les données absentes, opérations finales, documentation et applications natives. Le menu Paramètres tablette reste non confirmé par l’outil ; les quatorze pages ont cependant été ouvertes par leurs entrées connues. Aucun changement de profil supplémentaire n’est demandé.
+
+CONSOLIDATION DE TRANSMISSION — 17 NOVEMBRE
+La liste précise d’exemples est désormais dans 14_EXEMPLES_A_RETROUVER_DANS_LES_CLUBS.txt et EXEMPLES_A_RETROUVER.json. Priorité EX01–EX05, sans création sur les comptes réels. Les exemples déjà disponibles ne sont pas redemandés. Le modèle d’import est fourni mais ses résultats, erreurs et dédoublonnage ne sont pas validés.

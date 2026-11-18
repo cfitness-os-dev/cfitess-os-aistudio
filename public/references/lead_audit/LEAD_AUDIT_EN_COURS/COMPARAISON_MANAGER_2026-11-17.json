@@ -1,0 +1,233 @@
+{
+  "date": "2026-11-17",
+  "contexte": "Manager / Beynost",
+  "pages": [
+    {
+      "rubrique": "Gestion crédits SMS",
+      "actions": [
+        "Open menu",
+        "Créditer le compte",
+        "Activer la recharge automatique",
+        "Historique des recharges automatiques"
+      ],
+      "champs": 0,
+      "interrupteurs": [],
+      "titres": [
+        "Crédits SMS"
+      ]
+    },
+    {
+      "rubrique": "Profil du Club",
+      "actions": [
+        "Open menu",
+        "Upload image",
+        "Mettre à jour"
+      ],
+      "champs": 4,
+      "interrupteurs": [],
+      "titres": [
+        "Marketing"
+      ]
+    },
+    {
+      "rubrique": "Utilisateurs",
+      "actions": [
+        "Open menu",
+        "Gestion des droits utilisateurs",
+        "10",
+        "Précédent",
+        "Suivant"
+      ],
+      "champs": 1,
+      "interrupteurs": [],
+      "titres": [
+        "Gestion des utilisateurs"
+      ]
+    },
+    {
+      "rubrique": "Gestion rendez-vous",
+      "actions": [
+        "Open menu",
+        "Copier l'url",
+        "Ajouter",
+        "Ajouter"
+      ],
+      "champs": 1,
+      "interrupteurs": [
+        {
+          "etat": "false",
+          "grise": false,
+          "nom": null
+        }
+      ],
+      "titres": [
+        "Gestion de vos rendez-vous"
+      ]
+    },
+    {
+      "rubrique": "Email & SMS de service",
+      "actions": [
+        "Open menu",
+        "Modifier",
+        "Modifier",
+        "Modifier",
+        "Modifier",
+        "Modifier",
+        "Modifier"
+      ],
+      "champs": 0,
+      "interrupteurs": [
+        {
+          "etat": "false",
+          "grise": false,
+          "nom": null
+        },
+        {
+          "etat": "false",
+          "grise": true,
+          "nom": null
+        },
+        {
+          "etat": "false",
+          "grise": true,
+          "nom": null
+        },
+        {
+          "etat": "true",
+          "grise": false,
+          "nom": null
+        },
+        {
+          "etat": "false",
+          "grise": true,
+          "nom": null
+        },
+        {
+          "etat": "false",
+          "grise": true,
+          "nom": null
+        },
+        {
+          "etat": "true",
+          "grise": false,
+          "nom": null
+        }
+      ],
+      "titres": [
+        "Emails & SMS de service"
+      ]
+    },
+    {
+      "rubrique": "Gestion prospects",
+      "actions": [
+        "Open menu",
+        "Appliquer",
+        "Archivé",
+        "Appliquer"
+      ],
+      "champs": 2,
+      "interrupteurs": [
+        {
+          "etat": "false",
+          "grise": false,
+          "nom": null
+        },
+        {
+          "etat": "false",
+          "grise": false,
+          "nom": null
+        },
+        {
+          "etat": "true",
+          "grise": false,
+          "nom": null
+        }
+      ],
+      "titres": [
+        "Gestion prospects"
+      ]
+    },
+    {
+      "rubrique": "Segments",
+      "etat": "navigation_non_confirmee"
+    },
+    {
+      "rubrique": "Segments",
+      "titres": [
+        "Segments"
+      ],
+      "etat": "page_accessible"
+    },
+    {
+      "rubrique": "Script de vente",
+      "actions": [
+        "Open menu",
+        "Styles de texte",
+        "Gras",
+        "Italique",
+        "Souligné",
+        "Aligner à gauche",
+        "Centrer",
+        "Aligner à droite",
+        "Supprimer",
+        "Enregistrer"
+      ],
+      "champs": 0,
+      "titres": [
+        "Script de vente"
+      ]
+    },
+    {
+      "rubrique": "Sources",
+      "actions": [
+        "Open menu"
+      ],
+      "champs": 58,
+      "titres": [
+        "Sources"
+      ]
+    },
+    {
+      "rubrique": "Passage statut client",
+      "actions": [
+        "Open menu"
+      ],
+      "champs": 0,
+      "titres": [
+        "Statut client"
+      ]
+    },
+    {
+      "rubrique": "Notifications",
+      "actions": [
+        "Open menu",
+        "Enregistrer"
+      ],
+      "champs": 1,
+      "titres": [
+        "Notifications"
+      ]
+    },
+    {
+      "rubrique": "WhatsApp",
+      "actions": [
+        "Open menu"
+      ],
+      "champs": 0,
+      "titres": [
+        "WhatsApp"
+      ]
+    },
+    {
+      "rubrique": "API partenaires",
+      "actions": [
+        "Open menu"
+      ],
+      "champs": 0,
+      "titres": [
+        "API partenaires"
+      ]
+    }
+  ],
+  "limite": "Navigation et structure visible uniquement ; droits d’écriture non testés, nombres de champs non exhaustifs."
+}

@@ -1,0 +1,32 @@
+ANALYSE DES TECHNOLOGIES — OBSERVATION LIMITÉE AU NAVIGATEUR
+
+Preuves structurées : ANALYSE_TECHNIQUE.json.
+
+ÉTABLI SUR LA PAGE SEGMENTS
+• Un fichier JavaScript applicatif et une feuille CSS à noms contenant une empreinte sont référencés sous /assets/.
+• Des feuilles Google Fonts demandent Inter, Grape Nuts et Montserrat. Les éléments échantillonnés utilisent Inter ; les autres polices peuvent appartenir à l’aide embarquée.
+• Des scripts Jimo, PostHog et Facebook sont chargés. Leur présence n’atteste ni le consentement, ni la configuration métier, ni une connexion Facebook du club.
+• Des SVG intégrés sont présents. L’inventaire de ressources ne permet pas de certifier la bibliothèque d’icônes.
+
+INFÉRENCES, NON CERTIFICATIONS
+• Les classes de style visibles sont compatibles avec une approche utilitaire de type Tailwind.
+• Des identifiants de fenêtres/menus suggèrent des composants Radix.
+• La navigation comporte des mises à jour asynchrones : après changement d’adresse, l’arbre d’accessibilité a parfois conservé temporairement des éléments précédents. Le DOM visible et les captures ont servi à distinguer les états.
+
+NON ÉTABLI
+Framework applicatif exact, versions, bibliothèque de routage, construction des bundles, architecture serveur, hébergement réel, base de données, services métier, couverture de tests et code source privé.
+
+Les scripts ont été inventoriés par leurs références, pas désassemblés ni copiés. Aucun dépôt, source map privée, variable interne, cookie, token ou stockage de session n’a été extrait. Les styles calculés sont des échantillons de rendu.
+
+AUTHENTIFICATION
+Une session administrateur déjà ouverte est observable. L’authentification complète, expiration, renouvellement, MFA, contrôle serveur des droits et isolation interclubs ne sont pas validés. Le rôle affiché ne prouve pas à lui seul l’autorisation de chaque opération serveur.
+
+PERFORMANCES
+Pas de mesures reproductibles de LCP, INP, CLS, latence API, cache, débit ou poids transférés. Une lecture ponctuelle de cinq erreurs console maximum n’a renvoyé aucune entrée : cela ne prouve pas l’absence d’erreurs. Les annonces et scripts tiers doivent faire l’objet d’une mesure séparée sur un environnement de test.
+
+COMPLÉMENT ADMINISTRATEUR — 17 NOVEMBRE
+La feuille publique index-CmM1sBMH.css a été consultée localement : variables --tw- et --radix-, seuils 640/768/1024/1280/1400 px, hover et réduction des animations. Le DOM contient des classes svg-inline--fa et fa-pencil/fa-trash. Ces indices renforcent les hypothèses de bibliothèques, sans établir leurs versions ou le framework applicatif. Le CSS propriétaire n’est pas joint.
+Seize mesures initiales des huit grandes vues en 390×844 et 820×1180 sont conservées. Statistiques et Ventes ont été reprises après chargement ; cela ne couvre pas tous les tableaux différés ou les formulaires. Messagerie mobile observée visuellement : menu hamburger et bouton + ouvrant la recherche. Aucune application native n’est testée.
+
+PASSE FILTRES ET RESPONSIVE — 17 NOVEMBRE
+Diagnostic visible de l’erreur mobile SMS : DialogClose must be used within Dialog. Il s’agit d’un indice de composant, pas d’une version de bibliothèque certifiée ou d’une preuve d’architecture backend. Les captures par défaut incohérentes ont été écartées au profit de cadrages explicites.

@@ -1,0 +1,247 @@
+{
+  "date": "2026-11-16",
+  "page": "Paramètres / Segments",
+  "contexte": "Session ADMIN, Beynost ; écran vide ; dimensions navigateur restaurées",
+  "limite": "Échantillon d’une page ; pas d’accès au dépôt, au serveur, ni aux versions de dépendances.",
+  "ressources": [
+    {
+      "type": "stylesheet",
+      "hote": "fonts.googleapis.com",
+      "nomFichier": "CSS polices",
+      "familles": [
+        "Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900"
+      ]
+    },
+    {
+      "type": "stylesheet",
+      "hote": "fonts.googleapis.com",
+      "nomFichier": "CSS polices",
+      "familles": [
+        "Grape Nuts"
+      ]
+    },
+    {
+      "type": "stylesheet",
+      "hote": "lead.masalledesport.com",
+      "nomFichier": "index-Bq9gPOtF.css"
+    },
+    {
+      "type": "script",
+      "hote": "lead.masalledesport.com",
+      "nomFichier": "index-DXpIMt1p.js"
+    },
+    {
+      "type": "script",
+      "hote": "eu-assets.i.posthog.com",
+      "nomFichier": "config.js"
+    },
+    {
+      "type": "script",
+      "hote": "undercity.usejimo.com",
+      "nomFichier": "jimo-invader.js"
+    },
+    {
+      "type": "script",
+      "hote": "connect.facebook.net",
+      "nomFichier": "sdk.js"
+    },
+    {
+      "type": "script",
+      "hote": "connect.facebook.net",
+      "nomFichier": "sdk.js"
+    },
+    {
+      "type": "script",
+      "hote": "undercity.usejimo.com",
+      "nomFichier": "jimo-main.js"
+    },
+    {
+      "type": "stylesheet",
+      "hote": "fonts.googleapis.com",
+      "nomFichier": "CSS polices",
+      "familles": [
+        "Inter:wght@300;400;500;600;700"
+      ]
+    },
+    {
+      "type": "stylesheet",
+      "hote": "fonts.googleapis.com",
+      "nomFichier": "CSS polices",
+      "familles": [
+        "Montserrat:wght@300;400;500;600;700"
+      ]
+    }
+  ],
+  "styles": {
+    "action": {
+      "background": "rgb(123, 87, 239)",
+      "borderRadius": "6px",
+      "color": "rgb(255, 255, 255)",
+      "fontFamily": "Inter, sans-serif",
+      "fontSize": "14px",
+      "fontWeight": "500",
+      "gap": "6px",
+      "height": 28,
+      "lineHeight": "20px",
+      "padding": "6px 12px",
+      "tag": "A",
+      "width": 157.171875
+    },
+    "heading": {
+      "background": "rgba(0, 0, 0, 0)",
+      "borderRadius": "0px",
+      "color": "rgb(33, 33, 33)",
+      "fontFamily": "Inter, sans-serif",
+      "fontSize": "24px",
+      "fontWeight": "500",
+      "gap": "normal",
+      "height": 32,
+      "lineHeight": "32px",
+      "padding": "0px",
+      "tag": "H4",
+      "width": 306.578125
+    },
+    "input": {
+      "background": "rgba(0, 0, 0, 0)",
+      "borderRadius": "6px",
+      "color": "rgb(0, 0, 0)",
+      "fontFamily": "Inter, sans-serif",
+      "fontSize": "14px",
+      "fontWeight": "400",
+      "gap": "normal",
+      "height": 40,
+      "lineHeight": "20px",
+      "padding": "4px 12px 4px 36px",
+      "tag": "INPUT",
+      "width": 320
+    },
+    "main": {
+      "background": "rgba(0, 0, 0, 0)",
+      "borderRadius": "0px",
+      "color": "rgb(0, 0, 0)",
+      "fontFamily": "Inter, sans-serif",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "gap": "normal",
+      "height": 643,
+      "lineHeight": "24px",
+      "padding": "0px",
+      "tag": "MAIN",
+      "width": 1232
+    },
+    "table": {
+      "background": "rgba(0, 0, 0, 0)",
+      "borderRadius": "0px",
+      "color": "rgb(0, 0, 0)",
+      "fontFamily": "Inter, sans-serif",
+      "fontSize": "14px",
+      "fontWeight": "400",
+      "gap": "normal",
+      "height": 424,
+      "lineHeight": "20px",
+      "padding": "0px",
+      "tag": "TABLE",
+      "width": 1138
+    }
+  },
+  "technologies": [
+    {
+      "nom": "Inter",
+      "niveau": "observe",
+      "preuve": "Police calculée des éléments échantillonnés"
+    },
+    {
+      "nom": "Google Fonts",
+      "niveau": "observe",
+      "preuve": "Feuilles de styles polices présentes ; Inter, Grape Nuts et Montserrat demandées"
+    },
+    {
+      "nom": "Jimo",
+      "niveau": "observe",
+      "preuve": "Scripts et annonces/aide visibles"
+    },
+    {
+      "nom": "PostHog",
+      "niveau": "observe",
+      "preuve": "Script de configuration chargé ; aucun identifiant de projet conservé"
+    },
+    {
+      "nom": "Facebook SDK",
+      "niveau": "observe",
+      "preuve": "Scripts chargés, sans preuve de connexion du club"
+    },
+    {
+      "nom": "CSS utilitaire de type Tailwind",
+      "niveau": "inference",
+      "preuve": "Classes utilitaires visibles dans le DOM ; package et version non vérifiés"
+    },
+    {
+      "nom": "Composants de type Radix",
+      "niveau": "inference",
+      "preuve": "Identifiants radix dans les états de menus et fenêtres ; package/version non vérifiés"
+    },
+    {
+      "nom": "Framework JavaScript / routage / serveur / base de données",
+      "niveau": "non_determine",
+      "preuve": "L’inventaire de fichiers et le DOM seuls ne certifient pas ces choix"
+    }
+  ],
+  "reseau": {
+    "etat": "non_observe",
+    "raison": "L’outil de navigateur expose DOM, assets, captures et console ; aucun journal HTTP ni HAR disponible dans cette session.",
+    "consequence": "Ne pas présenter les routes de navigation ou le webhook documenté comme des requêtes réseau capturées."
+  },
+  "authentification": {
+    "etat": "session_existante_observee",
+    "nonAnalyse": [
+      "Cookies",
+      "Tokens",
+      "Stockage local",
+      "En-têtes Authorization",
+      "Protocole complet et expiration"
+    ],
+    "secretExtrait": false
+  },
+  "performances": {
+    "etat": "non_mesure",
+    "console": "Aucune erreur renvoyée par la lecture limitée à cinq erreurs au moment du contrôle ; ne prouve pas une absence globale d’erreurs.",
+    "manque": [
+      "Temps de réponse HTTP",
+      "Core Web Vitals",
+      "Poids transférés",
+      "Cache",
+      "Coûts des scripts tiers",
+      "Erreurs serveur",
+      "Benchmark mobile réel"
+    ]
+  },
+  "complement_2026_11_17": {
+    "page": "Ventes, ADMIN",
+    "css": "index-CmM1sBMH.css",
+    "methode": "Feuille publique chargée, exportée par la capacité de ressources puis inspectée localement ; code non livré.",
+    "indices": [
+      "Variables --tw-",
+      "Variables --radix-",
+      "Classes DOM svg-inline--fa, fa-pencil, fa-trash"
+    ],
+    "seuils_css_px": [
+      640,
+      768,
+      1024,
+      1280,
+      1400
+    ],
+    "autres_medias": [
+      "hover: hover",
+      "prefers-reduced-motion: reduce"
+    ],
+    "limite": "Indices compatibles avec Tailwind, Radix et FontAwesome ; versions, framework et code privé non établis. Le changement de nom du bundle ne prouve pas une cause particulière.",
+    "responsive": "RESPONSIVE_2026-11-17_COMPLEMENT.json"
+  },
+  "complement_responsive": {
+    "diagnostic_visible_sms_mobile": "DialogClose must be used within Dialog",
+    "cause": "Non établie ; ne pas déduire une version de bibliothèque ni un défaut du backend.",
+    "captures": "Cadrages explicites retenus ; images par défaut incohérentes et clics initiaux sans effet écartés.",
+    "limite": "Paramètres de navigation et géométrie DOM, aucun réseau HTTP détaillé capturé."
+  }
+}

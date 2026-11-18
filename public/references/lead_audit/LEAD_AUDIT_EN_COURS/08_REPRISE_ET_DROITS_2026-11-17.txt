@@ -1,0 +1,65 @@
+REPRISE DU 17 NOVEMBRE 2026 — AUDIT LEAD
+Version 0.3 ; cette reprise continue l’audit. La validation du cahier des charges avant code ne bloque pas les vérifications.
+
+NOUVELLES OBSERVATIONS
+• Fiche prospect : dialogues de modification, activité future, interaction passée, SMS, email et prise de rendez-vous. Aucun formulaire validé.
+• Email existant : styles, 18 polices, variables, aperçu ; réglages de blocs texte, bouton, pied de page et réseaux sociaux, sans édition.
+• Segment neuf : palette, bibliothèque d’icônes et code ; aucun segment créé. Liste des 194 pays proposés conservée séparément.
+• Client : calendrier de vacances consulté sans période choisie ; abonnements visibles sans effet supplémentaire démontré au clic.
+• Formulaire existant : éditeur vide et liste de réponses vide ; publication imposant nom, prénom et email. Pas d’ajout de section pour remplir artificiellement le compte.
+• Gestion externe : rôles Admin, Manager, Commercial, Coach et Basic affichés. Les cases détaillées de permission appartiennent à ClubConnect, pas aux actions de Lead.
+• Scénario : condition d’assignation et sources ; édition de mail d’étape existante, type/délai grisés. Nouvelle étape préparatoire : six types, unités minutes/heures/jours. Le formulaire a été annulé sans création.
+• WhatsApp direct : traitement d’une fenêtre fermée avec trois replis. Le modèle de repli n’a pas été appliqué ; aucun message créé ou envoyé.
+• Statistiques : tableaux chargés après défilement, huit angles parcourus, mix des ventes et détail commercial. Pas d’export ni de chiffres réels transmis.
+
+COMPARAISON DES PROFILS
+ADMIN : relevé de base des 16/17 novembre. Gestion de l’organisation et liens externes consultés sans modification.
+MANAGER : même compte de comparaison avant changement par le propriétaire. Menus métier, Communication et 14 rubriques de paramètres visibles ; ouvertures des pages confirmées. Les actions d’écriture ne sont pas testées.
+COMMERCIAL : rôle constaté après rechargement. Prospects, Clients, Messagerie, Activités, Planning, Statistiques, Ventes, Formulaires, App et Assistance visibles. Communication et Paramètres absents du menu. Statistiques accessibles avec le réglage actuel du club.
+Dans Clients, pas de sélection multiple proposée. Dans Formulaires, pas d’ajout ni de crayon ; aperçu grisé sur le formulaire non publié. Une corbeille reste visible non grisée : point ouvert ACL-01, pas une suppression exécutée ni un droit serveur validé.
+La fiche prospect conserve les commandes individuelles, dont Conversation, Modifier et Ajouter un segment. Les menus ne suffisent pas à valider les règles côté serveur, l’assignation ou le périmètre des contacts.
+COACH/BASIC : valeurs encore affichées dans la gestion centralisée, mais obsolètes selon l’aide. Aucun compte de ces rôles testé.
+
+FORMATION
+33 pages officielles déjà rapprochées ; 13 vidéos identifiées dans les pages de formation et d’aide WhatsApp.
+13 transcriptions automatiques lues, dont 3 WhatsApp. Les deux exports initialement manquants (campagnes et ajout utilisateur) ont été obtenus lors de la nouvelle tentative. Il ne s’agit pas d’un visionnage image par image. Aucune transcription intégrale n’est fournie dans l’archive.
+Nouveaux détails documentés : capacités et notifications conditionnelles des types de rendez-vous, lien de rendez-vous isolé, créneaux par jour et absence de blocage mutuel entre types. Les sous-titres ne remplacent pas les observations du compte.
+
+QUALITÉ DES PREUVES
+Les captures 001/002 restent non probantes. Les captures 003–014 ont été contrôlées lors de la passe précédente. Quatre nouvelles tentatives montraient une transition graphique laissant apparaître le contact derrière la fenêtre ; elles ont été supprimées du dossier avant transmission. Les nouveaux formulaires reposent donc sur des relevés d’interface, sans capture certifiée.
+Les annonces d’aide peuvent intercepter les clics ; des retours à la liste n’ont pas été interprétés comme des refus de rôle. L’accès au scénario a ensuite été confirmé par un lien d’accessibilité. Les états provisoires de chargement sont signalés et les tableaux attendus ont été repris après chargement.
+
+PAS DE DÉVELOPPEMENT NI DE VALIDATION MÉTIER
+Aucun envoi, paiement, publication, activation, suppression, copie interclub ou changement de rôle n’a été validé par l’assistant. Les changements de rôle ont été réalisés par le propriétaire. INC-001 du premier assistant WhatsApp reste un brouillon possible, non confirmé et non supprimé.
+
+Le relevé n’est pas encore exhaustif : voir 09_COUVERTURE_ET_BLOCAGES.txt. Les identifiants LEAD existants sont conservés ; les nouveaux constats sont ajoutés après la version précédente.
+
+COMPLÉMENT ADMINISTRATEUR — SECOND CLUB ET FORMATS
+Accès administrateur confirmé à Beynost et Lyon Carré de Soie. Dans le second club, Formulaires contient zéro formulaire : la recherche d’un exemple rempli n’a donc pas abouti.
+Sur un type de rendez-vous déjà réservable, lecture sans changer les champs : fréquence des départs, délai minimum en heures, capacité par créneau (0 sans limite), notifications au prospect, commercial assigné et club, lien isolé, disponibilité par jour et proposition de connexion Stripe. Le menu Tags de description propose %club%. Aucun Appliquer ni connexion Stripe exécuté.
+Campagne SMS : formulaire préparatoire lu puis abandonné. Segments, douze statuts, période de statut, exclusion des refus commerciaux, variables, modèle/texte et campagne différée présents. Aucun segment/destinataire ni interrupteur choisi ; programmation conditionnelle non dépliée.
+WhatsApp : modèles Marketing et Utility existants ; état Actif ou En cours d’examen dans la liste. Le nom de ligne ouvre l’éditeur. L’icône corbeille ouvre une confirmation, annulée immédiatement ; aucune suppression. Dans un modèle Utility approuvé, corps, format du titre et boutons sont verrouillés ; nom, description et média restent modifiables. Limites affichées : nom 100, description/corps 1024, footer 60, texte de réponse rapide 25 caractères, dix boutons maximum ; image JPG/PNG de 5 MB maximum. Aucun réglage modifié.
+Une alerte média manquant coexiste avec Actif. Un autre modèle en examen dans la liste affiche Actif et Modifications verrouillées dans le détail : écart WA-02, statut Meta réel non établi.
+Activités : traitement d’un appel existant ouvert, puis annulé sans consignation. Réponse, message vocal, segment et commentaire observés. Vue Faites consultée avec lignes existantes ; aucun résultat d’exécution testé.
+Formats : seize mesures initiales sur les huit grandes vues, en 390×844 et 820×1180. Statistiques et Ventes ont été reprises après chargement. Les mesures concernent le rendu initial, pas l’intégralité des interactions ni tous les tableaux chargés après défilement. Les tableaux des listes dépassent la largeur disponible et sont entourés de conteneurs à défilement horizontal. Messagerie mobile : menu hamburger et bouton + ouvrant la recherche du prospect ; aucun contact choisi. Taille du navigateur restaurée.
+Deux captures supplémentaires : 015 cadre uniquement les commandes de messagerie mobile, sans noms ni messages ; 016 montre l’éditeur d’un modèle de service existant, sans contact réel. Elles ne constituent pas des captures de chaque écran du logiciel.
+Technique : feuille CSS publique chargée inspectée localement. Variables --tw- et --radix-, seuils 640/768/1024/1280/1400 px et réduction des animations observés ; classes SVG de style FontAwesome dans le DOM. Indices supplémentaires, sans certification des versions ni copie de code dans le dossier. Le nom du bundle CSS diffère de l’échantillon précédent ; aucune cause déduite.
+
+DERNIÈRE PASSE EN LECTURE SEULE — 17 NOVEMBRE
+Cette passe ajoute 92 relevés d’options/états et quatre captures 017–020. Le nombre de lignes n’est pas un pourcentage de couverture.
+• Communications de service : six éditeurs rappel/modification/annulation, en email et SMS, ouverts et abandonnés. Les modèles sont consultables même quand l’interrupteur parent est grisé. Les variables de rendez-vous sont contextuelles.
+• Email : 27 modèles existants de Beynost ouverts et refermés sans édition ; comparaison de structure seulement, pas extraction des messages. Propriétés de l’En-tête et du HTML approfondies. Six types détaillés sur douze : Texte, Bouton, En-tête, Réseaux sociaux, Pied de page, HTML. Les six autres restent à détailler.
+• Scénarios : première modale Automatique/Manuel lue sans créer. Manuel masque les conditions de source et d’assignation commerciale. Un scénario existant peut être Actif et Verrouillé : le verrouillage bloque les nouvelles entrées et laisse finir les inscrits, selon le texte de l’interface. Aucune action de verrouillage ou d’état exécutée.
+• Activités : demande email, demande de contact et tâche SMS planifiée consultées sans traitement. Avis vides dans les deux clubs, en attente et faits. Les comptes de lignes lus trop tôt après filtre ont été écartés ; aucun nom de contact conservé.
+• Campagnes : calendrier et heure du formulaire SMS différé lus puis formulaire annulé ; bilan d’un email déjà envoyé avec les quatre métriques, sans données de destinataires ni chiffres conservés. Aucun exemple de campagne SMS n’a été trouvé dans le filtre de Beynost.
+• ÉVOLUTION D’INTERFACE : la création email comporte Cibler, Composer, Objet, Vérifier. La formation montre encore l’ancien parcours. Seule la première étape est observée ; aucun destinataire sélectionné, aucune étape suivante. Les segments sont facultatifs et affinent les statuts ; il suffit d’appartenir à l’un des segments choisis.
+• Mobile : panneau de filtre du chargé de rendez-vous, menu compact avec huit liens, fiche Sommaire/Détails. Formulaires, Communication, App et Paramètres ne figurent pas dans le menu 390 px observé ; ce n’est pas un refus serveur démontré. Taille normale restaurée.
+• Formation : les deux exports manquants ont réussi. Les 13 vidéos identifiées disposent désormais d’une transcription automatique analysée. Aucun visionnage image par image ni totalité de tous les contenus de l’éditeur revendiqués. Les résumés, pas les transcriptions intégrales, sont remis.
+• Écart restant : Histoire sportive, mentionnée dans l’aide, non retrouvée sur la fiche observée. Ne pas la supprimer du périmètre sur ce seul constat ; question DOC-02 au fournisseur.
+Toutes les préparations ont été quittées sans validation. L’assistant n’a envoyé, enregistré, activé, publié, clôturé ou supprimé aucune donnée métier pendant cette passe. Les choix de présentation dans des formulaires vides ont été abandonnés. INC-001 reste l’incident historique distinct déjà documenté.
+
+PASSE FILTRES ET RESPONSIVE — 17 NOVEMBRE
+Lire 12_FILTRES_ET_RESPONSIVE_2026-11-17.txt : 43 relevés, 20 mesures ciblées, 12 entrées de listes de communication et 28 entrées de paramètres. Six nouvelles captures 021–026. Des défauts mobile sont reproduits ; aucun résultat d’écriture métier testé.
+
+CONSOLIDATION DE TRANSMISSION — 17 NOVEMBRE
+Derniers chemins : document 13 ; import Excel, segmentation groupée sans application, détail UTM et recherche de références. Point d’entrée LIRE_EN_PREMIER_DEV_IA.txt ; cahier 07 consolidé ; liste EX01–EX16 document 14.

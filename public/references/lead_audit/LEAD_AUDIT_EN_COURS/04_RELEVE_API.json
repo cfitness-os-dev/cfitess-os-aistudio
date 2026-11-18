@@ -1,0 +1,65 @@
+{
+  "version": "0.2",
+  "date": "2026-11-16",
+  "capture_http": {
+    "etat": "non_disponible",
+    "appels_observes": [],
+    "raison": "Aucun journal réseau/HAR exposé par l’outil de navigateur. Aucun endpoint déduit des URL de pages."
+  },
+  "contrat_documente": {
+    "source": "https://support.masalledesport.com/helpcenter/comment-int%C3%A9grer-lead-via-webhook-",
+    "methode": "POST",
+    "url": "https://lead.masalledesport.com/api/lead/webhooks/clubEntry",
+    "requete_executee": false,
+    "requis_contact": [
+      "apiKey",
+      "club",
+      "email",
+      "lastname",
+      "firstname"
+    ],
+    "requis_essai_supplementaire": [
+      "offername"
+    ],
+    "champs_facultatifs": [
+      "gender",
+      "birthdate",
+      "zipcode",
+      "city",
+      "street",
+      "country",
+      "message",
+      "source",
+      "utm_source",
+      "utm_campaign",
+      "utm_medium",
+      "isWix"
+    ],
+    "essai_facultatifs": [
+      "phone",
+      "source_url"
+    ],
+    "limite": "Contrat d’entrée documenté, pas capture HTTP. Voir DOC-003 et API-01 ; lecture, export, erreurs, limites et webhooks sortants non documentés ici."
+  },
+  "stripe": {
+    "observation": "Champ URL de webhook et champs de clés visibles en interface",
+    "url_patron": "https://api-appointment.masalledesport.com/api/v2/appointment/webhooks/stripe/{club}",
+    "appel_capture": false,
+    "configuration_testee": false,
+    "secrets_extraits": false
+  },
+  "points_a_obtenir": [
+    "Documentation complète et versions",
+    "Authentification et portée par club",
+    "Lecture et export autorisés",
+    "Événements sortants",
+    "Statuts et erreurs",
+    "Pagination et limites",
+    "Anti-doublons et idempotence",
+    "Signatures et rejeu",
+    "Réconciliation et reprise",
+    "Rétention et migration"
+  ],
+  "derniere_verification_outil": "2026-11-17",
+  "limite_confirmee": "Connexion navigateur sans journal HTTP détaillé. Aucun appel métier capturé ni requête de test exécutée."
+}
