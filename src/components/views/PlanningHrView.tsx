@@ -433,7 +433,7 @@ export function PlanningHrView() {
 
         {/* Dedicated Group Classes Banner when Cours collectifs is active */}
         {isCoursCollectifsView && (
-          <div className="p-4 bg-gradient-to-r from-rose-50/60 via-violet-50/50 to-sky-50/60 border-b border-slate-200 space-y-3">
+          <div className="p-4 bg-gradient-to-r from-rose-50/60 via-violet-50/50 to-sky-50/60 dark:from-[#181d2f] dark:via-[#151a2a] dark:to-[#181d2f] border-b border-slate-200 dark:border-slate-800 space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
                 <span className="text-[10px] font-mono uppercase font-bold text-rose-600">

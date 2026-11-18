@@ -247,18 +247,24 @@ html.dark {
 }
 
 .cfos-dark main .bg-slate-50,
+.cfos-dark main .bg-slate-50\/30,
 .cfos-dark main .bg-slate-50\/40,
 .cfos-dark main .bg-slate-50\/50,
 .cfos-dark main .bg-slate-50\/60,
 .cfos-dark main .bg-slate-50\/70,
 .cfos-dark main .bg-slate-50\/80,
+.cfos-dark main .bg-slate-50\/90,
 .cfos-dark .cfos-adaptive-shell .bg-slate-50,
 .cfos-dark .fixed .bg-slate-50 {
   background-color: #191f31;
 }
 
 .cfos-dark main .bg-slate-100,
+.cfos-dark main .bg-slate-100\/50,
+.cfos-dark main .bg-slate-100\/60,
+.cfos-dark main .bg-slate-100\/70,
 .cfos-dark main .bg-slate-100\/80,
+.cfos-dark main .bg-slate-100\/90,
 .cfos-dark .cfos-adaptive-shell .bg-slate-100 {
   background-color: #1e263b;
   color: #e2e8f0;
