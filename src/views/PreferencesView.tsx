@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useCfos } from '../context/CfosContext';
+import { cleanUiTree } from '../domain/cleanModeSanitizer';
 import { ApiClientError, clientApi, type ApiAuthContext } from '../domain/clientApi';
 import type { UserPreferences } from '../domain/types';
 
@@ -108,7 +109,7 @@ export function PreferencesView({
 
   const calendarUrl = `https://club.cfitness-fictif.local/ics/${draft.calendarFeedToken}.ics`;
 
-  return (
+  return cleanUiTree(
     <div className="space-y-5">
       <div className="cf-card p-5 flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -361,6 +362,7 @@ export function PreferencesView({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    isTechnicalMode
   );
 }

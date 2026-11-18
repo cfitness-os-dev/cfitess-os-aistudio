@@ -10,6 +10,7 @@ import {
   UserCheck,
 } from 'lucide-react';
 import type { DashboardPayload } from '../domain/apiEngine';
+import { cleanUiTree } from '../domain/cleanModeSanitizer';
 import { computeShiftNetMinutes, formatMinutesAsHours } from '../domain/rbac';
 import { useCfos } from '../context/CfosContext';
 
@@ -54,7 +55,7 @@ export function DashboardView({
     (e) => e.hrFileStatus !== 'complete'
   );
 
-  return (
+  return cleanUiTree(
     <div className="space-y-6">
       {/* En-tête synthétique collaborateur */}
       <div className="cf-card p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -484,6 +485,7 @@ export function DashboardView({
           données propres{isTechnicalMode ? ' (TST31)' : ''}.
         </div>
       )}
-    </div>
+    </div>,
+    isTechnicalMode
   );
 }

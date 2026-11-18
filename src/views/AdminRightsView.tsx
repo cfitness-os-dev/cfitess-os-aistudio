@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useCfos } from '../context/CfosContext';
+import { cleanUiTree } from '../domain/cleanModeSanitizer';
 import type { DashboardPayload } from '../domain/apiEngine';
 import { ApiClientError, clientApi, type ApiAuthContext } from '../domain/clientApi';
 import { getControlState } from '../domain/rbac';
@@ -280,7 +281,7 @@ export function AdminRightsView({
     }
   }
 
-  return (
+  return cleanUiTree(
     <div className="space-y-5">
       <div className="cf-card p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
@@ -896,6 +897,7 @@ export function AdminRightsView({
           </div>
         </div>
       )}
-    </div>
+    </div>,
+    isTechnicalMode
   );
 }

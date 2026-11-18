@@ -23,6 +23,7 @@ import {
   Webhook,
 } from 'lucide-react';
 import { useCfos } from '../../context/CfosContext';
+import { cleanUiTree } from '../../domain/cleanModeSanitizer';
 import {
   computeSmsSegmentMetrics,
   evaluateLeadModuleAccess,
@@ -489,7 +490,7 @@ export function LeadCommercialHubView({
   ];
   const TABS = ALL_TABS.filter((t) => !t.technicalOnly || isTechnicalMode);
 
-  return (
+  return cleanUiTree(
     <div className="space-y-4">
       {/* ===================================================================== */}
       {/* EN-TÊTE HUB COMMERCIAL LEAD (SÉPARÉ DE MON COMPTE RH V1.16)           */}
@@ -2132,6 +2133,7 @@ export function LeadCommercialHubView({
           )}
         </>
       )}
-    </div>
+    </div>,
+    isTechnicalMode
   );
 }

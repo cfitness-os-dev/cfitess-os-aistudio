@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useCfos } from '../context/CfosContext';
+import { cleanUiTree } from '../domain/cleanModeSanitizer';
 import type { DashboardPayload } from '../domain/apiEngine';
 import {
   ApiClientError,
@@ -953,7 +954,7 @@ export function PlanningAndModulesView({
         p.note.toLowerCase().includes(gq)
     );
 
-    return (
+    return cleanUiTree(
       <div className="space-y-5">
         {renderZoomModal()}
         <div className="cf-card p-5 space-y-3">
@@ -1680,7 +1681,8 @@ export function PlanningAndModulesView({
             </div>
           </div>
         )}
-      </div>
+      </div>,
+      isTechnicalMode
     );
   }
 
@@ -1692,7 +1694,7 @@ export function PlanningAndModulesView({
     const posMap = new Map(dashboard.positions.map((p) => [p.id, p]));
     const siteMap = new Map(dashboard.sites.map((s) => [s.id, s.name]));
 
-    return (
+    return cleanUiTree(
       <div className="space-y-5">
         {renderZoomModal()}
         <div className="cf-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1880,7 +1882,8 @@ export function PlanningAndModulesView({
         )}
 
         {renderSourceDrawer('MC03')}
-      </div>
+      </div>,
+      isTechnicalMode
     );
   }
 
@@ -5494,10 +5497,11 @@ export function PlanningAndModulesView({
       break;
   }
 
-  return (
+  return cleanUiTree(
     <>
       {renderZoomModal()}
       {sectionContent}
-    </>
+    </>,
+    isTechnicalMode
   );
 }
