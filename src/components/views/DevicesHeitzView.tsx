@@ -295,21 +295,23 @@ export function DevicesHeitzView() {
                 <span>1. Adhérents &amp; Portillons ({heitzMembers.length})</span>
               </button>
 
-              <button
-                onClick={() => {
-                  setActiveSoftwareTab('HEITZ_DESKTOP');
-                  setShowTpvDrawer(true);
-                  setHeitzStatusFilter('IMPAYE');
-                }}
-                className={`px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors ${
-                  activeSoftwareTab === 'HEITZ_DESKTOP' && showTpvDrawer
-                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-2xs'
-                    : 'text-slate-600 hover:bg-white hover:text-slate-900'
-                }`}
-              >
-                <CreditCard className="w-4 h-4" />
-                <span>2. Finances, SEPA &amp; Caisse NF525</span>
-              </button>
+              {navSubTarget === 'finances' && (
+                <button
+                  onClick={() => {
+                    setActiveSoftwareTab('HEITZ_DESKTOP');
+                    setShowTpvDrawer(true);
+                    setHeitzStatusFilter('IMPAYE');
+                  }}
+                  className={`px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors ${
+                    activeSoftwareTab === 'HEITZ_DESKTOP' && showTpvDrawer
+                      ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-2xs'
+                      : 'text-slate-600 hover:bg-white hover:text-slate-900'
+                  }`}
+                >
+                  <CreditCard className="w-4 h-4" />
+                  <span>2. Finances, SEPA &amp; Caisse NF525</span>
+                </button>
+              )}
 
               <button
                 onClick={() => setActiveSoftwareTab('INBODY_LB120')}
@@ -320,7 +322,7 @@ export function DevicesHeitzView() {
                 }`}
               >
                 <Activity className="w-4 h-4" />
-                <span>3. Bilans Technogym Checkup</span>
+                <span>{navSubTarget === 'finances' ? '3.' : '2.'} Bilans Technogym Checkup</span>
               </button>
             </div>
           </div>
@@ -520,37 +522,41 @@ export function DevicesHeitzView() {
               >
                 Contrôle d&apos;Accès Tripodes
               </button>
-              <button
-                type="button"
-                onClick={() => setShowTpvDrawer((prev) => !prev)}
-                className={`px-2.5 py-1 rounded-lg cursor-pointer ${
-                  showTpvDrawer
-                    ? 'bg-emerald-600 text-white font-bold'
-                    : 'hover:bg-slate-200 text-slate-700'
-                }`}
-              >
-                Caisse / TPV Comptoir
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setHeitzStatusFilter((prev) => (prev === 'IMPAYE' ? 'ALL' : 'IMPAYE'))
-                }
-                className={`px-2.5 py-1 rounded-lg cursor-pointer ${
-                  heitzStatusFilter === 'IMPAYE'
-                    ? 'bg-rose-600 text-white font-bold'
-                    : 'hover:bg-slate-200 text-slate-700'
-                }`}
-              >
-                {isTechnicalMode ? 'Prélèvements SEPA (finBalance)' : 'Prélèvements SEPA'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveSection('dashboard')}
-                className="px-2.5 py-1 rounded-lg hover:bg-slate-200 text-slate-700 cursor-pointer"
-              >
-                Statistiques FMI →
-              </button>
+              {navSubTarget === 'finances' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setShowTpvDrawer((prev) => !prev)}
+                    className={`px-2.5 py-1 rounded-lg cursor-pointer ${
+                      showTpvDrawer
+                        ? 'bg-emerald-600 text-white font-bold'
+                        : 'hover:bg-slate-200 text-slate-700'
+                    }`}
+                  >
+                    Caisse / TPV Comptoir
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setHeitzStatusFilter((prev) => (prev === 'IMPAYE' ? 'ALL' : 'IMPAYE'))
+                    }
+                    className={`px-2.5 py-1 rounded-lg cursor-pointer ${
+                      heitzStatusFilter === 'IMPAYE'
+                        ? 'bg-rose-600 text-white font-bold'
+                        : 'hover:bg-slate-200 text-slate-700'
+                    }`}
+                  >
+                    {isTechnicalMode ? 'Prélèvements SEPA (finBalance)' : 'Prélèvements SEPA'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection('dashboard')}
+                    className="px-2.5 py-1 rounded-lg hover:bg-slate-200 text-slate-700 cursor-pointer"
+                  >
+                    Statistiques FMI →
+                  </button>
+                </>
+              )}
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-slate-500">Club pupitre :</span>
@@ -1001,14 +1007,15 @@ export function DevicesHeitzView() {
 
             {/* RIGHT PANE (3 cols): Tactile POS Caisse TPV Heitz + Live Turnstile Log */}
             <div className="lg:col-span-3 flex flex-col gap-4">
-              {/* Tactile Caisse TPV Comptoir */}
-              <div
-                className={`bg-white border rounded-2xl overflow-hidden shadow-2xs transition-all ${
-                  showTpvDrawer
-                    ? 'border-emerald-500 ring-2 ring-emerald-500/30'
-                    : 'border-slate-200/80'
-                }`}
-              >
+              {navSubTarget === 'finances' && (
+                /* Tactile Caisse TPV Comptoir */
+                <div
+                  className={`bg-white border rounded-2xl overflow-hidden shadow-2xs transition-all ${
+                    showTpvDrawer
+                      ? 'border-emerald-500 ring-2 ring-emerald-500/30'
+                      : 'border-slate-200/80'
+                  }`}
+                >
                 <div
                   className={`border-b px-3.5 py-2.5 text-xs font-bold flex items-center justify-between ${
                     showTpvDrawer
@@ -1260,6 +1267,7 @@ export function DevicesHeitzView() {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Fil d'eau des passages temps réel */}
               <div className="bg-white border border-slate-200/80 rounded-2xl flex-1 flex flex-col overflow-hidden shadow-2xs">
@@ -1292,6 +1300,7 @@ export function DevicesHeitzView() {
           </div>
 
           {/* Official heitzsystem.com/solution/ 6-Pillar Compatibility & Feature Parity Matrix */}
+          {isTechnicalMode && (
           <div className="m-4 p-5 bg-white border border-slate-200/80 rounded-2xl space-y-3 shadow-2xs">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-2.5 border-b border-slate-200">
               <div>
@@ -1453,6 +1462,7 @@ export function DevicesHeitzView() {
               </div>
             </div>
           </div>
+          )}
         </div>
       )}
 
