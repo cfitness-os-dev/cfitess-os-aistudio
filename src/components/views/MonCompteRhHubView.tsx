@@ -34,6 +34,7 @@ export type MonCompteHubTab =
 
 interface MonCompteRhHubViewProps {
   subTarget?: string | null;
+  planningOnly?: boolean;
 }
 
 function clubFilterToSiteId(filter: ClubFilter): string | 'all' {
@@ -72,7 +73,7 @@ function parseInitialTarget(subTarget?: string | null): {
   return { tab: 'mon-compte', section: 'MC01' };
 }
 
-export function MonCompteRhHubView({ subTarget }: MonCompteRhHubViewProps) {
+export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompteRhHubViewProps) {
   const { clubFilter, setClubFilter, isTechnicalMode } = useCfos();
   const initialTarget = parseInitialTarget(subTarget);
 
@@ -243,6 +244,7 @@ export function MonCompteRhHubView({ subTarget }: MonCompteRhHubViewProps) {
     <div className="space-y-5">
       {/* Bandeau de sélection de vue unifiée (V1.16 Mon compte <-> Traçabilité <-> Vues GitHub CFOS) */}
       <div className="cf-card p-3 sm:p-4 space-y-3">
+        {!planningOnly && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -345,12 +347,19 @@ export function MonCompteRhHubView({ subTarget }: MonCompteRhHubViewProps) {
             </div>
           )}
         </div>
+        )}
 
         {/* Contrôles de simulation RBAC V1.16 et barre MC01..MC13 */}
         {(hubTab === 'mon-compte' || hubTab === 'traceability') && dashboard && registry && (
-          <div className="pt-3 border-t border-[var(--cf-border)] space-y-3">
+          <div className={`${planningOnly ? '' : 'pt-3 border-t border-[var(--cf-border)]'} space-y-3`}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-3">
+                {planningOnly && (
+                  <div className="flex items-center gap-2 pr-2">
+                    <Calendar className="w-4 h-4 text-violet-400 shrink-0" />
+                    <span className="text-sm font-extrabold">Planning des équipes</span>
+                  </div>
+                )}
                 {isTechnicalMode && (
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-violet-400 shrink-0" />
@@ -397,20 +406,23 @@ export function MonCompteRhHubView({ subTarget }: MonCompteRhHubViewProps) {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => void handleNavigateSection('MC11')}
-                  title="Tester l'accès direct à MC11 (Organisation & Droits) pour vérifier le refus HTTP 403 serveur selon le profil actif"
-                  className="cf-input px-2.5 py-1.5 text-xs flex items-center gap-1.5 hover:border-violet-500/60 transition-colors cursor-pointer"
-                >
-                  <Lock className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Tester URL /MC11</span>
-                </button>
-              </div>
+              {isTechnicalMode && (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void handleNavigateSection('MC11')}
+                    title="Tester l'accès direct à MC11 (Organisation & Droits) pour vérifier le refus HTTP 403 serveur selon le profil actif"
+                    className="cf-input px-2.5 py-1.5 text-xs flex items-center gap-1.5 hover:border-violet-500/60 transition-colors cursor-pointer"
+                  >
+                    <Lock className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Tester URL /MC11</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Barre des 13 sous-sections */}
+            {!planningOnly && (
             <div className="overflow-x-auto pb-1">
               <div className="flex items-center gap-1.5 min-w-max">
                 {isTechnicalMode && (
@@ -459,6 +471,7 @@ export function MonCompteRhHubView({ subTarget }: MonCompteRhHubViewProps) {
                 )}
               </div>
             </div>
+            )}
           </div>
         )}
       </div>
