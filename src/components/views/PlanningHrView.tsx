@@ -243,6 +243,7 @@ export function PlanningHrView() {
 
   // Skello Drag & Drop State
   const [dragOverCellKey, setDragOverCellKey] = useState<string | null>(null);
+  const [alertBannerDismissed, setAlertBannerDismissed] = useState(false);
 
   const handleShiftDragStart = (e: React.DragEvent, shiftId: string) => {
     if (isCurrentWeekLocked) {
@@ -1126,17 +1127,56 @@ export function PlanningHrView() {
           </div>
         )}
 
-        {existingScheduleViolations.length > 0 && (
-          <div className="px-4 py-2.5 bg-amber-50 border-b border-amber-300 text-xs text-amber-950 space-y-1">
-            <div className="font-bold flex items-center gap-1.5">
-              <AlertTriangle className="w-4 h-4 text-amber-600" />
-              Alerte Légale Skello — Convention Collective du Sport (IDCC 2511) :
-            </div>
-            {existingScheduleViolations.map((v, i) => (
-              <div key={i}>
-                • [{v.code}] {v.message}
+        {existingScheduleViolations.length > 0 && !alertBannerDismissed && (
+          <div className="px-4 py-3 bg-amber-50 border-b border-amber-300 text-xs text-amber-950 space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="font-bold flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>
+                  Alerte Légale Skello — Convention Collective du Sport (IDCC 2511) ({existingScheduleViolations.length}) :
+                </span>
               </div>
-            ))}
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const offendingIds = Array.from(
+                      new Set(existingScheduleViolations.map((v) => v.shiftId).filter(Boolean))
+                    );
+                    offendingIds.forEach((id) => deleteShift(id));
+                    setFeedbackBanner(
+                      `${offendingIds.length} créneau(x) non conforme(s) supprimé(s) — planning 100 % conforme IDCC 2511.`
+                    );
+                  }}
+                  className="px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-[11px] cursor-pointer"
+                >
+                  Résoudre : annuler les créneaux en infraction
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAlertBannerDismissed(true)}
+                  className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-semibold text-[11px] cursor-pointer"
+                >
+                  Fermer l&apos;alerte
+                </button>
+              </div>
+            </div>
+            <div className="space-y-1">
+              {existingScheduleViolations.map((v, i) => (
+                <div key={i} className="flex items-center justify-between gap-2">
+                  <span>• [{v.code}] {v.message}</span>
+                  {v.shiftId && (
+                    <button
+                      type="button"
+                      onClick={() => deleteShift(v.shiftId)}
+                      className="text-[10px] font-bold underline text-rose-500 hover:text-rose-400 shrink-0 cursor-pointer"
+                    >
+                      Supprimer ce créneau
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -1543,23 +1583,41 @@ export function PlanningHrView() {
               {showShiftCreator && (
                 <div className="lg:col-span-3 bg-slate-50/70 p-4 space-y-4">
                   <div className="space-y-2 border-b border-slate-200 pb-2.5">
-                    <div className="flex items-center justify-between">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-[#4318FF]">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-violet-400">
                         Planification Unifiée
                       </div>
-                      <button
-                        type="button"
-                        onClick={triggerTestViolation}
-                        className="text-[10px] font-semibold text-rose-600 hover:text-rose-700 underline cursor-pointer"
-                      >
-                        Simuler dépassement &gt;10h
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {previewViolations.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setStartTime('09:00');
+                              setEndTime('17:00');
+                              setBreakMinutes(60);
+                            }}
+                            className="text-[10px] font-semibold text-emerald-400 hover:text-emerald-300 underline cursor-pointer"
+                          >
+                            Réinitialiser (09h–17h)
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAlertBannerDismissed(false);
+                            triggerTestViolation();
+                          }}
+                          className="text-[10px] font-semibold text-rose-400 hover:text-rose-300 underline cursor-pointer"
+                        >
+                          Simuler dépassement &gt;10h
+                        </button>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-1 p-0.5 rounded-lg bg-slate-200/80 text-[11px]">
+                    <div className="grid grid-cols-2 gap-1 p-1 rounded-lg bg-slate-900 border border-slate-700 text-[11px]">
                       <button
                         type="button"
                         onClick={() => setShowUnifiedEventModal(false)}
-                        className="py-1 px-2 rounded-md bg-white text-slate-900 font-bold shadow-2xs cursor-pointer"
+                        className="py-1.5 px-2 rounded-md bg-violet-600 text-white font-bold shadow-2xs cursor-pointer"
                       >
                         Horaire RH
                       </button>
@@ -1569,7 +1627,7 @@ export function PlanningHrView() {
                           setShowUnifiedEventModal(true);
                           setShowShiftCreator(false);
                         }}
-                        className="py-1 px-2 rounded-md text-slate-600 hover:text-slate-900 font-semibold cursor-pointer"
+                        className="py-1.5 px-2 rounded-md text-slate-200 hover:bg-slate-800 hover:text-white font-semibold cursor-pointer"
                       >
                         RDV Heitz / Mywellness
                       </button>
