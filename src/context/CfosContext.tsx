@@ -340,6 +340,14 @@ interface CfosContextValue extends PersistedState {
     simulateMidWayFailure?: boolean;
   }) => OnboardingTransactionResult;
 
+  createHeitzMember: (params: {
+    firstName: string;
+    lastName: string;
+    phone: string;
+    email?: string;
+    homeClubId: ClubId;
+    subscriptionName: string;
+  }) => HeitzMember;
   simulateMemberGateScan: (memberId: string, clubId: ClubId) => AccessEvent | null;
   triggerManualTurnstileOpen: (
     clubId: ClubId,
@@ -1796,6 +1804,45 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     notify('success', 'Statut de l’abonnement Heitz mis à jour (Gel médical / Réactivation).');
   };
 
+  const createHeitzMember: CfosContextValue['createHeitzMember'] = (params) => {
+    const clubPrefix = params.homeClubId === 'carre-de-soie' ? 'CDS' : 'BEY';
+    const seq = String(1000 + state.heitzMembers.length + Math.floor(Date.now() % 900)).slice(-4);
+    const newMember: HeitzMember = {
+      id: `hm-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      badgeCode: `HZ-${clubPrefix}-${seq}`,
+      rfidBluetoothEnabled: true,
+      firstName: params.firstName.trim(),
+      lastName: params.lastName.trim(),
+      phone: params.phone.trim(),
+      email: params.email?.trim() || undefined,
+      homeClubId: params.homeClubId,
+      subscriptionName: params.subscriptionName,
+      activeSubscription: true,
+      finBalanceEur: 0,
+      finBalanceState: 1,
+      technogymMoves30d: 0,
+      daysSinceLastWorkout: 0,
+      loyaltyPoints: 50,
+      referralsCount: 0,
+    };
+
+    setState((prev) => ({
+      ...prev,
+      heitzMembers: [newMember, ...prev.heitzMembers],
+      auditLogs: appendAudit(prev.auditLogs, {
+        clubId: params.homeClubId,
+        action: 'CREATION_ADHERENT_HEITZ',
+        target: `${newMember.firstName} ${newMember.lastName} (${newMember.badgeCode})`,
+        afterState: `Abonnement ${newMember.subscriptionName} actif · Badge RFID/BLE activé`,
+      }),
+    }));
+    notify(
+      'success',
+      `Nouvel adhérent créé : ${newMember.firstName} ${newMember.lastName} (${newMember.badgeCode}).`
+    );
+    return newMember;
+  };
+
   const rewardMemberLoyaltyOrReferral: CfosContextValue['rewardMemberLoyaltyOrReferral'] = (
     memberId,
     rewardType,
@@ -2522,6 +2569,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     ingestEmailCandidate,
     createJobOffer,
     runCandidateOnboarding,
+    createHeitzMember,
     simulateMemberGateScan,
     triggerManualTurnstileOpen,
     regularizeMemberSepa,

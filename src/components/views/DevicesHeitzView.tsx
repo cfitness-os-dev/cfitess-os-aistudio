@@ -39,6 +39,7 @@ export function DevicesHeitzView() {
     heitzKpiTickets,
     accessEvents,
     inBodyScans,
+    createHeitzMember,
     simulateMemberGateScan,
     triggerManualTurnstileOpen,
     regularizeMemberSepa,
@@ -83,6 +84,41 @@ export function DevicesHeitzView() {
     'CB TPV'
   );
   const [tpvFeedback, setTpvFeedback] = useState<string | null>(null);
+
+  // Direct Member Creation Form State
+  const [showNewMemberForm, setShowNewMemberForm] = useState(false);
+  const [newMemberFirstName, setNewMemberFirstName] = useState('');
+  const [newMemberLastName, setNewMemberLastName] = useState('');
+  const [newMemberPhone, setNewMemberPhone] = useState('');
+  const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [newMemberClubId, setNewMemberClubId] = useState<ClubId>(
+    clubFilter === 'beynost' ? 'beynost' : 'carre-de-soie'
+  );
+  const [newMemberSubscription, setNewMemberSubscription] = useState(
+    'Liberté Bi-Club (39,90 €/mois)'
+  );
+
+  const handleCreateNewMember = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMemberFirstName.trim() || !newMemberLastName.trim()) return;
+    const created = createHeitzMember({
+      firstName: newMemberFirstName,
+      lastName: newMemberLastName,
+      phone: newMemberPhone || '06 00 00 00 00',
+      email: newMemberEmail || undefined,
+      homeClubId: newMemberClubId,
+      subscriptionName: newMemberSubscription,
+    });
+    setSelectedMemberId(created.id);
+    setActiveSoftwareTab('HEITZ_DESKTOP');
+    setHeitzStatusFilter('ALL');
+    setMemberSearch('');
+    setNewMemberFirstName('');
+    setNewMemberLastName('');
+    setNewMemberPhone('');
+    setNewMemberEmail('');
+    setShowNewMemberForm(false);
+  };
 
   useEffect(() => {
     if (navSubTarget === 'finances') {
@@ -328,6 +364,17 @@ export function DevicesHeitzView() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {navSubTarget !== 'finances' && (
+              <button
+                type="button"
+                onClick={() => setShowNewMemberForm((prev) => !prev)}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-xs"
+              >
+                <Plus className="w-4 h-4" />
+                {showNewMemberForm ? 'Fermer le formulaire' : 'Nouvel adhérent'}
+              </button>
+            )}
+
             <button
               onClick={() => toggleClubMode(selectedClubGate, 'degradedMode')}
               className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer border ${
@@ -361,6 +408,102 @@ export function DevicesHeitzView() {
             </button>
           </div>
         </div>
+
+        {showNewMemberForm && navSubTarget !== 'finances' && (
+          <form
+            onSubmit={handleCreateNewMember}
+            className="p-4 rounded-xl border border-violet-300 bg-violet-50/70 space-y-3"
+          >
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-extrabold uppercase tracking-wider text-violet-700">
+                Créer une nouvelle fiche adhérent (badge RFID/BLE + accès portillons)
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowNewMemberForm(false)}
+                className="text-xs text-slate-500 hover:text-slate-800 cursor-pointer"
+              >
+                Annuler
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Prénom *</label>
+                <input
+                  type="text"
+                  required
+                  value={newMemberFirstName}
+                  onChange={(e) => setNewMemberFirstName(e.target.value)}
+                  placeholder="Ex. Camille"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Nom *</label>
+                <input
+                  type="text"
+                  required
+                  value={newMemberLastName}
+                  onChange={(e) => setNewMemberLastName(e.target.value)}
+                  placeholder="Ex. Laurent"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Téléphone</label>
+                <input
+                  type="tel"
+                  value={newMemberPhone}
+                  onChange={(e) => setNewMemberPhone(e.target.value)}
+                  placeholder="06 12 34 56 78"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={newMemberEmail}
+                  onChange={(e) => setNewMemberEmail(e.target.value)}
+                  placeholder="camille.laurent@email.fr"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Club d&apos;appartenance</label>
+                <select
+                  value={newMemberClubId}
+                  onChange={(e) => setNewMemberClubId(e.target.value as ClubId)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900"
+                >
+                  <option value="carre-de-soie">C.Fitness Center (Carré de Soie)</option>
+                  <option value="beynost">C.Fitness Place (Beynost)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Formule d&apos;abonnement</label>
+                <select
+                  value={newMemberSubscription}
+                  onChange={(e) => setNewMemberSubscription(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900"
+                >
+                  <option value="Liberté Bi-Club (39,90 €/mois)">Liberté Bi-Club (39,90 €/mois)</option>
+                  <option value="Privilège + Biocircuit (49,90 €/mois)">Privilège + Biocircuit (49,90 €/mois)</option>
+                  <option value="Étudiant / Jeune (29,90 €/mois)">Étudiant / Jeune (29,90 €/mois)</option>
+                  <option value="Pass 10 Séances">Pass 10 Séances</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold cursor-pointer"
+              >
+                Enregistrer l&apos;adhérent et activer son badge
+              </button>
+            </div>
+          </form>
+        )}
 
         {/* Contextual Summary Strip matching Homepage KPIs (Finances OR Adhérents) */}
         {isFinancesView ? (
