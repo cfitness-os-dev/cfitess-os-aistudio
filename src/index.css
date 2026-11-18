@@ -270,8 +270,15 @@ html.dark {
   color: #e2e8f0;
 }
 
-.cfos-dark main .bg-\[\#E2E8F0\] {
+.cfos-dark main .bg-\[\#E2E8F0\],
+.cfos-dark main .bg-\[\#F3F4F6\],
+.cfos-dark main .bg-\[\#F5F8FA\] {
   background-color: #0f1420;
+}
+
+.cfos-dark main .bg-\[\#E5E7EB\]\/80 {
+  background-color: #191f31;
+  border-color: rgba(148, 163, 184, 0.16);
 }
 
 /* Bordures et séparateurs en Mode Nuit */
