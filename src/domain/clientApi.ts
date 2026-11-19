@@ -441,6 +441,29 @@ export const clientApi = {
     });
   },
 
+  importLeadProspects(
+    auth: ApiAuthContext,
+    rows: Array<{
+      gender: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+      street: string;
+      postalCode: string;
+      city: string;
+      birthDate: string;
+      comment: string;
+      clubId: string;
+      rgpdConsent: boolean;
+    }>
+  ): Promise<{ ok: boolean; created: number; skippedDuplicates: number; rejected: number }> {
+    return requestJson('/api/lead/prospects/import', auth, {
+      method: 'POST',
+      body: JSON.stringify({ rows }),
+    });
+  },
+
   revokeCalendarToken(auth: ApiAuthContext): Promise<UserPreferences> {
     return requestJson<UserPreferences>('/api/me/calendar-token/revoke', auth, {
       method: 'POST',

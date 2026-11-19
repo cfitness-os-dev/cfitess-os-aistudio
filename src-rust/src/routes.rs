@@ -2308,6 +2308,35 @@ fn authorized_clubs_for_actor(db: &AppDatabaseState, actor_id: &str) -> HashSet<
     clubs
 }
 
+fn actor_has_lead_admin_write_on_club(db: &AppDatabaseState, actor_id: &str, club_id: &str) -> bool {
+    let Some(emp) = db.employees.iter().find(|e| e.id == actor_id) else {
+        return false;
+    };
+    if emp.site_accesses.iter().any(|sa| sa.profile_id == "admin_systeme") {
+        return true;
+    }
+    emp.site_accesses.iter().any(|sa| {
+        site_id_to_club_id(&sa.site_id) == club_id
+            && matches!(sa.profile_id.as_str(), "master_avance" | "planificateur_avance")
+    })
+}
+
+fn actor_has_lead_rdv_write_on_club(db: &AppDatabaseState, actor_id: &str, club_id: &str) -> bool {
+    let Some(emp) = db.employees.iter().find(|e| e.id == actor_id) else {
+        return false;
+    };
+    if emp.site_accesses.iter().any(|sa| sa.profile_id == "admin_systeme") {
+        return true;
+    }
+    emp.site_accesses.iter().any(|sa| {
+        site_id_to_club_id(&sa.site_id) == club_id
+            && matches!(
+                sa.profile_id.as_str(),
+                "master_avance" | "planificateur_avance" | "planificateur_standard"
+            )
+    })
+}
+
 fn parse_hhmm_minutes(hhmm: &str) -> Option<u32> {
     let mut parts = hhmm.trim().split(':');
     let h: u32 = parts.next()?.parse().ok()?;
@@ -2732,10 +2761,12 @@ async fn put_lead_form(
         .position(|f| f.id == form_id)
         .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Formulaire introuvable."))?;
 
-    if !allowed.contains(&db.lead_forms[idx].club_id) {
+    if !allowed.contains(&db.lead_forms[idx].club_id)
+        || !actor_has_lead_admin_write_on_club(&db, &actor_id, &db.lead_forms[idx].club_id)
+    {
         return Err(err_resp(
             StatusCode::FORBIDDEN,
-            "Accès refusé (403) : formulaire hors de vos clubs autorisés.",
+            "Accès refusé (403) : droits d'administration Lead requis sur ce club.",
         ));
     }
 
@@ -2807,10 +2838,12 @@ async fn post_lead_prospects_import(
     let mut rejected = 0u32;
 
     for item in payload.rows {
-        if !allowed.contains(&item.club_id) {
+        if !allowed.contains(&item.club_id)
+            || !actor_has_lead_admin_write_on_club(&db, &actor_id, &item.club_id)
+        {
             return Err(err_resp(
                 StatusCode::FORBIDDEN,
-                format!("Import refusé (403) : club {} non autorisé.", item.club_id),
+                format!("Import refusé (403) : droits insuffisants sur le club {}.", item.club_id),
             ));
         }
         let email = item.email.trim().to_lowercase();
@@ -2891,8 +2924,10 @@ async fn patch_lead_appointment(
         .position(|a| a.id == slot_id)
         .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Rendez-vous introuvable."))?;
 
-    if !allowed.contains(&db.lead_appointments[idx].club_id) {
-        return Err(err_resp(StatusCode::FORBIDDEN, "Accès refusé (403) sur ce club."));
+    if !allowed.contains(&db.lead_appointments[idx].club_id)
+        || !actor_has_lead_rdv_write_on_club(&db, &actor_id, &db.lead_appointments[idx].club_id)
+    {
+        return Err(err_resp(StatusCode::FORBIDDEN, "Accès refusé (403) : profil insuffisant ou hors club."));
     }
     let start_min = parse_hhmm_minutes(&payload.start_time)
         .ok_or_else(|| err_resp(StatusCode::BAD_REQUEST, "Heure invalide."))?;
@@ -2944,8 +2979,10 @@ async fn delete_lead_appointment(
         .position(|a| a.id == slot_id)
         .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Rendez-vous introuvable."))?;
 
-    if !allowed.contains(&db.lead_appointments[idx].club_id) {
-        return Err(err_resp(StatusCode::FORBIDDEN, "Accès refusé (403) sur ce club."));
+    if !allowed.contains(&db.lead_appointments[idx].club_id)
+        || !actor_has_lead_rdv_write_on_club(&db, &actor_id, &db.lead_appointments[idx].club_id)
+    {
+        return Err(err_resp(StatusCode::FORBIDDEN, "Accès refusé (403) : profil insuffisant ou hors club."));
     }
 
     db.lead_appointments[idx].status = "annule".into();
@@ -2968,9 +3005,12 @@ mod tests {
     use crate::seed::load_or_init_state;
 
     fn test_state() -> SharedState {
+        static TEST_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+        let seq = TEST_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let dir = std::env::temp_dir().join(format!(
-            "cfos_test_{}",
-            Utc::now().timestamp_nanos_opt().unwrap_or_default()
+            "cfos_test_{}_{}",
+            Utc::now().timestamp_nanos_opt().unwrap_or_default(),
+            seq
         ));
         Arc::new(SharedAppState {
             db: RwLock::new(load_or_init_state(&dir)),
@@ -3619,10 +3659,10 @@ mod tests {
         let forms = ws["forms"].as_array().unwrap();
         assert!(!forms.iter().any(|f| f["clubId"] == "beynost"));
 
-        // Sarah CDS tente de modifier frm-2 (Beynost) -> 403 FORBIDDEN
+        // Sarah CDS tente de modifier frm-2 (Beynost) -> 403 FORBIDDEN (inter-club)
         let forbidden_form = put_lead_form(
             State(state.clone()),
-            h_sarah,
+            h_sarah.clone(),
             Path("frm-2".to_string()),
             Json(PutLeadFormPayload {
                 published: Some(false),
@@ -3633,6 +3673,61 @@ mod tests {
         .await
         .unwrap_err();
         assert_eq!(forbidden_form.0, StatusCode::FORBIDDEN);
+
+        // Chloé (employe_standard sur Beynost) tente de modifier frm-2 (Beynost) -> 403 FORBIDDEN (intra-club)
+        let chloe_login = post_local_auth_login(
+            State(state.clone()),
+            Json(LocalAuthLoginRequest {
+                email_or_id: "emp-chloe".to_string(),
+                pin_or_password: "5320".to_string(),
+                role_requested: String::new(),
+            }),
+        )
+        .await
+        .into_response();
+        let chloe_bytes = axum::body::to_bytes(chloe_login.into_body(), usize::MAX).await.unwrap();
+        let chloe_json: Value = serde_json::from_slice(&chloe_bytes).unwrap();
+        let chloe_token = chloe_json["sessionToken"].as_str().unwrap().to_string();
+        let mut h_chloe = HeaderMap::new();
+        h_chloe.insert(header::AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", chloe_token)).unwrap());
+
+        let chloe_forbidden_form = put_lead_form(
+            State(state.clone()),
+            h_chloe.clone(),
+            Path("frm-2".to_string()),
+            Json(PutLeadFormPayload {
+                published: Some(false),
+                name: None,
+                fields: None,
+            }),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(chloe_forbidden_form.0, StatusCode::FORBIDDEN);
+
+        let chloe_forbidden_import = post_lead_prospects_import(
+            State(state.clone()),
+            h_chloe,
+            Json(ImportLeadProspectsPayload {
+                rows: vec![ImportLeadProspectItem {
+                    gender: "F".into(),
+                    first_name: "Test".into(),
+                    last_name: "Intra".into(),
+                    email: "intra@exemple.fr".into(),
+                    phone: "".into(),
+                    street: "".into(),
+                    postal_code: "".into(),
+                    city: "".into(),
+                    birth_date: "".into(),
+                    comment: "".into(),
+                    club_id: "beynost".into(),
+                    rgpd_consent: true,
+                }],
+            }),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(chloe_forbidden_import.0, StatusCode::FORBIDDEN);
 
         // 5. Persistance après redémarrage (rechargement disque)
         let reloaded = load_or_init_state(&state.data_dir);

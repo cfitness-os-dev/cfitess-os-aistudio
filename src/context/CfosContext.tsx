@@ -328,6 +328,7 @@ interface CfosContextValue extends PersistedState {
     >
   ) => { ok: boolean; message: string };
   assignSegmentToProspects: (prospectIds: string[], segmentName: string) => number;
+  upsertServerProspects: (serverProspects: Prospect[]) => void;
   updateProspectStage: (prospectId: string, stage: ProspectStage) => void;
   scheduleProspectTrial: (prospectId: string, trialDateLabel: string) => void;
   convertProspectToMember: (
@@ -1305,6 +1306,25 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     });
     notify('success', 'Fiche prospect mise à jour et persistée.');
     return { ok: true, message: 'Fiche prospect enregistrée.' };
+  };
+
+  const upsertServerProspects = (serverProspects: Prospect[]) => {
+    setState((prev) => {
+      const next = [...prev.prospects];
+      for (const sp of serverProspects) {
+        const idx = next.findIndex(
+          (lp) =>
+            lp.id === sp.id ||
+            (lp.email.trim().toLowerCase() === sp.email.trim().toLowerCase() && lp.clubId === sp.clubId)
+        );
+        if (idx >= 0) {
+          next[idx] = { ...next[idx], ...sp, id: sp.id };
+        } else {
+          next.unshift(sp);
+        }
+      }
+      return { ...prev, prospects: next };
+    });
   };
 
   const assignSegmentToProspects = (prospectIds: string[], segmentName: string): number => {
@@ -2959,6 +2979,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     updateStaffEmployeeContract,
     updateProspect,
     assignSegmentToProspects,
+    upsertServerProspects,
     updateRecoveryCaseStatus,
     recordRecoveryRelance,
     shellMode,

@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useCfos } from '../../context/CfosContext';
 import { clientApi } from '../../domain/clientApi';
+import type { Prospect } from '../../types/cfos';
 import { cleanUiTree } from '../../domain/cleanModeSanitizer';
 import {
   INITIAL_FICTIVE_SALES,
@@ -247,6 +248,7 @@ export function LeadCommercialHubView({
     createProspect,
     updateProspect,
     assignSegmentToProspects,
+    upsertServerProspects,
   } = useCfos();
 
   const allowedClubIds: Array<'carre-de-soie' | 'beynost'> =
@@ -261,96 +263,101 @@ export function LeadCommercialHubView({
     employees.map((e) => [e.id, `${e.firstName} ${e.lastName}`])
   );
 
-  // Synchronisation serveur partagée (visiteur public -> contact canonique -> formulaire / RDV / activité)
+  const [workspaceSyncError, setWorkspaceSyncError] = useState<string | null>(null);
+
+  const syncLeadWorkspaceFromServer = async () => {
+    setWorkspaceSyncError(null);
+    const ws = await clientApi.getLeadWorkspace({ actorId: currentUser.id, siteId: 'all' });
+    setFormsList(
+      (ws.forms ?? []).map((f) => ({
+        id: f.id,
+        name: f.name,
+        clubId: f.clubId,
+        responsesCount: f.responsesCount,
+        createdAt: '2026-11-16',
+        published: f.published,
+        sections: f.sectionTitles?.length ?? 1,
+        sectionTitles: f.sectionTitles ?? [],
+        fields: f.fields,
+        sampleResponses: f.sampleResponses ?? [],
+      }))
+    );
+    setRdvBookings(
+      (ws.appointments ?? [])
+        .filter((a) => a.status !== 'annule')
+        .map((a) => ({
+          id: a.id,
+          clubId: a.clubId,
+          coachId: a.coachId,
+          typeName: a.prospectName ? `${a.typeName} (${a.prospectName})` : a.typeName,
+          date: a.date,
+          startTime: a.startTime,
+          durationMinutes: a.durationMinutes,
+          capacityMax: a.capacityMax,
+          currentBookedCount: a.currentBookedCount,
+          paidRequired: false,
+          paymentStatus: (a.paymentStatus as 'non_requis' | 'attente_paiement' | 'paye') || 'non_requis',
+        }))
+    );
+    setActivities(
+      (ws.activities ?? []).map((a) => ({
+        id: a.id,
+        type: (a.type as FictiveActivityRow['type']) || 'CONTACT',
+        title: a.title,
+        prospectId: a.prospectId,
+        prospectName: a.prospectName,
+        clubId: a.clubId,
+        dueAt: a.dueAt,
+        status: a.status,
+        assignedToId: a.assignedToId,
+        statusLabel: a.statusLabel,
+      }))
+    );
+    if (ws.prospects?.length) {
+      upsertServerProspects(
+        ws.prospects.map((sp) => ({
+          id: sp.id,
+          firstName: sp.firstName,
+          lastName: sp.lastName,
+          phone: sp.phone,
+          email: sp.email,
+          clubId: sp.clubId,
+          source: 'Site c.fitness',
+          stage: (sp.stage as Prospect['stage']) || 'Nouveau',
+          assignedToId: sp.clubId === 'beynost' ? 'emp-chloe' : 'emp-maxime',
+          rgpdConsent: sp.rgpdConsent,
+          bloctelListed: false,
+          smsStopOptOut: false,
+          retryCount: 0,
+          trialDate: sp.trialDate,
+          goal: sp.comment || 'Soumission publique serveur',
+          notes: sp.comment || '',
+          createdAt: sp.createdAt,
+          segments: sp.segments,
+          leadStatus: sp.leadStatus,
+          gender: sp.gender,
+          street: sp.street,
+          postalCode: sp.postalCode,
+          city: sp.city,
+          birthDate: sp.birthDate,
+          comment: sp.comment,
+        }))
+      );
+    }
+  };
+
+  // Synchronisation serveur partagée (snapshot serveur prioritaire)
   useEffect(() => {
     let cancelled = false;
-    void clientApi
-      .getLeadWorkspace({ actorId: currentUser.id, siteId: 'all' })
-      .then((ws) => {
-        if (cancelled) return;
-        if (ws.forms?.length) {
-          setFormsList(
-            ws.forms.map((f) => ({
-              id: f.id,
-              name: f.name,
-              clubId: f.clubId,
-              responsesCount: f.responsesCount,
-              createdAt: '2026-11-16',
-              published: f.published,
-              sections: f.sectionTitles?.length ?? 1,
-              sectionTitles: f.sectionTitles ?? [],
-              fields: f.fields,
-              sampleResponses: f.sampleResponses ?? [],
-            }))
-          );
-        }
-        if (ws.appointments?.length) {
-          setRdvBookings((prev) => {
-            const serverIds = new Set(ws.appointments.map((a) => a.id));
-            const mapped = ws.appointments
-              .filter((a) => a.status !== 'annule')
-              .map((a) => ({
-                id: a.id,
-                clubId: a.clubId,
-                coachId: a.coachId,
-                typeName: a.prospectName ? `${a.typeName} (${a.prospectName})` : a.typeName,
-                date: a.date,
-                startTime: a.startTime,
-                durationMinutes: a.durationMinutes,
-                capacityMax: a.capacityMax,
-                currentBookedCount: a.currentBookedCount,
-                paidRequired: false,
-                paymentStatus: (a.paymentStatus as 'non_requis' | 'attente_paiement' | 'paye') || 'non_requis',
-              }));
-            return [...mapped, ...prev.filter((p) => !serverIds.has(p.id))];
-          });
-        }
-        if (ws.activities?.length) {
-          setActivities((prev) => {
-            const serverIds = new Set(ws.activities.map((a) => a.id));
-            const mapped = ws.activities.map((a) => ({
-              id: a.id,
-              type: (a.type as FictiveActivityRow['type']) || 'CONTACT',
-              title: a.title,
-              prospectId: a.prospectId,
-              prospectName: a.prospectName,
-              clubId: a.clubId,
-              dueAt: a.dueAt,
-              status: a.status,
-              assignedToId: a.assignedToId,
-              statusLabel: a.statusLabel,
-            }));
-            return [...mapped, ...prev.filter((p) => !serverIds.has(p.id))];
-          });
-        }
-        for (const sp of ws.prospects ?? []) {
-          const exists = prospects.some(
-            (lp) => lp.email.toLowerCase() === sp.email.toLowerCase() && lp.clubId === sp.clubId
-          );
-          if (!exists) {
-            createProspect({
-              firstName: sp.firstName,
-              lastName: sp.lastName,
-              phone: sp.phone,
-              email: sp.email,
-              clubId: sp.clubId,
-              source: 'Site c.fitness',
-              goal: sp.comment || 'Soumission publique serveur',
-              rgpdConsent: sp.rgpdConsent,
-              gender: sp.gender,
-              street: sp.street,
-              postalCode: sp.postalCode,
-              city: sp.city,
-              birthDate: sp.birthDate,
-              comment: sp.comment,
-              allowEmptyPhone: true,
-            });
-          }
-        }
-      })
-      .catch(() => {
-        // Fallback démo si offline
-      });
+    void syncLeadWorkspaceFromServer().catch((err) => {
+      if (!cancelled) {
+        setWorkspaceSyncError(
+          err instanceof Error
+            ? `Synchronisation serveur Lead échouée : ${err.message}`
+            : 'Synchronisation serveur Lead indisponible.'
+        );
+      }
+    });
     return () => {
       cancelled = true;
     };
@@ -1034,6 +1041,21 @@ export function LeadCommercialHubView({
           )}
         </div>
 
+        {workspaceSyncError && (
+          <div className="p-2.5 rounded-xl bg-rose-950/60 border border-rose-500/40 text-xs text-rose-200 flex items-center justify-between gap-2">
+            <span>{workspaceSyncError}</span>
+            <button
+              type="button"
+              onClick={() => void syncLeadWorkspaceFromServer().catch((err) => {
+                setWorkspaceSyncError(err instanceof Error ? err.message : 'Erreur de synchronisation serveur');
+              })}
+              className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold shrink-0 cursor-pointer"
+            >
+              Réessayer
+            </button>
+          </div>
+        )}
+
         {/* Navigation interne des 9 onglets Lead — 100% responsive sans débordement */}
         <div className="flex flex-wrap gap-1.5 pt-2 border-t border-slate-800/80">
           {TABS.map((t) => {
@@ -1178,7 +1200,7 @@ export function LeadCommercialHubView({
                     <button
                       type="button"
                       disabled={importSummary.validCount === 0 || simulatedRole === 'commercial'}
-                      onClick={() => {
+                      onClick={async () => {
                         const rawRows = parseCsvRowsWithQuotes(importCsvText, ';');
                         const targetClub: 'carre-de-soie' | 'beynost' =
                           allowedClubIds.length === 1
@@ -1186,34 +1208,39 @@ export function LeadCommercialHubView({
                             : clubFilter === 'beynost'
                             ? 'beynost'
                             : 'carre-de-soie';
-                        let created = 0;
-                        let skipped = 0;
-                        for (const row of importSummary.results) {
-                          if (row.status !== 'valide') continue;
-                          const cols = rawRows[row.rowNumber - 1] ?? [];
-                          const firstName = (cols[1] || '').trim() || 'Prospect';
-                          const lastName = (cols[2] || '').trim() || 'Importé';
-                          const rawPhone = (cols[4] || '').trim() || '0600000000';
-                          const comment = (cols[10] || '').trim();
-                          const addressSummary = [cols[5], cols[6], cols[7]].filter(Boolean).join(' ');
-                          const birthInfo = cols[8] ? `Né(e) ${cols[8]}` : '';
-                          const goalParts = [comment, addressSummary, birthInfo].filter(Boolean);
-                          const res = createProspect({
-                            firstName,
-                            lastName,
-                            phone: rawPhone,
-                            email: row.email,
-                            clubId: targetClub,
-                            source: 'Site c.fitness',
-                            goal: goalParts.join(' · ') || 'Import CSV 11 colonnes',
-                            rgpdConsent: row.consentGranted,
+                        const serverRows = importSummary.results
+                          .filter((row) => row.status === 'valide')
+                          .map((row) => {
+                            const cols = rawRows[row.rowNumber - 1] ?? [];
+                            return {
+                              gender: (cols[0] || '').trim(),
+                              firstName: (cols[1] || '').trim() || 'Prospect',
+                              lastName: (cols[2] || '').trim() || 'Importé',
+                              email: row.email,
+                              phone: (cols[4] || '').trim() || '0600000000',
+                              street: (cols[5] || '').trim(),
+                              postalCode: (cols[6] || '').trim(),
+                              city: (cols[7] || '').trim(),
+                              birthDate: (cols[8] || '').trim(),
+                              comment: (cols[10] || '').trim(),
+                              clubId: targetClub,
+                              rgpdConsent: row.consentGranted,
+                            };
                           });
-                          if (res.ok) created += 1;
-                          else skipped += 1;
+                        try {
+                          const res = await clientApi.importLeadProspects(
+                            { actorId: currentUser.id, siteId: 'all' },
+                            serverRows
+                          );
+                          await syncLeadWorkspaceFromServer();
+                          setImportFeedback(
+                            `Import exécuté (${targetClub}) : ${res.created} prospect(s) persisté(s) sur le serveur, ${res.skippedDuplicates} doublon(s), ${res.rejected} rejet(s).`
+                          );
+                        } catch (err) {
+                          setImportFeedback(
+                            `Erreur import serveur : ${err instanceof Error ? err.message : String(err)}`
+                          );
                         }
-                        setImportFeedback(
-                          `Import exécuté (${targetClub}) : ${created} prospect(s) créé(s) avec les 11 champs conservés, ${skipped} doublon(s)/rejet(s) ignoré(s).`
-                        );
                       }}
                       className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-xs font-bold cursor-pointer"
                     >
@@ -2285,7 +2312,7 @@ export function LeadCommercialHubView({
                       <div className="flex gap-1.5">
                         <button
                           type="button"
-                          onClick={() => {
+                          onClick={async () => {
                             const [hhStr, mmStr] = slot.startTime.split(':');
                             const curH = Number(hhStr ?? 10);
                             const curM = mmStr ?? '00';
@@ -2312,10 +2339,19 @@ export function LeadCommercialHubView({
                               setRdvActionMessage(`Report +1h refusé : ${check.reason}`);
                               return;
                             }
-                            setRdvBookings((prev) =>
-                              prev.map((s) => (s.id === slot.id ? { ...s, startTime: nextTime } : s))
-                            );
-                            setRdvActionMessage(`Créneau reporté à ${nextTime} (validation sans collision).`);
+                            try {
+                              await clientApi.patchLeadAppointment(
+                                { actorId: currentUser.id, siteId: 'all' },
+                                slot.id,
+                                nextTime
+                              );
+                              await syncLeadWorkspaceFromServer();
+                              setRdvActionMessage(`Créneau reporté à ${nextTime} et persisté sur le serveur.`);
+                            } catch (err) {
+                              setRdvActionMessage(
+                                `Erreur serveur report +1h : ${err instanceof Error ? err.message : String(err)}`
+                              );
+                            }
                           }}
                           className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] cursor-pointer"
                         >
@@ -2323,9 +2359,19 @@ export function LeadCommercialHubView({
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            setRdvBookings((prev) => prev.filter((s) => s.id !== slot.id));
-                            setRdvActionMessage(`RDV « ${slot.typeName} » annulé.`);
+                          onClick={async () => {
+                            try {
+                              await clientApi.deleteLeadAppointment(
+                                { actorId: currentUser.id, siteId: 'all' },
+                                slot.id
+                              );
+                              await syncLeadWorkspaceFromServer();
+                              setRdvActionMessage(`RDV « ${slot.typeName} » annulé sur le serveur.`);
+                            } catch (err) {
+                              setRdvActionMessage(
+                                `Erreur serveur annulation : ${err instanceof Error ? err.message : String(err)}`
+                              );
+                            }
                           }}
                           className="px-2 py-1 rounded bg-rose-600/80 hover:bg-rose-600 text-white text-[11px] cursor-pointer"
                         >
