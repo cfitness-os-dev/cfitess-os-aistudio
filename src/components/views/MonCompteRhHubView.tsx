@@ -84,9 +84,11 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
   } = useCfos();
   const initialTarget = parseInitialTarget(subTarget);
   const isShellAdmin = currentUser.role === 'admin' || currentUser.role === 'manager';
+  const isStrictAdmin = currentUser.role === 'admin';
 
   const defaultActorForShellUser = () => {
-    if (isShellAdmin) return 'emp-admin';
+    if (isStrictAdmin) return 'emp-admin';
+    if (currentUser.role === 'manager') return 'emp-master-cs';
     if (currentUser.role === 'commercial') return 'emp-accueil-cs';
     return 'emp-employe-multi';
   };
@@ -100,15 +102,17 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
   }, [isTechnicalMode, hubTab]);
   const [activeActorId, setActiveActorId] = useState<string>(defaultActorForShellUser);
   const [activeSiteId, setActiveSiteId] = useState<string | 'all'>(() =>
-    clubFilter === 'all' ? 'club-carre-soie' : clubFilterToSiteId(clubFilter)
+    currentUser.clubId === 'beynost' ? 'club-beynost' : 'club-carre-soie'
   );
   const [activeSection, setActiveSection] = useState<McSectionId>(initialTarget.section);
 
   useEffect(() => {
     const nextActor = defaultActorForShellUser();
     setActiveActorId(nextActor);
+    const primarySite = currentUser.clubId === 'beynost' ? 'club-beynost' : 'club-carre-soie';
+    setActiveSiteId(primarySite);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser.id, currentUser.role]);
+  }, [currentUser.id, currentUser.role, currentUser.clubId]);
 
   const [dashboard, setDashboard] = useState<DashboardPayload | null>(null);
   const [registry, setRegistry] = useState<RegistryPayload | null>(null);
@@ -260,10 +264,10 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
         dashboard.session.resolvedPermissions['ORG04-38']?.allowed
     );
 
-  // Projection de l'identité réelle du collaborateur connecté (ex: Maxime Giraud)
-  // lorsque l'utilisateur n'est pas administrateur (évite d'afficher Julie Roux)
+  // Projection de l'identité réelle du collaborateur connecté (ex: Maxime, Chloé, Sarah)
+  // lorsque l'utilisateur n'est pas administrateur système global (#1 / #9)
   const effectiveDashboard: DashboardPayload | null =
-    dashboard && !isShellAdmin
+    dashboard && !isStrictAdmin
       ? (() => {
           const userSiteId =
             currentUser.clubId === 'beynost' ? 'club-beynost' : 'club-carre-soie';
@@ -271,24 +275,42 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
             currentUser.contractType === 'Apprentissage'
               ? ('Alternance' as const)
               : (currentUser.contractType as 'CDI' | 'CDD' | 'Alternance');
+          const defaultProfileId =
+            currentUser.role === 'manager' ? ('master_avance' as const) : ('employe_standard' as const);
+          const derivedSiteAccesses =
+            currentUser.siteAssignments && currentUser.siteAssignments.length > 0
+              ? currentUser.siteAssignments.map((sa) => ({
+                  siteId: sa.clubId === 'beynost' ? 'club-beynost' : 'club-carre-soie',
+                  isPrimary: sa.isPrimary,
+                  profileId: (sa.profileId as typeof defaultProfileId) || defaultProfileId,
+                  teamIds: sa.teamIds ?? [],
+                  managedTeamIds: sa.managedTeamIds ?? [],
+                  showOnPlanning: sa.showOnPlanning ?? true,
+                  positionIds: sa.positionIds ?? [],
+                }))
+              : [
+                  {
+                    siteId: userSiteId,
+                    isPrimary: true,
+                    profileId: defaultProfileId,
+                    teamIds: [],
+                    showOnPlanning: true,
+                    positionIds: [],
+                  },
+                ];
+          const allowedSiteIds = new Set(derivedSiteAccesses.map((s) => s.siteId));
+          const filteredSites = dashboard.sites.filter((s) => allowedSiteIds.has(s.id));
           const mappedEmployee = {
             ...dashboard.session.employee,
             id: currentUser.id,
             firstName: currentUser.firstName,
             lastName: currentUser.lastName,
+            email: currentUser.email,
+            phone: currentUser.phone,
             matricule: currentUser.id.toUpperCase(),
             active: true,
             hrFileStatus: 'complete' as const,
-            siteAccesses: [
-              {
-                siteId: userSiteId,
-                isPrimary: true,
-                profileId: 'employe_standard' as const,
-                teamIds: [],
-                showOnPlanning: true,
-                positionIds: [],
-              },
-            ],
+            siteAccesses: derivedSiteAccesses,
             counter: {
               ...dashboard.session.employee.counter,
               cpAcquired: currentUser.cpBalance ?? 0,
@@ -299,6 +321,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
               cpNMinus1Remaining: 0,
               rttAcquired: currentUser.rttBalance ?? 0,
               rttRemaining: currentUser.rttBalance ?? 0,
+              rttDaysRemaining: currentUser.rttBalance ?? 0,
               rttInitialized: true,
             },
             contact: {
@@ -319,7 +342,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
               id: `CTR-${currentUser.id.toUpperCase()}`,
               siteId: userSiteId,
               contractType: userContractType,
-              regime: 'hours' as const,
+              regime: currentUser.contractRegime ?? ('hours' as const),
               weeklyHours: currentUser.weeklyContractHours,
               effectiveFrom: currentUser.hireDate,
               hourlyRateEur: currentUser.hourlyRate ?? 0,
@@ -330,17 +353,33 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
             ...mappedEmployee,
             contract: {
               ...mappedEmployee.contract,
-              hourlyRateEur: null,
-              monthlyGrossEur: null,
+              hourlyRateEur: currentUser.role === 'manager' ? currentUser.hourlyRate : null,
+              monthlyGrossEur: currentUser.role === 'manager' ? currentUser.monthlyGrossEur : null,
             },
           };
+          const scopedVisibleEmployees =
+            currentUser.role === 'manager'
+              ? [
+                  redactedVisibleEmployee,
+                  ...dashboard.visibleEmployees.filter(
+                    (e) =>
+                      e.id !== currentUser.id &&
+                      e.siteAccesses.some((sa) => allowedSiteIds.has(sa.siteId))
+                  ),
+                ]
+              : [redactedVisibleEmployee];
           return {
             ...dashboard,
+            sites: filteredSites.length > 0 ? filteredSites : dashboard.sites,
+            myShifts: dashboard.myShifts.filter(
+              (s) => s.employeeId === currentUser.id || allowedSiteIds.has(s.siteId)
+            ),
+            myRequests: dashboard.myRequests.filter((r) => r.employeeId === currentUser.id),
             session: {
               ...dashboard.session,
               employee: mappedEmployee,
             },
-            visibleEmployees: [redactedVisibleEmployee],
+            visibleEmployees: scopedVisibleEmployees,
           };
         })()
       : dashboard;

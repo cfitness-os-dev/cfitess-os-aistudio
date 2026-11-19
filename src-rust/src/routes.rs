@@ -27,8 +27,21 @@ use tokio::sync::RwLock;
 pub struct SharedAppState {
     pub db: RwLock<AppDatabaseState>,
     pub data_dir: PathBuf,
-    pub sessions: RwLock<HashMap<String, String>>,
+    pub sessions: RwLock<HashMap<String, (String, i64)>>,
     pub login_attempts: RwLock<HashMap<String, (u32, std::time::Instant)>>,
+}
+
+fn generate_session_token() -> String {
+    use std::hash::{BuildHasher, Hasher};
+    let mut out = String::with_capacity(64);
+    for round in 0..4u64 {
+        let h = std::collections::hash_map::RandomState::new();
+        let mut hasher = h.build_hasher();
+        hasher.write_u64(round);
+        hasher.write_i64(Utc::now().timestamp_nanos_opt().unwrap_or_default());
+        out.push_str(&format!("{:016x}", hasher.finish()));
+    }
+    format!("cfos_{}", out)
 }
 
 pub type SharedState = Arc<SharedAppState>;
@@ -141,6 +154,7 @@ pub fn api_router(state: SharedState) -> Router {
             post(post_stripe_appointment_webhook),
         )
         .route("/api/auth/login", post(post_local_auth_login))
+        .route("/api/auth/logout", post(post_local_auth_logout))
         .route("/api/heitz/gate-check", post(post_heitz_gate_check))
         .route("/api/ats/ingest-email", post(post_ats_ingest_email))
         .route(
@@ -371,12 +385,13 @@ async fn post_local_auth_login(
     }
     .to_string();
 
-    let token = format!(
-        "cfos-srv-{}-{}",
-        emp.id,
-        Utc::now().timestamp_nanos_opt().unwrap_or_default()
-    );
-    state.sessions.write().await.insert(token.clone(), emp.id.clone());
+    let token = generate_session_token();
+    let expires_at = Utc::now().timestamp() + 8 * 3600;
+    state
+        .sessions
+        .write()
+        .await
+        .insert(token.clone(), (emp.id.clone(), expires_at));
 
     tracing::info!(
         "Authentification locale vérifiée C.Fitness OS : {} (rôle serveur: {})",
@@ -541,6 +556,25 @@ async fn post_backup_snapshot_ingest(
     )
 }
 
+async fn post_local_auth_logout(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    if let Some(auth_val) = headers.get(header::AUTHORIZATION).and_then(|v| v.to_str().ok()) {
+        if let Some(token) = auth_val.strip_prefix("Bearer ").map(|t| t.trim()) {
+            let removed = state.sessions.write().await.remove(token).is_some();
+            return (
+                StatusCode::OK,
+                Json(json!({ "ok": true, "revoked": removed })),
+            );
+        }
+    }
+    (
+        StatusCode::OK,
+        Json(json!({ "ok": true, "revoked": false })),
+    )
+}
+
 pub async fn resolve_session_actor(
     state: &SharedState,
     headers: &HeaderMap,
@@ -554,8 +588,12 @@ pub async fn resolve_session_actor(
 
     if let Some(auth_val) = headers.get(header::AUTHORIZATION).and_then(|v| v.to_str().ok()) {
         if let Some(token) = auth_val.strip_prefix("Bearer ").map(|t| t.trim()) {
-            if let Some(verified_actor) = state.sessions.read().await.get(token).cloned() {
-                return Ok((verified_actor, site_id));
+            let entry = state.sessions.read().await.get(token).cloned();
+            if let Some((verified_actor, expires_at)) = entry {
+                if Utc::now().timestamp() <= expires_at {
+                    return Ok((verified_actor, site_id));
+                }
+                state.sessions.write().await.remove(token);
             }
             return Err(err_resp(
                 StatusCode::UNAUTHORIZED,
@@ -1833,10 +1871,14 @@ mod tests {
         .await
         .into_response();
         assert_eq!(ok_resp.status(), StatusCode::OK);
-        let sessions = state.sessions.read().await;
-        assert_eq!(sessions.len(), 1);
-        let (token, actor) = sessions.iter().next().unwrap();
+        let (token, (actor, _)) = {
+            let sessions = state.sessions.read().await;
+            assert_eq!(sessions.len(), 1);
+            let (t, v) = sessions.iter().next().unwrap();
+            (t.clone(), v.clone())
+        };
         assert_eq!(actor, "emp-employe-multi");
+        assert!(!token.contains("emp-employe-multi"));
 
         // 3. Résolution session Bearer valide vs falsifiée
         let mut h_valid = HeaderMap::new();
@@ -1851,6 +1893,13 @@ mod tests {
         let mut h_fake = HeaderMap::new();
         h_fake.insert(header::AUTHORIZATION, HeaderValue::from_static("Bearer fake-token"));
         assert!(resolve_session_actor(&state, &h_fake).await.is_err());
+
+        // 4. Révocation immédiate via /api/auth/logout -> 401
+        let logout_resp = post_local_auth_logout(State(state.clone()), h_valid.clone())
+            .await
+            .into_response();
+        assert_eq!(logout_resp.status(), StatusCode::OK);
+        assert!(resolve_session_actor(&state, &h_valid).await.is_err());
     }
 
     #[tokio::test]

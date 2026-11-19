@@ -62,8 +62,11 @@ export interface Employee {
     clubId: ClubId;
     isPrimary: boolean;
     roleInClub: Role;
+    profileId?: string;
     teamIds: string[];
     managedTeamIds?: string[];
+    showOnPlanning?: boolean;
+    positionIds?: string[];
   }>;
   monthlySubscriptionsTarget?: number;
   monthlySubscriptionsActual?: number;

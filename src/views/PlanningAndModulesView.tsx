@@ -515,6 +515,13 @@ export function PlanningAndModulesView({
   // Unification référentiel : fusion des salariés persistés dans CfosContext (staffEmployees)
   // uniquement si l'utilisateur courant a un rôle de gestion (admin/manager), sinon uniquement soi-même (#1 / #4)
   const canSeeGlobalRoster = currentUser.role === 'admin' || currentUser.role === 'manager';
+  const canEditSiteAccess = (siteId: string) => {
+    if (!canSeeGlobalRoster) return false;
+    const selfSiteAccess = dashboard.session.employee.siteAccesses.find((s) => s.siteId === siteId);
+    if (selfSiteAccess?.profileId === 'lecture_seule_avancee') return false;
+    if (currentUser.role === 'manager' && !selfSiteAccess) return false;
+    return true;
+  };
   const visibleNamesForMc02 = new Set(
     dashboard.visibleEmployees.map((e) => `${e.firstName} ${e.lastName}`.trim().toLowerCase())
   );
@@ -2364,7 +2371,7 @@ export function PlanningAndModulesView({
                       <div className="font-semibold">
                         Accès établissements &amp; Équipes par club (EMP03 · Multi-clubs)
                       </div>
-                      {canSeeGlobalRoster && (
+                      {canEditSiteAccess(auth.siteId === 'all' ? 'club-carre-soie' : auth.siteId) && (
                         <div className="flex flex-wrap gap-1.5 text-[11px]">
                           {(
                             [
@@ -2380,13 +2387,23 @@ export function PlanningAndModulesView({
                                 const nextAccesses = preset.clubs.map((cid, idx) => {
                                   const sid = cid === 'beynost' ? 'club-beynost' : 'club-carre-soie';
                                   const existing = selectedEmp.siteAccesses.find((a) => a.siteId === sid);
+                                  const keepPrimary = selectedEmp.siteAccesses.some((a) => a.siteId === sid && a.isPrimary);
                                   return {
                                     siteId: sid,
-                                    isPrimary: idx === 0,
+                                    isPrimary:
+                                      keepPrimary ||
+                                      (idx === 0 &&
+                                        !selectedEmp.siteAccesses.some(
+                                          (a) =>
+                                            a.isPrimary &&
+                                            (preset.clubs as readonly string[]).includes(
+                                              a.siteId === 'club-beynost' ? 'beynost' : 'carre-de-soie'
+                                            )
+                                        )),
                                     profileId: existing?.profileId ?? ('employe_standard' as ProfileId),
-                                    teamIds: existing?.teamIds?.length ? existing.teamIds : ['team-accueil'],
-                                    showOnPlanning: true,
-                                    positionIds: [],
+                                    teamIds: existing?.teamIds ?? [],
+                                    showOnPlanning: existing?.showOnPlanning ?? true,
+                                    positionIds: existing?.positionIds ?? [],
                                   };
                                 });
                                 const nextMap = { ...siteAccessOverrides, [selectedEmp.id]: nextAccesses };
@@ -2398,12 +2415,23 @@ export function PlanningAndModulesView({
                                 }
                                 updateStaffEmployeeSiteAssignments(
                                   selectedEmp.id,
-                                  preset.clubs.map((cid, idx) => ({
-                                    clubId: cid,
-                                    isPrimary: idx === 0,
-                                    roleInClub: 'commercial',
-                                    teamIds: nextAccesses[idx].teamIds,
-                                  }))
+                                  preset.clubs.map((cid, idx) => {
+                                    const acc = nextAccesses[idx];
+                                    return {
+                                      clubId: cid,
+                                      isPrimary: acc.isPrimary,
+                                      roleInClub:
+                                        acc.profileId === 'master_avance'
+                                          ? 'manager'
+                                          : acc.profileId === 'admin_systeme'
+                                          ? 'admin'
+                                          : 'commercial',
+                                      profileId: acc.profileId,
+                                      teamIds: acc.teamIds,
+                                      showOnPlanning: acc.showOnPlanning,
+                                      positionIds: acc.positionIds,
+                                    };
+                                  })
                                 );
                                 setModuleFeedback({
                                   kind: 'ok',
@@ -2418,70 +2446,39 @@ export function PlanningAndModulesView({
                         </div>
                       )}
                     </div>
-                    {selectedEmp.siteAccesses.map((acc) => (
-                      <div
-                        key={acc.siteId}
-                        className="cf-card-secondary p-3 space-y-2"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div>
-                            <span className="font-semibold">
-                              {siteMap.get(acc.siteId) ?? acc.siteId}
-                            </span>
-                            <span className="ml-2 cf-mono text-[10px] px-2 py-0.5 rounded bg-violet-500/20 text-violet-300">
-                              {acc.isPrimary ? 'Établissement principal' : 'Établissement secondaire'}
-                            </span>
-                          </div>
-                          {canSeeGlobalRoster ? (
-                            <select
-                              aria-label={`Profil ${acc.siteId}`}
-                              value={acc.profileId}
-                              onChange={(e) => {
-                                const nextProf = e.target.value as ProfileId;
-                                const nextAccesses = selectedEmp.siteAccesses.map((item) =>
-                                  item.siteId === acc.siteId ? { ...item, profileId: nextProf } : item
-                                );
-                                const nextMap = { ...siteAccessOverrides, [selectedEmp.id]: nextAccesses };
-                                setSiteAccessOverrides(nextMap);
-                                try {
-                                  localStorage.setItem('cfos_mc02_site_accesses_v1', JSON.stringify(nextMap));
-                                } catch {
-                                  // ignore
-                                }
-                                setModuleFeedback({
-                                  kind: 'ok',
-                                  text: `Droits sur ${siteMap.get(acc.siteId) ?? acc.siteId} mis à jour (${nextProf}) sans modifier l'autre club.`,
-                                });
-                              }}
-                              className="cf-input text-[11px] px-2 py-1"
-                            >
-                              <option value="employe_standard">Employé standard</option>
-                              <option value="lecture_seule_avancee">Lecture seule avancée</option>
-                              <option value="planificateur_standard">Planif. standard (équipe)</option>
-                              <option value="planificateur_avance">Planif. avancé (club)</option>
-                              <option value="master_avance">Responsable club</option>
-                            </select>
-                          ) : (
-                            <div className="cf-mono text-[11px] cf-muted">
-                              Profil : {acc.profileId} · Planning : {acc.showOnPlanning ? 'Visible' : 'Masqué'}
+                    {selectedEmp.siteAccesses.map((acc) => {
+                      const canEditThisClub = canEditSiteAccess(acc.siteId);
+                      const clubTeams = dashboard.teams.filter((t) => t.siteId === acc.siteId);
+                      const teamOptions =
+                        clubTeams.length > 0
+                          ? clubTeams.map((t) => ({ id: t.id, name: t.name }))
+                          : [
+                              { id: `${acc.siteId}-accueil`, name: 'Accueil' },
+                              { id: `${acc.siteId}-coaching`, name: 'Coaching' },
+                              { id: `${acc.siteId}-commercial`, name: 'Commercial' },
+                            ];
+                      return (
+                        <div
+                          key={acc.siteId}
+                          className="cf-card-secondary p-3 space-y-2"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <span className="font-semibold">
+                                {siteMap.get(acc.siteId) ?? acc.siteId}
+                              </span>
+                              <span className="ml-2 cf-mono text-[10px] px-2 py-0.5 rounded bg-violet-500/20 text-violet-300">
+                                {acc.isPrimary ? 'Établissement principal' : 'Établissement secondaire'}
+                              </span>
                             </div>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-                          <span className="cf-muted">Équipes sur ce club :</span>
-                          {['team-accueil', 'team-coaching', 'team-commercial'].map((tid) => {
-                            const activeTeam = acc.teamIds.includes(tid);
-                            return (
-                              <button
-                                key={tid}
-                                type="button"
-                                disabled={!canSeeGlobalRoster}
-                                onClick={() => {
-                                  const nextTeams = activeTeam
-                                    ? acc.teamIds.filter((t) => t !== tid)
-                                    : [...acc.teamIds, tid];
+                            {canEditThisClub ? (
+                              <select
+                                aria-label={`Profil ${acc.siteId}`}
+                                value={acc.profileId}
+                                onChange={(e) => {
+                                  const nextProf = e.target.value as ProfileId;
                                   const nextAccesses = selectedEmp.siteAccesses.map((item) =>
-                                    item.siteId === acc.siteId ? { ...item, teamIds: nextTeams } : item
+                                    item.siteId === acc.siteId ? { ...item, profileId: nextProf } : item
                                   );
                                   const nextMap = { ...siteAccessOverrides, [selectedEmp.id]: nextAccesses };
                                   setSiteAccessOverrides(nextMap);
@@ -2490,20 +2487,97 @@ export function PlanningAndModulesView({
                                   } catch {
                                     // ignore
                                   }
+                                  updateStaffEmployeeSiteAssignments(
+                                    selectedEmp.id,
+                                    nextAccesses.map((item) => ({
+                                      clubId: item.siteId === 'club-beynost' ? 'beynost' : 'carre-de-soie',
+                                      isPrimary: item.isPrimary,
+                                      roleInClub:
+                                        item.profileId === 'master_avance'
+                                          ? 'manager'
+                                          : item.profileId === 'admin_systeme'
+                                          ? 'admin'
+                                          : 'commercial',
+                                      profileId: item.profileId,
+                                      teamIds: item.teamIds,
+                                      showOnPlanning: item.showOnPlanning,
+                                      positionIds: item.positionIds,
+                                    }))
+                                  );
+                                  setModuleFeedback({
+                                    kind: 'ok',
+                                    text: `Droits sur ${siteMap.get(acc.siteId) ?? acc.siteId} mis à jour (${nextProf}) sans modifier l'autre club.`,
+                                  });
                                 }}
-                                className={`px-2 py-0.5 rounded border ${
-                                  activeTeam
-                                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300 font-semibold'
-                                    : 'bg-slate-900/40 border-slate-700 text-slate-400'
-                                } ${canSeeGlobalRoster ? 'cursor-pointer' : 'cursor-default'}`}
+                                className="cf-input text-[11px] px-2 py-1"
                               >
-                                {tid.replace('team-', '')}
-                              </button>
-                            );
-                          })}
+                                <option value="employe_standard">Employé standard</option>
+                                <option value="lecture_seule_avancee">Lecture seule avancée</option>
+                                <option value="planificateur_standard">Planif. standard (équipe)</option>
+                                <option value="planificateur_avance">Planif. avancé (club)</option>
+                                <option value="master_avance">Responsable club</option>
+                              </select>
+                            ) : (
+                              <div className="cf-mono text-[11px] cf-muted">
+                                Profil : {acc.profileId} · {canSeeGlobalRoster ? 'Lecture seule sur ce club' : `Planning : ${acc.showOnPlanning ? 'Visible' : 'Masqué'}`}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                            <span className="cf-muted">Équipes ({siteMap.get(acc.siteId) ?? acc.siteId}) :</span>
+                            {teamOptions.map((tm) => {
+                              const activeTeam = acc.teamIds.includes(tm.id);
+                              return (
+                                <button
+                                  key={tm.id}
+                                  type="button"
+                                  disabled={!canEditThisClub}
+                                  onClick={() => {
+                                    const nextTeams = activeTeam
+                                      ? acc.teamIds.filter((t) => t !== tm.id)
+                                      : [...acc.teamIds, tm.id];
+                                    const nextAccesses = selectedEmp.siteAccesses.map((item) =>
+                                      item.siteId === acc.siteId ? { ...item, teamIds: nextTeams } : item
+                                    );
+                                    const nextMap = { ...siteAccessOverrides, [selectedEmp.id]: nextAccesses };
+                                    setSiteAccessOverrides(nextMap);
+                                    try {
+                                      localStorage.setItem('cfos_mc02_site_accesses_v1', JSON.stringify(nextMap));
+                                    } catch {
+                                      // ignore
+                                    }
+                                    updateStaffEmployeeSiteAssignments(
+                                      selectedEmp.id,
+                                      nextAccesses.map((item) => ({
+                                        clubId: item.siteId === 'club-beynost' ? 'beynost' : 'carre-de-soie',
+                                        isPrimary: item.isPrimary,
+                                        roleInClub:
+                                          item.profileId === 'master_avance'
+                                            ? 'manager'
+                                            : item.profileId === 'admin_systeme'
+                                            ? 'admin'
+                                            : 'commercial',
+                                        profileId: item.profileId,
+                                        teamIds: item.teamIds,
+                                        showOnPlanning: item.showOnPlanning,
+                                        positionIds: item.positionIds,
+                                      }))
+                                    );
+                                  }}
+                                  className={`px-2 py-0.5 rounded border ${
+                                    activeTeam
+                                      ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300 font-semibold'
+                                      : 'bg-slate-900/40 border-slate-700 text-slate-400'
+                                  } ${canEditThisClub ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}
+                                >
+                                  {tm.name}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}

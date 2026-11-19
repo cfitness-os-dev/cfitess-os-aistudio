@@ -207,12 +207,14 @@ export function DashboardView({
               </div>
               <div className="cf-card-secondary p-3">
                 <div className="cf-muted">
-                  {session.employee.counter.rttDaysRemaining !== undefined
+                  {session.employee.counter.rttDaysRemaining !== undefined &&
+                  session.employee.counter.rttDaysRemaining !== null
                     ? 'RTT restants'
                     : 'Annualisation'}
                 </div>
                 <div className="text-lg font-bold cf-mono mt-0.5 text-violet-300">
-                  {session.employee.counter.rttDaysRemaining !== undefined
+                  {session.employee.counter.rttDaysRemaining !== undefined &&
+                  session.employee.counter.rttDaysRemaining !== null
                     ? `${session.employee.counter.rttDaysRemaining} j`
                     : session.employee.counter.annualizationBalanceHours !== undefined
                     ? `${session.employee.counter.annualizationBalanceHours > 0 ? '+' : ''}${session.employee.counter.annualizationBalanceHours} h`
