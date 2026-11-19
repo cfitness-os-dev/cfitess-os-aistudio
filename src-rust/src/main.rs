@@ -71,7 +71,7 @@ async fn main() {
     let index_file = frontend_dir.join("index.html");
     let spa_service = ServeDir::new(&frontend_dir)
         .append_index_html_on_directories(true)
-        .not_found_service(ServeFile::new(index_file));
+        .fallback(ServeFile::new(index_file));
 
     let app: Router = api_router(shared)
         .fallback_service(spa_service)
