@@ -44,6 +44,7 @@ const DEAL_ANNUAL_VALUE_EUR = 478.8;
 
 export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
   const {
+    currentUser,
     clubFilter,
     prospects,
     employees,
@@ -86,7 +87,15 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
   const [goal, setGoal] = useState('Remise en forme & Biocircuit Technogym');
   const [rgpdConsent, setRgpdConsent] = useState(false);
 
+  const allowedClubIds: ClubId[] =
+    currentUser.role === 'admin'
+      ? ['carre-de-soie', 'beynost']
+      : currentUser.siteAssignments?.length
+      ? currentUser.siteAssignments.map((sa) => sa.clubId)
+      : [currentUser.clubId];
+
   const filteredProspects = prospects.filter((p) => {
+    if (!allowedClubIds.includes(p.clubId)) return false;
     if (clubFilter !== 'all' && p.clubId !== clubFilter) return false;
     if (selectedStageFilter !== 'ALL' && p.stage !== selectedStageFilter) return false;
     if (!searchQuery.trim()) return true;

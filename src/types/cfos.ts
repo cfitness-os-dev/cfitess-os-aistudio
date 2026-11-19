@@ -188,6 +188,12 @@ export interface Prospect {
   segments?: string[];
   leadStatus?: string;
   address?: string;
+  gender?: string;
+  street?: string;
+  postalCode?: string;
+  city?: string;
+  birthDate?: string;
+  comment?: string;
 }
 
 export interface PhoneLine {

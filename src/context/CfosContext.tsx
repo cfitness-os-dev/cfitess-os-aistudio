@@ -207,6 +207,8 @@ interface CfosContextValue extends PersistedState {
   canAccessRecovery: boolean;
   toggleRecoveryAccess: (employeeId: string) => void;
   addStaffEmployee: (params: {
+    id?: string;
+    pinCode?: string;
     firstName: string;
     lastName: string;
     contractType?: 'CDI' | 'CDD';
@@ -297,6 +299,13 @@ interface CfosContextValue extends PersistedState {
     source: Prospect['source'];
     goal: string;
     rgpdConsent: boolean;
+    gender?: string;
+    street?: string;
+    postalCode?: string;
+    city?: string;
+    birthDate?: string;
+    comment?: string;
+    allowEmptyPhone?: boolean;
   }) => { ok: boolean; message: string };
   updateProspect: (
     prospectId: string,
@@ -1204,15 +1213,17 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
   };
 
   const createProspect: CfosContextValue['createProspect'] = (input) => {
-    if (!input.firstName.trim() || !input.lastName.trim() || !input.phone.trim()) {
+    if (!input.firstName.trim() || !input.lastName.trim() || (!input.allowEmptyPhone && !input.phone.trim())) {
       return { ok: false, message: 'Prénom, nom et téléphone sont obligatoires.' };
     }
     const rawPhone = input.phone.trim();
-    const digitsOnly = rawPhone.replace(/[\s.\-()]/g, '').replace(/^\+33/, '0');
-    if (!/^0[1-9]\d{8}$/.test(digitsOnly) && !/^\+\d{10,15}$/.test(rawPhone.replace(/[\s.\-()]/g, ''))) {
-      const errMsg = `Numéro de téléphone invalide (« ${rawPhone} ») — saisissez un numéro valide (ex: 06 12 34 56 78).`;
-      notify('warning', errMsg);
-      return { ok: false, message: errMsg };
+    if (rawPhone.length > 0) {
+      const digitsOnly = rawPhone.replace(/[\s.\-()]/g, '').replace(/^\+33/, '0');
+      if (!/^0[1-9]\d{8}$/.test(digitsOnly) && !/^\+\d{10,15}$/.test(rawPhone.replace(/[\s.\-()]/g, ''))) {
+        const errMsg = `Numéro de téléphone invalide (« ${rawPhone} ») — saisissez un numéro valide (ex: 06 12 34 56 78).`;
+        notify('warning', errMsg);
+        return { ok: false, message: errMsg };
+      }
     }
     const dup = findDuplicateProspect(state.prospects, input.phone, input.email);
     if (dup) {
@@ -1221,11 +1232,12 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
       return { ok: false, message: msg };
     }
 
+    const addressFull = [input.street, input.postalCode, input.city].filter(Boolean).join(' ').trim();
     const newProspect: Prospect = {
       id: `pr-${Date.now()}`,
       firstName: input.firstName.trim(),
       lastName: input.lastName.trim(),
-      phone: input.phone.trim(),
+      phone: rawPhone,
       email: input.email.trim(),
       clubId: input.clubId,
       source: input.source,
@@ -1236,8 +1248,15 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
       smsStopOptOut: false,
       retryCount: 0,
       goal: input.goal.trim() || 'Séance découverte & bilan forme',
-      notes: `Créé via ${input.source}.`,
+      notes: input.comment?.trim() ? input.comment.trim() : `Créé via ${input.source}.`,
       createdAt: new Date().toISOString().slice(0, 10),
+      address: addressFull || undefined,
+      gender: input.gender?.trim() || undefined,
+      street: input.street?.trim() || undefined,
+      postalCode: input.postalCode?.trim() || undefined,
+      city: input.city?.trim() || undefined,
+      birthDate: input.birthDate?.trim() || undefined,
+      comment: input.comment?.trim() || undefined,
       pendingSmsDraft: input.rgpdConsent
         ? `Bonjour ${input.firstName.trim()}, bienvenue chez C.Fitness ! Quand souhaitez-vous planifier votre séance d’essai offerte ? STOP au 36111.`
         : undefined,
@@ -2766,6 +2785,8 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     currentUser.role === 'admin' || recoveryAuthorizedIds.includes(currentUser.id);
 
   const addStaffEmployee: CfosContextValue['addStaffEmployee'] = ({
+    id,
+    pinCode,
     firstName,
     lastName,
     contractType = 'CDI',
@@ -2779,7 +2800,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     const cleanFirst = firstName.trim();
     const cleanLast = lastName.trim();
     const safeRole: Role = role === 'admin' || role === 'manager' ? 'commercial' : role;
-    const uniquePin = String(Math.floor(1000 + Math.random() * 8999));
+    const uniquePin = pinCode?.trim() || '1234';
     const defaultAssignments: NonNullable<Employee['siteAssignments']> = siteAssignments?.length
       ? siteAssignments
       : [
@@ -2792,7 +2813,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
           },
         ];
     const newEmp: Employee = {
-      id: `emp-staff-${Date.now()}`,
+      id: id?.trim() || `emp-staff-${Date.now()}`,
       firstName: cleanFirst,
       lastName: cleanLast,
       email: `${cleanFirst.toLowerCase()}.${cleanLast.toLowerCase()}@cfitness.fr`.replace(/\s+/g, ''),

@@ -877,15 +877,15 @@ export function validateAppointmentBooking(
     };
   }
 
-  const sameType = sameClubOverlap.find(
-    (s) => s.typeName === candidate.typeName && s.startTime === candidate.startTime
-  );
-  if (candidate.capacityMax > 0 && sameType && sameType.currentBookedCount >= candidate.capacityMax) {
+  const totalBookedSameType = sameClubOverlap
+    .filter((s) => s.typeName === candidate.typeName && s.startTime === candidate.startTime)
+    .reduce((acc, s) => acc + s.currentBookedCount, 0);
+  if (candidate.capacityMax > 0 && totalBookedSameType >= candidate.capacityMax) {
     return {
       accepted: false,
       bookingStatus: 'refuse',
       collisionDetected: true,
-      reason: `Capacité maximale atteinte (${sameType.currentBookedCount}/${candidate.capacityMax}).`,
+      reason: `Capacité maximale atteinte (${totalBookedSameType}/${candidate.capacityMax}).`,
     };
   }
 

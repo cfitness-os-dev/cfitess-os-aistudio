@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CheckCircle2, Lock, Calendar, FileText } from 'lucide-react';
+import { validateAppointmentBooking, type AppointmentSlotRecord } from '../domain/leadAuditRegistry';
 
 interface PublicFormField {
   id: string;
@@ -12,11 +13,21 @@ interface StoredLeadForm {
   id: string;
   name: string;
   clubId: 'carre-de-soie' | 'beynost';
-  status: 'published' | 'draft';
-  sections: string[];
+  published?: boolean;
+  status?: 'published' | 'draft';
+  sections?: number | string[];
+  sectionTitles?: string[];
   fields?: PublicFormField[];
   responsesCount: number;
-  lastResponsePreview: string;
+  lastResponsePreview?: string;
+  sampleResponses?: Array<{
+    id: string;
+    fullName: string;
+    email: string;
+    phone: string;
+    rgpdConsent: boolean;
+    submittedAt: string;
+  }>;
 }
 
 const DEFAULT_PUBLIC_FORMS: StoredLeadForm[] = [
@@ -24,8 +35,8 @@ const DEFAULT_PUBLIC_FORMS: StoredLeadForm[] = [
     id: 'frm-1',
     name: 'Séance Découverte Carré de Soie',
     clubId: 'carre-de-soie',
-    status: 'published',
-    sections: ['Coordonnées', 'Objectif fitness', 'Consentement RGPD'],
+    published: true,
+    sectionTitles: ['Coordonnées', 'Objectif fitness', 'Consentement RGPD'],
     fields: [
       { id: 'fld-fn', label: 'Prénom', type: 'text', required: true },
       { id: 'fld-ln', label: 'Nom', type: 'text', required: true },
@@ -34,45 +45,74 @@ const DEFAULT_PUBLIC_FORMS: StoredLeadForm[] = [
       { id: 'fld-rgpd', label: 'J’accepte le traitement RGPD de mes données', type: 'checkbox', required: true },
     ],
     responsesCount: 42,
-    lastResponsePreview: 'Camille Garnier · 0611223344 · Objectif perte de poids · RGPD=true',
+    sampleResponses: [
+      {
+        id: 'rep-1',
+        fullName: 'Camille Garnier',
+        email: 'camille.garnier@exemple.fr',
+        phone: '0611223344',
+        rgpdConsent: true,
+        submittedAt: '2026-11-16 14:20',
+      },
+    ],
   },
   {
     id: 'frm-2',
     name: 'Bilan Checkup Beynost',
     clubId: 'beynost',
-    status: 'published',
-    sections: ['Identité', 'Disponibilités', 'Accord RGPD'],
+    published: true,
+    sectionTitles: ['Identité', 'Disponibilités', 'Accord RGPD'],
     fields: [
       { id: 'fld-fn2', label: 'Prénom', type: 'text', required: true },
       { id: 'fld-em2', label: 'Email', type: 'email', required: true },
       { id: 'fld-rgpd2', label: 'Accord RGPD obligatoire', type: 'checkbox', required: true },
     ],
     responsesCount: 19,
-    lastResponsePreview: 'Hugo Lefebvre · 0677889900 · Checkup Technogym · RGPD=true',
+    sampleResponses: [
+      {
+        id: 'rep-2',
+        fullName: 'Hugo Lefebvre',
+        email: 'hugo.lefebvre@exemple.fr',
+        phone: '0677889900',
+        rgpdConsent: true,
+        submittedAt: '2026-11-15 11:05',
+      },
+    ],
   },
   {
     id: 'frm-3',
     name: 'Offre Rentrée Coaching (Brouillon)',
     clubId: 'carre-de-soie',
-    status: 'draft',
-    sections: ['Identité'],
+    published: false,
+    sectionTitles: ['Identité'],
     fields: [{ id: 'fld-fn3', label: 'Prénom', type: 'text', required: true }],
     responsesCount: 0,
-    lastResponsePreview: 'Aucune réponse collectée.',
+    sampleResponses: [],
   },
 ];
 
 export function PublicLeadPortalView({ pathname }: { pathname: string }) {
   const parts = pathname.split('/').filter(Boolean);
   const kind = parts[0]; // 'forms' | 'book'
-  const clubSlug = parts[1] === 'beynost' ? 'beynost' : 'carre-de-soie';
+  const clubSlug: 'carre-de-soie' | 'beynost' = parts[1] === 'beynost' ? 'beynost' : 'carre-de-soie';
   const itemId = parts[2] ?? '';
 
   const [values, setValues] = useState<Record<string, string | boolean>>({});
+  const [bookDate, setBookDate] = useState(() => {
+    const d = new Date(Date.now() + 2 * 86400000);
+    return d.toISOString().slice(0, 10);
+  });
+  const [bookTime, setBookTime] = useState('10:00');
   const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   if (kind === 'book') {
+    const slotLabel = itemId.includes('checkup')
+      ? 'Bilan Checkup Technogym'
+      : 'Séance Découverte Coaching';
+    const durationMinutes = 60;
+    const coachId = clubSlug === 'beynost' ? 'emp-sarah' : 'emp-karim';
+
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
         <div className="max-w-md w-full rounded-2xl bg-slate-900 border border-slate-800 p-6 space-y-4">
@@ -81,26 +121,94 @@ export function PublicLeadPortalView({ pathname }: { pathname: string }) {
             <span>Réservation publique — {clubSlug === 'beynost' ? 'C.Fitness Beynost' : 'C.Fitness Carré de Soie'}</span>
           </div>
           <p className="text-xs text-slate-400">
-            Page publique isolée pour le créneau <span className="font-mono text-slate-200">{itemId || 'séance'}</span> (aucune donnée interne exposée).
+            Créneau <strong>{slotLabel}</strong> ({durationMinutes} min) · Page publique isolée (aucune donnée interne exposée).
           </p>
           {submitted ? (
             <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-200 text-xs flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 shrink-0" />
-              <span>Demande de créneau enregistrée en mode démonstration.</span>
+              <span>Créneau réservé le {bookDate} à {bookTime} et enregistré dans l&apos;agenda du club.</span>
             </div>
           ) : (
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                if (!String(values.name || '').trim() || !String(values.email || '').trim()) {
+                const fullName = String(values.name || '').trim();
+                const email = String(values.email || '').trim();
+                if (!fullName || !email) {
                   setErrorMsg('Nom et e-mail requis.');
                   return;
+                }
+                let existingSlots: AppointmentSlotRecord[] = [];
+                try {
+                  const raw = localStorage.getItem('cfos_lead_rdv_slots_v1');
+                  if (raw) existingSlots = JSON.parse(raw) as AppointmentSlotRecord[];
+                } catch {
+                  // ignore
+                }
+                const decision = validateAppointmentBooking(existingSlots, {
+                  clubId: clubSlug,
+                  coachId,
+                  typeName: slotLabel,
+                  date: bookDate,
+                  startTime: bookTime,
+                  durationMinutes,
+                  hoursBeforeSlot: 24,
+                  minDelayHours: 2,
+                  capacityMax: 1,
+                  requiresStripePayment: false,
+                  stripePaidConfirmed: false,
+                  referenceNow: new Date(),
+                });
+                if (!decision.accepted) {
+                  setErrorMsg(decision.reason);
+                  return;
+                }
+                const nextSlot: AppointmentSlotRecord = {
+                  id: `slot-pub-${Date.now()}`,
+                  clubId: clubSlug,
+                  coachId,
+                  typeName: slotLabel,
+                  date: bookDate,
+                  startTime: bookTime,
+                  durationMinutes,
+                  capacityMax: 1,
+                  currentBookedCount: 1,
+                  paidRequired: false,
+                  paymentStatus: 'non_requis',
+                };
+                try {
+                  localStorage.setItem(
+                    'cfos_lead_rdv_slots_v1',
+                    JSON.stringify([nextSlot, ...existingSlots])
+                  );
+                } catch {
+                  // ignore
                 }
                 setErrorMsg(null);
                 setSubmitted(true);
               }}
               className="space-y-3 text-xs"
             >
+              <div className="grid grid-cols-2 gap-2">
+                <label className="space-y-1">
+                  <span className="text-slate-300">Date</span>
+                  <input
+                    type="date"
+                    value={bookDate}
+                    onChange={(e) => setBookDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-slate-300">Heure</span>
+                  <input
+                    type="time"
+                    value={bookTime}
+                    onChange={(e) => setBookTime(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700"
+                  />
+                </label>
+              </div>
               <input
                 type="text"
                 placeholder="Nom complet"
@@ -115,12 +223,12 @@ export function PublicLeadPortalView({ pathname }: { pathname: string }) {
                 onChange={(e) => setValues((v) => ({ ...v, email: e.target.value }))}
                 className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700"
               />
-              {errorMsg && <div className="text-red-300">{errorMsg}</div>}
+              {errorMsg && <div className="text-red-300 font-semibold">{errorMsg}</div>}
               <button
                 type="submit"
                 className="w-full py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-bold cursor-pointer"
               >
-                Confirmer ma demande de créneau
+                Confirmer ma réservation
               </button>
             </form>
           )}
@@ -138,7 +246,13 @@ export function PublicLeadPortalView({ pathname }: { pathname: string }) {
   }
 
   const form = forms.find((f) => f.id === itemId && f.clubId === clubSlug);
-  if (!form || form.status !== 'published') {
+  const isFormPublished = form
+    ? form.published !== undefined
+      ? form.published
+      : form.status === 'published'
+    : false;
+
+  if (!form || !isFormPublished) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
         <div className="max-w-md w-full rounded-2xl bg-slate-900 border border-red-500/40 p-6 space-y-3 text-center">
@@ -158,6 +272,7 @@ export function PublicLeadPortalView({ pathname }: { pathname: string }) {
       : [
           { id: 'fld-fn', label: 'Prénom', type: 'text', required: true },
           { id: 'fld-em', label: 'Email', type: 'email', required: true },
+          { id: 'fld-ph', label: 'Téléphone', type: 'tel', required: false },
           { id: 'fld-rgpd', label: 'Consentement RGPD obligatoire', type: 'checkbox', required: true },
         ];
 
@@ -179,7 +294,7 @@ export function PublicLeadPortalView({ pathname }: { pathname: string }) {
         {submitted ? (
           <div className="p-4 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-200 text-xs flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 shrink-0" />
-            <span>Merci ! Votre réponse a été enregistrée pour {form.name} (démonstration locale).</span>
+            <span>Merci ! Votre réponse structurée a été enregistrée pour {form.name}.</span>
           </div>
         ) : (
           <form
@@ -199,13 +314,28 @@ export function PublicLeadPortalView({ pathname }: { pathname: string }) {
                 }
               }
               setErrorMsg(null);
+              const fullName = [values['fld-fn'], values['fld-ln'], values['fld-fn2'], values['fld-fn3']]
+                .map((x) => String(x || '').trim())
+                .filter(Boolean)
+                .join(' ') || 'Contact public';
+              const email = String(values['fld-em'] || values['fld-em2'] || '').trim();
+              const phone = String(values['fld-ph'] || '').trim();
+              const structuredResponse = {
+                id: `rep-${Date.now()}`,
+                fullName,
+                email,
+                phone,
+                rgpdConsent: Boolean(values['fld-rgpd'] ?? values['fld-rgpd2'] ?? true),
+                submittedAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
+              };
               try {
                 const updatedForms = forms.map((item) =>
                   item.id === form.id
                     ? {
                         ...item,
                         responsesCount: item.responsesCount + 1,
-                        lastResponsePreview: Object.values(values).filter(Boolean).join(' · ').slice(0, 100),
+                        lastResponsePreview: `${fullName} · ${email}`,
+                        sampleResponses: [structuredResponse, ...(item.sampleResponses ?? [])],
                       }
                     : item
                 );
@@ -236,7 +366,7 @@ export function PublicLeadPortalView({ pathname }: { pathname: string }) {
                       {f.label} {f.required && <span className="text-red-400">*</span>}
                     </span>
                     <input
-                      type={f.type}
+                      type={f.type === 'select' ? 'text' : f.type}
                       value={String(values[f.id] || '')}
                       onChange={(e) => setValues((prev) => ({ ...prev, [f.id]: e.target.value }))}
                       className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700"

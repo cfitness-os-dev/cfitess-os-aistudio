@@ -316,11 +316,11 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
             },
             Employee {
                 id: "emp-master".into(),
-                first_name: "Karim".into(),
-                last_name: "Haddad".into(),
+                first_name: "Mehdi".into(),
+                last_name: "Benali".into(),
                 birth_name: None,
                 matricule: "FICT-002".into(),
-                email: "karim.haddad@cfitness-fictif.local".into(),
+                email: "mehdi.benali@cfitness-fictif.local".into(),
                 phone: "06 00 00 00 02".into(),
                 active: true,
                 hr_file_status: "complete".into(),
@@ -1069,6 +1069,62 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
                 published: false,
             },
             Shift {
+                id: "sh-maxime-cs-1".into(),
+                site_id: "club-carre-soie".into(),
+                date: "2026-11-19".into(),
+                start_time: "09:00".into(),
+                end_time: "17:00".into(),
+                break_minutes: 60,
+                employee_id: Some("emp-maxime".into()),
+                position_id: "pos-cs-accueil".into(),
+                mission_label: None,
+                tasks: vec!["Accueil & Vente Carré de Soie".into()],
+                lock_state: "none".into(),
+                published: true,
+            },
+            Shift {
+                id: "sh-maxime-cs-2".into(),
+                site_id: "club-carre-soie".into(),
+                date: "2026-11-20".into(),
+                start_time: "10:00".into(),
+                end_time: "18:00".into(),
+                break_minutes: 60,
+                employee_id: Some("emp-maxime".into()),
+                position_id: "pos-cs-accueil".into(),
+                mission_label: None,
+                tasks: vec!["Relances prospects & visites".into()],
+                lock_state: "none".into(),
+                published: true,
+            },
+            Shift {
+                id: "sh-maxime-bey-1".into(),
+                site_id: "club-beynost".into(),
+                date: "2026-11-21".into(),
+                start_time: "09:30".into(),
+                end_time: "17:30".into(),
+                break_minutes: 60,
+                employee_id: Some("emp-maxime".into()),
+                position_id: "pos-bey-accueil".into(),
+                mission_label: None,
+                tasks: vec!["Renfort accueil Beynost".into()],
+                lock_state: "none".into(),
+                published: true,
+            },
+            Shift {
+                id: "sh-chloe-bey-1".into(),
+                site_id: "club-beynost".into(),
+                date: "2026-11-19".into(),
+                start_time: "09:00".into(),
+                end_time: "17:00".into(),
+                break_minutes: 60,
+                employee_id: Some("emp-chloe".into()),
+                position_id: "pos-bey-accueil".into(),
+                mission_label: None,
+                tasks: vec!["Accueil & Relance Beynost".into()],
+                lock_state: "none".into(),
+                published: true,
+            },
+            Shift {
                 id: "sh-bey-multi".into(),
                 site_id: "club-beynost".into(),
                 date: "2026-11-18".into(),
@@ -1222,6 +1278,20 @@ pub fn load_or_init_state(data_dir: &Path) -> AppDatabaseState {
                 for seed_emp in baseline.employees {
                     if !parsed.employees.iter().any(|e| e.id == seed_emp.id) {
                         parsed.employees.push(seed_emp);
+                        migrated = true;
+                    }
+                }
+                if let Some(master) = parsed.employees.iter_mut().find(|e| e.id == "emp-master") {
+                    if master.first_name == "Karim" && master.last_name == "Haddad" {
+                        master.first_name = "Mehdi".into();
+                        master.last_name = "Benali".into();
+                        master.email = "mehdi.benali@cfitness-fictif.local".into();
+                        migrated = true;
+                    }
+                }
+                for seed_shift in baseline.shifts {
+                    if !parsed.shifts.iter().any(|s| s.id == seed_shift.id) {
+                        parsed.shifts.push(seed_shift);
                         migrated = true;
                     }
                 }
