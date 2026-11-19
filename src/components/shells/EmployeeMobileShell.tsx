@@ -1890,6 +1890,7 @@ export function EmployeeMobileShell() {
                   ))}
                 </div>
 
+                <div className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-1 md:pb-0">
                 {[
                   {
                     id: 'dashboard',
@@ -2008,7 +2009,7 @@ export function EmployeeMobileShell() {
                       key={`${item.id}-${item.sub || 'main'}`}
                       type="button"
                       onClick={() => setActiveSection(item.id as AdminSection, item.sub)}
-                      className={`w-full px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 cursor-pointer transition-colors ${
+                      className={`shrink-0 md:w-full min-h-[38px] px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap ${
                         isSelected
                           ? 'bg-violet-600 text-white'
                           : isDark
@@ -2021,21 +2022,30 @@ export function EmployeeMobileShell() {
                     </button>
                   );
                 })}
+                </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2">
+              <div className="hidden md:flex pt-3 border-t border-slate-200 dark:border-slate-800 items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-violet-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                  TC
+                  {currentUser.id === 'emp-mario'
+                    ? 'TC'
+                    : `${currentUser.firstName[0] || ''}${currentUser.lastName[0] || ''}`.toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <div className="text-xs font-bold truncate">Thomas CLAUDE</div>
-                  <div className="text-[10px] text-slate-400 truncate">Directeur Général</div>
+                  <div className="text-xs font-bold truncate">
+                    {currentUser.id === 'emp-mario'
+                      ? 'Thomas CLAUDE'
+                      : `${currentUser.firstName} ${currentUser.lastName}`}
+                  </div>
+                  <div className="text-[10px] text-slate-400 truncate">
+                    {currentUser.id === 'emp-mario' ? 'Directeur Général' : currentUser.jobTitle}
+                  </div>
                 </div>
               </div>
             </aside>
 
             {/* Tablet Main Active Module Content */}
-            <main className="flex-1 p-4 overflow-y-auto max-h-[760px]">
+            <main className="flex-1 min-w-0 p-3 sm:p-4 overflow-y-auto overflow-x-clip max-h-[760px]">
               {activeSection === 'my-day' && <MyDayCollaboratorView />}
               {activeSection === 'planning-hr' && <PlanningHrView />}
               {activeSection === 'recovery' && <RecoveryView />}

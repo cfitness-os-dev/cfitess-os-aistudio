@@ -35,6 +35,7 @@ import {
   MessageSquare,
   Compass,
   Scale,
+  UserCheck,
 } from 'lucide-react';
 import { AdminSection } from '../types/cfos';
 import { isSectionAllowedForRole } from '../domain/rules';
@@ -724,14 +725,14 @@ export function AdminShell() {
               : 'bg-white/95 border-slate-200/80'
           }`}
         >
-          <div className="px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
+          <div className="px-3 sm:px-6 py-2.5 flex items-center justify-between gap-2 sm:gap-3">
             {/* Left: Mobile Menu Button + Wide Global Search Bar */}
-            <div className="flex items-center gap-3 flex-1 max-w-md xl:max-w-lg">
+            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 max-w-md xl:max-w-lg">
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(true)}
                 aria-label="Ouvrir le menu de navigation"
-                className={`lg:hidden min-h-[40px] min-w-[40px] rounded-xl border flex items-center justify-center cursor-pointer shrink-0 ${
+                className={`lg:hidden min-h-[44px] min-w-[44px] rounded-xl border flex items-center justify-center cursor-pointer shrink-0 ${
                   isDark
                     ? 'border-slate-700 text-slate-200 hover:bg-slate-800'
                     : 'border-slate-200 text-slate-700 hover:bg-slate-100'
@@ -741,7 +742,7 @@ export function AdminShell() {
               </button>
 
               {/* Global Search Input */}
-              <div className="relative flex-1 min-w-[220px]">
+              <div className="relative flex-1 min-w-0">
                 <div
                   className={`flex items-center gap-2.5 px-3.5 py-2 rounded-xl border text-xs transition-colors ${
                     isDark
@@ -1094,7 +1095,7 @@ export function AdminShell() {
         )}
 
         {/* Active View Content */}
-        <main className="flex-1 p-4 sm:p-6 max-w-[1440px] w-full mx-auto">
+        <main className="flex-1 p-3 sm:p-6 pb-24 lg:pb-6 max-w-[1440px] w-full mx-auto min-w-0 overflow-x-clip">
           {activeSection === 'my-day' && (
             <MonCompteRhHubView subTarget={navSubTarget} />
           )}
@@ -1202,6 +1203,98 @@ export function AdminShell() {
           {activeSection === 'governance' && <GovernanceView />}
         </main>
       </div>
+
+      {/* Responsive Bottom Navigation Bar for Real Smartphones & Portrait Tablets (< lg) */}
+      <nav
+        aria-label="Navigation rapide mobile et tablette"
+        className={`fixed bottom-0 inset-x-0 z-40 lg:hidden border-t backdrop-blur-md pb-safe ${
+          isDark
+            ? 'bg-[#111522]/95 border-slate-800 text-slate-300'
+            : 'bg-white/95 border-slate-200 text-slate-700'
+        }`}
+      >
+        <div className="grid grid-cols-5 gap-1 px-2 pt-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedNavId('nav-dashboard');
+              setActiveSection(isSectionAllowedForRole('dashboard', currentUser.role) ? 'dashboard' : 'my-day');
+            }}
+            className={`min-h-[48px] rounded-xl flex flex-col items-center justify-center gap-0.5 text-[10px] font-bold cursor-pointer ${
+              activeSection === 'dashboard'
+                ? 'text-violet-500 bg-violet-500/10'
+                : 'opacity-75 hover:opacity-100'
+            }`}
+          >
+            <Home className="w-4 h-4" />
+            <span className="truncate">Accueil</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              const canAdherents = isSectionAllowedForRole('devices', currentUser.role) && currentUser.role !== 'coach' && currentUser.role !== 'apprenti';
+              setSelectedNavId(canAdherents ? 'nav-adherents' : 'nav-checkup');
+              setActiveSection('devices', canAdherents ? 'adherents' : 'checkup');
+            }}
+            className={`min-h-[48px] rounded-xl flex flex-col items-center justify-center gap-0.5 text-[10px] font-bold cursor-pointer ${
+              activeSection === 'devices'
+                ? 'text-violet-500 bg-violet-500/10'
+                : 'opacity-75 hover:opacity-100'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span className="truncate">
+              {currentUser.role === 'coach' || currentUser.role === 'apprenti' ? 'Bilans' : 'Adhérents'}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedNavId('nav-planning');
+              setActiveSection('planning-hr', 'planning');
+            }}
+            className={`min-h-[48px] rounded-xl flex flex-col items-center justify-center gap-0.5 text-[10px] font-bold cursor-pointer ${
+              activeSection === 'planning-hr'
+                ? 'text-violet-500 bg-violet-500/10'
+                : 'opacity-75 hover:opacity-100'
+            }`}
+          >
+            <Calendar className="w-4 h-4" />
+            <span className="truncate">Planning</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedNavId('nav-personnel');
+              setActiveSection('my-day', 'MC01');
+            }}
+            className={`min-h-[48px] rounded-xl flex flex-col items-center justify-center gap-0.5 text-[10px] font-bold cursor-pointer ${
+              activeSection === 'my-day'
+                ? 'text-violet-500 bg-violet-500/10'
+                : 'opacity-75 hover:opacity-100'
+            }`}
+          >
+            <UserCheck className="w-4 h-4" />
+            <span className="truncate">RH</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className={`min-h-[48px] rounded-xl flex flex-col items-center justify-center gap-0.5 text-[10px] font-bold cursor-pointer ${
+              mobileMenuOpen
+                ? 'text-violet-500 bg-violet-500/10'
+                : 'opacity-75 hover:opacity-100'
+            }`}
+          >
+            <Menu className="w-4 h-4" />
+            <span className="truncate">Menus</span>
+          </button>
+        </div>
+      </nav>
 
       {/* Mobile & Tablet Off-Canvas Navigation Drawer */}
       {mobileMenuOpen && (
@@ -1318,10 +1411,14 @@ export function AdminShell() {
                         handleVisualItemClick(item);
                         setMobileMenuOpen(false);
                       }}
-                      className="w-full px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-3 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                      className={`w-full min-h-[44px] px-3 py-2.5 rounded-xl text-xs font-medium flex items-center gap-3 cursor-pointer ${
+                        selectedNavId === item.id
+                          ? 'bg-violet-600/15 text-violet-400 font-bold'
+                          : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
                     >
                       <Icon className={`w-4 h-4 shrink-0 ${item.iconColor}`} />
-                      <span>{item.label}</span>
+                      <span className="truncate">{item.label}</span>
                     </button>
                   );
                 })}
