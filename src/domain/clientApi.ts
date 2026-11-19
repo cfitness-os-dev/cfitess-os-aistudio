@@ -268,6 +268,25 @@ export const clientApi = {
     });
   },
 
+  createEmployee(
+    auth: ApiAuthContext,
+    payload: {
+      firstName: string;
+      lastName: string;
+      siteId: string;
+      contractType?: string;
+      weeklyHours?: number;
+      profileId?: ProfileId;
+      teamIds?: string[];
+      managedTeamIds?: string[];
+    }
+  ): Promise<{ ok: boolean; employee: { id: string; firstName: string; lastName: string } }> {
+    return requestJson('/api/admin/employees', auth, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
   updateEmployeeSiteAccesses(
     auth: ApiAuthContext,
     employeeId: string,

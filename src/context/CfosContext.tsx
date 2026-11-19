@@ -250,12 +250,12 @@ interface CfosContextValue extends PersistedState {
   unlockArchitectSpace: () => void;
   lockArchitectSpace: () => void;
   setClubFilter: (filter: ClubFilter) => void;
-  switchUserSession: (employeeId: string, preferredShell?: ShellMode) => void;
+  switchUserSession: (employeeId: string, preferredShell?: ShellMode) => Promise<void>;
   loginWithLocalCredentials: (params: {
     employeeId: string;
     secretOrPin: string;
     preferredShell?: ShellMode;
-  }) => { ok: boolean; message: string; locked?: boolean };
+  }) => Promise<{ ok: boolean; message: string; locked?: boolean }>;
   logoutSession: () => void;
   resetDemoData: () => void;
 
@@ -737,42 +737,64 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     setBannerNotice({ tone, text });
   };
 
-  const syncServerBearerSession = (employeeId: string, secret: string) => {
-    if (typeof window === 'undefined') return;
-    void fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ emailOrId: employeeId, pinOrPassword: secret }),
-    })
-      .then(async (res) => {
-        if (!res.ok) return;
-        const data = (await res.json()) as { authenticated?: boolean; sessionToken?: string };
-        if (data?.authenticated && data?.sessionToken) {
-          window.sessionStorage.setItem('cfos_bearer_token', data.sessionToken);
-          window.sessionStorage.setItem('cfos_bearer_actor_id', employeeId);
-          window.dispatchEvent(new CustomEvent('cfos-bearer-updated', { detail: { employeeId, token: data.sessionToken } }));
-        }
-      })
-      .catch(() => {
-        // Fallback démo si offline
+  const requestServerBearerSession = async (
+    employeeId: string,
+    secret: string
+  ): Promise<{ ok: true; token: string } | { ok: false; message: string; locked?: boolean }> => {
+    if (typeof window === 'undefined') {
+      return { ok: false, message: 'Environnement navigateur requis pour la session.' };
+    }
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emailOrId: employeeId, pinOrPassword: secret }),
       });
+      if (!res.ok) {
+        if (res.status === 429) {
+          return {
+            ok: false,
+            locked: true,
+            message: 'Trop de tentatives échouées (429). Compte temporairement limité.',
+          };
+        }
+        return {
+          ok: false,
+          message: `Authentification serveur refusée (HTTP ${res.status}). Vérifiez vos identifiants.`,
+        };
+      }
+      const data = (await res.json()) as { authenticated?: boolean; sessionToken?: string };
+      if (!data?.authenticated || !data?.sessionToken) {
+        return { ok: false, message: 'Réponse serveur invalide : aucun jeton Bearer émis.' };
+      }
+      window.sessionStorage.setItem('cfos_bearer_token', data.sessionToken);
+      window.sessionStorage.setItem('cfos_bearer_actor_id', employeeId);
+      window.dispatchEvent(
+        new CustomEvent('cfos-bearer-updated', { detail: { employeeId, token: data.sessionToken } })
+      );
+      return { ok: true, token: data.sessionToken };
+    } catch {
+      return { ok: false, message: 'Serveur d’authentification inaccessible. Session non ouverte.' };
+    }
   };
 
-  const switchUserSession = (employeeId: string, preferredShell?: ShellMode) => {
+  const switchUserSession = async (employeeId: string, preferredShell?: ShellMode) => {
     const target = state.employees.find((e) => e.id === employeeId);
     if (!target) return;
+    const authRes = await requestServerBearerSession(target.id, target.pinCode);
+    if (!authRes.ok) {
+      notify('error', authRes.message);
+      return;
+    }
     setIsArchitectUnlocked(false);
     setCurrentUserId(target.id);
     setIsAuthenticated(true);
     try {
       window.sessionStorage.setItem('cfos_local_auth_active', 'true');
       window.sessionStorage.setItem('cfos_local_auth_user_id', target.id);
-      window.sessionStorage.removeItem('cfos_bearer_token');
-      window.sessionStorage.removeItem('cfos_bearer_actor_id');
     } catch {
       // ignore storage errors
     }
-    syncServerBearerSession(target.id, target.pinCode);
     if (preferredShell) {
       setShellMode(preferredShell);
     } else if (target.role === 'coach' || target.role === 'apprenti') {
@@ -782,10 +804,10 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     } else {
       setShellMode('admin');
     }
-    notify('success', `Session locale ouverte : ${target.firstName} ${target.lastName} (${target.jobTitle})`);
+    notify('success', `Session serveur ouverte : ${target.firstName} ${target.lastName} (${target.jobTitle})`);
   };
 
-  const loginWithLocalCredentials: CfosContextValue['loginWithLocalCredentials'] = ({
+  const loginWithLocalCredentials: CfosContextValue['loginWithLocalCredentials'] = async ({
     employeeId,
     secretOrPin,
     preferredShell,
@@ -818,45 +840,36 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
         }));
         return { ok: false, message: pinCheck.reason, locked: pinCheck.locked };
       }
-      // Reset failed attempts on valid PIN
-      setState((prev) => ({
-        ...prev,
-        employees: prev.employees.map((e) =>
-          e.id === target.id ? pinCheck.updatedEmployee : e
-        ),
-        auditLogs: appendAudit(prev.auditLogs, {
-          clubId: target.clubId,
-          action: 'CONNEXION_LOCALE_ARGON2_JWT',
-          target: `${target.firstName} ${target.lastName} [${target.role.toUpperCase()}]`,
-          afterState: `Authentification locale Debian 12 validée (Club ${target.clubId})`,
-        }),
-      }));
-    } else {
-      setState((prev) => ({
-        ...prev,
-        employees: prev.employees.map((e) =>
-          e.id === target.id ? { ...e, failedPinAttempts: 0 } : e
-        ),
-        auditLogs: appendAudit(prev.auditLogs, {
-          clubId: target.clubId,
-          action: 'CONNEXION_LOCALE_ARGON2_JWT',
-          target: `${target.firstName} ${target.lastName} [${target.role.toUpperCase()}]`,
-          afterState: `Authentification locale Debian 12 validée (Club ${target.clubId})`,
-        }),
-      }));
     }
+
+    const authSecret = isValidLocalPassword ? target.pinCode : normalizedSecret;
+    const authRes = await requestServerBearerSession(target.id, authSecret);
+    if (!authRes.ok) {
+      notify('error', authRes.message);
+      return authRes;
+    }
+
+    setState((prev) => ({
+      ...prev,
+      employees: prev.employees.map((e) =>
+        e.id === target.id ? { ...e, failedPinAttempts: 0 } : e
+      ),
+      auditLogs: appendAudit(prev.auditLogs, {
+        clubId: target.clubId,
+        action: 'CONNEXION_LOCALE_ARGON2_JWT',
+        target: `${target.firstName} ${target.lastName} [${target.role.toUpperCase()}]`,
+        afterState: `Authentification Bearer serveur validée (Club ${target.clubId})`,
+      }),
+    }));
 
     setCurrentUserId(target.id);
     setIsAuthenticated(true);
     try {
       window.sessionStorage.setItem('cfos_local_auth_active', 'true');
       window.sessionStorage.setItem('cfos_local_auth_user_id', target.id);
-      window.sessionStorage.removeItem('cfos_bearer_token');
-      window.sessionStorage.removeItem('cfos_bearer_actor_id');
     } catch {
       // ignore storage errors
     }
-    syncServerBearerSession(target.id, isValidLocalPassword ? target.pinCode : normalizedSecret);
 
     if (preferredShell) {
       setShellMode(preferredShell);

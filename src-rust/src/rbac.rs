@@ -149,16 +149,16 @@ pub fn evaluate_permission(
                         };
                     }
                     Scope::Teams => {
-                        let shares_team = t
+                        let manages_target_team = t
                             .target_team_ids
                             .iter()
-                            .any(|tid| access.team_ids.contains(tid));
-                        if !shares_team {
+                            .any(|tid| access.managed_team_ids.contains(tid));
+                        if !manages_target_team {
                             return PermissionResult {
                                 allowed: false,
                                 state: PermissionControlState::Autorise,
                                 effective_scope: Scope::Teams,
-                                reason: "Donnée hors de votre périmètre d'équipe(s).".into(),
+                                reason: "Donnée hors de vos équipes encadrées (managedTeamIds).".into(),
                             };
                         }
                     }

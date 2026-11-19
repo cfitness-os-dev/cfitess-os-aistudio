@@ -169,6 +169,7 @@ pub fn api_router(state: SharedState) -> Router {
         .route("/api/shifts/:shift_id", patch(patch_shift))
         .route("/api/admin/profiles", get(get_admin_profiles))
         .route("/api/admin/profiles/:profile_id", put(put_admin_profile))
+        .route("/api/admin/employees", post(post_admin_employee))
         .route(
             "/api/admin/employees/:emp_id/site-accesses",
             put(put_employee_site_accesses),
@@ -1469,6 +1470,201 @@ async fn post_restore(
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct CreateAdminEmployeePayload {
+    pub first_name: String,
+    pub last_name: String,
+    pub site_id: String,
+    pub contract_type: Option<String>,
+    pub weekly_hours: Option<u32>,
+    pub profile_id: Option<String>,
+    pub team_ids: Option<Vec<String>>,
+    pub managed_team_ids: Option<Vec<String>>,
+}
+
+async fn post_admin_employee(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Json(payload): Json<CreateAdminEmployeePayload>,
+) -> Result<(StatusCode, Json<Value>), (StatusCode, Json<Value>)> {
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let mut db = state.db.write().await;
+
+    let first_name = payload.first_name.trim().to_string();
+    let last_name = payload.last_name.trim().to_string();
+    if first_name.is_empty() || last_name.is_empty() {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            "Prénom et nom requis pour créer un collaborateur.",
+        ));
+    }
+    if !db.sites.iter().any(|s| s.id == payload.site_id) {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            format!("Établissement inexistant : {}", payload.site_id),
+        ));
+    }
+
+    let ctx = build_session_context(&db, &actor_id, &payload.site_id)
+        .ok_or_else(|| err_resp(StatusCode::FORBIDDEN, "Accès refusé sur cet établissement."))?;
+    let can_create = ctx
+        .resolved_permissions
+        .get("ORG04-12")
+        .map(|p| p.allowed)
+        .unwrap_or(false)
+        || ctx
+            .resolved_permissions
+            .get("ORG04-14")
+            .map(|p| p.allowed)
+            .unwrap_or(false);
+    if !can_create {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Accès refusé (403) : permission ORG04-12/ORG04-14 requise pour créer un salarié.",
+        ));
+    }
+
+    let profile_id = payload
+        .profile_id
+        .unwrap_or_else(|| "employe_standard".to_string());
+    if !db.profiles.iter().any(|p| p.id == profile_id) {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            format!("Profil RH inexistant : {}", profile_id),
+        ));
+    }
+    let is_global_admin = db
+        .employees
+        .iter()
+        .find(|e| e.id == actor_id)
+        .map(|a| a.site_accesses.iter().any(|sa| sa.profile_id == "admin_systeme"))
+        .unwrap_or(false);
+    if !is_global_admin && (profile_id == "admin_systeme" || profile_id == "master_avance") {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Non-élévation (403) : profil supérieur non attribuable hors admin_systeme.",
+        ));
+    }
+
+    let team_ids = payload.team_ids.unwrap_or_default();
+    let managed_team_ids = payload.managed_team_ids.unwrap_or_default();
+    for tid in team_ids.iter().chain(managed_team_ids.iter()) {
+        if !db.teams.iter().any(|t| t.id == *tid && t.site_id == payload.site_id) {
+            return Err(err_resp(
+                StatusCode::BAD_REQUEST,
+                format!("Équipe {} invalide pour le club {}.", tid, payload.site_id),
+            ));
+        }
+    }
+
+    let new_id = format!(
+        "emp-staff-{}",
+        Utc::now().timestamp_millis()
+    );
+    let slug = format!(
+        "{}.{}",
+        first_name.to_lowercase(),
+        last_name.to_lowercase()
+    )
+    .replace(' ', "-");
+    let matricule = format!("CF-NEW-{:03}", db.employees.len() + 1);
+    let contract_type = payload.contract_type.unwrap_or_else(|| "CDI".to_string());
+    let weekly_hours = payload.weekly_hours.unwrap_or(35);
+
+    let new_emp = Employee {
+        id: new_id.clone(),
+        first_name: first_name.clone(),
+        last_name: last_name.clone(),
+        birth_name: None,
+        matricule,
+        email: format!("{}@cfitness-fictif.local", slug),
+        phone: "06 00 00 00 99".into(),
+        active: true,
+        hr_file_status: "complete".into(),
+        site_accesses: vec![crate::models::EmployeeSiteAccess {
+            site_id: payload.site_id.clone(),
+            is_primary: true,
+            profile_id,
+            show_on_planning: true,
+            team_ids,
+            managed_team_ids,
+            position_ids: vec![],
+        }],
+        sensitive_bank: crate::models::SensitiveBankInfo {
+            payment_mode: "Virement".into(),
+            iban_masked: "FR76 •••• •••• •••• 9999".into(),
+            bic: "CFITFRPPXXX".into(),
+            nir_masked: "1 99 •• •• ••• ••• 99".into(),
+        },
+        contract: crate::models::ContractSummary {
+            id: format!("ctr-{}", new_id),
+            site_id: payload.site_id.clone(),
+            contract_type,
+            regime: "hours".into(),
+            weekly_hours: Some(weekly_hours),
+            annual_days: None,
+            monthly_gross_eur: Some(1823.03),
+            hourly_rate_eur: Some(12.02),
+            loaded_cost_factor: 1.32,
+            effective_from: Utc::now().format("%Y-%m-%d").to_string(),
+            effective_to: None,
+        },
+        counter: crate::models::EmployeeCounter {
+            cp_n_acquired: 0.0,
+            cp_n_taken: 0.0,
+            cp_n_minus1_remaining: 0.0,
+            rtt_days_remaining: Some(0.0),
+            annualization_balance_hours: Some(0.0),
+        },
+    };
+
+    db.employees.push(new_emp.clone());
+    db.preferences_by_employee.insert(
+        new_id.clone(),
+        crate::models::UserPreferences {
+            language: "Français".into(),
+            notifications: crate::models::NotificationPrefs {
+                email_enabled: true,
+                sms_enabled: false,
+                frequency: "daily".into(),
+                digest_hour: "08:30".into(),
+                include_activity_report: false,
+            },
+            calendar_feed_token: format!("cal-{}", new_id),
+            calendar_feed_enabled: true,
+            sso_enabled: false,
+            sso_provider: "OIDC / SAML (non activé)".into(),
+            sso_domain: String::new(),
+        },
+    );
+    append_audit(
+        &mut db,
+        &actor_id,
+        "Création collaborateur",
+        format!("Nouveau salarié {} {} ({}) créé sur {}", first_name, last_name, new_id, payload.site_id),
+        "emp",
+        &new_id,
+        None,
+        None,
+    );
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        db.employees.retain(|e| e.id != new_id);
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec persistance serveur : {}", err_msg),
+        ));
+    }
+
+    Ok((
+        StatusCode::CREATED,
+        Json(json!({
+            "ok": true,
+            "employee": new_emp
+        })),
+    ))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PutEmployeeSiteAccessesPayload {
     pub site_accesses: Vec<crate::models::EmployeeSiteAccess>,
 }
@@ -2540,5 +2736,104 @@ mod tests {
         )
         .await;
         assert_eq!(invalid_managed.unwrap_err().0, StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn rbac_teams_scope_uses_managed_team_ids_distinct_from_membership_and_creates_employee() {
+        let state = test_state();
+
+        // Ajout d'une équipe C sur Carré de Soie et d'un responsable membre de A (team-cs-coaching),
+        // encadrant B (team-cs-accueil), sans droit sur C (team-cs-c).
+        {
+            let mut db = state.db.write().await;
+            db.teams.push(Team {
+                id: "team-cs-c".to_string(),
+                site_id: "club-carre-soie".to_string(),
+                name: "Équipe C".to_string(),
+            });
+            // Salarié cible uniquement dans l'équipe A (coaching)
+            let karim = db.employees.iter_mut().find(|e| e.id == "emp-karim").unwrap();
+            karim.site_accesses[0].team_ids = vec!["team-cs-coaching".to_string()];
+            // Salarié cible dans l'équipe B (accueil)
+            let julie = db.employees.iter_mut().find(|e| e.id == "emp-accueil-cs").unwrap();
+            julie.site_accesses[0].team_ids = vec!["team-cs-accueil".to_string()];
+            // Salarié cible dans l'équipe C
+            let sophie = db.employees.iter_mut().find(|e| e.id == "emp-planif-av").unwrap();
+            sophie.site_accesses[0].team_ids = vec!["team-cs-c".to_string()];
+
+            // Responsable emp-planif-std : membre de A (team-cs-coaching), encadrant B (team-cs-accueil)
+            let planif = db.employees.iter_mut().find(|e| e.id == "emp-planif-std").unwrap();
+            planif.site_accesses[0].team_ids = vec!["team-cs-coaching".to_string()];
+            planif.site_accesses[0].managed_team_ids = vec!["team-cs-accueil".to_string()];
+        }
+
+        // Connexion Bearer pour emp-planif-std
+        let login_res = post_local_auth_login(
+            State(state.clone()),
+            Json(LocalAuthLoginRequest {
+                email_or_id: "emp-planif-std".to_string(),
+                pin_or_password: "4040".to_string(),
+                role_requested: String::new(),
+            }),
+        )
+        .await
+        .into_response();
+        assert_eq!(login_res.status(), StatusCode::OK);
+        let login_bytes = axum::body::to_bytes(login_res.into_body(), usize::MAX).await.unwrap();
+        let login_json: Value = serde_json::from_slice(&login_bytes).unwrap();
+        let token = login_json["sessionToken"].as_str().unwrap().to_string();
+
+        let mut h = HeaderMap::new();
+        h.insert(header::AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", token)).unwrap());
+        h.insert("x-cfitness-site-id", HeaderValue::from_static("club-carre-soie"));
+
+        let dash = get_dashboard(State(state.clone()), h.clone()).await.unwrap().0;
+        let visible_ids: Vec<&str> = dash.visible_employees.iter().map(|e| e.id.as_str()).collect();
+        // Doit voir soi-même (emp-planif-std) et B (emp-accueil-cs), mais PAS A (emp-karim) ni C (emp-planif-av) !
+        assert!(visible_ids.contains(&"emp-planif-std"));
+        assert!(visible_ids.contains(&"emp-accueil-cs"));
+        assert!(!visible_ids.contains(&"emp-karim"));
+        assert!(!visible_ids.contains(&"emp-planif-av"));
+
+        // Création d'un salarié côté serveur par Mario (admin) via POST /api/admin/employees
+        let mario_login = post_local_auth_login(
+            State(state.clone()),
+            Json(LocalAuthLoginRequest {
+                email_or_id: "emp-mario".to_string(),
+                pin_or_password: "1010".to_string(),
+                role_requested: String::new(),
+            }),
+        )
+        .await
+        .into_response();
+        let mario_bytes = axum::body::to_bytes(mario_login.into_body(), usize::MAX).await.unwrap();
+        let mario_json: Value = serde_json::from_slice(&mario_bytes).unwrap();
+        let mario_token = mario_json["sessionToken"].as_str().unwrap().to_string();
+        let mut h_mario = HeaderMap::new();
+        h_mario.insert(header::AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", mario_token)).unwrap());
+
+        let (status, created_json) = post_admin_employee(
+            State(state.clone()),
+            h_mario,
+            Json(CreateAdminEmployeePayload {
+                first_name: "Camille".to_string(),
+                last_name: "Recette".to_string(),
+                site_id: "club-carre-soie".to_string(),
+                contract_type: Some("CDI".to_string()),
+                weekly_hours: Some(35),
+                profile_id: Some("employe_standard".to_string()),
+                team_ids: Some(vec!["team-cs-accueil".to_string()]),
+                managed_team_ids: Some(vec![]),
+            }),
+        )
+        .await
+        .unwrap();
+        assert_eq!(status, StatusCode::CREATED);
+        let created_id = created_json.0["employee"]["id"].as_str().unwrap().to_string();
+        assert!(created_id.starts_with("emp-staff-"));
+
+        // Vérification de la persistance disque
+        let reloaded = load_or_init_state(&state.data_dir);
+        assert!(reloaded.employees.iter().any(|e| e.id == created_id));
     }
 }

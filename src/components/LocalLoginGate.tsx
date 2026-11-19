@@ -88,14 +88,18 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
     };
   };
 
-  const handleOpenArchitectSpace = (autoUnlock = false) => {
+  const handleOpenArchitectSpace = async (autoUnlock = false) => {
     const adminEmp = employees.find((e) => e.role === 'admin') || nonKioskEmployees[0];
     if (!adminEmp) return;
-    loginWithLocalCredentials({
+    const res = await loginWithLocalCredentials({
       employeeId: adminEmp.id,
       secretOrPin: adminEmp.pinCode,
       preferredShell: 'admin',
     });
+    if (!res.ok) {
+      setErrorFeedback(res.message);
+      return;
+    }
     if (autoUnlock) {
       unlockArchitectSpace();
     } else {
@@ -119,14 +123,14 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const handleSubmitLogin = (e: React.FormEvent) => {
+  const handleSubmitLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (secretInput.trim() === '0766') {
-      handleOpenArchitectSpace(true);
+      await handleOpenArchitectSpace(true);
       return;
     }
     if (!selectedEmployee) return;
-    const res = loginWithLocalCredentials({
+    const res = await loginWithLocalCredentials({
       employeeId: selectedEmployee.id,
       secretOrPin: secretInput,
       preferredShell: targetShell,
@@ -136,10 +140,10 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const handleQuickRoleLogin = (empId: string, shell?: ShellMode) => {
+  const handleQuickRoleLogin = async (empId: string, shell?: ShellMode) => {
     const emp = employees.find((e) => e.id === empId);
     if (!emp) return;
-    const res = loginWithLocalCredentials({
+    const res = await loginWithLocalCredentials({
       employeeId: emp.id,
       secretOrPin: emp.pinCode,
       preferredShell: shell,

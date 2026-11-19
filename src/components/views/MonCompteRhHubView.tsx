@@ -80,38 +80,13 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
     clubFilter,
     setClubFilter,
     isTechnicalMode,
-    shifts: contextShifts,
     setActiveSection: setShellSection,
   } = useCfos();
   const initialTarget = parseInitialTarget(subTarget);
   const isShellAdmin = currentUser.role === 'admin' || currentUser.role === 'manager';
   const isStrictAdmin = currentUser.role === 'admin';
 
-  const CANONICAL_SERVER_ACTORS = new Set([
-    'emp-mario',
-    'emp-daniel',
-    'emp-greg',
-    'emp-sarah',
-    'emp-maxime',
-    'emp-chloe',
-    'emp-karim',
-    'emp-lea',
-    'emp-admin',
-    'emp-master',
-    'emp-planif-av',
-    'emp-planif-std',
-    'emp-readonly',
-    'emp-employe-multi',
-    'emp-accueil-cs',
-  ]);
-
-  const defaultActorForShellUser = () => {
-    if (CANONICAL_SERVER_ACTORS.has(currentUser.id)) return currentUser.id;
-    if (isStrictAdmin) return 'emp-mario';
-    if (currentUser.role === 'manager') return 'emp-sarah';
-    if (currentUser.role === 'commercial') return 'emp-maxime';
-    return 'emp-karim';
-  };
+  const defaultActorForShellUser = () => currentUser.id;
 
   const [hubTab, setHubTab] = useState<MonCompteHubTab>(initialTarget.tab);
 
@@ -303,179 +278,13 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
     }
   }
 
-  // Projection client uniquement si l'utilisateur courant n'est pas déjà servi canoniquement par le backend
+  // Vérité serveur exclusive : aucune projection synthétique côté client (#1 / #9)
   const effectiveDashboard: DashboardPayload | null =
+    dashboard && dashboard.session.employee.id === currentUser.id ? dashboard : null;
+  const identityMismatchBanner =
     dashboard && dashboard.session.employee.id !== currentUser.id
-      ? (() => {
-          const userSiteId =
-            currentUser.clubId === 'beynost' ? 'club-beynost' : 'club-carre-soie';
-          const userContractType =
-            currentUser.contractType === 'Apprentissage'
-              ? ('Alternance' as const)
-              : (currentUser.contractType as 'CDI' | 'CDD' | 'Alternance');
-          const defaultProfileId =
-            currentUser.role === 'manager' ? ('master_avance' as const) : ('employe_standard' as const);
-          const derivedSiteAccesses =
-            currentUser.siteAssignments && currentUser.siteAssignments.length > 0
-              ? currentUser.siteAssignments.map((sa) => ({
-                  siteId: sa.clubId === 'beynost' ? 'club-beynost' : 'club-carre-soie',
-                  isPrimary: sa.isPrimary,
-                  profileId: (sa.profileId as typeof defaultProfileId) || defaultProfileId,
-                  teamIds: sa.teamIds ?? [],
-                  managedTeamIds: sa.managedTeamIds ?? [],
-                  showOnPlanning: sa.showOnPlanning ?? true,
-                  positionIds: sa.positionIds ?? [],
-                }))
-              : [
-                  {
-                    siteId: userSiteId,
-                    isPrimary: true,
-                    profileId: defaultProfileId,
-                    teamIds: [],
-                    showOnPlanning: true,
-                    positionIds: [],
-                  },
-                ];
-          const allowedSiteIds = new Set(derivedSiteAccesses.map((s) => s.siteId));
-          const allKnownSites = [
-            ...dashboard.sites,
-            ...(dashboard.sites.some((s) => s.id === 'club-beynost')
-              ? []
-              : [
-                  {
-                    ...(dashboard.sites[0] ?? {}),
-                    id: 'club-beynost',
-                    name: 'C.Fitness Beynost',
-                    code: 'BEY',
-                    address: 'ZAC des Baterses, 01700 Beynost',
-                    city: 'Beynost',
-                  },
-                ]),
-            ...(dashboard.sites.some((s) => s.id === 'club-carre-soie')
-              ? []
-              : [
-                  {
-                    ...(dashboard.sites[0] ?? {}),
-                    id: 'club-carre-soie',
-                    name: 'C.Fitness Carré de Soie',
-                    code: 'CDS',
-                    address: '2 Rue Jacquard, 69120 Vaulx-en-Velin',
-                    city: 'Vaulx-en-Velin',
-                  },
-                ]),
-          ];
-          const filteredSites = allKnownSites.filter((s) => allowedSiteIds.has(s.id));
-          const mappedEmployee = {
-            ...dashboard.session.employee,
-            id: currentUser.id,
-            firstName: currentUser.firstName,
-            lastName: currentUser.lastName,
-            email: currentUser.email,
-            phone: currentUser.phone,
-            matricule: currentUser.id.toUpperCase(),
-            active: true,
-            hrFileStatus: 'complete' as const,
-            siteAccesses: derivedSiteAccesses,
-            counter: {
-              ...dashboard.session.employee.counter,
-              cpAcquired: currentUser.cpBalance ?? 0,
-              cpTaken: 0,
-              cpRemaining: currentUser.cpBalance ?? 0,
-              cpNAcquired: currentUser.cpBalance ?? 0,
-              cpNTaken: 0,
-              cpNMinus1Remaining: 0,
-              rttAcquired: currentUser.rttBalance ?? 0,
-              rttRemaining: currentUser.rttBalance ?? 0,
-              rttDaysRemaining: currentUser.rttBalance ?? 0,
-              rttInitialized: true,
-            },
-            contact: {
-              email: currentUser.email,
-              phone: currentUser.phone,
-              address:
-                currentUser.clubId === 'beynost'
-                  ? 'ZAC des Baterses, 01700 Beynost'
-                  : '2 Rue Jacquard, 69120 Vaulx-en-Velin',
-            },
-            contract: {
-              ...(dashboard.session.employee.contract || {
-                id: `CTR-${currentUser.id.toUpperCase()}`,
-                siteId: userSiteId,
-                regime: 'hours' as const,
-                loadedCostFactor: 1.42,
-              }),
-              id: `CTR-${currentUser.id.toUpperCase()}`,
-              siteId: userSiteId,
-              contractType: userContractType,
-              regime: currentUser.contractRegime ?? ('hours' as const),
-              weeklyHours: currentUser.weeklyContractHours,
-              effectiveFrom: currentUser.hireDate,
-              hourlyRateEur: currentUser.hourlyRate ?? 0,
-              monthlyGrossEur: currentUser.monthlyGrossEur ?? 0,
-            },
-          };
-          const redactedVisibleEmployee = {
-            ...mappedEmployee,
-            contract: {
-              ...mappedEmployee.contract,
-              hourlyRateEur: currentUser.role === 'manager' ? currentUser.hourlyRate : null,
-              monthlyGrossEur: currentUser.role === 'manager' ? currentUser.monthlyGrossEur : null,
-            },
-          };
-          const scopedVisibleEmployees =
-            currentUser.role === 'manager'
-              ? [
-                  redactedVisibleEmployee,
-                  ...dashboard.visibleEmployees.filter(
-                    (e) =>
-                      e.id !== currentUser.id &&
-                      e.siteAccesses.some((sa) => allowedSiteIds.has(sa.siteId))
-                  ),
-                ]
-              : [redactedVisibleEmployee];
-          const ownShiftsFromContext = contextShifts
-            .filter((sh) => sh.employeeId === currentUser.id)
-            .map((sh) => ({
-              id: sh.id,
-              employeeId: sh.employeeId,
-              siteId: sh.clubId === 'beynost' ? 'club-beynost' : 'club-carre-soie',
-              date: sh.date,
-              startTime: sh.startTime,
-              endTime: sh.endTime,
-              breakMinutes: sh.breakMinutes,
-              netMinutes: 0,
-              teamId: 'team-accueil',
-              positionId: 'pos-accueil',
-              tasks: [sh.roleLabel],
-              status: sh.published ? ('published' as const) : ('draft' as const),
-              lockState: 'none' as const,
-              published: sh.published,
-              locked: false,
-            }));
-          const ownServerShifts = dashboard.myShifts.filter(
-            (s) => s.employeeId === currentUser.id
-          );
-          const mergedOwnShifts =
-            ownShiftsFromContext.length > 0 ? ownShiftsFromContext : ownServerShifts;
-          const activeSiteList = filteredSites.length > 0 ? filteredSites : dashboard.sites;
-          const activeSiteSet = new Set(activeSiteList.map((s) => s.id));
-          return {
-            ...dashboard,
-            sites: activeSiteList,
-            kpis: dashboard.kpis.filter((k) => activeSiteSet.has(k.siteId)),
-            myShifts: mergedOwnShifts,
-            teamShifts: dashboard.teamShifts.filter((s) => activeSiteSet.has(s.siteId)),
-            myRequests: dashboard.myRequests.filter((r) => r.employeeId === currentUser.id),
-            teamRequests: dashboard.teamRequests.filter((r) => activeSiteSet.has(r.siteId)),
-            session: {
-              ...dashboard.session,
-              activeSiteId: allowedSiteIds.has(activeSiteId) ? activeSiteId : userSiteId,
-              employee: mappedEmployee,
-            },
-            visibleEmployees: scopedVisibleEmployees,
-          };
-        })()
-      : dashboard;
+      ? `Identité serveur (${dashboard.session.employee.id}) différente de la session (${currentUser.id}). Dossier synthétique désactivé.`
+      : null;
 
   const effectiveSitesForCanSelect = effectiveDashboard?.sites ?? dashboard?.sites ?? [];
   const canSelectAllSites =
@@ -729,6 +538,13 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
           </div>
         )}
       </div>
+
+      {identityMismatchBanner && (
+        <div className="p-4 rounded-card bg-amber-950/50 border border-amber-500/50 text-amber-100 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+          <div className="text-xs">{identityMismatchBanner}</div>
+        </div>
+      )}
 
       {/* Bannière 403 / Refus serveur */}
       {forbiddenBanner && (

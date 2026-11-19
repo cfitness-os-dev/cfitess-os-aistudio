@@ -18,10 +18,10 @@ export function AuthSwitchModal({ onClose }: { onClose: () => void }) {
 
   const targetEmp = employees.find((e) => e.id === selectedEmpId) || employees[0];
 
-  const handlePinSubmit = (e: React.FormEvent) => {
+  const handlePinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!targetEmp) return;
-    const res = loginWithLocalCredentials({
+    const res = await loginWithLocalCredentials({
       employeeId: targetEmp.id,
       secretOrPin: pinInput,
       preferredShell: 'admin',

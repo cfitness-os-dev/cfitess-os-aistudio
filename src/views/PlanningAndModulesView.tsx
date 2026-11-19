@@ -2315,7 +2315,7 @@ export function PlanningAndModulesView({
               </button>
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   if (!newEmpFirst.trim() || !newEmpLast.trim()) {
                     setModuleFeedback({
                       kind: 'err',
@@ -2323,36 +2323,58 @@ export function PlanningAndModulesView({
                     });
                     return;
                   }
+                  const siteId = newEmpClub === 'beynost' ? 'club-beynost' : 'club-carre-soie';
                   const siteName =
                     newEmpClub === 'beynost'
                       ? 'C.FITNESS Beynost'
                       : 'C.FITNESS Carré de Soie';
-                  const created = addStaffEmployee({
-                    firstName: newEmpFirst.trim(),
-                    lastName: newEmpLast.trim(),
-                    contractType: newEmpContract,
-                    weeklyContractHours: newEmpHours,
-                    role: newEmpRole,
-                    clubId: newEmpClub,
-                  });
-                  setSelectedEmpId(created.id);
-                  setCreatedEmployees((prev) => [
-                    ...prev,
-                    {
-                      id: created.id,
-                      name: `${created.firstName} ${created.lastName}`,
-                      contract: newEmpContract,
-                      hours: newEmpHours,
-                      site: siteName,
-                    },
-                  ]);
-                  setNewEmpFirst('');
-                  setNewEmpLast('');
-                  setShowAddEmpForm(false);
-                  setModuleFeedback({
-                    kind: 'ok',
-                    text: `Collaborateur ${created.firstName} ${created.lastName} créé (${newEmpRole} · ${siteName}, PIN individuel attribué).`,
-                  });
+                  try {
+                    const serverRes = await clientApi.createEmployee(auth, {
+                      firstName: newEmpFirst.trim(),
+                      lastName: newEmpLast.trim(),
+                      siteId,
+                      contractType: newEmpContract,
+                      weeklyHours: newEmpHours,
+                      profileId: 'employe_standard',
+                      teamIds: [],
+                      managedTeamIds: [],
+                    });
+                    addStaffEmployee({
+                      firstName: newEmpFirst.trim(),
+                      lastName: newEmpLast.trim(),
+                      contractType: newEmpContract,
+                      weeklyContractHours: newEmpHours,
+                      role: newEmpRole,
+                      clubId: newEmpClub,
+                    });
+                    await onRefreshDashboard();
+                    setSelectedEmpId(serverRes.employee.id);
+                    setCreatedEmployees((prev) => [
+                      ...prev,
+                      {
+                        id: serverRes.employee.id,
+                        name: `${serverRes.employee.firstName} ${serverRes.employee.lastName}`,
+                        contract: newEmpContract,
+                        hours: newEmpHours,
+                        site: siteName,
+                      },
+                    ]);
+                    setNewEmpFirst('');
+                    setNewEmpLast('');
+                    setShowAddEmpForm(false);
+                    setModuleFeedback({
+                      kind: 'ok',
+                      text: `Collaborateur ${serverRes.employee.firstName} ${serverRes.employee.lastName} (${serverRes.employee.id}) créé et persisté côté serveur (${siteName}).`,
+                    });
+                  } catch (err) {
+                    setModuleFeedback({
+                      kind: 'err',
+                      text:
+                        err instanceof ApiClientError
+                          ? `Refus création serveur (HTTP ${err.status}) : ${err.message}`
+                          : 'Erreur réseau lors de la création du collaborateur.',
+                    });
+                  }
                 }}
                 className="cf-brand-gradient text-white px-4 py-1.5 rounded-btn font-semibold"
               >
