@@ -63,7 +63,11 @@ function getJobBoardBadgeStyle(channel: string): string {
   return 'bg-violet-600 text-white';
 }
 
-export function AtsView() {
+export function AtsView({
+  initialTab,
+}: {
+  initialTab?: 'FLATCHR_KANBAN' | 'YOUSIGN_PARAPHEUR';
+} = {}) {
   const {
     clubFilter,
     candidates,
@@ -78,16 +82,18 @@ export function AtsView() {
   } = useCfos();
 
   const [atsMode, setAtsMode] = useState<'FLATCHR_KANBAN' | 'YOUSIGN_PARAPHEUR'>(
-    navSubTarget === 'ats' ? 'FLATCHR_KANBAN' : 'YOUSIGN_PARAPHEUR'
+    initialTab ?? (navSubTarget === 'ats' ? 'FLATCHR_KANBAN' : 'YOUSIGN_PARAPHEUR')
   );
 
   React.useEffect(() => {
-    if (navSubTarget === 'documents') {
+    if (initialTab) {
+      setAtsMode(initialTab);
+    } else if (navSubTarget === 'documents') {
       setAtsMode('YOUSIGN_PARAPHEUR');
     } else if (navSubTarget === 'ats') {
       setAtsMode('FLATCHR_KANBAN');
     }
-  }, [navSubTarget]);
+  }, [initialTab, navSubTarget]);
 
   const [otpInputByDoc, setOtpInputByDoc] = useState<Record<string, string>>({});
   const [simulateRollback, setSimulateRollback] = useState(false);

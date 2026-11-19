@@ -25,6 +25,7 @@ import { PlanningAndModulesView } from '../../views/PlanningAndModulesView';
 import { PreferencesView } from '../../views/PreferencesView';
 import { MyDayCollaboratorView } from './MyDayCollaboratorView';
 import { PlanningHrView } from './PlanningHrView';
+import { AtsView } from './AtsView';
 
 export type MonCompteHubTab =
   | 'mon-compte'
@@ -557,9 +558,21 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                 </div>
               )}
 
+              {hubTab === 'mon-compte' && activeSection === 'MC06' && (
+                <div className="space-y-4">
+                  <AtsView initialTab="YOUSIGN_PARAPHEUR" />
+                </div>
+              )}
+
               {hubTab === 'mon-compte' && activeSection === 'MC07' && (
                 <div className="space-y-4">
                   <PlanningHrView forcedSubTab="SILAE" />
+                </div>
+              )}
+
+              {hubTab === 'mon-compte' && activeSection === 'MC12' && (
+                <div className="space-y-4">
+                  <AtsView initialTab="FLATCHR_KANBAN" />
                 </div>
               )}
 
@@ -583,8 +596,10 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                 activeSection !== 'MC01' &&
                 activeSection !== 'MC04' &&
                 activeSection !== 'MC05' &&
+                activeSection !== 'MC06' &&
                 activeSection !== 'MC07' &&
                 activeSection !== 'MC11' &&
+                activeSection !== 'MC12' &&
                 activeSection !== 'MC13' && (
                   <PlanningAndModulesView
                     mode={activeSection === 'MC03' ? 'planning' : 'blueprint'}

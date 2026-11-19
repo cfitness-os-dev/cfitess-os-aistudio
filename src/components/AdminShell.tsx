@@ -183,6 +183,7 @@ const VISUAL_SIDEBAR_ITEMS: VisualNavItem[] = [
     sectionId: 'ats',
     subTarget: 'documents',
     hasChevron: true,
+    technicalOnly: true,
   },
   {
     id: 'nav-rapports',
@@ -952,7 +953,7 @@ export function AdminShell() {
                     <button
                       type="button"
                       onClick={() => {
-                        setActiveSection('ats', 'documents');
+                        setActiveSection('my-day', 'MC06');
                         setNotifPopoverOpen(false);
                       }}
                       className={`w-full p-2.5 rounded-xl text-left flex items-center justify-between cursor-pointer ${
