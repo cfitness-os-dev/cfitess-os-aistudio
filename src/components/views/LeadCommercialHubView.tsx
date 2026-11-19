@@ -378,11 +378,28 @@ export function LeadCommercialHubView({
   const [newVacStart, setNewVacStart] = useState('2026-12-01');
   const [newVacEnd, setNewVacEnd] = useState('2026-12-15');
 
-  // Tab 3 : Activités (/todos) — persistées localStorage (CFOS-046/047)
+  // Tab 3 : Activités (/todos) — persistées localStorage + migration sûre (CFOS-046/047)
   const [activities, setActivities] = useState<FictiveActivityRow[]>(() => {
     try {
       const raw = localStorage.getItem('cfos_lead_activities_v1');
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const parsed = JSON.parse(raw) as FictiveActivityRow[];
+        return parsed.map((act) => {
+          if (act.prospectId && prospects.some((p) => p.id === act.prospectId)) {
+            return act;
+          }
+          // Correspondance sûre uniquement par nom exact ET même club (sans devinette aveugle)
+          const matched = prospects.find(
+            (p) =>
+              `${p.firstName} ${p.lastName}`.trim().toLowerCase() ===
+                act.prospectName.trim().toLowerCase() && p.clubId === act.clubId
+          );
+          if (matched) {
+            return { ...act, prospectId: matched.id };
+          }
+          return act;
+        });
+      }
     } catch {
       // ignore
     }
@@ -1745,27 +1762,20 @@ export function LeadCommercialHubView({
                               </button>
                             </>
                           )}
-                          {a.prospectId && (
+                          {a.prospectId && linkedProspect ? (
                             <button
                               type="button"
                               onClick={() => {
-                                const p = prospects.find((pr) => pr.id === a.prospectId);
-                                if (!p) {
-                                  setPurgeLog(
-                                    `Fiche prospect introuvable (archivée, supprimée ou hors périmètre) pour « ${a.title} ».`
-                                  );
-                                  return;
-                                }
-                                setEditingProspectId(p.id);
+                                setEditingProspectId(linkedProspect.id);
                                 setEditProspectForm({
-                                  firstName: p.firstName,
-                                  lastName: p.lastName,
-                                  phone: p.phone,
-                                  email: p.email,
-                                  goal: p.goal,
-                                  notes: p.notes,
-                                  address: p.address ?? '',
-                                  assignedToId: p.assignedToId,
+                                  firstName: linkedProspect.firstName,
+                                  lastName: linkedProspect.lastName,
+                                  phone: linkedProspect.phone,
+                                  email: linkedProspect.email,
+                                  goal: linkedProspect.goal,
+                                  notes: linkedProspect.notes,
+                                  address: linkedProspect.address ?? '',
+                                  assignedToId: linkedProspect.assignedToId,
                                 });
                                 setActiveTab('prospects');
                               }}
@@ -1773,6 +1783,44 @@ export function LeadCommercialHubView({
                             >
                               Fiche prospect
                             </button>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px]">
+                                Prospect non rattaché
+                              </span>
+                              <select
+                                aria-label={`Réassocier ${a.title}`}
+                                defaultValue=""
+                                onChange={(e) => {
+                                  const pid = e.target.value;
+                                  const targetP = prospects.find((pr) => pr.id === pid);
+                                  if (!targetP) return;
+                                  setActivities((prev) =>
+                                    prev.map((row) =>
+                                      row.id === a.id
+                                        ? {
+                                            ...row,
+                                            prospectId: targetP.id,
+                                            prospectName: `${targetP.firstName} ${targetP.lastName}`,
+                                            clubId: targetP.clubId,
+                                          }
+                                        : row
+                                    )
+                                  );
+                                  setPurgeLog(
+                                    `Activité « ${a.title} » réassociée à ${targetP.firstName} ${targetP.lastName}.`
+                                  );
+                                }}
+                                className="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-700 text-[10px]"
+                              >
+                                <option value="">Réassocier…</option>
+                                {prospects.map((pr) => (
+                                  <option key={pr.id} value={pr.id}>
+                                    {pr.firstName} {pr.lastName} ({pr.clubId})
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
                           )}
                         </div>
                       </div>

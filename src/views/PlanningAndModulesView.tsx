@@ -2147,7 +2147,7 @@ export function PlanningAndModulesView({
               Dossiers collaborateurs, contrats & compteurs RH
             </h1>
             <p className="text-xs cf-muted mt-1">
-              {dashboard.visibleEmployees.length} fiche(s) autorisée(s) sur ce périmètre
+              {unifiedMc02Employees.length} fiche(s) autorisée(s) sur ce périmètre
               {isTechnicalMode ? ' — protection IBAN/NIR/salaires via ORG04-10 (TST33).' : '.'}
             </p>
           </div>

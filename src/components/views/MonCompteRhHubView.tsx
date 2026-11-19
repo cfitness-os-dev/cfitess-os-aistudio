@@ -80,6 +80,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
     clubFilter,
     setClubFilter,
     isTechnicalMode,
+    shifts: contextShifts,
     setActiveSection: setShellSection,
   } = useCfos();
   const initialTarget = parseInitialTarget(subTarget);
@@ -255,15 +256,6 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
     }
   }
 
-  const canSelectAllSites =
-    dashboard !== null &&
-    dashboard.sites.length > 1 &&
-    dashboard.session.activeProfile.scopeSelected === 'sites' &&
-    Boolean(
-      dashboard.session.resolvedPermissions['ORG04-07']?.allowed ||
-        dashboard.session.resolvedPermissions['ORG04-38']?.allowed
-    );
-
   // Projection de l'identité réelle du collaborateur connecté (ex: Maxime, Chloé, Sarah)
   // lorsque l'utilisateur n'est pas administrateur système global (#1 / #9)
   const effectiveDashboard: DashboardPayload | null =
@@ -395,11 +387,40 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                   ),
                 ]
               : [redactedVisibleEmployee];
+          const ownShiftsFromContext = contextShifts
+            .filter((sh) => sh.employeeId === currentUser.id)
+            .map((sh) => ({
+              id: sh.id,
+              employeeId: sh.employeeId,
+              siteId: sh.clubId === 'beynost' ? 'club-beynost' : 'club-carre-soie',
+              date: sh.date,
+              startTime: sh.startTime,
+              endTime: sh.endTime,
+              breakMinutes: sh.breakMinutes,
+              netMinutes: 0,
+              teamId: 'team-accueil',
+              positionId: 'pos-accueil',
+              tasks: [sh.roleLabel],
+              status: sh.published ? ('published' as const) : ('draft' as const),
+              lockState: 'none' as const,
+              published: sh.published,
+              locked: false,
+            }));
+          const ownServerShifts = dashboard.myShifts.filter(
+            (s) => s.employeeId === currentUser.id
+          );
+          const mergedOwnShifts =
+            ownShiftsFromContext.length > 0 ? ownShiftsFromContext : ownServerShifts;
+          const activeSiteList = filteredSites.length > 0 ? filteredSites : dashboard.sites;
+          const activeSiteSet = new Set(activeSiteList.map((s) => s.id));
           return {
             ...dashboard,
-            sites: filteredSites.length > 0 ? filteredSites : dashboard.sites,
-            myShifts: dashboard.myShifts.filter((s) => s.employeeId === currentUser.id),
+            sites: activeSiteList,
+            kpis: dashboard.kpis.filter((k) => activeSiteSet.has(k.siteId)),
+            myShifts: mergedOwnShifts,
+            teamShifts: dashboard.teamShifts.filter((s) => activeSiteSet.has(s.siteId)),
             myRequests: dashboard.myRequests.filter((r) => r.employeeId === currentUser.id),
+            teamRequests: dashboard.teamRequests.filter((r) => activeSiteSet.has(r.siteId)),
             session: {
               ...dashboard.session,
               activeSiteId: allowedSiteIds.has(activeSiteId) ? activeSiteId : userSiteId,
@@ -409,6 +430,16 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
           };
         })()
       : dashboard;
+
+  const effectiveSitesForCanSelect = effectiveDashboard?.sites ?? dashboard?.sites ?? [];
+  const canSelectAllSites =
+    dashboard !== null &&
+    effectiveSitesForCanSelect.length > 1 &&
+    dashboard.session.activeProfile.scopeSelected === 'sites' &&
+    Boolean(
+      dashboard.session.resolvedPermissions['ORG04-07']?.allowed ||
+        dashboard.session.resolvedPermissions['ORG04-38']?.allowed
+    );
 
   return (
     <div className="space-y-5">
@@ -528,7 +559,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                     <span className="text-sm font-extrabold">Planning des équipes</span>
                   </div>
                 )}
-                {!planningOnly && isShellAdmin && (
+                {!planningOnly && isStrictAdmin && isTechnicalMode && (
                   <div className="flex items-center gap-2 min-w-0 max-w-full">
                     <Users className="w-4 h-4 text-violet-400 shrink-0" />
                     <label htmlFor="hub-persona-select" className="text-xs cf-muted hidden sm:inline shrink-0">
@@ -548,7 +579,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                     </select>
                   </div>
                 )}
-                {!planningOnly && !isShellAdmin && (
+                {!planningOnly && (!isStrictAdmin || !isTechnicalMode) && (
                   <div className="flex items-center gap-2 text-xs font-semibold px-2.5 py-1.5 rounded-xl bg-slate-800/40 border border-[var(--cf-border)] min-w-0 max-w-full">
                     <Users className="w-3.5 h-3.5 text-violet-400 shrink-0" />
                     <span className="truncate">
@@ -570,10 +601,10 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                   >
                     {canSelectAllSites && (
                       <option value="all">
-                        Tous les clubs ({dashboard.sites.length})
+                        Tous les clubs ({(effectiveDashboard?.sites ?? dashboard.sites).length})
                       </option>
                     )}
-                    {dashboard.sites.map((s) => (
+                    {(effectiveDashboard?.sites ?? dashboard.sites).map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name}
                       </option>
