@@ -169,7 +169,7 @@ const VISUAL_SIDEBAR_ITEMS: VisualNavItem[] = [
   },
   {
     id: 'nav-marketing',
-    label: 'Marketing',
+    label: 'Marketing & Téléphonie',
     icon: Megaphone,
     iconColor: 'text-pink-500',
     sectionId: 'telephony',
@@ -1122,36 +1122,40 @@ export function AdminShell() {
           {activeSection === 'recovery' && <RecoveryView />}
           {activeSection === 'telephony' && (
             <div className="space-y-4">
-              <div className="cf-card p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
-                <span className="cf-muted">
-                  Module Marketing &amp; Téléphonie WebRTC 12 Lignes (GitHub CFOS)
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setActiveSection('my-day', 'MC09')}
-                  className="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold cursor-pointer"
-                >
-                  Ouvrir MC09 Communication RH (V1.16) →
-                </button>
-              </div>
+              {isTechnicalMode && (
+                <div className="cf-card p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span className="cf-muted">
+                    Module Marketing &amp; Téléphonie WebRTC 12 Lignes (GitHub CFOS)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection('my-day', 'MC09')}
+                    className="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold cursor-pointer"
+                  >
+                    Ouvrir MC09 Communication RH (V1.16) →
+                  </button>
+                </div>
+              )}
               <TelephonyView />
             </div>
           )}
           {activeSection === 'crm' && <CrmView subTarget={navSubTarget} />}
           {activeSection === 'ats' && (
             <div className="space-y-4">
-              <div className="cf-card p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
-                <span className="cf-muted">
-                  Module ATS Recrutement &amp; Signatures Internes eIDAS (GitHub CFOS)
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setActiveSection('my-day', 'MC06')}
-                  className="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold cursor-pointer"
-                >
-                  Ouvrir MC06 Documents &amp; signatures RH (V1.16) →
-                </button>
-              </div>
+              {isTechnicalMode && (
+                <div className="cf-card p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span className="cf-muted">
+                    Module ATS Recrutement &amp; Signatures Internes eIDAS (GitHub CFOS)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection('my-day', 'MC06')}
+                    className="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold cursor-pointer"
+                  >
+                    Ouvrir MC06 Documents &amp; signatures RH (V1.16) →
+                  </button>
+                </div>
+              )}
               <AtsView />
             </div>
           )}
@@ -1162,18 +1166,20 @@ export function AdminShell() {
           {activeSection === 'orchestrator' && <OrchestratorMaintenanceView />}
           {activeSection === 'academy' && (
             <div className="space-y-4">
-              <div className="cf-card p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
-                <span className="cf-muted">
-                  Module Rapports, Académie 3S &amp; Livret BPJEPS (GitHub CFOS)
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setActiveSection('my-day', 'MC08')}
-                  className="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold cursor-pointer"
-                >
-                  Ouvrir MC08 Pilotage &amp; missions (V1.16) →
-                </button>
-              </div>
+              {isTechnicalMode && (
+                <div className="cf-card p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span className="cf-muted">
+                    Module Rapports, Académie 3S &amp; Livret BPJEPS (GitHub CFOS)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection('my-day', 'MC08')}
+                    className="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold cursor-pointer"
+                  >
+                    Ouvrir MC08 Pilotage &amp; missions (V1.16) →
+                  </button>
+                </div>
+              )}
               <AcademyView />
             </div>
           )}
