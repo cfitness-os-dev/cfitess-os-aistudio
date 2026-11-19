@@ -114,7 +114,7 @@ const VISUAL_SIDEBAR_ITEMS: VisualNavItem[] = [
   },
   {
     id: 'nav-personnel',
-    label: 'Personnel (Mon compte)',
+    label: 'Personnel & RH',
     icon: Users,
     iconColor: 'text-blue-500',
     sectionId: 'my-day',

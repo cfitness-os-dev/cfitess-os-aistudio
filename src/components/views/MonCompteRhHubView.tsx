@@ -267,7 +267,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
               <span>
                 {isTechnicalMode
                   ? 'Espace Mon compte RH V1.16 (MC01–MC13)'
-                  : 'Espace Mon compte RH'}
+                  : 'Espace Personnel & RH'}
               </span>
             </button>
 
