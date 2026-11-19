@@ -36,6 +36,7 @@ import {
   PhoneCall,
   UserPlus,
   ShoppingBag,
+  Scale,
 } from 'lucide-react';
 import { formatLeaveStatus } from '../../domain/rules';
 import { AdminSection, ClubId, LeaveRequest, PointageType } from '../../types/cfos';
@@ -51,6 +52,7 @@ import { TelephonyView } from '../views/TelephonyView';
 import { AtsView } from '../views/AtsView';
 import { AcademyView } from '../views/AcademyView';
 import { GovernanceView } from '../views/GovernanceView';
+import { RecoveryView } from '../views/RecoveryView';
 
 interface MobileCourseSlot {
   id: string;
@@ -173,6 +175,8 @@ export function EmployeeMobileShell() {
     navSubTarget,
     setActiveSection,
     setShellMode,
+    isTechnicalMode,
+    canAccessRecovery,
     submitLeaveRequest,
     signDocumentWithInternalProof,
     completeAcademyQuiz,
@@ -360,6 +364,10 @@ export function EmployeeMobileShell() {
       setQuickProspectPhone('');
     }
   };
+
+  const isAdmin = currentUser.role === 'admin';
+  const isCommercial = currentUser.role === 'commercial';
+  const canSeeRecovery = isAdmin || canAccessRecovery;
 
   const openPhoneModule = (section: AdminSection, label: string, sub?: string) => {
     setActiveSection(section, sub);
@@ -1299,76 +1307,100 @@ export function EmployeeMobileShell() {
         {/* 4. Grille d'accès direct à tous les modules C.Fitness OS (Directement dans le Téléphone) */}
         <div className="space-y-1.5">
           <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            Ouvrir les 16 modules complets sur ce Téléphone
+            Modules autorisés pour votre profil ({currentUser.role})
           </div>
           <div className="grid grid-cols-2 gap-1.5">
             {[
               {
                 label: 'Tableau de bord',
+                visible: isAdmin || isCommercial,
                 action: () => openPhoneModule('dashboard', 'Tableau de bord'),
               },
               {
-                label: 'Clubs Carré de Soie & Beynost',
-                action: () => openPhoneModule('dashboard', 'Clubs Carré de Soie & Beynost', 'clubs'),
-              },
-              {
-                label: 'Adhérents & Caisse TPV',
-                action: () => openPhoneModule('devices', 'Adhérents & Caisse TPV', 'adherents'),
+                label: 'Adhérents',
+                visible: isAdmin || isCommercial,
+                action: () => openPhoneModule('devices', 'Adhérents', 'adherents'),
               },
               {
                 label: 'Bilans & Mywellness',
+                visible: true,
                 action: () => openPhoneModule('devices', 'Bilans & Mywellness', 'checkup'),
               },
-              { label: 'CRM & Ventes', action: () => openPhoneModule('crm', 'CRM & Ventes') },
               {
-                label: 'Planning RH',
-                action: () => openPhoneModule('planning-hr', 'Planning RH', 'planning'),
+                label: 'CRM & Ventes',
+                visible: isAdmin || isCommercial,
+                action: () => openPhoneModule('crm', 'CRM & Ventes'),
+              },
+              {
+                label: 'Marketing & Téléphonie',
+                visible: isAdmin || isCommercial,
+                action: () => openPhoneModule('telephony', 'Marketing & Téléphonie'),
+              },
+              {
+                label: 'Planning',
+                visible: true,
+                action: () => openPhoneModule('planning-hr', 'Planning', 'planning'),
               },
               {
                 label: 'Cours collectifs',
+                visible: true,
                 action: () =>
                   openPhoneModule('planning-hr', 'Cours collectifs', 'cours-collectifs'),
               },
               {
-                label: 'Personnel & Pointage',
-                action: () => openPhoneModule('my-day', 'Personnel & Pointage'),
+                label: 'Personnel & RH',
+                visible: true,
+                action: () => openPhoneModule('my-day', 'Personnel & RH'),
               },
               {
                 label: 'Finances & SEPA',
+                visible: isAdmin,
                 action: () => openPhoneModule('devices', 'Finances & SEPA', 'finances'),
               },
               {
-                label: 'Maintenance & IoT',
+                label: 'Recouvrement',
+                visible: canSeeRecovery,
+                action: () => openPhoneModule('recovery', 'Recouvrement'),
+              },
+              {
+                label: 'Maintenance',
+                visible: true,
                 action: () =>
-                  openPhoneModule('orchestrator', 'Maintenance & IoT', 'maintenance'),
+                  openPhoneModule('orchestrator', 'Maintenance', 'maintenance'),
               },
               {
                 label: 'Stock & Achats',
+                visible: isAdmin || isCommercial,
                 action: () => openPhoneModule('orchestrator', 'Stock & Achats', 'stocks'),
               },
               {
-                label: 'Marketing & Appels',
-                action: () => openPhoneModule('telephony', 'Marketing & Appels'),
-              },
-              {
-                label: 'Documents & ATS',
-                action: () => openPhoneModule('ats', 'Documents & ATS', 'documents'),
-              },
-              {
-                label: 'Rapports & BPJEPS',
-                action: () => openPhoneModule('academy', 'Rapports & BPJEPS', 'rapports'),
+                label: 'Rapports & Académie',
+                visible: true,
+                action: () => openPhoneModule('academy', 'Rapports & Académie', 'rapports'),
               },
               {
                 label: 'Agents IA',
+                visible: isAdmin && isTechnicalMode,
                 action: () => openPhoneModule('orchestrator', 'Agents IA', 'agents'),
               },
               {
                 label: 'Mon Espace (PIN)',
+                visible: isAdmin,
                 action: () => openPhoneModule('governance', 'Mon Espace (PIN)'),
               },
-              { label: 'Softphone 04/07', action: () => setShellMode('telephone') },
-              { label: 'Borne Kiosque PIN', action: () => setShellMode('tablette') },
-            ].map((m) => (
+              {
+                label: 'Softphone 04/07',
+                visible: isAdmin || isCommercial,
+                action: () => setShellMode('telephone'),
+              },
+              {
+                label: 'Borne Kiosque PIN',
+                visible: true,
+                action: () => setShellMode('tablette'),
+              },
+            ]
+              .filter((m) => m.visible)
+              .map((m) => (
               <button
                 key={m.label}
                 type="button"
@@ -1714,6 +1746,7 @@ export function EmployeeMobileShell() {
                 <div className="flex-1 p-3 sm:p-4 overflow-y-auto max-h-[680px]">
                   {activeSection === 'my-day' && <MyDayCollaboratorView />}
                   {activeSection === 'planning-hr' && <PlanningHrView />}
+                  {activeSection === 'recovery' && <RecoveryView />}
                   {activeSection === 'telephony' && <TelephonyView />}
                   {activeSection === 'crm' && <CrmView />}
                   {activeSection === 'ats' && <AtsView />}
@@ -1827,7 +1860,7 @@ export function EmployeeMobileShell() {
                   </div>
                   <div>
                     <div className="font-extrabold text-xs">C.Fitness OS</div>
-                    <div className="text-[10px] text-slate-400">Tablette Bi-Club (16 modules)</div>
+                    <div className="text-[10px] text-slate-400">Tablette Bi-Club · Droits {currentUser.role}</div>
                   </div>
                 </div>
 
@@ -1836,8 +1869,8 @@ export function EmployeeMobileShell() {
                   {(
                     [
                       { id: 'all', label: '2 Clubs' },
-                      { id: 'carre-de-soie', label: 'Center' },
-                      { id: 'beynost', label: 'Place' },
+                      { id: 'carre-de-soie', label: 'Carré de Soie' },
+                      { id: 'beynost', label: 'Beynost' },
                     ] as const
                   ).map((c) => (
                     <button
@@ -1863,73 +1896,109 @@ export function EmployeeMobileShell() {
                     sub: undefined,
                     label: 'Tableau de bord',
                     icon: Home,
-                  },
-                  {
-                    id: 'dashboard',
-                    sub: 'clubs',
-                    label: 'Clubs (Carré de Soie & Beynost)',
-                    icon: Building2,
+                    visible: isAdmin || isCommercial,
                   },
                   {
                     id: 'devices',
                     sub: 'adherents',
-                    label: 'Adhérents & Caisse TPV',
+                    label: 'Adhérents',
                     icon: Users,
+                    visible: isAdmin || isCommercial,
                   },
                   {
                     id: 'devices',
                     sub: 'checkup',
                     label: 'Bilans & Mywellness',
                     icon: Activity,
+                    visible: true,
                   },
-                  { id: 'crm', sub: undefined, label: 'CRM & Ventes', icon: TrendingUp },
+                  {
+                    id: 'crm',
+                    sub: undefined,
+                    label: 'CRM & Ventes',
+                    icon: TrendingUp,
+                    visible: isAdmin || isCommercial,
+                  },
+                  {
+                    id: 'telephony',
+                    sub: undefined,
+                    label: 'Marketing & Téléphonie',
+                    icon: Megaphone,
+                    visible: isAdmin || isCommercial,
+                  },
                   {
                     id: 'planning-hr',
                     sub: 'planning',
-                    label: 'Planning RH',
+                    label: 'Planning',
                     icon: Calendar,
+                    visible: true,
                   },
                   {
                     id: 'planning-hr',
                     sub: 'cours-collectifs',
                     label: 'Cours collectifs',
                     icon: Activity,
+                    visible: true,
                   },
-                  { id: 'my-day', sub: undefined, label: 'Personnel', icon: Users },
+                  {
+                    id: 'my-day',
+                    sub: undefined,
+                    label: 'Personnel & RH',
+                    icon: Users,
+                    visible: true,
+                  },
                   {
                     id: 'devices',
                     sub: 'finances',
                     label: 'Finances & SEPA',
                     icon: Euro,
+                    visible: isAdmin,
                   },
                   {
-                    id: 'orchestrator',
-                    sub: 'maintenance',
-                    label: 'Maintenance',
-                    icon: Wrench,
+                    id: 'recovery',
+                    sub: undefined,
+                    label: 'Recouvrement',
+                    icon: Scale,
+                    visible: canSeeRecovery,
                   },
                   {
                     id: 'orchestrator',
                     sub: 'stocks',
                     label: 'Stock & Achats',
                     icon: Package,
+                    visible: isAdmin || isCommercial,
                   },
-                  { id: 'telephony', sub: undefined, label: 'Marketing', icon: Megaphone },
-                  { id: 'ats', sub: 'documents', label: 'Documents', icon: FileText },
-                  { id: 'academy', sub: 'rapports', label: 'Rapports', icon: BarChart3 },
+                  {
+                    id: 'orchestrator',
+                    sub: 'maintenance',
+                    label: 'Maintenance',
+                    icon: Wrench,
+                    visible: true,
+                  },
+                  {
+                    id: 'academy',
+                    sub: 'rapports',
+                    label: 'Rapports & Académie',
+                    icon: BarChart3,
+                    visible: true,
+                  },
                   {
                     id: 'orchestrator',
                     sub: 'agents',
                     label: 'Agents IA',
                     icon: Sparkles,
+                    visible: isAdmin && isTechnicalMode,
                   },
                   {
                     id: 'governance',
                     sub: undefined,
                     label: 'Paramètres · Mon Espace',
                     icon: Settings,
+                    visible: isAdmin,
                   },
-                ].map((item) => {
+                ]
+                  .filter((item) => item.visible)
+                  .map((item) => {
                   const Icon = item.icon;
                   const isSelected =
                     activeSection === item.id &&
@@ -1969,6 +2038,7 @@ export function EmployeeMobileShell() {
             <main className="flex-1 p-4 overflow-y-auto max-h-[760px]">
               {activeSection === 'my-day' && <MyDayCollaboratorView />}
               {activeSection === 'planning-hr' && <PlanningHrView />}
+              {activeSection === 'recovery' && <RecoveryView />}
               {activeSection === 'telephony' && <TelephonyView />}
               {activeSection === 'crm' && <CrmView />}
               {activeSection === 'ats' && <AtsView />}
