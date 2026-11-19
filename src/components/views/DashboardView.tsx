@@ -417,18 +417,31 @@ export function DashboardView() {
     openMywellnessLink,
     themeMode,
     isTechnicalMode,
+    canAccessRecovery,
   } = useCfos();
+
+  const isAdmin = currentUser.role === 'admin';
+  const isCommercial = currentUser.role === 'commercial';
+  const isCoachOrApprenti = currentUser.role === 'coach' || currentUser.role === 'apprenti';
+  const canSeeFinances = isAdmin;
+  const canSeeCameras = isAdmin || isCommercial;
+  const canSeeRecovery = isAdmin || canAccessRecovery;
+  const canSeeCrm = isAdmin || isCommercial;
 
   const [activeTab, setActiveTab] = useState<ExecutiveDashboardTab>('overview');
 
   React.useEffect(() => {
     if (
-      !isTechnicalMode &&
+      (!isTechnicalMode || !isAdmin) &&
       (activeTab === 'features' || activeTab === 'pitch_roi' || activeTab === 'ecosystem_resale')
     ) {
       setActiveTab('overview');
+    } else if (!canSeeCameras && activeTab === 'cameras') {
+      setActiveTab('overview');
+    } else if (!isAdmin && activeTab === 'synthese') {
+      setActiveTab('overview');
     }
-  }, [isTechnicalMode, activeTab]);
+  }, [isTechnicalMode, isAdmin, canSeeCameras, activeTab]);
   const [periodFilter, setPeriodFilter] = useState<'7d' | '30d' | '90d'>('30d');
   const [subClubFilter, setSubClubFilter] = useState<'all' | 'center' | 'place'>('all');
   const [hoveredChartIdx, setHoveredChartIdx] = useState<number>(3);
@@ -521,37 +534,41 @@ export function DashboardView() {
             <span>Vue d&apos;ensemble (C.Fitness OS)</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('cameras')}
-            className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === 'cameras'
-                ? 'bg-rose-600 text-white shadow-xs'
-                : isDark
-                ? 'text-slate-300 hover:bg-slate-800'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Video className="w-3.5 h-3.5 text-rose-500" />
-            <span>Caméras des Clubs (8 Live)</span>
-          </button>
+          {canSeeCameras && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('cameras')}
+              className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                activeTab === 'cameras'
+                  ? 'bg-rose-600 text-white shadow-xs'
+                  : isDark
+                  ? 'text-slate-300 hover:bg-slate-800'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <Video className="w-3.5 h-3.5 text-rose-500" />
+              <span>Caméras des Clubs (8 Live)</span>
+            </button>
+          )}
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('synthese')}
-            className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === 'synthese'
-                ? 'bg-violet-600 text-white shadow-xs'
-                : isDark
-                ? 'text-slate-300 hover:bg-slate-800'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>1. Pilotage Heitz &amp; FMI</span>
-          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('synthese')}
+              className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                activeTab === 'synthese'
+                  ? 'bg-violet-600 text-white shadow-xs'
+                  : isDark
+                  ? 'text-slate-300 hover:bg-slate-800'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>1. Pilotage Heitz &amp; FMI</span>
+            </button>
+          )}
 
-          {isTechnicalMode && (
+          {isAdmin && isTechnicalMode && (
             <>
               <button
                 type="button"
@@ -638,7 +655,11 @@ export function DashboardView() {
                   <span aria-hidden="true">👋</span>
                 </h1>
                 <p className={`text-xs sm:text-sm mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Voici la vue d&apos;ensemble de vos deux clubs aujourd&apos;hui.
+                  {isAdmin
+                    ? "Voici la vue d'ensemble Direction de vos deux clubs aujourd'hui."
+                    : isCommercial
+                    ? "Cockpit Accueil & Commercial — Adhérents, CRM, Appels & Planning."
+                    : "Cockpit Terrain — Vos cours collectifs, bilans Mywellness, planning et maintenance."}
                 </p>
               </div>
 
@@ -660,11 +681,15 @@ export function DashboardView() {
               </div>
             </div>
 
-            {/* ROW 1: 4 SIGNATURE KPI CARDS */}
+            {/* ROW 1: 4 SIGNATURE KPI CARDS (ADAPTÉS AU RÔLE) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* KPI 1: Adhérents actifs */}
+              {/* KPI 1: Adhérents actifs (Admin/Commercial) ou Cours du jour (Coach/Apprenti) */}
               <div
-                onClick={() => setActiveSection('devices', 'adherents')}
+                onClick={() =>
+                  isCoachOrApprenti
+                    ? setActiveSection('planning-hr', 'cours-collectifs')
+                    : setActiveSection('devices', 'adherents')
+                }
                 className={`rounded-2xl border p-4 cursor-pointer transition-all hover:scale-[1.01] ${
                   isDark
                     ? 'bg-[#131826] border-slate-800/90 hover:border-violet-500/40'
@@ -674,11 +699,11 @@ export function DashboardView() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-violet-600 to-purple-400 text-white flex items-center justify-center shadow-sm shrink-0">
-                      <Users className="w-5 h-5" />
+                      {isCoachOrApprenti ? <Dumbbell className="w-5 h-5" /> : <Users className="w-5 h-5" />}
                     </div>
                     <div className="min-w-0">
                       <div className={`text-xs font-medium truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                        Adhérents actifs
+                        {isCoachOrApprenti ? 'Cours collectifs (jour)' : 'Adhérents actifs'}
                       </div>
                       <div className="flex items-baseline gap-1.5 mt-0.5 whitespace-nowrap">
                         <span
@@ -686,11 +711,15 @@ export function DashboardView() {
                             isDark ? 'text-white' : 'text-slate-900'
                           }`}
                         >
-                          {totalActiveMembers.toLocaleString('fr-FR')}
+                          {isCoachOrApprenti ? '7 cours' : totalActiveMembers.toLocaleString('fr-FR')}
                         </span>
-                        <span className="text-[11px] font-bold text-emerald-500">↑ +12%</span>
+                        <span className="text-[11px] font-bold text-emerald-500">
+                          {isCoachOrApprenti ? '86% remplis' : '↑ +12%'}
+                        </span>
                       </div>
-                      <div className="text-[10px] text-slate-400">vs mois dernier</div>
+                      <div className="text-[10px] text-slate-400">
+                        {isCoachOrApprenti ? 'Carré de Soie & Beynost' : 'vs mois dernier'}
+                      </div>
                     </div>
                   </div>
                   <MoreVertical className="w-4 h-4 text-slate-400 shrink-0" />
@@ -706,9 +735,15 @@ export function DashboardView() {
                 </div>
               </div>
 
-              {/* KPI 2: Chiffre d'affaires (mois) */}
+              {/* KPI 2: CA (Admin uniquement) | Prospects CRM (Commercial) | Bilans Mywellness (Coach/Apprenti) */}
               <div
-                onClick={() => setActiveSection('devices', 'finances')}
+                onClick={() =>
+                  canSeeFinances
+                    ? setActiveSection('devices', 'finances')
+                    : isCommercial
+                    ? setActiveSection('crm')
+                    : setActiveSection('devices', 'checkup')
+                }
                 className={`rounded-2xl border p-4 cursor-pointer transition-all hover:scale-[1.01] ${
                   isDark
                     ? 'bg-[#131826] border-slate-800/90 hover:border-emerald-500/40'
@@ -718,11 +753,21 @@ export function DashboardView() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-400 text-white flex items-center justify-center shadow-sm shrink-0">
-                      <Euro className="w-5 h-5" />
+                      {canSeeFinances ? (
+                        <Euro className="w-5 h-5" />
+                      ) : isCommercial ? (
+                        <TrendingUp className="w-5 h-5" />
+                      ) : (
+                        <Activity className="w-5 h-5" />
+                      )}
                     </div>
                     <div className="min-w-0">
                       <div className={`text-xs font-medium truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                        Chiffre d&apos;affaires (mois)
+                        {canSeeFinances
+                          ? "Chiffre d'affaires (mois)"
+                          : isCommercial
+                          ? 'Prospects & Essais CRM'
+                          : 'Bilans Mywellness'}
                       </div>
                       <div className="flex items-baseline gap-1.5 mt-0.5 whitespace-nowrap">
                         <span
@@ -730,11 +775,27 @@ export function DashboardView() {
                             isDark ? 'text-white' : 'text-slate-900'
                           }`}
                         >
-                          {displayedRevenue.toLocaleString('fr-FR')} €
+                          {canSeeFinances
+                            ? `${displayedRevenue.toLocaleString('fr-FR')} €`
+                            : isCommercial
+                            ? `${clubProspects.length} leads`
+                            : '12 bilans'}
                         </span>
-                        <span className="text-[11px] font-bold text-emerald-500">↑ +8%</span>
+                        <span className="text-[11px] font-bold text-emerald-500">
+                          {canSeeFinances
+                            ? '↑ +8%'
+                            : isCommercial
+                            ? `${newLeadsCount} nouveaux`
+                            : 'Checkup'}
+                        </span>
                       </div>
-                      <div className="text-[10px] text-slate-400">vs mois dernier</div>
+                      <div className="text-[10px] text-slate-400">
+                        {canSeeFinances
+                          ? 'vs mois dernier'
+                          : isCommercial
+                          ? `${scheduledTrialsCount} RDV découverte planifiés`
+                          : 'Station Technogym Checkup'}
+                      </div>
                     </div>
                   </div>
                   <MoreVertical className="w-4 h-4 text-slate-400 shrink-0" />
@@ -794,9 +855,9 @@ export function DashboardView() {
                 </div>
               </div>
 
-              {/* KPI 4: Satisfaction adhérents */}
+              {/* KPI 4: Satisfaction adhérents (Admin/Commercial) ou Mes shifts (Coach/Apprenti) */}
               <div
-                onClick={() => setActiveSection('crm')}
+                onClick={() => (isCoachOrApprenti ? setActiveSection('my-day', 'MC01') : setActiveSection('crm'))}
                 className={`rounded-2xl border p-4 cursor-pointer transition-all hover:scale-[1.01] ${
                   isDark
                     ? 'bg-[#131826] border-slate-800/90 hover:border-amber-500/40'
@@ -806,11 +867,11 @@ export function DashboardView() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-400 text-white flex items-center justify-center shadow-sm shrink-0">
-                      <Star className="w-5 h-5 fill-white" />
+                      {isCoachOrApprenti ? <Calendar className="w-5 h-5" /> : <Star className="w-5 h-5 fill-white" />}
                     </div>
                     <div className="min-w-0">
                       <div className={`text-xs font-medium truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                        Satisfaction adhérents
+                        {isCoachOrApprenti ? 'Mes créneaux (semaine)' : 'Satisfaction adhérents'}
                       </div>
                       <div className="flex items-baseline gap-1.5 mt-0.5 whitespace-nowrap">
                         <span
@@ -818,11 +879,17 @@ export function DashboardView() {
                             isDark ? 'text-white' : 'text-slate-900'
                           }`}
                         >
-                          4,8 / 5
+                          {isCoachOrApprenti
+                            ? `${shifts.filter((s) => s.employeeId === currentUser.id).length} shifts`
+                            : '4,8 / 5'}
                         </span>
-                        <span className="text-[11px] font-bold text-emerald-500">↑ +0,2</span>
+                        <span className="text-[11px] font-bold text-emerald-500">
+                          {isCoachOrApprenti ? 'IDCC 2511' : '↑ +0,2'}
+                        </span>
                       </div>
-                      <div className="text-[10px] text-slate-400">Avis vérifiés bi-club</div>
+                      <div className="text-[10px] text-slate-400">
+                        {isCoachOrApprenti ? 'Planning & pointage PIN' : 'Avis vérifiés bi-club'}
+                      </div>
                     </div>
                   </div>
                   <MoreVertical className="w-4 h-4 text-slate-400 shrink-0" />
@@ -863,7 +930,7 @@ export function DashboardView() {
                       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(251,191,36,0.35),transparent_60%)]" />
                       <Dumbbell className="w-5 h-5 text-amber-300/90 relative z-10" />
                       <span className="text-[9px] font-black text-white/90 ml-1 relative z-10 tracking-tight">
-                        CENTER
+                        CDS
                       </span>
                     </div>
                     <div className="min-w-0">
@@ -919,16 +986,20 @@ export function DashboardView() {
 
                   <div className="flex items-center gap-2 min-w-0">
                     <div className="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-500 flex items-center justify-center shrink-0">
-                      <Euro className="w-3.5 h-3.5" />
+                      {canSeeFinances ? <Euro className="w-3.5 h-3.5" /> : <TrendingUp className="w-3.5 h-3.5" />}
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-baseline gap-1 whitespace-nowrap">
                         <span className={`text-xs font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                          54 230 €
+                          {canSeeFinances ? '54 230 €' : isCommercial ? '14 RDV' : '5 coachs'}
                         </span>
-                        <span className="text-[10px] font-bold text-emerald-500">↑ +7%</span>
+                        <span className="text-[10px] font-bold text-emerald-500">
+                          {canSeeFinances ? '↑ +7%' : isCommercial ? 'semaine' : 'en salle'}
+                        </span>
                       </div>
-                      <div className="text-[10px] text-slate-400 truncate">CA (mois)</div>
+                      <div className="text-[10px] text-slate-400 truncate">
+                        {canSeeFinances ? 'CA (mois)' : isCommercial ? 'essais planifiés' : 'équipe terrain'}
+                      </div>
                     </div>
                   </div>
 
@@ -981,7 +1052,7 @@ export function DashboardView() {
                       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.35),transparent_60%)]" />
                       <Dumbbell className="w-5 h-5 text-sky-300/90 relative z-10" />
                       <span className="text-[9px] font-black text-white/90 ml-1 relative z-10 tracking-tight">
-                        PLACE
+                        BEY
                       </span>
                     </div>
                     <div className="min-w-0">
@@ -994,7 +1065,7 @@ export function DashboardView() {
                       </h2>
                       <div className="flex items-center gap-1 text-xs text-slate-400 mt-0.5">
                         <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="truncate">Lyon 6e · Beynost ZAC</span>
+                        <span className="truncate">ZAC des Baterses · 01700 Beynost</span>
                       </div>
                     </div>
                   </div>
@@ -1037,16 +1108,20 @@ export function DashboardView() {
 
                   <div className="flex items-center gap-2 min-w-0">
                     <div className="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-500 flex items-center justify-center shrink-0">
-                      <Euro className="w-3.5 h-3.5" />
+                      {canSeeFinances ? <Euro className="w-3.5 h-3.5" /> : <TrendingUp className="w-3.5 h-3.5" />}
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-baseline gap-1 whitespace-nowrap">
                         <span className={`text-xs font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                          48 220 €
+                          {canSeeFinances ? '48 220 €' : isCommercial ? '11 RDV' : '4 coachs'}
                         </span>
-                        <span className="text-[10px] font-bold text-emerald-500">↑ +9%</span>
+                        <span className="text-[10px] font-bold text-emerald-500">
+                          {canSeeFinances ? '↑ +9%' : isCommercial ? 'semaine' : 'en salle'}
+                        </span>
                       </div>
-                      <div className="text-[10px] text-slate-400 truncate">CA (mois)</div>
+                      <div className="text-[10px] text-slate-400 truncate">
+                        {canSeeFinances ? 'CA (mois)' : isCommercial ? 'essais planifiés' : 'équipe terrain'}
+                      </div>
                     </div>
                   </div>
 
@@ -1097,17 +1172,19 @@ export function DashboardView() {
                   </div>
                   <div className="text-sm font-extrabold">
                     {clubFilter === 'carre-de-soie'
-                      ? 'C.Fitness Carré de Soie (Vaulx-en-Velin · Carré de Soie) — 682 adhérents · 54 230 € CA · 28 cours/sem'
-                      : 'C.Fitness Beynost (Lyon 6e · Beynost ZAC) — 566 adhérents · 48 220 € CA · 32 cours/sem'}
+                      ? `C.Fitness Carré de Soie (2 rue Jacquard · Vaulx-en-Velin) — 682 adhérents${canSeeFinances ? ' · 54 230 € CA' : ''} · 28 cours/sem`
+                      : `C.Fitness Beynost (ZAC des Baterses · 01700 Beynost) — 566 adhérents${canSeeFinances ? ' · 48 220 € CA' : ''} · 32 cours/sem`}
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 shrink-0 text-xs">
                   <button
                     type="button"
-                    onClick={() => setActiveSection('devices', 'adherents')}
+                    onClick={() =>
+                      setActiveSection('devices', isCoachOrApprenti ? 'checkup' : 'adherents')
+                    }
                     className="px-2.5 py-1.5 rounded-xl bg-violet-600 text-white font-bold cursor-pointer"
                   >
-                    Adhérents du club →
+                    {isCoachOrApprenti ? 'Bilans Mywellness →' : 'Adhérents du club →'}
                   </button>
                   <button
                     type="button"
@@ -1531,13 +1608,13 @@ export function DashboardView() {
               </div>
             </div>
 
-            {/* ROW 4: VUE EN DIRECT DES CAMÉRAS DES CLUBS (NVR IP PoE BI-CLUB) */}
-            <ClubCamerasWallPanel />
+            {/* ROW 4: VUE EN DIRECT DES CAMÉRAS DES CLUBS (DIRECTION & ACCUEIL UNIQUEMENT) */}
+            {canSeeCameras && <ClubCamerasWallPanel />}
           </div>
 
           {/* RIGHT SIDEBAR COLUMN (3 cols on xl): Actions importantes & Activités du jour */}
           <div className="xl:col-span-3 space-y-5">
-            {/* Card 1: Actions importantes (3) */}
+            {/* Card 1: Actions importantes (filtrées par rôle) */}
             <div
               className={`rounded-2xl border p-4 space-y-3 ${
                 isDark
@@ -1555,70 +1632,108 @@ export function DashboardView() {
                   </h3>
                 </div>
                 <span className="w-5 h-5 rounded-full bg-rose-500 text-white text-[11px] font-bold flex items-center justify-center">
-                  3
+                  {(canSeeRecovery ? 1 : 0) + (isAdmin ? 1 : 0) + (isCommercial ? 1 : 0) + 1}
                 </span>
               </div>
 
               <div className="space-y-2.5">
-                {/* Action 1: 5 impayés à relancer */}
-                <button
-                  type="button"
-                  onClick={() => setActiveSection('devices', 'finances')}
-                  className={`w-full p-3 rounded-xl border text-left flex items-center justify-between gap-2 transition-colors cursor-pointer ${
-                    isDark
-                      ? 'bg-[#191F31] border-slate-800 hover:border-rose-500/50'
-                      : 'bg-rose-50/50 border-rose-100 hover:bg-rose-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-xl bg-rose-500/15 text-rose-500 flex items-center justify-center shrink-0">
-                      <AlertCircle className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div
-                        className={`text-xs font-bold truncate ${
-                          isDark ? 'text-white' : 'text-slate-900'
-                        }`}
-                      >
-                        5 impayés à relancer
+                {/* Action 1: Impayés à relancer (Admin ou Recouvrement autorisé uniquement) */}
+                {canSeeRecovery && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      isAdmin ? setActiveSection('devices', 'finances') : setActiveSection('recovery')
+                    }
+                    className={`w-full p-3 rounded-xl border text-left flex items-center justify-between gap-2 transition-colors cursor-pointer ${
+                      isDark
+                        ? 'bg-[#191F31] border-slate-800 hover:border-rose-500/50'
+                        : 'bg-rose-50/50 border-rose-100 hover:bg-rose-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-xl bg-rose-500/15 text-rose-500 flex items-center justify-center shrink-0">
+                        <AlertCircle className="w-4 h-4" />
                       </div>
-                      <div className="text-[11px] text-slate-400 truncate">
-                        Représentent 1 250 €
+                      <div className="min-w-0">
+                        <div
+                          className={`text-xs font-bold truncate ${
+                            isDark ? 'text-white' : 'text-slate-900'
+                          }`}
+                        >
+                          5 impayés à relancer
+                        </div>
+                        <div className="text-[11px] text-slate-400 truncate">
+                          Représentent 1 250 €
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-                </button>
+                    <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                  </button>
+                )}
 
-                {/* Action 2: 2 contrats en attente */}
-                <button
-                  type="button"
-                  onClick={() => setActiveSection('ats', 'documents')}
-                  className={`w-full p-3 rounded-xl border text-left flex items-center justify-between gap-2 transition-colors cursor-pointer ${
-                    isDark
-                      ? 'bg-[#191F31] border-slate-800 hover:border-amber-500/50'
-                      : 'bg-amber-50/50 border-amber-100 hover:bg-amber-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center shrink-0">
-                      <FileText className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div
-                        className={`text-xs font-bold truncate ${
-                          isDark ? 'text-white' : 'text-slate-900'
-                        }`}
-                      >
-                        2 contrats en attente
+                {/* Action Commercial: Prospects à rappeler aujourd'hui */}
+                {isCommercial && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection('crm')}
+                    className={`w-full p-3 rounded-xl border text-left flex items-center justify-between gap-2 transition-colors cursor-pointer ${
+                      isDark
+                        ? 'bg-[#191F31] border-slate-800 hover:border-blue-500/50'
+                        : 'bg-blue-50/50 border-blue-100 hover:bg-blue-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-500 flex items-center justify-center shrink-0">
+                        <PhoneCall className="w-4 h-4" />
                       </div>
-                      <div className="text-[11px] text-slate-400 truncate">
-                        À valider cette semaine
+                      <div className="min-w-0">
+                        <div
+                          className={`text-xs font-bold truncate ${
+                            isDark ? 'text-white' : 'text-slate-900'
+                          }`}
+                        >
+                          {newLeadsCount} nouveaux leads CRM
+                        </div>
+                        <div className="text-[11px] text-slate-400 truncate">
+                          À rappeler &amp; planifier RDV
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-                </button>
+                    <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                  </button>
+                )}
+
+                {/* Action 2: 2 contrats RH en attente (Admin uniquement) */}
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection('my-day', 'MC06')}
+                    className={`w-full p-3 rounded-xl border text-left flex items-center justify-between gap-2 transition-colors cursor-pointer ${
+                      isDark
+                        ? 'bg-[#191F31] border-slate-800 hover:border-amber-500/50'
+                        : 'bg-amber-50/50 border-amber-100 hover:bg-amber-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center shrink-0">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div
+                          className={`text-xs font-bold truncate ${
+                            isDark ? 'text-white' : 'text-slate-900'
+                          }`}
+                        >
+                          2 contrats en attente
+                        </div>
+                        <div className="text-[11px] text-slate-400 truncate">
+                          À valider cette semaine
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                  </button>
+                )}
 
                 {/* Action 3: Maintenance prévue */}
                 <button
@@ -1728,7 +1843,9 @@ export function DashboardView() {
                     target: 'planning-hr' as NavSection,
                     subTarget: 'cours-collectifs',
                   },
-                ].map((act) => (
+                ]
+                  .filter((act) => (act.target === 'crm' ? canSeeCrm : true))
+                  .map((act) => (
                   <div
                     key={`${act.time}-${act.title}`}
                     onClick={() => setActiveSection(act.target, act.subTarget)}

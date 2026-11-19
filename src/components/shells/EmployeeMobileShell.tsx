@@ -552,11 +552,13 @@ export function EmployeeMobileShell() {
             </button>
           </div>
 
-          {/* 4 Interactive KPI Cards */}
+          {/* 4 Interactive KPI Cards (adaptés au rôle) */}
           <div className="grid grid-cols-4 gap-2">
             <button
               type="button"
-              onClick={() => setPhoneTab('adherents')}
+              onClick={() =>
+                isAdmin || isCommercial ? setPhoneTab('adherents') : setPhoneTab('planning')
+              }
               className={`p-2 rounded-2xl border text-center cursor-pointer transition-transform active:scale-95 ${
                 isDark
                   ? 'bg-[#171C2E] border-slate-800 hover:border-violet-500/50'
@@ -564,17 +566,33 @@ export function EmployeeMobileShell() {
               }`}
             >
               <div className="w-7 h-7 mx-auto rounded-full bg-violet-500 text-white flex items-center justify-center mb-1">
-                <Users className="w-3.5 h-3.5" />
+                {isAdmin || isCommercial ? (
+                  <Users className="w-3.5 h-3.5" />
+                ) : (
+                  <Calendar className="w-3.5 h-3.5" />
+                )}
               </div>
               <div className="text-xs font-black tabular-nums">
-                {mobileClub === 'center' ? '1 248' : '566'}
+                {isAdmin || isCommercial
+                  ? mobileClub === 'center'
+                    ? '682'
+                    : '566'
+                  : '7'}
               </div>
-              <div className="text-[9px] text-slate-400 truncate">Adhérents</div>
+              <div className="text-[9px] text-slate-400 truncate">
+                {isAdmin || isCommercial ? 'Adhérents' : 'Cours jour'}
+              </div>
             </button>
 
             <button
               type="button"
-              onClick={() => openAdminModule('devices', 'finances')}
+              onClick={() =>
+                isAdmin
+                  ? openAdminModule('devices', 'finances')
+                  : isCommercial
+                  ? openAdminModule('crm')
+                  : openAdminModule('devices', 'checkup')
+              }
               className={`p-2 rounded-2xl border text-center cursor-pointer transition-transform active:scale-95 ${
                 isDark
                   ? 'bg-[#171C2E] border-slate-800 hover:border-emerald-500/50'
@@ -582,12 +600,26 @@ export function EmployeeMobileShell() {
               }`}
             >
               <div className="w-7 h-7 mx-auto rounded-full bg-emerald-500 text-white flex items-center justify-center mb-1">
-                <Euro className="w-3.5 h-3.5" />
+                {isAdmin ? (
+                  <Euro className="w-3.5 h-3.5" />
+                ) : isCommercial ? (
+                  <TrendingUp className="w-3.5 h-3.5" />
+                ) : (
+                  <Activity className="w-3.5 h-3.5" />
+                )}
               </div>
               <div className="text-xs font-black tabular-nums">
-                {mobileClub === 'center' ? '102 K€' : '48 K€'}
+                {isAdmin
+                  ? mobileClub === 'center'
+                    ? '54 K€'
+                    : '48 K€'
+                  : isCommercial
+                  ? `${prospects.length}`
+                  : '12'}
               </div>
-              <div className="text-[9px] text-slate-400 truncate">CA (mois)</div>
+              <div className="text-[9px] text-slate-400 truncate">
+                {isAdmin ? 'CA (mois)' : isCommercial ? 'Leads CRM' : 'Bilans'}
+              </div>
             </button>
 
             <button
@@ -708,7 +740,9 @@ export function EmployeeMobileShell() {
                 iconBg: 'bg-emerald-500',
                 action: () => openAdminModule('orchestrator', 'maintenance'),
               },
-            ].map((item) => (
+            ]
+              .filter((item) => (item.title.includes('commercial') ? isAdmin || isCommercial : true))
+              .map((item) => (
               <button
                 key={item.time}
                 type="button"
