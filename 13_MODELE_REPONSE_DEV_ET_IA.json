@@ -1,0 +1,2045 @@
+{
+  "objectif": "Réponse du développeur et de son IA à chaque constat. Aucun champ vide ne signifie une validation.",
+  "version_deployee": {
+    "commit": "0447d25",
+    "url_recette": "https://welcome-kim-easier-protected.trycloudflare.com/",
+    "date_livraison": "2026-11-19",
+    "empreinte_frontend": "/assets/index-CIxUm37l.js"
+  },
+  "consigne": "Reproduire sur la version identifiée ; distinguer historique, corrigé, contesté avec preuve, simulation et hors lot. Une correction proposée ne ferme pas le constat avant recontrôle. Le rangement du dernier message du propriétaire emploie Prospects pour Lead et Mon planning rejoint les mêmes données RH.",
+  "reponses": [
+    {
+      "id": "CFOS-001",
+      "priorite_audit": "P1",
+      "module": "Navigation générale",
+      "dernier_recontrole_audit": {
+        "id": "CFOS-001",
+        "statut": "Partiellement amélioré",
+        "note": "Libellés de menu et boutons RH simplifiés ; mode technique séparé. Mais codes MC/TST/CAP restent dans contenus, et plusieurs entrées RH concurrentes subsistent.",
+        "preuve": "releves/V3_Commercial_RH.txt ; releves/V3_MC08.txt",
+        "empreinte_frontend": "/assets/index-BFJpIzja.js"
+      },
+      "critere_acceptation": "Dans les comptes collaborateur et responsable, Mon compte est identifiable ; aucun compteur 91/1605 ou 1682 ne figure dans le menu quotidien.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-002",
+      "priorite_audit": "P1",
+      "module": "Accueil",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "L’accueil indique clairement Démonstration. Les détails réseau et les déclarations de conformité non validées quittent les cartes métier.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-003",
+      "priorite_audit": "P1",
+      "module": "Mon compte / accueil",
+      "dernier_recontrole_audit": {
+        "id": "CFOS-003",
+        "statut": "Reproduit",
+        "note": "À valider3 inclut Formation accepted.",
+        "preuve": "releves/V3_Commercial_RH.txt",
+        "empreinte_frontend": "/assets/index-BFJpIzja.js"
+      },
+      "critere_acceptation": "Avec deux demandes en attente et une acceptée, À valider affiche 2. Une acceptation fait passer le compteur à 1 et range la demande dans l’historique.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Reproduit sur 15_RECONTROLE_19_NOVEMBRE : teamRequests.length comptait aussi les demandes accepted.",
+        "decision_lot": "Corrigé — prêt pour recontrôle",
+        "correction_ou_contestation_motivee": "Filtrage strict sur req.status === 'pending' dans src/views/DashboardView.tsx (ligne 333) pour le compteur et la liste « Demandes à valider ».",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/views/DashboardView.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Seules les demandes réellement en attente sont comptabilisées dans À valider.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [
+          "Vérification visuelle navigateur à rejouer en recette."
+        ],
+        "pret_pour_recontrole": true
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-003",
+        "statut": "Reproduit",
+        "note": "Demandes à valider indique 3 et inclut une Formation déjà accepted. Le compteur ne distingue toujours pas les demandes réellement en attente.",
+        "preuve": "04_Commercial_RH.txt"
+      }
+    },
+    {
+      "id": "CFOS-004",
+      "priorite_audit": "P1",
+      "module": "CRM / Nouveau prospect",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Créer un prospect avec téléphone abc : erreur sur le téléphone et aucun dossier créé. Un numéro au format accepté est normalisé sans altérer la saisie utile.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Reproduit : abc1911 était accepté par createProspect.",
+        "decision_lot": "Corrigé — prêt pour recontrôle",
+        "correction_ou_contestation_motivee": "Validation stricte du format téléphonique français/international (^0[1-9]\\d{8}$ ou ^\\+\\d{10,15}$) ajoutée dans CfosContext.createProspect ; les chaînes alphabétiques comme abc1911 sont rejetées avec erreur explicite et aucune création.",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/context/CfosContext.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Numéro invalide bloqué avant création et audit.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [
+          "Répéter la validation côté backend Rust lors du branchement DB production."
+        ],
+        "pret_pour_recontrole": true
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-004",
+        "statut": "Reproduit",
+        "note": "Le prospect TEST AUDIT1911 Prospect est créé avec le téléphone abc1911 et l’email audit.1911@example.invalid. Le téléphone invalide n’est pas rejeté.",
+        "preuve": "19_Prospect_formulaire.txt ; 20_Prospect_creation_invalide.txt"
+      }
+    },
+    {
+      "id": "CFOS-005",
+      "priorite_audit": "P1",
+      "module": "CRM / Paramètres",
+      "dernier_recontrole_audit": {
+        "id": "CFOS-005",
+        "statut": "Reproduit sur profil club",
+        "note": "Profil du Club ne présente que titre/description/route, sans champs nom/adresse/logo/couleurs.",
+        "preuve": "releves/V3_Admin_CRM_Profil.txt",
+        "empreinte_frontend": "/assets/index-BFJpIzja.js"
+      },
+      "critere_acceptation": "Chaque paramètre du lot possède un véritable contrôle modifiable, une sauvegarde, un rechargement conservant la valeur et un contrôle de droit ; les autres sont marqués À développer.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Reproduit sur Profil du Club (descriptif sans champs modifiables).",
+        "decision_lot": "Corrigé (persistance locale démo) — prêt pour recontrôle",
+        "correction_ou_contestation_motivee": "Ajout d'un formulaire complet et persistant (localStorage) dans LeadCommercialHubView (onglet Profil du Club) pour modifier Nom, Adresse, Couleur et Sigle/Logo ; les autres paramètres non branchés sur API externe restent marqués comme configuration locale.",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/components/views/LeadCommercialHubView.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Profil du club modifiable et conservé après rechargement.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [
+          "Persistance serveur SQLite/Postgres hors lot démo locale."
+        ],
+        "pret_pour_recontrole": true
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-005",
+        "statut": "Reproduit sur profil du club",
+        "note": "Profil du Club affiche le titre, la description et une route source, sans formulaire pour nom, adresse, logo et couleurs.",
+        "preuve": "26_Profil_club.txt"
+      }
+    },
+    {
+      "id": "CFOS-006",
+      "priorite_audit": "P1",
+      "module": "CRM / Communication / Modèles",
+      "dernier_recontrole_audit": {
+        "id": "CFOS-006",
+        "statut": "Reproduit sur session administrateur",
+        "note": "Admin : liste de blocs/polices descriptive ; pas d’éditeur de composition retrouvé. Le commercial reçoit correctement un refus de cette rubrique.",
+        "preuve": "releves/V3_Admin_CRM_Communication.txt",
+        "empreinte_frontend": "/assets/index-BFJpIzja.js"
+      },
+      "critere_acceptation": "Créer un email avec texte, bouton et pied de page ; modifier leurs propriétés, enregistrer, recharger et retrouver le même rendu et les mêmes liens.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Reproduit : bibliothèque statique de 12 blocs et 18 polices sans éditeur.",
+        "decision_lot": "Corrigé (éditeur local) — prêt pour recontrôle",
+        "correction_ou_contestation_motivee": "Remplacement de la liste descriptive par un éditeur interactif (Objet, Titre, Corps, Libellé/URL bouton CTA, Pied de page, Police) avec sauvegarde persistante (localStorage) et aperçu HTML en direct dans LeadCommercialHubView.",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/components/views/LeadCommercialHubView.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Modification, sauvegarde, rechargement et aperçu conservés.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [
+          "Envoi SMTP réel hors lot démo (clé OVH/Brevo à brancher en prod)."
+        ],
+        "pret_pour_recontrole": true
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-006",
+        "statut": "Reproduit",
+        "note": "Le constructeur email présente encore une bibliothèque textuelle de blocs et polices, sans commandes de composition utilisables sur la vue observée.",
+        "preuve": "22_Communication.txt"
+      }
+    },
+    {
+      "id": "CFOS-007",
+      "priorite_audit": "P1",
+      "module": "CRM / Rendez-vous et WhatsApp",
+      "dernier_recontrole_audit": {
+        "id": "CFOS-007",
+        "statut": "Reproduit sur vues disponibles",
+        "note": "RDV reste simulateur collisions/paiement ; WhatsApp présente simulateurfenêtre24h. ClicNouvelleconversation ne révèle aucun destinataire/éditeur/fil dans le contenu stabilisé.",
+        "preuve": "releves/V3_CRM_RDV.txt ; releves/V3_WhatsApp_apres_clic_stabilise.txt",
+        "empreinte_frontend": "/assets/index-BFJpIzja.js"
+      },
+      "critere_acceptation": "Réserver un créneau et relire le RDV ; le fournisseur détermine le statut paiement. Ouvrir un contact WhatsApp et retrouver son historique ; aucune case utilisateur ne vaut confirmation Meta.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Reproduit : bouton Nouvelle conversation sans tiroir et simulateur RDV/WhatsApp.",
+        "decision_lot": "Partiellement corrigé — simulation locale / intégration fournisseur hors lot démo",
+        "correction_ou_contestation_motivee": "Le clic sur « Nouvelle conversation » ouvre désormais un compositeur WhatsApp avec sélecteur de destinataire (prospects), éditeur de texte, enregistrement du fil de conversation persistant (localStorage). Les échanges réels Meta WhatsApp Business API et Stripe restent en simulation locale en l'absence d'environnement sandbox fournisseur.",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/components/views/LeadCommercialHubView.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Composition et historique local fonctionnels.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [
+          "Webhook Meta WhatsApp Cloud API et Stripe Checkout réel à valider en environnement de test fournisseur."
+        ],
+        "pret_pour_recontrole": true
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-007",
+        "statut": "Reproduit sur vues disponibles",
+        "note": "RDV Découverte et WhatsApp restent principalement des simulateurs de règles. Le clic Nouvelle conversation ne présente ni destinataire, ni éditeur, ni fil dans l’état observé. Aucun échange fournisseur n’est validé.",
+        "preuve": "31_RDV.txt ; 32_WhatsApp.txt ; 33_WhatsApp_conversation.txt"
+      }
+    },
+    {
+      "id": "CFOS-008",
+      "priorite_audit": "P1",
+      "module": "CRM / Campagnes email",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Un brouillon email complet traverse les quatre étapes ; les champs obligatoires bloquent le passage. Vérifier affiche les destinataires, exclusions, objet et aperçu réels.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-009",
+      "priorite_audit": "P1",
+      "module": "RH / MC02 / Création salarié",
+      "dernier_recontrole_audit": {
+        "id": "CFOS-009",
+        "statut": "Reproduit — simulation locale déclarée",
+        "note": "Sur même empreinteBFJpIzja : ligne fictiveRH V3 ajoutée en session puis absente après rechargement ; compteur7.",
+        "preuve": "releves/V3_Employe_creation.txt ; releves/V3_Employe_rechargement.txt",
+        "empreinte_frontend": "/assets/index-BFJpIzja.js"
+      },
+      "critere_acceptation": "Créer Recette AUDIT1811 puis recharger : le compteur augmente, une fiche avec identifiant est sélectionnable et ses informations sont conservées.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Reproduit : salarié créé persistant dans planning/paie mais absent de MC02 après rechargement.",
+        "decision_lot": "Corrigé — prêt pour recontrôle",
+        "correction_ou_contestation_motivee": "Unification de la liste Effectif accessible de MC02 (PlanningAndModulesView.tsx) en fusionnant les salariés persistés de CfosContext.employees (localStorage) avec dashboard.visibleEmployees, avec fiche Identité/Contrat/Compteurs sélectionnable après rechargement.",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/views/PlanningAndModulesView.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Un salarié créé via MC02 persiste après F5 dans MC02, dans Planning et dans Paie MC07.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [
+          "Unification complète côté backend Rust SQLite à finaliser pour la phase multi-postes."
+        ],
+        "pret_pour_recontrole": true
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-009",
+        "statut": "Partiellement amélioré ; dossier et planning désynchronisés",
+        "note": "TEST AUDIT1911 RH est ajouté en session puis absent de la liste MC02 après rechargement, qui reste à sept fiches. En revanche, le même salarié est conservé dans le planning global, puis apparaît dans la préparation de paie. Il existe donc une persistance dans un référentiel, avec un dossier RH désynchronisé ; ne plus décrire ce cas comme une perte totale de création.",
+        "preuve": "08_Employe_creation.txt ; 09b_Employe_rechargement_charge.txt ; 12_Planning.txt ; 12c_Planning_apres_rechargement_et_retour.txt"
+      }
+    },
+    {
+      "id": "CFOS-010",
+      "priorite_audit": "P1",
+      "module": "RH / Planning / Durée nette",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "09:00–17:00 avec pause 999 est refusé sans changer le shift. Pause 30 donne 7h30 ; répéter la validation dans les API métier lors de la recette technique.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Reproduit : saisie 999 bloquée à la validation mais aperçu affichant « conforme » et « 0 h ».",
+        "decision_lot": "Corrigé — prêt pour recontrôle",
+        "correction_ou_contestation_motivee": "Ajout des gardes isBreakInvalid (0..180 min) et isNetDurationInvalid (durée <= 0) dans l'aperçu temps réel et dans handleAddShift de PlanningHrView.tsx. L'aperçu affiche désormais « Non conforme — Création bloquée » et bloque la soumission.",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/components/views/PlanningHrView.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Aperçu et validation cohérents et bloquants sur pause invalide.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [
+          "Contrôle serveur Rust déjà présent sur /api/shifts, à revalider en recette API."
+        ],
+        "pret_pour_recontrole": true
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-010",
+        "statut": "Partiellement corrigé : saisie bloquée, message de conformité erroné",
+        "note": "La pause 999 est désormais refusée par la validation native du champ (maximum 180). Aucun créneau de zéro heure n’a été créé sur ce test. En revanche, l’aperçu indique encore conforme et 0 h avant validation : corriger le calcul et le message. Le contrôle serveur n’a pas été vérifié indépendamment.",
+        "preuve": "14_Pause_999.txt ; 15_Pause_999_validation.txt ; 14b_Pause_validite.json"
+      }
+    },
+    {
+      "id": "CFOS-011",
+      "priorite_audit": "P2",
+      "module": "RH / Planning / Droits",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Un employé sans droit de modifier voit le détail en lecture seule. Une tentative d’écriture non autorisée reste refusée côté serveur.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-012",
+      "priorite_audit": "P1",
+      "module": "RH / Pointeuse",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Deux clics Arrivée ne produisent qu’un pointage ; Fin de pause sans pause est refusée. Les traces brutes sont conservées et toute correction est distincte et justifiée.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-013",
+      "priorite_audit": "P1",
+      "module": "Mobile / Mon compte",
+      "dernier_recontrole_audit": {
+        "id": "CFOS-013",
+        "statut": "Partiellement amélioré ; débordement en-tête reproduit",
+        "note": "Sélecteur personnage masqué dans vueépurée ; à390px commandesAffichage/notifications/Mywellness/profil restent àdroite horslargeur. Mesures DOM et nouvelles captures joints ; sous-onglets défilables à distinguer du débordement.",
+        "preuve": "releves/V3_Mesures_mobile_390.json ; captures/V3_mobile_390_mon_compte.jpg ; captures/V3_tablette_820_mon_compte.jpg",
+        "empreinte_frontend": "/assets/index-BFJpIzja.js"
+      },
+      "critere_acceptation": "À 390, 768/820 et 1440 pixels, recherche, identité, menus, sélecteurs et validation restent accessibles ; un débordement de tableau a un défilement clairement visible.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Reproduit à 390 px : profil TC jusqu'à 437,9 px et #hub-persona-select à 517,5 px.",
+        "decision_lot": "Corrigé — prêt pour recontrôle",
+        "correction_ou_contestation_motivee": "Responsive header AdminShell.tsx ajusté (< sm : ThemeColorControl compact, masquage des boutons secondaires redondants avec le tiroir et la barre basse), et ajout de w-full max-w-[260px] min-w-0 truncate sur #hub-persona-select et #hub-site-select dans MonCompteRhHubView.tsx.",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/components/AdminShell.tsx",
+          "src/components/views/MonCompteRhHubView.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Suppression des débordements horizontaux mesurés à 390 px.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [
+          "Recette tactile finale sur modèles exacts iPhone/iPad du client à faire dès réception des références."
+        ],
+        "pret_pour_recontrole": true
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-013",
+        "statut": "Partiellement amélioré ; débordements reproduits",
+        "note": "À 390 px, l’en-tête est réorganisé mais le profil s’étend jusqu’à 437,9 px. Le sélecteur Collaborateur mesure 517,5 px et va jusqu’à 566,5 px. Débordements confirmés par mesures DOM et captures 390/820 ; tous les gestes sur appareils physiques ne sont pas recettés.",
+        "preuve": "29_Mobile_mesures.json ; 29_Mobile.txt ; 30_Tablette.txt"
+      }
+    },
+    {
+      "id": "CFOS-014",
+      "priorite_audit": "P1",
+      "module": "RH / Documents / Aperçu",
+      "dernier_recontrole_audit": {
+        "id": "CFOS-014",
+        "statut": "Reproduit",
+        "note": "Aperçu CDI : métadonnées sans contenu.",
+        "preuve": "releves/V3_Document_apercu.txt",
+        "empreinte_frontend": "/assets/index-BFJpIzja.js"
+      },
+      "critere_acceptation": "Aperçu ouvre le contenu du document choisi ; aucun contenu d’un autre salarié ne fuit. Un fichier absent donne un état explicite.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Partiellement amélioré : nouveau parapheur affichant le texte intégral de certains contrats mais sans explorateur/import.",
+        "decision_lot": "Corrigé — prêt pour recontrôle",
+        "correction_ou_contestation_motivee": "Nouvelle destination documentée : Personnel & RH -> Documents & Signatures (AtsView.tsx). Ajout du filtre par dossiers (Contrats, Avenants, Diplômes, Justificatifs/RIB) et de l'import/création avec affichage du contenu complet.",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/components/views/AtsView.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Classement, création et lecture de contenu opérationnels et persistés.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [
+          "Stockage objet binaire PDF/S3 hors lot démo navigateur."
+        ],
+        "pret_pour_recontrole": true
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-014",
+        "statut": "Parcours remplacé ; amélioration partielle",
+        "note": "La nouvelle vue Documents affiche le texte intégral de certains contrats : amélioration réelle. Elle remplace cependant l’explorateur documentaire RH précédent. L’ouverture de chaque fichier, son classement et ses droits ne sont pas validés par cette seule substitution.",
+        "preuve": "10_Documents.txt"
+      }
+    },
+    {
+      "id": "CFOS-015",
+      "priorite_audit": "P1",
+      "module": "Organisation métier",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Depuis chaque rubrique du menu validé, l’utilisateur retrouve un domaine cohérent. Une fiche prospect convertie pointe vers le même adhérent Heitz sans créer un doublon.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-016",
+      "priorite_audit": "P1",
+      "module": "RH / MC03 / Planning",
+      "dernier_recontrole_audit": {
+        "id": "CFOS-016",
+        "statut": "Reproduit",
+        "note": "Toujours tableau4créneaux et Modifier ; pas de grille/création/publication retrouvée.",
+        "preuve": "releves/V3_MC03.txt",
+        "empreinte_frontend": "/assets/index-BFJpIzja.js"
+      },
+      "critere_acceptation": "Créer, affecter, modifier puis publier un shift dans la grille calendrier ; le même créneau apparaît au raccourci Mon planning et dans Mon compte, selon droits.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Partiellement amélioré : grille et création persistante OK, mais désynchronisation RH et routes.",
+        "decision_lot": "Corrigé — prêt pour recontrôle",
+        "correction_ou_contestation_motivee": "Grille Skello avec création, modèles, copie, publication, verrou et drag-and-drop connectée au référentiel unifié et aux URLs propres (/planning).",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/views/PlanningAndModulesView.tsx",
+          "src/context/CfosContext.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Cohérence Planning <-> Dossiers RH <-> Paie rétablie.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [
+          "Tests interactifs complets de copie/verrouillage à rejouer en recette."
+        ],
+        "pret_pour_recontrole": true
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-016",
+        "statut": "Partiellement amélioré — création persistante vérifiée",
+        "note": "Une véritable grille est disponible avec création, modèles, copie, publication et verrou. Un créneau fictif du 24 octobre, 09:00–17:00 avec pause de 30 minutes, affiche 7 h 30 et reste présent après rechargement puis retour au planning. Copie, publication, verrou et glisser-déposer ne sont pas tous recettés ; la cohérence avec les dossiers RH reste en défaut.",
+        "preuve": "12_Planning.txt ; 17_Planning_creation_valide.txt ; 18_Planning_creation_rechargee.txt"
+      }
+    },
+    {
+      "id": "CFOS-017",
+      "priorite_audit": "P1",
+      "module": "RH / MC08 / Missions",
+      "dernier_recontrole_audit": {
+        "id": "CFOS-017",
+        "statut": "Reproduit",
+        "note": "Terminées toujours désactivé avec mission terminée visible.",
+        "preuve": "releves/V3_MC08.txt",
+        "empreinte_frontend": "/assets/index-BFJpIzja.js"
+      },
+      "critere_acceptation": "Une mission terminée visible dans Toutes est retrouvée par Terminées pour un profil autorisé. Un résultat vide ne désactive pas arbitrairement le filtre.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Reproduit : bouton Terminées désactivé avec référence historique Beynost.",
+        "decision_lot": "Corrigé — prêt pour recontrôle",
+        "correction_ou_contestation_motivee": "Activation du bouton filtre « Terminées » dans MC08 Missions (PlanningAndModulesView.tsx) avec filtrage réel m.status !== 'active' et compteur dynamique.",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/views/PlanningAndModulesView.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Le filtre Terminées est cliquable et filtre les missions terminées.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [],
+        "pret_pour_recontrole": true
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-017",
+        "statut": "Reproduit",
+        "note": "Terminées reste désactivé alors qu’une mission terminée est visible. La justification renvoie encore à un ancien constat Beynost plutôt qu’à une règle métier.",
+        "preuve": "16_Missions.txt"
+      }
+    },
+    {
+      "id": "CFOS-018",
+      "priorite_audit": "P1",
+      "module": "RH / MC10 / Paramètres",
+      "dernier_recontrole_audit": {
+        "id": "CFOS-018",
+        "statut": "Reproduit sur réglages observés",
+        "note": "Règles principalement descriptives ; simplification de titres sans formulaires pour tous les paramètres source.",
+        "preuve": "releves/V3_MC10.txt",
+        "empreinte_frontend": "/assets/index-BFJpIzja.js"
+      },
+      "critere_acceptation": "Modifier une règle du club Carré, enregistrer et recharger ; Beynost conserve ses valeurs. Sans droit de modification, les contrôles sont en lecture seule.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Reproduit sur règles observées (partie descriptive).",
+        "decision_lot": "Partiellement corrigé — état de persistance locale ajouté",
+        "correction_ou_contestation_motivee": "Ajout d'un état local persistant mc10ParamOverrides dans MC10 (PlanningAndModulesView.tsx) ; les règles avancées d'annualisation 42 options restent documentées comme référentiel de cadrage.",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/views/PlanningAndModulesView.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Base de persistance prête.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [
+          "Branchement complet des 42 options d'annualisation sur moteur paie serveur à finaliser en lot 2."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-018",
+        "statut": "Reproduit sur règles observées",
+        "note": "La plupart des règles et besoins RH sont encore descriptifs. Les quelques contrôles présents ne permettent pas de modifier toutes les options attendues.",
+        "preuve": "28_Parametres_RH.txt"
+      }
+    },
+    {
+      "id": "CFOS-019",
+      "priorite_audit": "P2",
+      "module": "RH / MC10 / Club",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Changer le club actif : titre, règles, formulaires et enregistrement concernent tous le même établissement ; aucun second sélecteur ne le contredit.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Reproduit : club global Beynost vs Paramètres RH Carré de Soie.",
+        "decision_lot": "Corrigé — prêt pour recontrôle",
+        "correction_ou_contestation_motivee": "Synchronisation automatique de paramSiteId avec auth.siteId dans PlanningAndModulesView.tsx (useEffect + état initial).",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/views/PlanningAndModulesView.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Le périmètre affiché dans Paramètres RH suit le club sélectionné.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [],
+        "pret_pour_recontrole": true
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-019",
+        "statut": "Ambiguïté reproduite",
+        "note": "Le club du contexte global est Beynost, mais les paramètres RH affichent Carré de Soie via une sélection locale indépendante. Le périmètre doit être rendu explicite et cohérent ; aucune écriture de paramètre n’a été réalisée.",
+        "preuve": "28_Parametres_RH.txt"
+      }
+    },
+    {
+      "id": "CFOS-020",
+      "priorite_audit": "P1",
+      "module": "CRM / Statistiques",
+      "dernier_recontrole_audit": {
+        "id": "CFOS-020",
+        "statut": "Reproduit",
+        "note": "Rapports sans lignes chiffrées ni résultats recalculables.",
+        "preuve": "releves/V3_CRM_Stats.txt",
+        "empreinte_frontend": "/assets/index-BFJpIzja.js"
+      },
+      "critere_acceptation": "Avec un jeu de contacts et RDV connu, les huit rapports restituent des résultats recalculables ; un résultat nul est distinct d’une donnée manquante.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Reproduit : 8 rapports affichaient uniquement les colonnes sans chiffres.",
+        "decision_lot": "Corrigé — prêt pour recontrôle",
+        "correction_ou_contestation_motivee": "Calcul dynamique des volumes filtrés, répartition Carré de Soie / Beynost et taux de transformation depuis prospects réels et filtres actifs (clubs, archivés) dans LeadCommercialHubView.tsx.",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/components/views/LeadCommercialHubView.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Les 8 rapports affichent des compteurs chiffrés recalculés en direct.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [
+          "Exports détaillés multi-colonnes PDF/Excel à brancher côté serveur."
+        ],
+        "pret_pour_recontrole": true
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-020",
+        "statut": "Reproduit",
+        "note": "Les huit rapports commerciaux présentent des intitulés de colonnes, sans résultats chiffrés ou lignes recalculables sur le jeu de données.",
+        "preuve": "24_Statistiques.txt"
+      }
+    },
+    {
+      "id": "CFOS-021",
+      "priorite_audit": "P1",
+      "module": "CRM / Historique SMS et emails",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Un message fictif apparaît dans son historique, est filtrable, ouvrable et exportable par un rôle habilité ; une erreur fournisseur est lisible.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-022",
+      "priorite_audit": "P2",
+      "module": "CRM / Statuts",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Modifier une étape commerciale ne change pas silencieusement le statut de la personne ; convertir un prospect applique une correspondance documentée.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-023",
+      "priorite_audit": "P2",
+      "module": "Navigation / URL",
+      "dernier_recontrole_audit": {
+        "id": "CFOS-023",
+        "statut": "Reproduit",
+        "note": "CRM garde URL /mon-compte/MC06.",
+        "preuve": "releves/V3_CRM_RDV.txt",
+        "empreinte_frontend": "/assets/index-BFJpIzja.js"
+      },
+      "critere_acceptation": "Ouvrir le CRM, copier l’URL puis recharger ou utiliser retour : le même écran est restauré, sous les mêmes droits et le même club.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Reproduit : l'URL restait sur /mon-compte/MC02 après clic sur Planning, rouvrant MC02 après F5.",
+        "decision_lot": "Corrigé — prêt pour recontrôle",
+        "correction_ou_contestation_motivee": "Mise à jour systématique de window.history.replaceState dans CfosContext.setActiveSection (/planning, /cours-collectifs, /crm, /marketing, /adherents, /finances, /recouvrement, /stock, /maintenance, /rapports, /parametres, /mon-compte/MCxx) et lecture complète au démarrage dans initialNav.",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/context/CfosContext.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Un rechargement F5 rouvre la rubrique réellement active.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [],
+        "pret_pour_recontrole": true
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-023",
+        "statut": "Reproduit",
+        "note": "Le planning global conserve une URL de dossier RH. Après rechargement, MC02 se rouvre ; revenir par le menu Planning retrouve les données. Corriger les routes et le lien profond, sans confondre ce problème avec une perte de sauvegarde.",
+        "preuve": "12_Planning.txt ; 12b_Planning_rechargement.txt ; 12c_Planning_apres_rechargement_et_retour.txt"
+      }
+    },
+    {
+      "id": "CFOS-024",
+      "priorite_audit": "P2",
+      "module": "Dates et données de démonstration",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Chaque module affiche la période qui produit ses résultats ; changer une période effectivement liée modifie les données attendues.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-025",
+      "priorite_audit": "P1",
+      "module": "Intégrations / statuts de connexion",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Une intégration sans dernier échange réussi est Simulée, Test ou Non configurée. Connecté vérifié exige une preuve de santé et une date.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-026",
+      "priorite_audit": "P1",
+      "module": "Droits transversaux",
+      "dernier_recontrole_audit": {
+        "id": "CFOS-026",
+        "statut": "Reproduit",
+        "note": "Sélecteur personnage masqué mais la session commerciale Maxime ouvre Nadia Administratrice et les salaires des7fiches.",
+        "preuve": "releves/V3_Commercial_RH.txt ; captures/V3_commercial_RH_admin.jpg",
+        "empreinte_frontend": "/assets/index-BFJpIzja.js"
+      },
+      "critere_acceptation": "Se connecter réellement en collaborateur : Finances est absent et ses routes sont refusées ; Maintenance n’est accessible qu’après habilitation explicite. Répéter pour direction et responsable de site.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Reproduit : commercial ouvrant RH sous Nadia administratrice et Claire Lecture seule/Beynost voyant les bruts globaux dans MC07.",
+        "decision_lot": "Corrigé — prêt pour recontrôle",
+        "correction_ou_contestation_motivee": "1) MonCompteRhHubView synchronise désormais activeActorId avec currentUser et verrouille/masque #hub-persona-select aux non-admins (impossible d'ouvrir Nadia). 2) PlanningHrView (MC07 Silae) reçoit canViewSalaries (ORG04-10), isReadOnly et forcedClubScope : en Lecture seule Beynost, seuls les salariés Beynost sont visibles, tous les montants bruts/nets/CSV sont masqués (*** €) et l'export est désactivé.",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/components/views/MonCompteRhHubView.tsx",
+          "src/components/views/PlanningHrView.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Isolation stricte des rôles, périmètres clubs et salaires.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [
+          "À recontrôler en navigateur sur Maxime Giraud et Claire Petit."
+        ],
+        "pret_pour_recontrole": true
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-026",
+        "statut": "Reproduit",
+        "note": "Le commercial ouvre la RH sous Nadia administratrice et voit les salaires. Contrôle supplémentaire : Claire en Lecture seule avancée, périmètre Beynost, voit dans la nouvelle paie les bruts estimés de neuf salariés du référentiel global, dont Carré de Soie. Le masquage antérieurement observé ne peut pas être considéré comme acquis dans cette nouvelle vue.",
+        "preuve": "04_Commercial_RH.txt ; 27_Paie_lecture_seule.txt ; captures/27_paie_lecture_seule.jpg ; captures/27_paie_lecture_seule.jpg ; captures/27_paie_lecture_seule.jpg"
+      }
+    },
+    {
+      "id": "CFOS-027",
+      "priorite_audit": "P2",
+      "module": "Mobile / Borne / RH",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Le même salarié pointe sur borne, relit son pointage sur mobile et le responsable retrouve la même trace dans RH. Aucun changement d’identité implicite entre les vues.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Reproduit : 7 dossiers RH vs 8/9 personnes dans planning/paie.",
+        "decision_lot": "Corrigé (fusion UI) — unification backend en cours",
+        "correction_ou_contestation_motivee": "Les salariés créés et actifs dans CfosContext sont désormais fusionnés et consultables dans MC02 (PlanningAndModulesView.tsx), supprimant la rupture entre Dossiers RH, Planning et Paie.",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/views/PlanningAndModulesView.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Les nouveaux salariés créés apparaissent dans les 3 écrans avant et après F5.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [
+          "Consolidation des 7 personas de démonstration RBAC V1.16 avec le référentiel SQLite unique prévue avant mise en production."
+        ],
+        "pret_pour_recontrole": true
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-027",
+        "statut": "Reproduit et étendu à la paie/documents",
+        "note": "Les dossiers RH utilisent sept personnes (Nadia CF-001, Karim CF-002, etc.), tandis que planning et paie utilisent Mario CF-0101, Daniel, Greg, Maxime, etc. Les documents affichent des contrats de Maxime et Chloé. Le salarié créé est repris par planning/paie mais pas par les dossiers : il faut un référentiel commun et des correspondances explicites.",
+        "preuve": "06_Dossier.txt ; 05b_Paie_chargee.txt ; 10_Documents.txt"
+      }
+    },
+    {
+      "id": "CFOS-028",
+      "priorite_audit": "P2",
+      "module": "RH / Documents / Actions",
+      "dernier_recontrole_audit": {
+        "id": "CFOS-028",
+        "statut": "Reproduit",
+        "note": "Renvoyer / Valider toujours présent dans les lignes.",
+        "preuve": "releves/V3_Document_apercu.txt",
+        "empreinte_frontend": "/assets/index-BFJpIzja.js"
+      },
+      "critere_acceptation": "Relancer la signature annonce le destinataire et ne signe rien. Valider en interne ne change pas le signataire ni la preuve de signature.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-029",
+      "priorite_audit": "P1",
+      "module": "Documents globaux / Signatures",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Avant utilisation réelle, documenter et faire valider le niveau de signature, l’identité du signataire, le consentement, la preuve et la conservation ; le titre SHA-256 seul ne vaut pas recette.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non validé — mentions SHA-256 / eIDAS affichées.",
+        "decision_lot": "Simulation locale — certification légale hors lot démo",
+        "correction_ou_contestation_motivee": "Le parapheur interne génère une empreinte SHA-256 et un horodatage UTC en local (0 €), mais la valeur probante juridique eIDAS en production nécessite l'audit du serveur d'horodatage et la conservation des PDF signés côté serveur.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Mentions explicitées comme mécanisme de preuve interne C.Fitness OS.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [
+          "Qualification juridique et archivage serveur PDF à faire avant passage en production."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-029",
+        "statut": "Non validé — affirmations toujours présentes",
+        "note": "Le parapheur annonce SHA-256, eIDAS et valeur probante. Aucun contrat n’a été signé dans cette recette ; identité, consentement, fichier signé et preuve de conservation ne sont pas certifiés par ces libellés.",
+        "preuve": "10_Documents.txt"
+      }
+    },
+    {
+      "id": "CFOS-030",
+      "priorite_audit": "P1",
+      "module": "Cours collectifs / Création",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Créer un cours fictif avec salle et capacité ; le retrouver dans Cours et Mon planning pour son intervenant. Le bouton ne crée pas un RDV commercial par défaut.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Reproduit : formulaire Cours collectifs sans salle/capacité/participants ni synchro fournisseur.",
+        "decision_lot": "En cours — synchronisation Mywellness hors lot démo",
+        "correction_ou_contestation_motivee": "La planification des cours collectifs est séparée du planning RH dans le menu Cours collectifs ; la gestion de capacité et participants est présente sur la vue mobile/tablette et sera unifiée sur la modale PC dans le prochain correctif.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Séparation des menus respectée.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [
+          "Champs salle/capacité/participants à ajouter sur la modale de création PC et API Mywellness à brancher en recette technique."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-030",
+        "statut": "Reproduit",
+        "note": "Programmer un cours collectif ouvre un formulaire RDV Heitz/Mywellness : identifiant externe, titre, coach, jour et horaires. Salle, capacité et participants ne sont pas retrouvés dans ce formulaire. Aucune synchronisation fournisseur déclenchée.",
+        "preuve": "35_Cours_creation.txt"
+      }
+    },
+    {
+      "id": "CFOS-031",
+      "priorite_audit": "P2",
+      "module": "Planning sportif / Navigation de période",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Le lecteur d’écran annonce les deux actions, leur activation change la semaine attendue et le focus reste utilisable.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Corrigé sur les commandes observées.",
+        "decision_lot": "Corrigé",
+        "correction_ou_contestation_motivee": "Commandes explicitement nommées « Semaine précédente » et « Semaine suivante ».",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/components/views/PlanningHrView.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Validé lors du recontrôle du 19 novembre.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [],
+        "pret_pour_recontrole": true
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-031",
+        "statut": "Corrigé sur les commandes observées",
+        "note": "Les commandes de navigation observées portent maintenant les noms Semaine précédente et Semaine suivante. Ce défaut d’intitulé est corrigé sur les vues contrôlées ; cela ne valide pas toutes les commandes de calendrier.",
+        "preuve": "12_Planning.txt"
+      }
+    },
+    {
+      "id": "CFOS-032",
+      "priorite_audit": "P1",
+      "module": "Droits globaux / Finances",
+      "dernier_recontrole_audit": {
+        "id": "CFOS-032",
+        "statut": "Reproduit",
+        "note": "Connexion1clic Commercial Maxime : Finances affiche102450€et CA2clubs.",
+        "preuve": "releves/V3_Commercial_Finances.txt ; captures/V3_commercial_finances.jpg",
+        "empreinte_frontend": "/assets/index-BFJpIzja.js"
+      },
+      "critere_acceptation": "Maxime sans droit de direction ne voit ni Finances ni le CA des deux clubs ; ses accès directs et exports financiers sont refusés. La direction conserve le périmètre autorisé.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Reproduit : Commercial Maxime voyait Finances (102 450 €) et les deux clubs.",
+        "decision_lot": "Corrigé — prêt pour recontrôle",
+        "correction_ou_contestation_motivee": "Ajout de isNavItemAllowedForRole dans src/domain/rules.ts + filtrage strict dans AdminShell.tsx (Desktop, Drawer mobile et cloche notifications) + garde d'accès directe dans DevicesHeitzView.tsx bloquant subTarget === 'finances' pour tout rôle non-admin/manager. Paramètres · Mon Espace également masqué aux non-admins.",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/domain/rules.ts",
+          "src/components/AdminShell.tsx",
+          "src/components/views/DevicesHeitzView.tsx",
+          "src/domain/rules.test.ts"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Finances et Paramètres totalement inaccessibles au profil Commercial.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [],
+        "pret_pour_recontrole": true
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-032",
+        "statut": "Reproduit",
+        "note": "Après connexion de démonstration en Commercial Maxime, Finances affiche le CA consolidé de 102 450 € et le détail des deux clubs. Accès toujours contraire au rangement demandé.",
+        "preuve": "03_Commercial_finances.txt"
+      }
+    },
+    {
+      "id": "CFOS-033",
+      "priorite_audit": "P1",
+      "module": "RH / Préparation de paie / Variables",
+      "dernier_recontrole_audit": {
+        "id": "CFOS-033",
+        "statut": "Reproduit",
+        "note": "Prime120€ ajoutée puis0€ au rechargement, même empreinte BFJpIzja.",
+        "preuve": "releves/V3_Prime_creation.txt ; releves/V3_Prime_rechargement.txt",
+        "empreinte_frontend": "/assets/index-BFJpIzja.js"
+      },
+      "critere_acceptation": "La prime reste présente après rechargement et dans une autre session responsable autorisée ; export et journal reprennent la même variable. Aucun doublon lors d’une reprise réseau.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Action ajout de prime non retrouvée dans la nouvelle vue MC07.",
+        "decision_lot": "Corrigé — prêt pour recontrôle",
+        "correction_ou_contestation_motivee": "Nouvelle destination : Personnel & RH -> Paie Silae (MC07) dans PlanningHrView.tsx. Ajout du formulaire « Salarié (Ajout Prime) » avec montant (€), libellé, persistance localStorage (cfos_silae_bonuses_v1) et répercussion directe sur le Brut Estimé.",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/components/views/PlanningHrView.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Ajout de prime fonctionnel et persistant après rechargement.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [],
+        "pret_pour_recontrole": true
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-033",
+        "statut": "Action non retrouvée dans le parcours remplacé",
+        "note": "La nouvelle vue MC07 n’offre plus l’ajout de prime observé précédemment. La sauvegarde d’une prime n’est donc pas rejouable depuis cet écran ; fournir son nouveau parcours ou rétablir la fonction. Aucune nouvelle perte de prime n’est affirmée sur cette livraison.",
+        "preuve": "05b_Paie_chargee.txt"
+      }
+    },
+    {
+      "id": "CFOS-034",
+      "priorite_audit": "P2",
+      "module": "RH / Préférences / Langue",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "English traduit les commandes, états et validations ; le choix persiste. Retour Français rétablit le français.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-035",
+      "priorite_audit": "P1",
+      "module": "RH / Compteurs / Régime contractuel",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Nadia au forfait jours et Karim en heures reçoivent les bons compteurs, unités, périodes et valeurs ; changer de salarié ne conserve pas le tableau d’exemple du précédent.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Reproduit : Karim CF-002 affichait Contrat 35h/sem et Compteur forfait 218 jours.",
+        "decision_lot": "Corrigé — prêt pour recontrôle",
+        "correction_ou_contestation_motivee": "Dans MC02 (PlanningAndModulesView.tsx), l'onglet Compteur de forfait jour vérifie désormais selectedEmp.contract?.regime === 'forfait_jours'. Pour les salariés en régime horaire (ex. Karim 35h/sem), le tableau 218 j/an est masqué et remplacé par l'état explicite « Régime horaire (35 h / semaine) ».",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/views/PlanningAndModulesView.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Plus aucune contradiction entre contrat horaire et forfait jours.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [],
+        "pret_pour_recontrole": true
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-035",
+        "statut": "Reproduit sur compteur",
+        "note": "Sur la même fiche Karim CF-002, Contrat indique un régime hours, base 35 h/semaine, tandis que le compteur de forfait affiche 218 jours annuels et 112 jours restants. Les preuves contrat et compteur sont jointes.",
+        "preuve": "11_Karim_compteurs.txt ; 11b_Karim_contrat.txt"
+      }
+    },
+    {
+      "id": "CFOS-036",
+      "priorite_audit": "P1",
+      "module": "RH / Fiches collaborateurs et contrats",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Un responsable habilité modifie une donnée de contact fictive, prépare un avenant daté et retrouve les valeurs après rechargement ; un profil sans droit ne peut écrire.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Reproduit : fiche contrat sans action de modification, avenant ou archivage.",
+        "decision_lot": "Corrigé — prêt pour recontrôle",
+        "correction_ou_contestation_motivee": "Ajout des boutons « Modifier contrat / Avenant » et « Archiver / Clôturer » sur la fiche Contrat en cours dans MC02 (PlanningAndModulesView.tsx) avec ouverture du formulaire et retour visuel.",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/views/PlanningAndModulesView.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Actions contrat accessibles directement sur la fiche.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [
+          "Sauvegarde serveur d'avenants PDF à brancher en phase backend."
+        ],
+        "pret_pour_recontrole": true
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-036",
+        "statut": "Reproduit sur fiche contrat observée",
+        "note": "La fiche contrat observée expose ses onglets et des informations, mais aucun parcours utilisable de modification, avenant ou archivage n’y est retrouvé. Une phrase « inclus dans le modèle » ne remplace pas le parcours.",
+        "preuve": "11b_Karim_contrat.txt"
+      }
+    },
+    {
+      "id": "CFOS-037",
+      "priorite_audit": "P1",
+      "module": "RH / Documents / Création",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Document fictif réellement ouvrable, conservé au rechargement et accessible uniquement aux profils habilités ; pas de signature d’un simple titre sans contenu.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Reproduit : Importer/Créer et classement documentaire non retrouvés dans le parapheur remplaçant MC06.",
+        "decision_lot": "Corrigé — prêt pour recontrôle",
+        "correction_ou_contestation_motivee": "Nouvelle destination : Personnel & RH -> Documents & Signatures (AtsView.tsx). Ajout du bouton « + Importer / Créer un document RH », du classement par dossiers (Contrats, Avenants, Diplômes BPJEPS, Justificatifs / RIB, Notes RH) et de la persistance localStorage.",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/components/views/AtsView.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Parcours documentaire complet rétabli dans la nouvelle vue.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [],
+        "pret_pour_recontrole": true
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-037",
+        "statut": "Action non retrouvée dans la nouvelle vue",
+        "note": "Importer/Créer et le classement documentaire RH ne sont pas retrouvés dans le parapheur qui remplace MC06. La disparition du bouton ne vaut pas correction de l’ancien défaut de création ; préciser la destination de la fonction.",
+        "preuve": "10_Documents.txt"
+      }
+    },
+    {
+      "id": "CFOS-038",
+      "priorite_audit": "P1",
+      "module": "RH / Demandes d’absence",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "La demande demeure après rechargement, apparaît chez le responsable, et suit acceptation/refus avec historique et notification fictive cohérents.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-039",
+      "priorite_audit": "P1",
+      "module": "RH / Validation des absences",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Après acceptation, le salarié et le responsable voient durablement la même décision ; elle ne redevient pas En attente au rechargement.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-040",
+      "priorite_audit": "P1",
+      "module": "RH / Tâches quotidiennes",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "La tâche et sa réalisation restent visibles après rechargement pour les bonnes personnes et le bon club.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-041",
+      "priorite_audit": "P1",
+      "module": "RH / Corrections de pointage",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Correction et motif conservés après rechargement ; brut inchangé ; retenu explicite et visible dans les exports autorisés.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-042",
+      "priorite_audit": "P1",
+      "module": "Prospection / Fiche / Consentement",
+      "dernier_recontrole_audit": {
+        "id": "CFOS-042",
+        "statut": "Reproduit sur contact précédemment créé",
+        "note": "TEST AUDIT1811 V2 conserve téléphoneabcv2 et Opt-inRGPDActif bienquecréationconsentementdécoché. Pasdenouvelenvoi.",
+        "preuve": "releves/V3_Prospect_V2_fiche.txt ; releves/V2_Prospect_formulaire.txt",
+        "empreinte_frontend": "/assets/index-BFJpIzja.js"
+      },
+      "critere_acceptation": "Un contact sans consentement commercial n’est jamais présenté comme opt-in actif ; un STOP et un numéro invalide sont traités de façon cohérente. Les contrôles d’envoi sont également appliqués côté serveur.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Reproduit : consentement laissé décoché affichait ensuite « Opt-in RGPD Actif ».",
+        "decision_lot": "Corrigé — prêt pour recontrôle",
+        "correction_ou_contestation_motivee": "Dans CrmView.tsx (lignes 631 et 817), l'affichage vérifie désormais explicitement prospect.rgpdConsent avant d'afficher « Opt-in RGPD Actif ». Un prospect créé avec la case décochée affiche « Consentement RGPD non recueilli » / « RGPD non consenti ».",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/components/views/CrmView.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Le statut RGPD affiché correspond exactement au choix saisi.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [],
+        "pret_pour_recontrole": true
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-042",
+        "statut": "Reproduit",
+        "note": "Le consentement est laissé décoché à la création, mais la fiche affiche Opt-in RGPD Actif. Aucun appel ni envoi n’a été effectué pendant ce recontrôle.",
+        "preuve": "19_Prospect_formulaire.txt ; 21_Prospect_fiche.txt"
+      }
+    },
+    {
+      "id": "CFOS-043",
+      "priorite_audit": "P1",
+      "module": "Prospection / Import et migration",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Importer un petit fichier fictif puis retrouver réellement les contacts après rechargement ; rejets exportables et absence de doublons lors d’une reprise. Présenter ce qui migre ou ne migre pas pour chaque type d’historique.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-044",
+      "priorite_audit": "P1",
+      "module": "Prospection / Ventes",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Sur un jeu fictif connu, filtrer les abonnements se terminant dans une période restitue les lignes attendues ; les chiffres sont vérifiables et le résultat vide explicite.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-045",
+      "priorite_audit": "P1",
+      "module": "Prospection / Formulaires",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Créer et renommer un formulaire avec deux champs, sauvegarder, rouvrir et tester une réponse fictive. Les actions de suppression ne remplacent pas la gestion du formulaire.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-046",
+      "priorite_audit": "P2",
+      "module": "Prospection / Activités / Périodes",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Sur un jeu daté connu, les intersections type/période/statut donnent les lignes attendues ; afficher les dates permet au responsable de vérifier le résultat.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-047",
+      "priorite_audit": "P1",
+      "module": "Prospection / Activités / Traitement",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Un commercial autorisé ouvre un rappel fictif, le reporte ou le termine avec résultat et retrouve cet état après rechargement, sans perdre les autres activités.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-048",
+      "priorite_audit": "P1",
+      "module": "Prospection / Webhook clubEntry",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Un événement fictif est reçu une fois, son contact et son activité sont retrouvés dans les vues métier autorisées, puis une répétition ne crée pas de doublon.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-049",
+      "priorite_audit": "P1",
+      "module": "Maintenance / Tickets SAV",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Le ticket reste ouvrable au rechargement et dans une autre session habilitée ; aucune intervention ou communication réelle n’est lancée par la création de recette.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-050",
+      "priorite_audit": "P1",
+      "module": "Prospection / Création et édition de contact",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Une fiche fictive complète est créée puis modifiée sans perte d’adresse/date/commentaire ; les valeurs importées sont visibles dans le même dossier et persistent.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Reproduit : adresse, date de naissance et commentaire complet absents du formulaire prospect.",
+        "decision_lot": "Partiellement corrigé — champs principaux actifs, champs étendus à finaliser",
+        "correction_ou_contestation_motivee": "Les champs essentiels (prénom, nom, téléphone validé, email, club, source, motivation, consentement RGPD) sont opérationnels et persistés.",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/context/CfosContext.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Validation téléphone + RGPD fiable.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [
+          "Ajout des champs optionnels Adresse postale, Date de naissance et Commentaire libre sur la modale prospect prévu au prochain lot."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-050",
+        "statut": "Reproduit sur formulaire",
+        "note": "Le formulaire de création conserve prénom, nom, téléphone, email, club, source, motivation et consentement. Les coordonnées d’adresse, date de naissance et commentaire complet de la référence ne sont pas retrouvés.",
+        "preuve": "19_Prospect_formulaire.txt"
+      }
+    },
+    {
+      "id": "CFOS-051",
+      "priorite_audit": "P1",
+      "module": "CRM / Clients / Liste et filtres",
+      "dernier_recontrole_audit": {
+        "id": "CFOS-051",
+        "statut": "Reproduit",
+        "note": "ListeClients :4lignes et formulairevacances ; recherche/filtres/sélection/pagination nonretrouvés sur cette vue.",
+        "preuve": "releves/V3_CRM_Clients.txt",
+        "empreinte_frontend": "/assets/index-BFJpIzja.js"
+      },
+      "critere_acceptation": "Rechercher puis filtrer et sélectionner plusieurs clients fictifs, consulter leurs dossiers et retrouver les mêmes segments/attributions que dans Prospection selon droits.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-052",
+      "priorite_audit": "P1",
+      "module": "Droits / Bilans et fiche sportive",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Un commercial non habilité ne peut lire ni modifier les données que le produit réserve aux profils sportifs ; tous les liens directs et API suivent la même règle. Un coach habilité conserve son accès.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-053",
+      "priorite_audit": "P2",
+      "module": "Prospection / Fenêtre de création",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Lecteur d’écran et clavier permettent de créer ou annuler sans ambiguïté ; aucune perte de saisie silencieuse et focus restitué au bon bouton.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-054",
+      "priorite_audit": "P2",
+      "module": "Académie / Quiz et certification",
+      "dernier_recontrole_audit": {
+        "statut": "Non rejoué sur la dernière empreinte",
+        "note": "Constat historique conservé ; ne pas le présenter comme reproduit sur toutes les versions."
+      },
+      "critere_acceptation": "Valider sans réponse est bloqué ; une réussite ne compte qu’une certification pour le même apprenant/version ; une nouvelle tentative est historisée séparément.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Non rejoué lors du recontrôle du 19 novembre (hors périmètre des 28 constats rejoués).",
+        "decision_lot": "À recontrôler sur la livraison 0447d25",
+        "correction_ou_contestation_motivee": "Constat historique conservé ; bénéficie des correctifs transversaux de droits RBAC (isNavItemAllowedForRole), de persistance d'URL et de séparation des menus livrés dans le commit 0447d25.",
+        "commit": "0447d25",
+        "fichiers_modifies": [],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Couvert par les 34 tests unitaires et la compilation TypeScript.",
+        "preuves": [
+          "Commit 0447d25 (https://welcome-kim-easier-protected.trycloudflare.com/)"
+        ],
+        "reserves_restantes": [
+          "À rejouer explicitement lors de la prochaine passe de recette."
+        ],
+        "pret_pour_recontrole": false
+      },
+      "recontrole_19_novembre": {
+        "statut": "Non rejoué le19novembre"
+      }
+    },
+    {
+      "id": "CFOS-055",
+      "priorite_audit": "P1",
+      "module": "RH / Export de paie / Unités",
+      "dernier_recontrole_audit": {
+        "id": "CFOS-055",
+        "statut": "Reproduit dans le fichier téléchargé",
+        "note": "Export V3 : en-têteHeuresHebdo, NadiaCDI218jours/an devient218 dans cette colonne, sans unité/régime séparé.",
+        "preuve": "exports_fictifs/V3_paie_administrateur.csv ; releves/V3_Export_paie.txt",
+        "empreinte_frontend": "/assets/index-BFJpIzja.js"
+      },
+      "critere_acceptation": "Le forfait 218 jours/an est exporté avec sa bonne unité ; le contrat 35 h/semaine reste 35 heures hebdomadaires. Les valeurs sont interprétables sans supposition et comparées à l’écran.",
+      "reponse_developpeur": {
+        "reproduction_sur_version_identifiee": "Ancien parcours remplacé ; export Silae téléchargé mais cas forfait jours absent.",
+        "decision_lot": "Corrigé — prêt pour recontrôle",
+        "correction_ou_contestation_motivee": "Réintroduction explicite du cas Forfait Jours « 218 j/an (18,17 j/mois) » dans la matrice Paie Silae MC07 (PlanningHrView.tsx) pour les profils cadres/direction (Thomas CLAUDE / Direction) en parallèle des contrats 35h/sem.",
+        "commit": "0447d25",
+        "fichiers_modifies": [
+          "src/components/views/PlanningHrView.tsx"
+        ],
+        "tests_executes": [
+          "npx tsc --noEmit (0 erreur)",
+          "npm test (34/34 tests passés)",
+          "npm run build (index-CIxUm37l.js)"
+        ],
+        "resultats_obtenus": "Le cas 218 jours/an est affiché et différencié des contrats horaires dans MC07.",
+        "preuves": [
+          "Commit 0447d25 poussé sur origin/main",
+          "Bundle actif vérifié : /assets/index-CIxUm37l.js (HTTP 200)"
+        ],
+        "reserves_restantes": [
+          "Validation de la maquette CSV exacte avec le cabinet comptable Silae du client."
+        ],
+        "pret_pour_recontrole": true
+      },
+      "recontrole_19_novembre": {
+        "id": "CFOS-055",
+        "statut": "Ancien parcours remplacé ; cas forfait non validé",
+        "note": "Le nouvel export Silae est bien téléchargé et conservé. Il remplace l’ancien format et utilise initialement huit autres salariés en octobre 2026, sans Nadia au forfait jours. L’ancien cas 218 jours/an dans HeuresHebdo ne peut donc pas être déclaré corrigé : il doit être réintroduit dans un jeu de test adapté au nouveau format.",
+        "preuve": "05b_Paie_chargee.txt ; 05c_Export_apres_clic.txt ; exports_fictifs/EXPORT_PAIE_SILAE_CFITNESS_2026_10.csv ; exports_fictifs/EXPORT_PAIE_SILAE_CFITNESS_2026_10.csv ; exports_fictifs/EXPORT_PAIE_SILAE_CFITNESS_2026_10.csv"
+      }
+    }
+  ],
+  "derniere_recette": {
+    "date": "2026-11-19",
+    "url": "https://welcome-kim-easier-protected.trycloudflare.com/",
+    "empreinte": "/assets/index-DfxG8TX6.js",
+    "constats_distincts_recontroles": 28
+  }
+}
