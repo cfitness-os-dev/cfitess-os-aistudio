@@ -848,7 +848,7 @@ export function OrchestratorMaintenanceView() {
               </h1>
               <p className="text-xs sm:text-sm text-slate-500 mt-1">
                 {activeTab === 'MODULE_STOCKS' &&
-                  'Suivi en temps réel des stocks (C.Fitness Center & C.Fitness Place), alertes de seuil bas, réapprovisionnement automatique et bons de commande fournisseurs.'}
+                  'Suivi en temps réel des stocks (C.Fitness Carré de Soie & C.Fitness Beynost), alertes de seuil bas, réapprovisionnement automatique et bons de commande fournisseurs.'}
                 {activeTab === 'MODULE_MAINTENANCE' &&
                   'Pilotage préventif et curatif du parc Technogym Biocircuit/Checkup, des centrales d’air CTA (Beynost & Center) et des portillons RFID/Bluetooth Heitz.'}
                 {activeTab === 'ARCHITECTURE_ORCHESTRATOR' &&
@@ -1386,7 +1386,7 @@ export function OrchestratorMaintenanceView() {
                 {totalStockValueHt.toLocaleString('fr-FR')} € HT
               </div>
               <div className="text-[11px] text-slate-500 mt-0.5">
-                Valorisation temps réel Center &amp; Place
+                Valorisation temps réel Carré de Soie &amp; Beynost
               </div>
             </div>
 
@@ -1409,7 +1409,7 @@ export function OrchestratorMaintenanceView() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-3">
                 <div>
                   <span className="text-[11px] font-mono uppercase text-orange-600 font-bold">
-                    Inventaire Temps Réel · C.Fitness Center &amp; C.Fitness Place
+                    Inventaire Temps Réel · C.Fitness Carré de Soie &amp; C.Fitness Beynost
                   </span>
                   <h2 className="text-base font-extrabold text-slate-900">
                     État des Stocks, Consommables &amp; Produits Bar / Boutique ({filteredStocks.length})
@@ -1592,8 +1592,8 @@ export function OrchestratorMaintenanceView() {
                         onChange={(e) => setNewStockClub(e.target.value as ClubId)}
                         className="w-full px-2.5 py-2 rounded-xl border border-slate-300 bg-white"
                       >
-                        <option value="carre-de-soie">C.Fitness Center (CDS)</option>
-                        <option value="beynost">C.Fitness Place (BEY)</option>
+                        <option value="carre-de-soie">C.Fitness Carré de Soie (CDS)</option>
+                        <option value="beynost">C.Fitness Beynost (BEY)</option>
                       </select>
                     </div>
                   </div>
@@ -1772,7 +1772,7 @@ export function OrchestratorMaintenanceView() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-3">
                 <div>
                   <span className="text-[11px] font-mono uppercase text-violet-600 font-bold">
-                    Maintenance Préventive &amp; Curative · C.Fitness Center &amp; C.Fitness Place
+                    Maintenance Préventive &amp; Curative · C.Fitness Carré de Soie &amp; C.Fitness Beynost
                   </span>
                   <h2 className="text-base font-extrabold text-slate-900">
                     Suivi des Équipements, Climatisation CTA &amp; Interventions ({filteredTickets.length})

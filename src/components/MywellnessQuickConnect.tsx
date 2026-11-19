@@ -287,18 +287,18 @@ export function MywellnessQuickConnect({
           </div>
 
           <p className="text-xs text-slate-600 leading-relaxed">
-            Stations <strong>Technogym Checkup</strong> (C.Fitness Center &amp; Place) synchronisées avec Mywellness Cloud.
+            Stations <strong>Technogym Checkup</strong> (C.Fitness Carré de Soie &amp; Beynost) synchronisées avec Mywellness Cloud.
           </p>
 
           <div className="divide-y divide-slate-100 text-xs font-mono tabular-nums">
             <div className="py-1.5 flex items-center justify-between">
-              <span className="font-sans text-slate-600">C.Fitness Center (#1)</span>
+              <span className="font-sans text-slate-600">C.Fitness Carré de Soie (#1)</span>
               <span className={isCheckupConnected ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>
                 {isCheckupConnected ? `Connecté · ${checkupLatencyMs.cds} ms` : 'Hors ligne'}
               </span>
             </div>
             <div className="py-1.5 flex items-center justify-between">
-              <span className="font-sans text-slate-600">C.Fitness Place (#2)</span>
+              <span className="font-sans text-slate-600">C.Fitness Beynost (#2)</span>
               <span className={isCheckupConnected ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>
                 {isCheckupConnected ? `Connecté · ${checkupLatencyMs.bey} ms` : 'Hors ligne'}
               </span>
@@ -340,7 +340,7 @@ export function MywellnessQuickConnect({
               <span aria-hidden="true">·</span>
               <span>Suivi sportif 100 % unifié</span>
               <span aria-hidden="true">·</span>
-              <span>C.Fitness Center &amp; Place</span>
+              <span>C.Fitness Carré de Soie &amp; Beynost</span>
             </div>
             <h2 className="text-base sm:text-lg font-extrabold text-slate-900 leading-snug">
               Passerelle Rapide Mywellness &amp; Statut Technogym Checkup

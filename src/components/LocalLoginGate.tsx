@@ -184,7 +184,7 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
               </span>
             </div>
             <div className="text-xs text-slate-400">
-              {CFITNESS_LEGAL_IDENTITY.raisonSociale} · SIRET {CFITNESS_LEGAL_IDENTITY.siret} · C.Fitness Center &amp; Place
+              {CFITNESS_LEGAL_IDENTITY.raisonSociale} · SIRET {CFITNESS_LEGAL_IDENTITY.siret} · C.Fitness Carré de Soie &amp; Beynost
             </div>
           </div>
         </div>
@@ -409,7 +409,7 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
             <div className="text-right font-mono text-xs">
               <div className="text-slate-400">Club :</div>
               <div className="font-bold">
-                {selectedEmployee.clubId === 'carre-de-soie' ? 'C.Fitness Center' : 'C.Fitness Place'}
+                {selectedEmployee.clubId === 'carre-de-soie' ? 'C.Fitness Carré de Soie' : 'C.Fitness Beynost'}
               </div>
             </div>
           </div>

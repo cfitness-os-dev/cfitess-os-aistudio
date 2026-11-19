@@ -437,8 +437,8 @@ export function DevicesHeitzView() {
                 </h2>
                 <div className="text-xs text-slate-500">
                   {isFinancesView
-                    ? 'Suivi du CA mensuel (Center 54 230 € · Place 48 220 €), 5 impayés SEPA à relancer (1 250 €) et caisse comptoir NF525'
-                    : 'Fiches adhérents C.Fitness Center (682) & C.Fitness Place (566), badges RFID/BLE et bilans Technogym Checkup'}
+                    ? 'Suivi du CA mensuel (Carré de Soie 54 230 € · Beynost 48 220 €), 5 impayés SEPA à relancer (1 250 €) et caisse comptoir NF525'
+                    : 'Fiches adhérents C.Fitness Carré de Soie (682) & C.Fitness Beynost (566), badges RFID/BLE et bilans Technogym Checkup'}
                 </div>
               </div>
             </div>
@@ -609,8 +609,8 @@ export function DevicesHeitzView() {
                   onChange={(e) => setNewMemberClubId(e.target.value as ClubId)}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900"
                 >
-                  <option value="carre-de-soie">C.Fitness Center (Carré de Soie)</option>
-                  <option value="beynost">C.Fitness Place (Beynost)</option>
+                  <option value="carre-de-soie">C.Fitness Carré de Soie (Vaulx-en-Velin)</option>
+                  <option value="beynost">C.Fitness Beynost (ZAC des Baterses)</option>
                 </select>
               </div>
               <div>
@@ -739,17 +739,17 @@ export function DevicesHeitzView() {
               <div className="text-lg font-black text-slate-900 mt-0.5">
                 102 450 € <span className="text-emerald-600 text-xs font-bold">↑ +8%</span>
               </div>
-              <div className="text-[11px] text-slate-500">Consolidé Center &amp; Place</div>
+              <div className="text-[11px] text-slate-500">Consolidé Carré de Soie &amp; Beynost</div>
             </div>
             <div className="p-3 rounded-xl bg-violet-50/70 border border-violet-200">
-              <div className="text-slate-500 font-medium">CA C.Fitness Center (Lyon 3e)</div>
+              <div className="text-slate-500 font-medium">CA C.Fitness Carré de Soie (69120 Vaulx-en-Velin)</div>
               <div className="text-lg font-black text-slate-900 mt-0.5">
                 54 230 € <span className="text-emerald-600 text-xs font-bold">↑ +7%</span>
               </div>
               <div className="text-[11px] text-slate-500">682 adhérents actifs · SEPA EBICS</div>
             </div>
             <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200">
-              <div className="text-slate-500 font-medium">CA C.Fitness Place (Lyon 6e)</div>
+              <div className="text-slate-500 font-medium">CA C.Fitness Beynost (Lyon 6e)</div>
               <div className="text-lg font-black text-slate-900 mt-0.5">
                 48 220 € <span className="text-emerald-600 text-xs font-bold">↑ +9%</span>
               </div>

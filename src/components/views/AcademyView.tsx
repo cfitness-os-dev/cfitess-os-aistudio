@@ -82,7 +82,7 @@ export function AcademyView() {
             </div>
             <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 mt-0.5">
               {viewMode === 'RAPPORTS'
-                ? 'Rapports & Statistiques Consolidés (C.Fitness Center & C.Fitness Place)'
+                ? 'Rapports & Statistiques Consolidés (C.Fitness Carré de Soie & C.Fitness Beynost)'
                 : 'Académie Interne C.Fitness, Suivi Apprentis BPJEPS & Checklists'}
             </h1>
             <p className="text-xs text-slate-500 mt-1">
@@ -230,14 +230,14 @@ export function AcademyView() {
                   Tableau Comparatif Multi-Sites · Avril 2025
                 </span>
                 <h2 className="text-base font-extrabold text-slate-900">
-                  Comparatif Détaillé : C.Fitness Center (Lyon 3e) vs C.Fitness Place (Lyon 6e)
+                  Comparatif Détaillé : C.Fitness Carré de Soie (69120 Vaulx-en-Velin) vs C.Fitness Beynost (Lyon 6e)
                 </h2>
               </div>
               <button
                 type="button"
                 onClick={() =>
                   setExportToast(
-                    'Rapport mensuel consolidé (PDF / CSV) généré avec succès pour C.Fitness Center et C.Fitness Place.'
+                    'Rapport mensuel consolidé (PDF / CSV) généré avec succès pour C.Fitness Carré de Soie et C.Fitness Beynost.'
                   )
                 }
                 className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold flex items-center gap-1.5 cursor-pointer self-start"
@@ -252,8 +252,8 @@ export function AcademyView() {
                 <thead>
                   <tr className="border-b border-slate-200 text-[11px] font-bold uppercase text-slate-500">
                     <th className="py-2.5 pr-3">Indicateur de Performance</th>
-                    <th className="py-2.5 px-3">C.Fitness Center (CDS)</th>
-                    <th className="py-2.5 px-3">C.Fitness Place (BEY)</th>
+                    <th className="py-2.5 px-3">C.Fitness Carré de Soie (CDS)</th>
+                    <th className="py-2.5 px-3">C.Fitness Beynost (BEY)</th>
                     <th className="py-2.5 px-3">Total / Moyenne Bi-Club</th>
                     <th className="py-2.5 pl-3">Évolution (30j)</th>
                   </tr>
@@ -543,7 +543,7 @@ export function AcademyView() {
                         {task.label}
                       </div>
                       <div className="text-[11px] text-slate-500">
-                        Club {task.clubId === 'carre-de-soie' ? 'C.Fitness Center' : 'C.Fitness Place'} ·{' '}
+                        Club {task.clubId === 'carre-de-soie' ? 'C.Fitness Carré de Soie' : 'C.Fitness Beynost'} ·{' '}
                         {task.shiftType}
                         {completed &&
                           ` · Validé par ${task.checkedBy} à ${task.checkedAt}`}

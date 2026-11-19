@@ -204,7 +204,7 @@ export function runGraftedSystemsCompatibilityAudit(params: {
       id: 'sys-ha-ups-failover-321',
       systemName: '8. Haute Disponibilité Onduleur Eaton & Sauvegarde 3-2-1 (6 Réplicas)',
       vendorAndVersion: 'Eaton 5SC 1500i (NUT USB) + Moteur Auto-Mesh 6 Appareils',
-      localEndpoint: '10.10.0.10 → 6 Postes & Tablettes (Center & Place)',
+      localEndpoint: '10.10.0.10 → 6 Postes & Tablettes (Carré de Soie & Beynost)',
       protocolAndPort: 'BroadcastChannel + IndexedDB + Enveloppe JSON Signée SHA-256',
       securityMechanism: 'Bascule automatique < 1 s en cas de coupure + Restauration contrôlée',
       legalComplianceRef: 'Norme ISO 22301 (Continuité d’activité) & Règle ANSSI 3-2-1-1-0',

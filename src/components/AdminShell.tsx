@@ -429,7 +429,7 @@ export function AdminShell() {
             <span>Tableau de bord</span>
           </button>
 
-          {/* Expandable Clubs Group: C.Fitness Center & C.Fitness Place */}
+          {/* Expandable Clubs Group: C.Fitness Carré de Soie & C.Fitness Beynost */}
           <div className="pt-1">
             <button
               type="button"
@@ -471,7 +471,7 @@ export function AdminShell() {
                 >
                   <div className="flex items-center gap-2 truncate">
                     <MapPin className="w-3.5 h-3.5 text-violet-400 shrink-0" />
-                    <span className="truncate">C.Fitness Center</span>
+                    <span className="truncate">C.Fitness Carré de Soie</span>
                   </div>
                   <span className="text-[10px] opacity-70">CDS</span>
                 </button>
@@ -494,7 +494,7 @@ export function AdminShell() {
                 >
                   <div className="flex items-center gap-2 truncate">
                     <MapPin className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                    <span className="truncate">C.Fitness Place</span>
+                    <span className="truncate">C.Fitness Beynost</span>
                   </div>
                   <span className="text-[10px] opacity-70">BEY</span>
                 </button>

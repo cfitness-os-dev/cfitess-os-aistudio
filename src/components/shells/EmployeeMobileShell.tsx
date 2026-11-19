@@ -510,7 +510,7 @@ export function EmployeeMobileShell() {
             </h2>
             <p className="text-xs text-slate-400">
               Lundi {selectedDayNum} avril 2025 ·{' '}
-              {mobileClub === 'center' ? 'C.Fitness Center' : 'C.Fitness Place'}
+              {mobileClub === 'center' ? 'C.Fitness Carré de Soie' : 'C.Fitness Beynost'}
             </p>
           </div>
 
@@ -1308,8 +1308,8 @@ export function EmployeeMobileShell() {
                 action: () => openPhoneModule('dashboard', 'Tableau de bord'),
               },
               {
-                label: 'Clubs Center & Place',
-                action: () => openPhoneModule('dashboard', 'Clubs Center & Place', 'clubs'),
+                label: 'Clubs Carré de Soie & Beynost',
+                action: () => openPhoneModule('dashboard', 'Clubs Carré de Soie & Beynost', 'clubs'),
               },
               {
                 label: 'Adhérents & Caisse TPV',
@@ -1617,7 +1617,7 @@ export function EmployeeMobileShell() {
                   const [sec, sub] = val.split(':');
                   const labelMap: Record<string, string> = {
                     'dashboard:': 'Tableau de bord',
-                    'dashboard:clubs': 'Clubs Center & Place',
+                    'dashboard:clubs': 'Clubs Carré de Soie & Beynost',
                     'devices:adherents': 'Adhérents & Caisse TPV',
                     'devices:checkup': 'Bilans & Mywellness',
                     'crm:': 'CRM & Ventes',
@@ -1647,7 +1647,7 @@ export function EmployeeMobileShell() {
               >
                 <option value="">-- 4 Onglets Mobile (Accueil / Planning / Adhérents / Plus) --</option>
                 <option value="dashboard:">1. Tableau de bord</option>
-                <option value="dashboard:clubs">2. Clubs (Center &amp; Place)</option>
+                <option value="dashboard:clubs">2. Clubs (Carré de Soie &amp; Beynost)</option>
                 <option value="devices:adherents">3. Adhérents, Portillons &amp; Caisse TPV</option>
                 <option value="devices:checkup">4. Bilans Checkup &amp; Fiche Mywellness</option>
                 <option value="crm:">5. CRM &amp; Ventes</option>
@@ -1867,7 +1867,7 @@ export function EmployeeMobileShell() {
                   {
                     id: 'dashboard',
                     sub: 'clubs',
-                    label: 'Clubs (Center & Place)',
+                    label: 'Clubs (Carré de Soie & Beynost)',
                     icon: Building2,
                   },
                   {

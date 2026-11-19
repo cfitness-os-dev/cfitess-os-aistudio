@@ -57,7 +57,7 @@ const CLIENT_INSTALL_PREREQUISITES = [
   {
     id: 'req-mywellness',
     system: '2. Technogym Mywellness Cloud & Checkup (Cours collectifs & Bilans)',
-    ask: 'Clé API Technogym Mywellness, identifiants Facility ID des 2 clubs (Center & Place) et compte admin Mywellness pour la synchro des cours et bilans.',
+    ask: 'Clé API Technogym Mywellness, identifiants Facility ID des 2 clubs (Carré de Soie & Beynost) et compte admin Mywellness pour la synchro des cours et bilans.',
     envHint: 'MYWELLNESS_API_KEY, MYWELLNESS_FACILITY_IDS',
   },
   {

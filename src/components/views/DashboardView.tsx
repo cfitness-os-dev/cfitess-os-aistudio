@@ -839,9 +839,9 @@ export function DashboardView() {
               </div>
             </div>
 
-            {/* ROW 2: 2 CLUB OVERVIEW CARDS SIDE-BY-SIDE (C.Fitness Center & C.Fitness Place) */}
+            {/* ROW 2: 2 CLUB OVERVIEW CARDS SIDE-BY-SIDE (C.Fitness Carré de Soie & C.Fitness Beynost) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Club Card 1: C.Fitness Center (Carré de Soie / Lyon) */}
+              {/* Club Card 1: C.Fitness Carré de Soie (Carré de Soie / Lyon) */}
               <div
                 onClick={() =>
                   setClubFilter(clubFilter === 'carre-de-soie' ? 'all' : 'carre-de-soie')
@@ -872,11 +872,11 @@ export function DashboardView() {
                           isDark ? 'text-white' : 'text-slate-900'
                         }`}
                       >
-                        C.Fitness Center
+                        C.Fitness Carré de Soie
                       </h2>
                       <div className="flex items-center gap-1 text-xs text-slate-400 mt-0.5">
                         <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="truncate">Lyon 3e · Carré de Soie</span>
+                        <span className="truncate">Vaulx-en-Velin · Carré de Soie</span>
                       </div>
                     </div>
                   </div>
@@ -963,7 +963,7 @@ export function DashboardView() {
                 </div>
               </div>
 
-              {/* Club Card 2: C.Fitness Place (Beynost / Lyon) */}
+              {/* Club Card 2: C.Fitness Beynost (Beynost / Lyon) */}
               <div
                 onClick={() => setClubFilter(clubFilter === 'beynost' ? 'all' : 'beynost')}
                 className={`rounded-2xl border p-4 cursor-pointer transition-all ${
@@ -990,7 +990,7 @@ export function DashboardView() {
                           isDark ? 'text-white' : 'text-slate-900'
                         }`}
                       >
-                        C.Fitness Place
+                        C.Fitness Beynost
                       </h2>
                       <div className="flex items-center gap-1 text-xs text-slate-400 mt-0.5">
                         <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
@@ -1097,8 +1097,8 @@ export function DashboardView() {
                   </div>
                   <div className="text-sm font-extrabold">
                     {clubFilter === 'carre-de-soie'
-                      ? 'C.Fitness Center (Lyon 3e · Carré de Soie) — 682 adhérents · 54 230 € CA · 28 cours/sem'
-                      : 'C.Fitness Place (Lyon 6e · Beynost ZAC) — 566 adhérents · 48 220 € CA · 32 cours/sem'}
+                      ? 'C.Fitness Carré de Soie (Vaulx-en-Velin · Carré de Soie) — 682 adhérents · 54 230 € CA · 28 cours/sem'
+                      : 'C.Fitness Beynost (Lyon 6e · Beynost ZAC) — 566 adhérents · 48 220 € CA · 32 cours/sem'}
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 shrink-0 text-xs">
@@ -1162,11 +1162,11 @@ export function DashboardView() {
                   <div className="flex flex-wrap items-center gap-3 mt-2.5 text-[11px] text-slate-400">
                     <span className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-violet-500" />
-                      C.Fitness Center
+                      C.Fitness Carré de Soie
                     </span>
                     <span className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-blue-500" />
-                      C.Fitness Place
+                      C.Fitness Beynost
                     </span>
                     <span className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-indigo-400" />

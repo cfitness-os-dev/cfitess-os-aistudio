@@ -568,7 +568,7 @@ export function PlanningHrView({
                 </div>
                 <h2 className="font-extrabold text-lg tracking-tight text-slate-900">
                   {isCoursCollectifsView
-                    ? 'Cours collectifs — 28 cours/sem Center · 32 cours/sem Place'
+                    ? 'Cours collectifs — 28 cours/sem Carré de Soie · 32 cours/sem Beynost'
                     : isPlanningOnlyView
                     ? 'Planning des Équipes — Carré de Soie & Beynost'
                     : 'Planning Équipes, Pointeuse & Export Paie Silae'}
@@ -654,7 +654,7 @@ export function PlanningHrView({
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
                 <span className="text-[10px] font-mono uppercase font-bold text-rose-600">
-                  Planning des Cours Collectifs · C.Fitness Center (28 cours/sem) &amp; C.Fitness Place (32 cours/sem)
+                  Planning des Cours Collectifs · C.Fitness Carré de Soie (28 cours/sem) &amp; C.Fitness Beynost (32 cours/sem)
                 </span>
                 <h3 className="text-sm font-extrabold text-slate-900">
                   Séances du jour &amp; Top 5 de fréquentation des cours collectifs
@@ -675,7 +675,7 @@ export function PlanningHrView({
                 {
                   name: '1. BodyPump',
                   time: '08:00 & 18:00',
-                  room: 'Salle 1 · Center & Place',
+                  room: 'Salle 1 · Carré de Soie & Beynost',
                   booked: '28 / 30 participants',
                   pct: '92 %',
                   badge: 'bg-rose-100 text-rose-800 border-rose-200',
@@ -683,7 +683,7 @@ export function PlanningHrView({
                 {
                   name: '2. Yoga Flow',
                   time: '12:30 & 18:00',
-                  room: 'Studio Zen · Place',
+                  room: 'Studio Zen · Beynost',
                   booked: '28 / 30 participants',
                   pct: '88 %',
                   badge: 'bg-amber-100 text-amber-800 border-amber-200',
@@ -691,7 +691,7 @@ export function PlanningHrView({
                 {
                   name: '3. HIIT / GRIT',
                   time: '17:00',
-                  room: 'Zone Athletic · Center',
+                  room: 'Zone Athletic · Carré de Soie',
                   booked: '16 / 20 participants',
                   pct: '86 %',
                   badge: 'bg-emerald-100 text-emerald-800 border-emerald-200',
@@ -699,7 +699,7 @@ export function PlanningHrView({
                 {
                   name: '4. Pilates & BodyBalance',
                   time: '09:00',
-                  room: 'Salle 1 · Center',
+                  room: 'Salle 1 · Carré de Soie',
                   booked: '28 / 30 participants',
                   pct: '81 %',
                   badge: 'bg-violet-100 text-violet-800 border-violet-200',
@@ -707,7 +707,7 @@ export function PlanningHrView({
                 {
                   name: '5. Cycling / RPM',
                   time: '10:00 & 19:00',
-                  room: 'Salle 2 Bike · Place',
+                  room: 'Salle 2 Bike · Beynost',
                   booked: '24 / 30 participants',
                   pct: '78 %',
                   badge: 'bg-sky-100 text-sky-800 border-sky-200',
@@ -1816,13 +1816,13 @@ export function PlanningHrView({
                       Indicateurs Cours Collectifs · Semaine {currentWeekNumber}
                     </span>
                     <span className="text-slate-300 hidden sm:inline">
-                      Fréquentation &amp; salles actives Center &amp; Place
+                      Fréquentation &amp; salles actives Carré de Soie &amp; Beynost
                     </span>
                   </div>
                   <div className="flex flex-wrap items-center gap-5 font-mono tabular-nums">
                     <div>
                       <span className="text-slate-400 text-[11px]">Volume hebdo : </span>
-                      <span className="font-bold text-white">60 cours (28 Center · 32 Place)</span>
+                      <span className="font-bold text-white">60 cours (28 Carré de Soie · 32 Beynost)</span>
                     </div>
                     <div>
                       <span className="text-slate-400 text-[11px]">Remplissage moyen : </span>
