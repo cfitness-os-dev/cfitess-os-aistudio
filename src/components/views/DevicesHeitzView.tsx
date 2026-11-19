@@ -749,7 +749,7 @@ export function DevicesHeitzView() {
               <div className="text-[11px] text-slate-500">682 adhérents actifs · SEPA EBICS</div>
             </div>
             <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200">
-              <div className="text-slate-500 font-medium">CA C.Fitness Beynost (Lyon 6e)</div>
+              <div className="text-slate-500 font-medium">CA C.Fitness Beynost (01700 Beynost)</div>
               <div className="text-lg font-black text-slate-900 mt-0.5">
                 48 220 € <span className="text-emerald-600 text-xs font-bold">↑ +9%</span>
               </div>

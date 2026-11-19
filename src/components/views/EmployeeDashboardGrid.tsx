@@ -175,39 +175,45 @@ export function EmployeeDashboardGrid({
         </div>
       )}
 
-      {/* SKELLO-STYLE HERO BANNER: Today's Shift & Profile Snapshot */}
+      {/* HERO BANNER: Today's Shift & Profile Snapshot */}
       <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-700/80">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div
+          className={`flex flex-col ${
+            compact ? 'gap-3.5' : 'md:flex-row md:items-center md:justify-between gap-4'
+          }`}
+        >
           {/* Identity & Shift Status */}
-          <div className="flex items-start gap-3.5">
-            <div className="w-12 h-12 rounded-xl bg-orange-600 text-white font-extrabold text-base flex items-center justify-center shrink-0 shadow-xs">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="w-11 h-11 rounded-xl bg-orange-600 text-white font-extrabold text-sm flex items-center justify-center shrink-0 shadow-xs">
               {activeEmp.firstName[0]}
               {activeEmp.lastName[0]}
             </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
-                <span className="font-semibold text-orange-400">TABLEAU DE BORD SKELLO</span>
-                <span aria-hidden="true">·</span>
-                <span>Semaine 43</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-slate-300">
+                <span className="font-semibold text-orange-400">PORTAIL SALARIÉ</span>
                 <span aria-hidden="true">·</span>
                 <span>{formatClubName(activeEmp.clubId, false)}</span>
               </div>
-              <h1 className="text-base sm:text-lg font-extrabold tracking-tight text-white mt-0.5">
+              <h1 className="text-base sm:text-lg font-extrabold tracking-tight text-white mt-0.5 truncate">
                 Bonjour, {activeEmp.firstName} {activeEmp.lastName}
               </h1>
-              <div className="text-xs text-slate-300 mt-1 flex flex-wrap items-center gap-1.5">
+              <div className="text-xs text-slate-300 mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
                 <span>{activeEmp.jobTitle}</span>
                 <span aria-hidden="true">·</span>
                 <span>{activeEmp.contractType} ({activeEmp.weeklyContractHours}h/sem)</span>
                 <span aria-hidden="true">·</span>
-                <span className="text-emerald-400 font-medium">CCN Sport IDCC 2511</span>
+                <span className="text-emerald-400 font-medium">IDCC 2511</span>
               </div>
             </div>
           </div>
 
           {/* Today's Shift Card inside Header */}
-          <div className="bg-white/10 backdrop-blur-xs rounded-xl p-3 border border-white/15 flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="space-y-0.5">
+          <div
+            className={`bg-white/10 backdrop-blur-xs rounded-xl p-3 border border-white/15 flex flex-col ${
+              compact ? 'gap-2.5' : 'sm:flex-row sm:items-center gap-3'
+            }`}
+          >
+            <div className="space-y-0.5 min-w-0">
               <div className="text-[10px] uppercase font-bold tracking-wider text-orange-300">
                 Mon Shift du Jour
               </div>
@@ -228,19 +234,25 @@ export function EmployeeDashboardGrid({
             </div>
 
             {/* Quick Badgeuse Buttons */}
-            <div className="flex items-center gap-1.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 sm:border-l border-white/15 sm:pl-3">
+            <div
+              className={
+                compact
+                  ? 'grid grid-cols-2 gap-2 pt-2.5 border-t border-white/15'
+                  : 'flex items-center gap-1.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 sm:border-l border-white/15 sm:pl-3'
+              }
+            >
               <button
                 type="button"
                 onClick={() => handleQuickPunch('arrivee')}
-                className="min-h-[44px] px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors whitespace-nowrap"
+                className="min-h-[42px] px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors whitespace-nowrap"
               >
-                <Clock className="w-3.5 h-3.5" />
+                <Clock className="w-3.5 h-3.5 shrink-0" />
                 <span>Pointer Arrivée</span>
               </button>
               <button
                 type="button"
                 onClick={() => handleQuickPunch('depart')}
-                className="min-h-[44px] px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors whitespace-nowrap"
+                className="min-h-[42px] px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white font-bold text-xs flex items-center justify-center gap-1 cursor-pointer transition-colors whitespace-nowrap"
               >
                 <span>Départ</span>
               </button>
@@ -248,14 +260,14 @@ export function EmployeeDashboardGrid({
           </div>
         </div>
 
-        {/* 4-KPI Strip Skello Summary */}
+        {/* 4-KPI Strip Summary */}
         <div
           className={`grid ${
             compact ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-4'
           } gap-2.5 mt-4 pt-3.5 border-t border-white/10 text-xs`}
         >
           <div className="bg-white/5 rounded-lg p-2.5">
-            <div className="text-[10px] text-slate-300 uppercase">Heures Hebdo Skello</div>
+            <div className="text-[10px] text-slate-300 uppercase">Heures Hebdo</div>
             <div className="font-mono font-bold text-sm text-white mt-0.5 tabular-nums">
               {totalWeeklyHours.toFixed(1)} h / {activeEmp.weeklyContractHours} h
             </div>

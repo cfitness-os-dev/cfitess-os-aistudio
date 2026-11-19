@@ -230,7 +230,7 @@ export function AcademyView() {
                   Tableau Comparatif Multi-Sites · Avril 2025
                 </span>
                 <h2 className="text-base font-extrabold text-slate-900">
-                  Comparatif Détaillé : C.Fitness Carré de Soie (69120 Vaulx-en-Velin) vs C.Fitness Beynost (Lyon 6e)
+                  Comparatif Détaillé : C.Fitness Carré de Soie (69120 Vaulx-en-Velin) vs C.Fitness Beynost (01700 Beynost)
                 </h2>
               </div>
               <button
