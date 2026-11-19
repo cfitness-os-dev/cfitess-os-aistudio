@@ -298,6 +298,27 @@ interface CfosContextValue extends PersistedState {
     goal: string;
     rgpdConsent: boolean;
   }) => { ok: boolean; message: string };
+  updateProspect: (
+    prospectId: string,
+    patch: Partial<
+      Pick<
+        Prospect,
+        | 'firstName'
+        | 'lastName'
+        | 'phone'
+        | 'email'
+        | 'clubId'
+        | 'source'
+        | 'assignedToId'
+        | 'goal'
+        | 'notes'
+        | 'address'
+        | 'leadStatus'
+        | 'segments'
+      >
+    >
+  ) => { ok: boolean; message: string };
+  assignSegmentToProspects: (prospectIds: string[], segmentName: string) => number;
   updateProspectStage: (prospectId: string, stage: ProspectStage) => void;
   scheduleProspectTrial: (prospectId: string, trialDateLabel: string) => void;
   convertProspectToMember: (
@@ -1186,6 +1207,59 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
 
     notify('success', `Prospect ${newProspect.firstName} ${newProspect.lastName} ajouté au pipeline.`);
     return { ok: true, message: 'Prospect enregistré avec succès.' };
+  };
+
+  const updateProspect: CfosContextValue['updateProspect'] = (prospectId, patch) => {
+    if (patch.phone !== undefined) {
+      const rawPhone = patch.phone.trim();
+      const digitsOnly = rawPhone.replace(/[\s.\-()]/g, '').replace(/^\+33/, '0');
+      if (!/^0[1-9]\d{8}$/.test(digitsOnly) && !/^\+\d{10,15}$/.test(rawPhone.replace(/[\s.\-()]/g, ''))) {
+        const errMsg = `Numéro de téléphone invalide (« ${rawPhone} ») — saisissez un numéro valide (ex: 06 12 34 56 78).`;
+        notify('warning', errMsg);
+        return { ok: false, message: errMsg };
+      }
+    }
+    setState((prev) => {
+      const target = prev.prospects.find((p) => p.id === prospectId);
+      if (!target) return prev;
+      return {
+        ...prev,
+        prospects: prev.prospects.map((p) =>
+          p.id === prospectId ? { ...p, ...patch } : p
+        ),
+        auditLogs: appendAudit(prev.auditLogs, {
+          clubId: patch.clubId ?? target.clubId,
+          action: 'EDITION_FICHE_PROSPECT_CRM',
+          target: `${patch.firstName ?? target.firstName} ${patch.lastName ?? target.lastName}`,
+          afterState: `Champs mis à jour : ${Object.keys(patch).join(', ')}`,
+        }),
+      };
+    });
+    notify('success', 'Fiche prospect mise à jour et persistée.');
+    return { ok: true, message: 'Fiche prospect enregistrée.' };
+  };
+
+  const assignSegmentToProspects = (prospectIds: string[], segmentName: string): number => {
+    if (!segmentName.trim() || prospectIds.length === 0) return 0;
+    const idSet = new Set(prospectIds);
+    let updatedCount = 0;
+    setState((prev) => ({
+      ...prev,
+      prospects: prev.prospects.map((p) => {
+        if (!idSet.has(p.id)) return p;
+        updatedCount += 1;
+        const nextSegs = Array.from(new Set([...(p.segments ?? []), segmentName.trim()]));
+        return { ...p, segments: nextSegs };
+      }),
+      auditLogs: appendAudit(prev.auditLogs, {
+        clubId: clubFilter === 'all' ? 'carre-de-soie' : clubFilter,
+        action: 'AFFECTATION_SEGMENT_PROSPECTS',
+        target: `${prospectIds.length} prospect(s)`,
+        afterState: `Segment ajouté : ${segmentName.trim()}`,
+      }),
+    }));
+    notify('success', `Segment « ${segmentName.trim()} » enregistré sur ${prospectIds.length} prospect(s).`);
+    return updatedCount || prospectIds.length;
   };
 
   const updateProspectStage = (prospectId: string, stage: ProspectStage) => {
@@ -2813,6 +2887,8 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     addStaffEmployee,
     updateStaffEmployeeSiteAssignments,
     updateStaffEmployeeContract,
+    updateProspect,
+    assignSegmentToProspects,
     updateRecoveryCaseStatus,
     recordRecoveryRelance,
     shellMode,

@@ -25,6 +25,13 @@ import {
 import { useCfos } from '../../context/CfosContext';
 import { cleanUiTree } from '../../domain/cleanModeSanitizer';
 import {
+  INITIAL_FICTIVE_SALES,
+  computeActivityDueBucket,
+  computeLeadReportBreakdown,
+  filterFictiveSales,
+  parseCsvLineWithQuotes,
+} from '../../domain/leadHubHelpers';
+import {
   computeSmsSegmentMetrics,
   evaluateLeadModuleAccess,
   evaluateProspectAutoArchive,
@@ -92,20 +99,34 @@ interface FictiveActivityRow {
   id: string;
   type: (typeof LEAD_ACTIVITY_TYPES)[number]['code'];
   title: string;
+  prospectId?: string;
   prospectName: string;
   clubId: 'carre-de-soie' | 'beynost';
-  dueBucket: (typeof LEAD_ACTIVITY_TIME_FILTERS)[number];
+  dueAt: string;
+  status: 'todo' | 'done';
+  assignedToId: string;
+  notes?: string;
   statusLabel: string;
 }
 
 interface FictiveFormRow {
   id: string;
   name: string;
+  description?: string;
   clubId: 'carre-de-soie' | 'beynost';
   responsesCount: number;
   createdAt: string;
   published: boolean;
   sections: number;
+  sectionTitles?: string[];
+  sampleResponses?: Array<{
+    id: string;
+    fullName: string;
+    email: string;
+    phone: string;
+    rgpdConsent: boolean;
+    submittedAt: string;
+  }>;
 }
 
 interface LeadCommercialHubViewProps {
@@ -114,20 +135,57 @@ interface LeadCommercialHubViewProps {
 }
 
 const INITIAL_FICTIVE_ACTIVITIES: FictiveActivityRow[] = [
-  { id: 'act-1', type: 'SCHEDULED_CALL', title: 'Rappel essai Biocircuit', prospectName: 'Camille Garnier', clubId: 'carre-de-soie', dueBucket: "Aujourd'hui", statusLabel: 'À traiter' },
-  { id: 'act-2', type: 'APPOINTMENT', title: 'Bilan Checkup Technogym', prospectName: 'Lucas Morel', clubId: 'beynost', dueBucket: 'Demain', statusLabel: 'Confirmé' },
-  { id: 'act-3', type: 'CONTACT', title: 'Demande formulaire site web', prospectName: 'Nadia Benali', clubId: 'carre-de-soie', dueBucket: 'En retard', statusLabel: 'En retard (J-3)' },
-  { id: 'act-4', type: 'SCHEDULED_SMS', title: 'SMS rappel séance découverte', prospectName: 'Hugo Lefebvre', clubId: 'beynost', dueBucket: 'Cette semaine', statusLabel: 'Planifié' },
-  { id: 'act-5', type: 'SCHEDULED_EMAIL', title: 'Email confirmation offre', prospectName: 'Claire Dubois', clubId: 'carre-de-soie', dueBucket: 'À faire', statusLabel: 'En attente (EX08)' },
-  { id: 'act-6', type: 'REVIEW', title: 'Avis club Google / Lead', prospectName: 'Antoine Rocher', clubId: 'beynost', dueBucket: 'Faites', statusLabel: 'Traité (EX09)' },
-  { id: 'act-7', type: 'SMS', title: 'Réponse SMS entrante RDV', prospectName: 'Manon Faure', clubId: 'carre-de-soie', dueBucket: 'Faites', statusLabel: 'Reçu (EX07)' },
-  { id: 'act-8', type: 'MAIL', title: 'Réponse email prospect', prospectName: 'Sébastien Girard', clubId: 'beynost', dueBucket: 'Faites', statusLabel: 'Lu' },
+  { id: 'act-1', type: 'SCHEDULED_CALL', title: 'Rappel essai Biocircuit', prospectId: 'p-1', prospectName: 'Camille Garnier', clubId: 'carre-de-soie', dueAt: new Date().toISOString().slice(0, 10) + 'T10:30', status: 'todo', assignedToId: 'emp-maxime', statusLabel: 'À traiter' },
+  { id: 'act-2', type: 'APPOINTMENT', title: 'Bilan Checkup Technogym', prospectId: 'p-2', prospectName: 'Lucas Morel', clubId: 'beynost', dueAt: new Date(Date.now() + 86400000).toISOString().slice(0, 10) + 'T14:00', status: 'todo', assignedToId: 'emp-chloe', statusLabel: 'Confirmé' },
+  { id: 'act-3', type: 'CONTACT', title: 'Demande formulaire site web', prospectName: 'Nadia Benali', clubId: 'carre-de-soie', dueAt: new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10) + 'T09:00', status: 'todo', assignedToId: 'emp-maxime', statusLabel: 'En retard (J-3)' },
+  { id: 'act-4', type: 'SCHEDULED_SMS', title: 'SMS rappel séance découverte', prospectName: 'Hugo Lefebvre', clubId: 'beynost', dueAt: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10) + 'T11:00', status: 'todo', assignedToId: 'emp-chloe', statusLabel: 'Planifié' },
+  { id: 'act-5', type: 'SCHEDULED_EMAIL', title: 'Email confirmation offre', prospectName: 'Claire Dubois', clubId: 'carre-de-soie', dueAt: new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10) + 'T16:00', status: 'todo', assignedToId: 'emp-maxime', statusLabel: 'En attente (EX08)' },
+  { id: 'act-6', type: 'REVIEW', title: 'Avis club Google / Lead', prospectName: 'Antoine Rocher', clubId: 'beynost', dueAt: new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10) + 'T12:00', status: 'done', assignedToId: 'emp-chloe', statusLabel: 'Traité (EX09)' },
+  { id: 'act-7', type: 'SMS', title: 'Réponse SMS entrante RDV', prospectName: 'Manon Faure', clubId: 'carre-de-soie', dueAt: new Date(Date.now() - 86400000).toISOString().slice(0, 10) + 'T15:00', status: 'done', assignedToId: 'emp-maxime', statusLabel: 'Reçu (EX07)' },
+  { id: 'act-8', type: 'MAIL', title: 'Réponse email prospect', prospectName: 'Sébastien Girard', clubId: 'beynost', dueAt: new Date(Date.now() - 86400000).toISOString().slice(0, 10) + 'T17:00', status: 'done', assignedToId: 'emp-chloe', statusLabel: 'Lu' },
 ];
 
 const INITIAL_FICTIVE_FORMS: FictiveFormRow[] = [
-  { id: 'frm-1', name: 'Séance Découverte Carré de Soie', clubId: 'carre-de-soie', responsesCount: 42, createdAt: '2026-10-12', published: true, sections: 3 },
-  { id: 'frm-2', name: 'Bilan Checkup Beynost (EX01/EX02)', clubId: 'beynost', responsesCount: 19, createdAt: '2026-11-02', published: true, sections: 2 },
-  { id: 'frm-3', name: 'Offre Entreprise & CE (Brouillon)', clubId: 'carre-de-soie', responsesCount: 0, createdAt: '2026-11-16', published: false, sections: 1 },
+  {
+    id: 'frm-1',
+    name: 'Séance Découverte Carré de Soie',
+    description: 'Formulaire d’essai 7 jours et bilan forme.',
+    clubId: 'carre-de-soie',
+    responsesCount: 42,
+    createdAt: '2026-10-12',
+    published: true,
+    sections: 3,
+    sectionTitles: ['Coordonnées', 'Objectifs forme', 'Consentement RGPD'],
+    sampleResponses: [
+      { id: 'rep-1', fullName: 'Camille Garnier', email: 'camille.test@exemple-cfitness.fr', phone: '06 11 22 33 44', rgpdConsent: true, submittedAt: '2026-11-18 10:15' },
+    ],
+  },
+  {
+    id: 'frm-2',
+    name: 'Bilan Checkup Beynost (EX01/EX02)',
+    description: 'Prise de RDV Bilan Technogym Checkup.',
+    clubId: 'beynost',
+    responsesCount: 19,
+    createdAt: '2026-11-02',
+    published: true,
+    sections: 2,
+    sectionTitles: ['Identité', 'Créneau souhaité'],
+    sampleResponses: [
+      { id: 'rep-2', fullName: 'Lucas Morel', email: 'lucas.morel@exemple.fr', phone: '06 55 44 33 22', rgpdConsent: true, submittedAt: '2026-11-17 16:40' },
+    ],
+  },
+  {
+    id: 'frm-3',
+    name: 'Offre Entreprise & CE (Brouillon)',
+    description: 'Partenariats comités d’entreprise.',
+    clubId: 'carre-de-soie',
+    responsesCount: 0,
+    createdAt: '2026-11-16',
+    published: false,
+    sections: 1,
+    sectionTitles: ['Société & Effectif'],
+    sampleResponses: [],
+  },
 ];
 
 const INITIAL_SLOTS: AppointmentSlotRecord[] = [
@@ -171,7 +229,17 @@ export function LeadCommercialHubView({
   pipelineChildren,
   subTarget,
 }: LeadCommercialHubViewProps) {
-  const { currentUser, heitzMembers, prospects, clubFilter, isTechnicalMode } = useCfos();
+  const {
+    currentUser,
+    employees,
+    heitzMembers,
+    prospects,
+    clubFilter,
+    isTechnicalMode,
+    createProspect,
+    updateProspect,
+    assignSegmentToProspects,
+  } = useCfos();
 
   // États persistants pour WhatsApp conversation (CFOS-007), Constructeur Email (CFOS-006) et Profil Club (CFOS-005)
   const [waComposerOpen, setWaComposerOpen] = useState(false);
@@ -212,30 +280,42 @@ export function LeadCommercialHubView({
       ctaLabel: 'Réserver mon créneau',
       ctaUrl: 'https://c.fitness/essai',
       footerText: 'SAS C.FITNESS — SIRET 818 651 317 00018 · Désinscription RGPD',
-      font: 'Plus Jakarta Sans',
+      font: LEAD_EMAIL_FONTS_18[0],
     };
   });
   const [emailSavedNotice, setEmailSavedNotice] = useState<string | null>(null);
 
-  const [clubProfileForm, setClubProfileForm] = useState<{
-    name: string;
-    address: string;
-    primaryColor: string;
-    logoBadge: string;
-  }>(() => {
+  const [selectedProfileClubId, setSelectedProfileClubId] = useState<'carre-de-soie' | 'beynost'>(() =>
+    clubFilter === 'beynost' ? 'beynost' : 'carre-de-soie'
+  );
+  const [clubProfilesByClub, setClubProfilesByClub] = useState<
+    Record<
+      'carre-de-soie' | 'beynost',
+      { name: string; address: string; primaryColor: string; logoBadge: string }
+    >
+  >(() => {
     try {
-      const raw = localStorage.getItem('cfos_lead_club_profile_v1');
+      const raw = localStorage.getItem('cfos_lead_club_profiles_v1');
       if (raw) return JSON.parse(raw);
     } catch {
       // ignore
     }
     return {
-      name: 'C.Fitness Carré de Soie & Beynost',
-      address: '2 Rue Jacquard, 69120 Vaulx-en-Velin / ZAC des Baterses, 01700 Beynost',
-      primaryColor: '#7c3aed',
-      logoBadge: 'CF',
+      'carre-de-soie': {
+        name: 'C.Fitness Carré de Soie',
+        address: '2 Rue Jacquard, 69120 Vaulx-en-Velin',
+        primaryColor: '#7c3aed',
+        logoBadge: 'CF-CDS',
+      },
+      beynost: {
+        name: 'C.Fitness Beynost',
+        address: 'ZAC des Baterses, 01700 Beynost',
+        primaryColor: '#0ea5e9',
+        logoBadge: 'CF-BEY',
+      },
     };
   });
+  const clubProfileForm = clubProfilesByClub[selectedProfileClubId];
   const [clubProfileSavedNotice, setClubProfileSavedNotice] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<LeadHubTab>(() =>
@@ -244,7 +324,20 @@ export function LeadCommercialHubView({
   const [simulatedRole, setSimulatedRole] = useState<LeadRole>(() =>
     mapAppRoleToLeadRole(currentUser.role)
   );
-  const [statsAllowedForCommercial, setStatsAllowedForCommercial] = useState(true);
+  const [statsAllowedForCommercial, setStatsAllowedForCommercial] = useState<boolean>(() => {
+    try {
+      const raw = localStorage.getItem('cfos_lead_app_settings_v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed.statsAllowedForCommercial === 'boolean') {
+          return parsed.statsAllowedForCommercial;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return true;
+  });
 
   useEffect(() => {
     if (subTarget === 'lead-traceability' && isTechnicalMode) {
@@ -285,13 +378,54 @@ export function LeadCommercialHubView({
   const [newVacStart, setNewVacStart] = useState('2026-12-01');
   const [newVacEnd, setNewVacEnd] = useState('2026-12-15');
 
-  // Tab 3 : Activités (/todos)
-  const [activities, setActivities] = useState<FictiveActivityRow[]>(INITIAL_FICTIVE_ACTIVITIES);
+  // Tab 3 : Activités (/todos) — persistées localStorage (CFOS-046/047)
+  const [activities, setActivities] = useState<FictiveActivityRow[]>(() => {
+    try {
+      const raw = localStorage.getItem('cfos_lead_activities_v1');
+      if (raw) return JSON.parse(raw);
+    } catch {
+      // ignore
+    }
+    return INITIAL_FICTIVE_ACTIVITIES;
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('cfos_lead_activities_v1', JSON.stringify(activities));
+    } catch {
+      // ignore
+    }
+  }, [activities]);
   const [actTypeFilter, setActTypeFilter] =
     useState<(typeof LEAD_ACTIVITY_TYPES)[number]['code']>('*');
   const [actTimeFilter, setActTimeFilter] =
     useState<(typeof LEAD_ACTIVITY_TIME_FILTERS)[number] | 'ALL'>('ALL');
   const [purgeLog, setPurgeLog] = useState<string | null>(null);
+  const [newActTitle, setNewActTitle] = useState('');
+  const [newActType, setNewActType] = useState<FictiveActivityRow['type']>('SCHEDULED_CALL');
+  const [newActProspectId, setNewActProspectId] = useState('');
+  const [newActDueAt, setNewActDueAt] = useState(() => new Date().toISOString().slice(0, 10) + 'T11:00');
+  const [newActAssigneeId, setNewActAssigneeId] = useState('emp-maxime');
+  const [editingProspectId, setEditingProspectId] = useState<string | null>(null);
+  const [editProspectForm, setEditProspectForm] = useState<{
+    firstName: string;
+    lastName: string;
+    phone: string;
+    email: string;
+    goal: string;
+    notes: string;
+    address: string;
+    assignedToId: string;
+  }>({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    email: '',
+    goal: '',
+    notes: '',
+    address: '',
+    assignedToId: 'emp-maxime',
+  });
+  const [importFeedback, setImportFeedback] = useState<string | null>(null);
 
   // Tab 4 : Planning RDV & Stripe
   const [preventCrossTypeCollision, setPreventCrossTypeCollision] = useState(true);
@@ -299,6 +433,108 @@ export function LeadCommercialHubView({
   const [rdvMinDelayHours, setRdvMinDelayHours] = useState(4);
   const [rdvHoursBeforeSlot, setRdvHoursBeforeSlot] = useState(6);
   const [rdvTypeCandidate, setRdvTypeCandidate] = useState('Coaching Découverte (60 min)');
+  const [rdvCoachId, setRdvCoachId] = useState('emp-karim');
+  const [rdvClubId, setRdvClubId] = useState<'carre-de-soie' | 'beynost'>('carre-de-soie');
+  const [rdvDate, setRdvDate] = useState('2026-11-20');
+  const [rdvTime, setRdvTime] = useState('10:00');
+  const [rdvProspectId, setRdvProspectId] = useState(() => prospects[0]?.id || '');
+  const [rdvBookings, setRdvBookings] = useState<AppointmentSlotRecord[]>(() => {
+    try {
+      const raw = localStorage.getItem('cfos_lead_rdv_slots_v1');
+      if (raw) return JSON.parse(raw);
+    } catch {
+      // ignore
+    }
+    return INITIAL_SLOTS;
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('cfos_lead_rdv_slots_v1', JSON.stringify(rdvBookings));
+    } catch {
+      // ignore
+    }
+  }, [rdvBookings]);
+  const [rdvActionMessage, setRdvActionMessage] = useState<string | null>(null);
+
+  // Tab 6 : Campagnes Email/SMS, UTM, Scénarios, Historiques (mode test sans envoi, persisté)
+  const [campaignEmailSubject, setCampaignEmailSubject] = useState('Offre Découverte C.Fitness Nov 2026');
+  const [campaignSenderName, setCampaignSenderName] = useState('Équipe C.Fitness');
+  const [campaignSegmentTarget, setCampaignSegmentTarget] = useState('Tous prospects RGPD');
+  const [campaignEmailContent, setCampaignEmailContent] = useState(
+    'Bonjour %prenom%, venez tester le Biocircuit avec un coach dédié cette semaine.'
+  );
+  const [savedCampaigns, setSavedCampaigns] = useState<
+    Array<{ id: string; channel: 'EMAIL' | 'SMS'; name: string; targetCount: number; status: string; createdAt: string }>
+  >(() => {
+    try {
+      const raw = localStorage.getItem('cfos_lead_campaigns_v1');
+      if (raw) return JSON.parse(raw);
+    } catch {
+      // ignore
+    }
+    return [];
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('cfos_lead_campaigns_v1', JSON.stringify(savedCampaigns));
+    } catch {
+      // ignore
+    }
+  }, [savedCampaigns]);
+  const [campaignFeedback, setCampaignFeedback] = useState<string | null>(null);
+  const [commLogFilter, setCommLogFilter] = useState<string>('Tous');
+  const [commLogs, setCommLogs] = useState<
+    Array<{ id: string; channel: 'SMS' | 'EMAIL'; recipient: string; clubId: string; status: string; subjectOrPreview: string; errorReason?: string; sentAt: string }>
+  >(() => {
+    try {
+      const raw = localStorage.getItem('cfos_lead_comm_logs_v1');
+      if (raw) return JSON.parse(raw);
+    } catch {
+      // ignore
+    }
+    return [
+      { id: 'log-1', channel: 'SMS', recipient: 'Claire Dubois', clubId: 'carre-de-soie', status: 'Envoyé', subjectOrPreview: 'Rappel séance découverte 10:00', sentAt: '2026-11-18 09:30' },
+      { id: 'log-2', channel: 'SMS', recipient: 'Paul Invalide', clubId: 'beynost', status: 'Erreur', subjectOrPreview: 'Relance essai Biocircuit', errorReason: 'STOP / opt-out actif', sentAt: '2026-11-18 11:10' },
+      { id: 'log-3', channel: 'EMAIL', recipient: 'Lucas Morel', clubId: 'beynost', status: 'Envoyé', subjectOrPreview: 'Votre bilan Technogym Checkup', sentAt: '2026-11-18 14:05' },
+    ];
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('cfos_lead_comm_logs_v1', JSON.stringify(commLogs));
+    } catch {
+      // ignore
+    }
+  }, [commLogs]);
+
+  // Tab 8 : Réglages CRM persistés (CFOS-005)
+  const [crmSettings, setCrmSettings] = useState<{
+    smsCreditsCds: number;
+    smsCreditsBeynost: number;
+    salesScript: string;
+    archiveThresholdDays: number;
+    notifEmail: string;
+    whatsappNumberCds: string;
+    whatsappNumberBeynost: string;
+    clientPassOffer: string;
+  }>(() => {
+    try {
+      const raw = localStorage.getItem('cfos_lead_crm_settings_v1');
+      if (raw) return JSON.parse(raw);
+    } catch {
+      // ignore
+    }
+    return {
+      smsCreditsCds: 1420,
+      smsCreditsBeynost: 980,
+      salesScript: '1. Accueil & objectif forme\n2. Découverte Biocircuit / Checkup\n3. Proposition créneau essai',
+      archiveThresholdDays: 30,
+      notifEmail: 'direction@c.fitness',
+      whatsappNumberCds: '+33 4 78 00 00 01',
+      whatsappNumberBeynost: '+33 4 78 00 00 02',
+      clientPassOffer: 'Pass Liberté + Biocircuit 12 mois',
+    };
+  });
+  const [crmSettingsSavedNotice, setCrmSettingsSavedNotice] = useState<string | null>(null);
   const [rdvRequiresStripe, setRdvRequiresStripe] = useState(false);
   const [rdvStripePaid, setRdvStripePaid] = useState(false);
 
@@ -328,7 +564,30 @@ export function LeadCommercialHubView({
   const [compareToPreviousYear, setCompareToPreviousYear] = useState(true);
   const [multiClubBeynost, setMultiClubBeynost] = useState(true);
   const [multiClubCds, setMultiClubCds] = useState(true);
-  const [formsList, setFormsList] = useState<FictiveFormRow[]>(INITIAL_FICTIVE_FORMS);
+  const [formsList, setFormsList] = useState<FictiveFormRow[]>(() => {
+    try {
+      const raw = localStorage.getItem('cfos_lead_forms_v1');
+      if (raw) return JSON.parse(raw);
+    } catch {
+      // ignore
+    }
+    return INITIAL_FICTIVE_FORMS;
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('cfos_lead_forms_v1', JSON.stringify(formsList));
+    } catch {
+      // ignore
+    }
+  }, [formsList]);
+  const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
+  const [showNewFormDialog, setShowNewFormDialog] = useState(false);
+  const [newFormName, setNewFormName] = useState('');
+  const [newFormDesc, setNewFormDesc] = useState('');
+  const [newFormClub, setNewFormClub] = useState<'carre-de-soie' | 'beynost'>('carre-de-soie');
+  const [newSectionTitle, setNewSectionTitle] = useState('');
+  const [salesEndsAfter, setSalesEndsAfter] = useState('');
+  const [salesEndsBefore, setSalesEndsBefore] = useState('');
   const [formAccessMessage, setFormAccessMessage] = useState<string | null>(null);
 
   // Tab 8 : Paramètres (14 rubriques) & Webhook testeur
@@ -402,27 +661,33 @@ export function LeadCommercialHubView({
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter(Boolean)
-      .map((line) => line.split(';'));
+      .map((line) => parseCsvLineWithQuotes(line, ';'));
     const existingEmails = prospects.map((p) => p.email);
     const existingPhones = prospects.map((p) => p.phone);
     return validateAndParseLeadImportRows(parsedRows, existingEmails, existingPhones);
   }, [importCsvText, prospects]);
 
   const archiveDecision = useMemo(
-    () => evaluateProspectAutoArchive(archiveDaysInbound, archiveDaysOutbound, 30, false),
-    [archiveDaysInbound, archiveDaysOutbound]
+    () =>
+      evaluateProspectAutoArchive(
+        archiveDaysInbound,
+        archiveDaysOutbound,
+        crmSettings.archiveThresholdDays,
+        false
+      ),
+    [archiveDaysInbound, archiveDaysOutbound, crmSettings.archiveThresholdDays]
   );
 
   const rdvBookingDecision = useMemo(
     () =>
       validateAppointmentBooking(
-        INITIAL_SLOTS,
+        rdvBookings,
         {
-          clubId: 'carre-de-soie',
-          coachId: 'emp-karim',
+          clubId: rdvClubId,
+          coachId: rdvCoachId,
           typeName: rdvTypeCandidate,
-          date: '2026-11-20',
-          startTime: '10:00',
+          date: rdvDate,
+          startTime: rdvTime,
           hoursBeforeSlot: rdvHoursBeforeSlot,
           minDelayHours: rdvMinDelayHours,
           capacityMax: rdvCapacityMax,
@@ -432,7 +697,12 @@ export function LeadCommercialHubView({
         preventCrossTypeCollision
       ),
     [
+      rdvBookings,
+      rdvClubId,
+      rdvCoachId,
       rdvTypeCandidate,
+      rdvDate,
+      rdvTime,
       rdvHoursBeforeSlot,
       rdvMinDelayHours,
       rdvCapacityMax,
@@ -466,7 +736,8 @@ export function LeadCommercialHubView({
     return activities.filter((a) => {
       if (clubFilter !== 'all' && a.clubId !== clubFilter) return false;
       if (actTypeFilter !== '*' && a.type !== actTypeFilter) return false;
-      if (actTimeFilter !== 'ALL' && a.dueBucket !== actTimeFilter) return false;
+      const bucket = computeActivityDueBucket(a.dueAt, a.status);
+      if (actTimeFilter !== 'ALL' && bucket !== actTimeFilter) return false;
       return true;
     });
   }, [activities, clubFilter, actTypeFilter, actTimeFilter]);
@@ -503,8 +774,16 @@ export function LeadCommercialHubView({
       setFormAccessMessage(`HTTP ${access.httpStatus} — ${access.reason}`);
       return;
     }
+    const target = formsList.find((f) => f.id === formId);
+    if (
+      typeof window !== 'undefined' &&
+      !window.confirm(`Supprimer le formulaire « ${target?.name ?? formId} » ?`)
+    ) {
+      return;
+    }
     setFormsList((prev) => prev.filter((f) => f.id !== formId));
-    setFormAccessMessage('Formulaire supprimé (simulation locale).');
+    if (selectedFormId === formId) setSelectedFormId(null);
+    setFormAccessMessage('Formulaire supprimé (persistance locale).');
   };
 
   const handleTestWebhook = async () => {
@@ -705,6 +984,73 @@ export function LeadCommercialHubView({
                     ))}
                   </div>
 
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-semibold cursor-pointer">
+                      Charger un fichier .csv
+                      <input
+                        type="file"
+                        accept=".csv,.txt"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            if (typeof reader.result === 'string') {
+                              setImportCsvText(reader.result);
+                              setImportFeedback(`Fichier « ${file.name} » chargé pour aperçu.`);
+                            }
+                          };
+                          reader.readAsText(file, 'utf-8');
+                        }}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      disabled={importSummary.validCount === 0 || simulatedRole === 'commercial'}
+                      onClick={() => {
+                        const rawLines = importCsvText
+                          .split(/\r?\n/)
+                          .map((line) => line.trim())
+                          .filter(Boolean)
+                          .map((line) => parseCsvLineWithQuotes(line, ';'));
+                        let created = 0;
+                        let skipped = 0;
+                        for (const row of importSummary.results) {
+                          if (row.status !== 'valide') continue;
+                          const parts = row.fullName.trim().split(/\s+/);
+                          const firstName = parts[0] || 'Prospect';
+                          const lastName = parts.slice(1).join(' ') || 'Importé';
+                          const rawPhone = rawLines[row.rowNumber - 1]?.[4] || '0600000000';
+                          const res = createProspect({
+                            firstName,
+                            lastName,
+                            phone: rawPhone,
+                            email: row.email,
+                            clubId: clubFilter === 'beynost' ? 'beynost' : 'carre-de-soie',
+                            source: 'Site c.fitness',
+                            goal: 'Import CSV 11 colonnes',
+                            rgpdConsent: row.consentGranted,
+                          });
+                          if (res.ok) created += 1;
+                          else skipped += 1;
+                        }
+                        setImportFeedback(
+                          `Import exécuté : ${created} prospect(s) créé(s), ${skipped} doublon(s)/rejet(s) ignoré(s).`
+                        );
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-xs font-bold cursor-pointer"
+                    >
+                      Confirmer l&apos;import ({importSummary.validCount} valide(s))
+                    </button>
+                  </div>
+
+                  {importFeedback && (
+                    <div className="p-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-[11px] text-emerald-300 font-semibold">
+                      {importFeedback}
+                    </div>
+                  )}
+
                   <textarea
                     value={importCsvText}
                     onChange={(e) => setImportCsvText(e.target.value)}
@@ -753,80 +1099,228 @@ export function LeadCommercialHubView({
                   </h3>
 
                   <div className="flex flex-wrap gap-1.5">
-                    {LEAD_PROSPECT_STATUSES.map((st) => (
-                      <button
-                        key={st}
-                        type="button"
-                        onClick={() => setSelectedLeadStatusFilter(st)}
-                        className={`px-2 py-1 rounded-lg text-[11px] font-semibold cursor-pointer border ${
-                          selectedLeadStatusFilter === st
-                            ? 'bg-violet-600 text-white border-violet-400'
-                            : 'bg-slate-900/60 border-slate-700 text-slate-300'
-                        }`}
-                      >
-                        {st}
-                      </button>
-                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedLeadStatusFilter('ALL')}
+                      className={`px-2 py-1 rounded-lg text-[11px] font-semibold cursor-pointer border ${
+                        selectedLeadStatusFilter === 'ALL'
+                          ? 'bg-violet-600 text-white border-violet-400'
+                          : 'bg-slate-900/60 border-slate-700 text-slate-300'
+                      }`}
+                    >
+                      Tous ({prospects.length})
+                    </button>
+                    {LEAD_PROSPECT_STATUSES.map((st) => {
+                      const countForStatus = prospects.filter(
+                        (p) => (p.leadStatus ?? p.stage) === st
+                      ).length;
+                      return (
+                        <button
+                          key={st}
+                          type="button"
+                          onClick={() => setSelectedLeadStatusFilter(st)}
+                          className={`px-2 py-1 rounded-lg text-[11px] font-semibold cursor-pointer border ${
+                            selectedLeadStatusFilter === st
+                              ? 'bg-violet-600 text-white border-violet-400'
+                              : 'bg-slate-900/60 border-slate-700 text-slate-300'
+                          }`}
+                        >
+                          {st} ({countForStatus})
+                        </button>
+                      );
+                    })}
                   </div>
 
                   {/* Sélection multiple -> Segments */}
-                  <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2 text-xs">
-                    <div className="font-bold flex items-center justify-between">
-                      <span>Sélection multiple → Ajouter un segment ({selectedLeadIds.length} choisi(s))</span>
-                      <span className="text-[10px] cf-muted">Bouton actif uniquement si ≥ 1 ligne</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {prospects.slice(0, 4).map((p) => {
-                        const checked = selectedLeadIds.includes(p.id);
-                        return (
-                          <label
-                            key={p.id}
-                            className="px-2 py-1 rounded bg-slate-950/60 border border-slate-700 flex items-center gap-1.5 cursor-pointer text-[11px]"
+                  {(() => {
+                    const filteredLeadList = prospects.filter((p) => {
+                      if (clubFilter !== 'all' && p.clubId !== clubFilter) return false;
+                      if (selectedLeadStatusFilter === 'ALL') return true;
+                      return (p.leadStatus ?? p.stage) === selectedLeadStatusFilter;
+                    });
+                    return (
+                      <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2 text-xs">
+                        <div className="font-bold flex items-center justify-between">
+                          <span>
+                            Sélection multiple ({filteredLeadList.length} affiché(s)) → Ajouter un segment ({selectedLeadIds.length} choisi(s))
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSelectedLeadIds(
+                                selectedLeadIds.length === filteredLeadList.length
+                                  ? []
+                                  : filteredLeadList.map((p) => p.id)
+                              )
+                            }
+                            className="text-[10px] underline text-violet-300 cursor-pointer"
                           >
+                            {selectedLeadIds.length === filteredLeadList.length && filteredLeadList.length > 0
+                              ? 'Tout décocher'
+                              : 'Tout cocher'}
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+                          {filteredLeadList.map((p) => {
+                            const checked = selectedLeadIds.includes(p.id);
+                            return (
+                              <div
+                                key={p.id}
+                                className="px-2 py-1 rounded bg-slate-950/60 border border-slate-700 flex items-center gap-1.5 text-[11px]"
+                              >
+                                <label className="flex items-center gap-1.5 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() =>
+                                      setSelectedLeadIds((prev) =>
+                                        checked ? prev.filter((x) => x !== p.id) : [...prev, p.id]
+                                      )
+                                    }
+                                  />
+                                  <span>
+                                    {p.firstName} {p.lastName}
+                                  </span>
+                                </label>
+                                {p.segments && p.segments.length > 0 && (
+                                  <span className="px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 text-[9px]">
+                                    {p.segments.join(', ')}
+                                  </span>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingProspectId(p.id);
+                                    setEditProspectForm({
+                                      firstName: p.firstName,
+                                      lastName: p.lastName,
+                                      phone: p.phone,
+                                      email: p.email,
+                                      goal: p.goal,
+                                      notes: p.notes,
+                                      address: p.address ?? '',
+                                      assignedToId: p.assignedToId,
+                                    });
+                                  }}
+                                  className="text-[10px] text-emerald-300 underline cursor-pointer ml-1"
+                                >
+                                  Éditer
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <select
+                            value={bulkSegmentToAssign}
+                            onChange={(e) => setBulkSegmentToAssign(e.target.value)}
+                            aria-label="Segment à attribuer à la sélection"
+                            className="px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs"
+                          >
+                            <option value="Relance Biocircuit">Relance Biocircuit</option>
+                            <option value="VIP Carré de Soie">VIP Carré de Soie</option>
+                            <option value="Offre Parrainage Beynost">Offre Parrainage Beynost</option>
+                          </select>
+                          <button
+                            type="button"
+                            disabled={selectedLeadIds.length === 0}
+                            onClick={() => {
+                              const count = assignSegmentToProspects(selectedLeadIds, bulkSegmentToAssign);
+                              setBulkSegmentLog(
+                                `Segment « ${bulkSegmentToAssign} » enregistré sur ${count} prospect(s).`
+                              );
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-violet-600 disabled:opacity-40 text-white font-bold text-xs cursor-pointer"
+                          >
+                            Ajouter à la sélection
+                          </button>
+                        </div>
+                        {bulkSegmentLog && (
+                          <div className="text-[11px] text-emerald-400 font-semibold">{bulkSegmentLog}</div>
+                        )}
+                        {editingProspectId && (
+                          <div className="p-3 rounded-lg bg-slate-950/90 border border-emerald-500/40 space-y-2 mt-2">
+                            <div className="flex items-center justify-between">
+                              <strong className="text-emerald-300">Édition fiche contact</strong>
+                              <button
+                                type="button"
+                                onClick={() => setEditingProspectId(null)}
+                                className="text-[11px] text-slate-400 cursor-pointer"
+                              >
+                                Fermer
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <input
+                                type="text"
+                                placeholder="Prénom"
+                                value={editProspectForm.firstName}
+                                onChange={(e) => setEditProspectForm((f) => ({ ...f, firstName: e.target.value }))}
+                                className="px-2 py-1 rounded bg-slate-900 border border-slate-700"
+                              />
+                              <input
+                                type="text"
+                                placeholder="Nom"
+                                value={editProspectForm.lastName}
+                                onChange={(e) => setEditProspectForm((f) => ({ ...f, lastName: e.target.value }))}
+                                className="px-2 py-1 rounded bg-slate-900 border border-slate-700"
+                              />
+                              <input
+                                type="text"
+                                placeholder="Téléphone (06...)"
+                                value={editProspectForm.phone}
+                                onChange={(e) => setEditProspectForm((f) => ({ ...f, phone: e.target.value }))}
+                                className="px-2 py-1 rounded bg-slate-900 border border-slate-700"
+                              />
+                              <input
+                                type="email"
+                                placeholder="Email"
+                                value={editProspectForm.email}
+                                onChange={(e) => setEditProspectForm((f) => ({ ...f, email: e.target.value }))}
+                                className="px-2 py-1 rounded bg-slate-900 border border-slate-700"
+                              />
+                              <input
+                                type="text"
+                                placeholder="Adresse"
+                                value={editProspectForm.address}
+                                onChange={(e) => setEditProspectForm((f) => ({ ...f, address: e.target.value }))}
+                                className="px-2 py-1 rounded bg-slate-900 border border-slate-700"
+                              />
+                              <select
+                                value={editProspectForm.assignedToId}
+                                onChange={(e) => setEditProspectForm((f) => ({ ...f, assignedToId: e.target.value }))}
+                                className="px-2 py-1 rounded bg-slate-900 border border-slate-700"
+                              >
+                                {employees.filter((e) => e.role !== 'kiosque').map((e) => (
+                                  <option key={e.id} value={e.id}>
+                                    {e.firstName} {e.lastName}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
                             <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() =>
-                                setSelectedLeadIds((prev) =>
-                                  checked ? prev.filter((x) => x !== p.id) : [...prev, p.id]
-                                )
-                              }
+                              type="text"
+                              placeholder="Notes / Objectif"
+                              value={editProspectForm.notes}
+                              onChange={(e) => setEditProspectForm((f) => ({ ...f, notes: e.target.value }))}
+                              className="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700"
                             />
-                            <span>
-                              {p.firstName} {p.lastName}
-                            </span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <select
-                        value={bulkSegmentToAssign}
-                        onChange={(e) => setBulkSegmentToAssign(e.target.value)}
-                        aria-label="Segment à attribuer à la sélection"
-                        className="px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs"
-                      >
-                        <option value="Relance Biocircuit">Relance Biocircuit</option>
-                        <option value="VIP Carré de Soie">VIP Carré de Soie</option>
-                        <option value="Offre Parrainage Beynost">Offre Parrainage Beynost</option>
-                      </select>
-                      <button
-                        type="button"
-                        disabled={selectedLeadIds.length === 0}
-                        onClick={() =>
-                          setBulkSegmentLog(
-                            `Segment « ${bulkSegmentToAssign} » attribué à ${selectedLeadIds.length} prospect(s) fictif(s).`
-                          )
-                        }
-                        className="px-3 py-1.5 rounded-lg bg-violet-600 disabled:opacity-40 text-white font-bold text-xs cursor-pointer"
-                      >
-                        Ajouter à la sélection
-                      </button>
-                    </div>
-                    {bulkSegmentLog && (
-                      <div className="text-[11px] text-emerald-400 font-semibold">{bulkSegmentLog}</div>
-                    )}
-                  </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const res = updateProspect(editingProspectId, editProspectForm);
+                                setBulkSegmentLog(res.message);
+                                if (res.ok) setEditingProspectId(null);
+                              }}
+                              className="px-3 py-1 rounded bg-emerald-600 text-white font-bold cursor-pointer"
+                            >
+                              Enregistrer la fiche
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Règle d'archivage sur réponse entrante uniquement */}
                   <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2 text-xs">
@@ -1008,32 +1502,122 @@ export function LeadCommercialHubView({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="text-sm font-extrabold">
-                    Activités Commerciales (`/todos`) — 9 types &amp; 6 vues temporelles
+                    Activités Commerciales (`/todos`) — 9 types &amp; 6 vues temporelles (échéances ISO réelles)
                   </h2>
                   <p className="text-xs cf-muted">
-                    Chaque filtre possède un <code>aria-label</code> explicite ; la purge des retards journalise chaque action.
+                    Création, affectation, report, traitement individuel et lien direct vers la fiche prospect (persistance locale).
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const overdueCount = activities.filter((a) => a.dueBucket === 'En retard').length;
-                    setActivities((prev) =>
-                      prev.map((a) =>
-                        a.dueBucket === 'En retard'
-                          ? { ...a, dueBucket: 'Faites', statusLabel: 'Purgé avec trace audit' }
-                          : a
-                      )
-                    );
-                    setPurgeLog(
-                      `${overdueCount} activité(s) en retard purgée(s) et journalisée(s) dans l'audit serveur.`
-                    );
-                  }}
-                  className="px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold cursor-pointer"
-                >
-                  Purger les retards ({activities.filter((a) => a.dueBucket === 'En retard').length})
-                </button>
+                {simulatedRole !== 'commercial' ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const overdueCount = activities.filter(
+                        (a) => computeActivityDueBucket(a.dueAt, a.status) === 'En retard'
+                      ).length;
+                      if (overdueCount === 0) {
+                        setPurgeLog('Aucune activité en retard à purger.');
+                        return;
+                      }
+                      if (
+                        typeof window !== 'undefined' &&
+                        !window.confirm(`Confirmer la purge locale de ${overdueCount} activité(s) en retard ?`)
+                      ) {
+                        return;
+                      }
+                      setActivities((prev) =>
+                        prev.map((a) =>
+                          computeActivityDueBucket(a.dueAt, a.status) === 'En retard'
+                            ? { ...a, status: 'done', statusLabel: 'Purgé (persistance locale)' }
+                            : a
+                        )
+                      );
+                      setPurgeLog(
+                        `${overdueCount} activité(s) en retard purgée(s) localement (aucun appel serveur sur cette démo).`
+                      );
+                    }}
+                    className="px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold cursor-pointer"
+                  >
+                    Purger les retards ({activities.filter((a) => computeActivityDueBucket(a.dueAt, a.status) === 'En retard').length})
+                  </button>
+                ) : (
+                  <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-[11px] text-slate-400">
+                    Purge réservée Manager/Admin
+                  </span>
+                )}
               </div>
+
+              {/* Formulaire de création / affectation d'activité liée au référentiel prospects */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!newActTitle.trim()) return;
+                  const targetProspect =
+                    prospects.find((p) => p.id === newActProspectId) ?? prospects[0];
+                  const created: FictiveActivityRow = {
+                    id: `act-${Date.now()}`,
+                    type: newActType,
+                    title: newActTitle.trim(),
+                    prospectId: targetProspect?.id,
+                    prospectName: targetProspect
+                      ? `${targetProspect.firstName} ${targetProspect.lastName}`
+                      : 'Prospect générique',
+                    clubId: targetProspect?.clubId ?? (clubFilter === 'beynost' ? 'beynost' : 'carre-de-soie'),
+                    dueAt: newActDueAt,
+                    status: 'todo',
+                    assignedToId: newActAssigneeId,
+                    statusLabel: 'À traiter',
+                  };
+                  setActivities((prev) => [created, ...prev]);
+                  setNewActTitle('');
+                  setPurgeLog(`Activité « ${created.title} » créée pour ${created.prospectName}.`);
+                }}
+                className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 grid grid-cols-1 md:grid-cols-5 gap-2 text-xs"
+              >
+                <input
+                  type="text"
+                  placeholder="Titre de l'activité (ex: Rappel devis)"
+                  value={newActTitle}
+                  onChange={(e) => setNewActTitle(e.target.value)}
+                  className="px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700 md:col-span-2"
+                />
+                <select
+                  value={newActType}
+                  onChange={(e) => setNewActType(e.target.value as FictiveActivityRow['type'])}
+                  className="px-2 py-1.5 rounded bg-slate-950 border border-slate-700"
+                >
+                  {LEAD_ACTIVITY_TYPES.filter((t) => t.code !== '*').map((t) => (
+                    <option key={t.code} value={t.code}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={newActProspectId || prospects[0]?.id || ''}
+                  onChange={(e) => setNewActProspectId(e.target.value)}
+                  className="px-2 py-1.5 rounded bg-slate-950 border border-slate-700"
+                >
+                  {prospects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.firstName} {p.lastName}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex gap-1.5">
+                  <input
+                    type="datetime-local"
+                    value={newActDueAt}
+                    onChange={(e) => setNewActDueAt(e.target.value)}
+                    className="w-full px-2 py-1.5 rounded bg-slate-950 border border-slate-700"
+                  />
+                  <button
+                    type="submit"
+                    className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold shrink-0 cursor-pointer"
+                  >
+                    + Créer
+                  </button>
+                </div>
+              </form>
 
               {purgeLog && (
                 <div className="p-2.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-xs text-emerald-300 font-semibold">
@@ -1096,25 +1680,94 @@ export function LeadCommercialHubView({
                     Aucune activité pour cette combinaison de filtres.
                   </div>
                 ) : (
-                  filteredActivities.map((a) => (
-                    <div
-                      key={a.id}
-                      className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs"
-                    >
-                      <div>
-                        <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 mr-2">
-                          {a.type}
-                        </span>
-                        <strong>{a.title}</strong> · {a.prospectName} ({a.clubId})
+                  filteredActivities.map((a) => {
+                    const bucket = computeActivityDueBucket(a.dueAt, a.status);
+                    return (
+                      <div
+                        key={a.id}
+                        className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs"
+                      >
+                        <div>
+                          <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 mr-2">
+                            {a.type}
+                          </span>
+                          <strong>{a.title}</strong> · {a.prospectName} ({a.clubId}) ·{' '}
+                          <span className="font-mono text-[10px] text-slate-400">
+                            {a.dueAt.replace('T', ' ')}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="px-2 py-0.5 rounded bg-slate-800 text-[11px]">{bucket}</span>
+                          <span className="px-2 py-0.5 rounded bg-violet-500/15 text-violet-300 text-[11px]">
+                            {a.statusLabel}
+                          </span>
+                          {a.status !== 'done' && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setActivities((prev) =>
+                                    prev.map((row) =>
+                                      row.id === a.id
+                                        ? { ...row, status: 'done', statusLabel: 'Fait' }
+                                        : row
+                                    )
+                                  )
+                                }
+                                className="px-2 py-0.5 rounded bg-emerald-600/80 hover:bg-emerald-600 text-white font-semibold cursor-pointer"
+                              >
+                                Marquer faite
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const nextDate = new Date(new Date(a.dueAt).getTime() + 86400000);
+                                  const iso = !Number.isNaN(nextDate.getTime())
+                                    ? nextDate.toISOString().slice(0, 16)
+                                    : a.dueAt;
+                                  setActivities((prev) =>
+                                    prev.map((row) =>
+                                      row.id === a.id
+                                        ? { ...row, dueAt: iso, statusLabel: 'Reportée (+1j)' }
+                                        : row
+                                    )
+                                  );
+                                }}
+                                className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 cursor-pointer"
+                              >
+                                Reporter +1j
+                              </button>
+                            </>
+                          )}
+                          {a.prospectId && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const p = prospects.find((pr) => pr.id === a.prospectId);
+                                if (p) {
+                                  setEditingProspectId(p.id);
+                                  setEditProspectForm({
+                                    firstName: p.firstName,
+                                    lastName: p.lastName,
+                                    phone: p.phone,
+                                    email: p.email,
+                                    goal: p.goal,
+                                    notes: p.notes,
+                                    address: p.address ?? '',
+                                    assignedToId: p.assignedToId,
+                                  });
+                                }
+                                setActiveTab('prospects');
+                              }}
+                              className="px-2 py-0.5 rounded bg-violet-600/80 hover:bg-violet-600 text-white cursor-pointer"
+                            >
+                              Fiche prospect
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded bg-slate-800 text-[11px]">{a.dueBucket}</span>
-                        <span className="px-2 py-0.5 rounded bg-violet-500/15 text-violet-300 text-[11px]">
-                          {a.statusLabel}
-                        </span>
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -1131,10 +1784,68 @@ export function LeadCommercialHubView({
                   Type de Rendez-vous Réservable, Collisions (RDV-01) &amp; Lien Isolé
                 </h2>
                 <p className="text-xs cf-muted">
-                  Créneau existant de test : <strong>20/11/2026 à 10:00 (Coach Karim — Carré de Soie)</strong> déjà occupé par « Bilan Technogym Checkup ».
+                  <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold mr-1">
+                    Mode démo (données fictives)
+                  </span>
+                  Réservation persistante locale avec détection des collisions inter-types (RDV-01), déplacement et annulation.
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                  <label>
+                    Club
+                    <select
+                      value={rdvClubId}
+                      onChange={(e) => setRdvClubId(e.target.value as 'carre-de-soie' | 'beynost')}
+                      className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700"
+                    >
+                      <option value="carre-de-soie">Carré de Soie</option>
+                      <option value="beynost">Beynost</option>
+                    </select>
+                  </label>
+                  <label>
+                    Coach
+                    <select
+                      value={rdvCoachId}
+                      onChange={(e) => setRdvCoachId(e.target.value)}
+                      className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700"
+                    >
+                      <option value="emp-karim">Coach Karim</option>
+                      <option value="emp-sarah">Coach Sarah</option>
+                      <option value="emp-maxime">Maxime Giraud</option>
+                    </select>
+                  </label>
+                  <label>
+                    Date du RDV
+                    <input
+                      type="date"
+                      value={rdvDate}
+                      onChange={(e) => setRdvDate(e.target.value)}
+                      className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700"
+                    />
+                  </label>
+                  <label>
+                    Heure
+                    <input
+                      type="time"
+                      value={rdvTime}
+                      onChange={(e) => setRdvTime(e.target.value)}
+                      className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700"
+                    />
+                  </label>
+                  <label>
+                    Prospect concerné
+                    <select
+                      value={rdvProspectId || prospects[0]?.id || ''}
+                      onChange={(e) => setRdvProspectId(e.target.value)}
+                      className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700"
+                    >
+                      {prospects.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.firstName} {p.lastName}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   <label>
                     Type à réserver
                     <input
@@ -1225,20 +1936,110 @@ export function LeadCommercialHubView({
                   Statut : <strong className="uppercase">{rdvBookingDecision.bookingStatus}</strong> —{' '}
                   {rdvBookingDecision.reason}
                 </div>
+
+                <button
+                  type="button"
+                  disabled={!rdvBookingDecision.accepted}
+                  onClick={() => {
+                    const targetProspect =
+                      prospects.find((p) => p.id === rdvProspectId) ?? prospects[0];
+                    const newSlot: AppointmentSlotRecord = {
+                      id: `slot-${Date.now()}`,
+                      clubId: rdvClubId,
+                      coachId: rdvCoachId,
+                      typeName: `${rdvTypeCandidate} (${targetProspect ? `${targetProspect.firstName} ${targetProspect.lastName}` : 'Prospect'})`,
+                      date: rdvDate,
+                      startTime: rdvTime,
+                      durationMinutes: 45,
+                      capacityMax: rdvCapacityMax || 1,
+                      currentBookedCount: 1,
+                      paidRequired: rdvRequiresStripe,
+                      paymentStatus: rdvRequiresStripe
+                        ? rdvStripePaid
+                          ? 'paye'
+                          : 'attente_paiement'
+                        : 'non_requis',
+                    };
+                    setRdvBookings((prev) => [newSlot, ...prev]);
+                    if (targetProspect) {
+                      setActivities((prev) => [
+                        {
+                          id: `act-rdv-${Date.now()}`,
+                          type: 'APPOINTMENT',
+                          title: `RDV ${rdvTypeCandidate}`,
+                          prospectId: targetProspect.id,
+                          prospectName: `${targetProspect.firstName} ${targetProspect.lastName}`,
+                          clubId: rdvClubId,
+                          dueAt: `${rdvDate}T${rdvTime}`,
+                          status: 'todo',
+                          assignedToId: rdvCoachId,
+                          statusLabel: 'RDV réservé (démo)',
+                        },
+                        ...prev,
+                      ]);
+                    }
+                    setRdvActionMessage(
+                      `RDV réservé le ${rdvDate} à ${rdvTime} (${rdvClubId}) et lié aux activités.`
+                    );
+                  }}
+                  className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-xs font-bold cursor-pointer"
+                >
+                  Confirmer la réservation (démo persistée)
+                </button>
+                {rdvActionMessage && (
+                  <div className="text-[11px] text-emerald-300 font-semibold">{rdvActionMessage}</div>
+                )}
               </div>
 
               <div className="cf-card p-4 space-y-3 text-xs">
-                <h3 className="text-sm font-extrabold">Variables &amp; Lien isolé par Club</h3>
-                <p className="cf-muted">
-                  Tags disponibles : <code>%club%</code>, <code>%rdv-date%</code>, <code>%rdv-heure%</code> · Lien isolé généré par club.
-                </p>
-                <div className="p-3 rounded-xl bg-slate-900/70 border border-slate-800 space-y-1 font-mono text-[11px]">
-                  <div>Carré de Soie : /book/carre-de-soie/coaching-decouverte</div>
-                  <div>Beynost       : /book/beynost/bilan-checkup-technogym</div>
-                  {isTechnicalMode && (
-                    <div>Webhook Stripe: POST /api/v2/appointment/webhooks/stripe/{'{club}'}</div>
-                  )}
+                <h3 className="text-sm font-extrabold">Agenda des créneaux réservés ({rdvBookings.length})</h3>
+                <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                  {rdvBookings.map((slot) => (
+                    <div
+                      key={slot.id}
+                      className="p-2.5 rounded-lg bg-slate-900/70 border border-slate-800 flex flex-wrap items-center justify-between gap-2"
+                    >
+                      <div>
+                        <div className="font-bold">{slot.typeName}</div>
+                        <div className="text-[10px] cf-muted font-mono">
+                          {slot.date} à {slot.startTime} · {slot.clubId} · {slot.coachId} · {slot.paymentStatus}
+                        </div>
+                      </div>
+                      <div className="flex gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextHour = String(
+                              (Number(slot.startTime.split(':')[0] || 10) + 1) % 20 || 10
+                            ).padStart(2, '0');
+                            setRdvBookings((prev) =>
+                              prev.map((s) =>
+                                s.id === slot.id ? { ...s, startTime: `${nextHour}:00` } : s
+                              )
+                            );
+                            setRdvActionMessage(`Créneau déplacé à ${nextHour}:00.`);
+                          }}
+                          className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] cursor-pointer"
+                        >
+                          Déplacer +1h
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRdvBookings((prev) => prev.filter((s) => s.id !== slot.id));
+                            setRdvActionMessage(`RDV « ${slot.typeName} » annulé.`);
+                          }}
+                          className="px-2 py-1 rounded bg-rose-600/80 hover:bg-rose-600 text-white text-[11px] cursor-pointer"
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
+                <p className="cf-muted text-[11px]">
+                  Liens publics isolés (hors paiement Stripe réel en démo) : <code>/book/carre-de-soie/coaching-decouverte</code> · <code>/book/beynost/bilan-checkup-technogym</code>
+                </p>
               </div>
             </div>
           )}
@@ -1621,12 +2422,107 @@ export function LeadCommercialHubView({
                         </button>
                       ))}
                     </div>
-                    <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-xs">
-                      {emailStep === 1 && 'Étape 1 (observée) : choix segments facultatifs + 12 statuts + exclusion refus/vacances.'}
-                      {emailStep === 2 && 'Étape 2 (recette fictive) : sélection modèle 12 blocs + personnalisation.'}
-                      {emailStep === 3 && 'Étape 3 (recette fictive) : objet dynamique + adresse expéditeur club.'}
-                      {emailStep === 4 && 'Étape 4 : validation finale par code email et bilan 4 compteurs (Envoyés/Délivrés/Ouverts/Cliqués).'}
-                    </div>
+                    {/* Campagne Email 4 étapes — Mode test sans envoi (CFOS-006/008/021) */}
+                    {emailStep === 1 && (
+                      <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2 text-xs">
+                        <div className="font-bold text-emerald-300">
+                          Étape 1/4 : Ciblage &amp; Destinataires (Mode test sans envoi)
+                        </div>
+                        <select
+                          value={campaignSegmentTarget}
+                          onChange={(e) => setCampaignSegmentTarget(e.target.value)}
+                          className="w-full px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
+                        >
+                          <option value="Tous prospects RGPD">Tous prospects avec consentement RGPD</option>
+                          <option value="Relance Biocircuit">Segment : Relance Biocircuit</option>
+                          <option value="VIP Carré de Soie">Segment : VIP Carré de Soie</option>
+                        </select>
+                        <div className="text-[11px] cf-muted">
+                          Cible calculée :{' '}
+                          <strong>
+                            {prospects.filter((p) => p.rgpdConsent && p.stage !== 'Perdu').length} prospect(s) éligible(s)
+                          </strong>{' '}
+                          (exclusions RGPD=false et Perdu appliquées).
+                        </div>
+                      </div>
+                    )}
+                    {emailStep === 2 && (
+                      <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2 text-xs">
+                        <div className="font-bold text-emerald-300">Étape 2/4 : Expéditeur &amp; Objet</div>
+                        <input
+                          type="text"
+                          value={campaignSenderName}
+                          onChange={(e) => setCampaignSenderName(e.target.value)}
+                          placeholder="Nom expéditeur"
+                          className="w-full px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
+                        />
+                        <input
+                          type="text"
+                          value={campaignEmailSubject}
+                          onChange={(e) => setCampaignEmailSubject(e.target.value)}
+                          placeholder="Objet de la campagne"
+                          className="w-full px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
+                        />
+                      </div>
+                    )}
+                    {emailStep === 3 && (
+                      <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2 text-xs">
+                        <div className="font-bold text-emerald-300">Étape 3/4 : Contenu du message</div>
+                        <textarea
+                          rows={3}
+                          value={campaignEmailContent}
+                          onChange={(e) => setCampaignEmailContent(e.target.value)}
+                          className="w-full px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
+                        />
+                      </div>
+                    )}
+                    {emailStep === 4 && (
+                      <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2 text-xs">
+                        <div className="font-bold text-emerald-300">Étape 4/4 : Contrôle final &amp; Brouillon (sans envoi réel)</div>
+                        <div>
+                          Expéditeur : <strong>{campaignSenderName}</strong> · Objet : <strong>{campaignEmailSubject}</strong> · Cible :{' '}
+                          <strong>{prospects.filter((p) => p.rgpdConsent && p.stage !== 'Perdu').length}</strong> destinataire(s).
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const count = prospects.filter((p) => p.rgpdConsent && p.stage !== 'Perdu').length;
+                            setSavedCampaigns((prev) => [
+                              {
+                                id: `cmp-${Date.now()}`,
+                                channel: 'EMAIL',
+                                name: campaignEmailSubject || 'Campagne Email',
+                                targetCount: count,
+                                status: 'Brouillon test (non envoyé)',
+                                createdAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
+                              },
+                              ...prev,
+                            ]);
+                            setCampaignFeedback(
+                              `Brouillon campagne email « ${campaignEmailSubject} » enregistré (${count} destinataires, aucun envoi SMTP réel).`
+                            );
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-bold cursor-pointer"
+                        >
+                          Enregistrer brouillon campagne (test)
+                        </button>
+                      </div>
+                    )}
+                    {campaignFeedback && (
+                      <div className="p-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-[11px] text-emerald-300 font-semibold">
+                        {campaignFeedback}
+                      </div>
+                    )}
+                    {savedCampaigns.length > 0 && (
+                      <div className="text-[11px] space-y-1">
+                        {savedCampaigns.slice(0, 3).map((c) => (
+                          <div key={c.id} className="px-2 py-1 rounded bg-slate-900/60 border border-slate-800 flex justify-between">
+                            <span>[{c.channel}] {c.name} ({c.targetCount} dest.)</span>
+                            <span className="text-amber-300">{c.status}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex justify-between gap-2 pt-1">
                       <button
                         type="button"
@@ -1637,7 +2533,18 @@ export function LeadCommercialHubView({
                       </button>
                       <button
                         type="button"
-                        onClick={() => setEmailStep((s) => (s < 4 ? ((s + 1) as 1 | 2 | 3 | 4) : 4))}
+                        onClick={() => {
+                          if (emailStep === 2 && (!campaignEmailSubject.trim() || !campaignSenderName.trim())) {
+                            setCampaignFeedback('Objet et expéditeur obligatoires avant de passer à l’étape 3.');
+                            return;
+                          }
+                          if (emailStep === 3 && !campaignEmailContent.trim()) {
+                            setCampaignFeedback('Contenu obligatoire avant le contrôle final.');
+                            return;
+                          }
+                          setCampaignFeedback(null);
+                          setEmailStep((s) => (s < 4 ? ((s + 1) as 1 | 2 | 3 | 4) : 4));
+                        }}
                         className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold cursor-pointer"
                       >
                         Suivant (visible à 390 px)
@@ -1662,9 +2569,31 @@ export function LeadCommercialHubView({
                         Encodage : <strong>{smsMetrics.encoding}</strong> ({smsMetrics.charCount} car. / {smsMetrics.maxPerSms})
                       </span>
                       <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-bold">
-                        {smsMetrics.segmentsCount} crédit(s) SMS/destinataire
+                        {smsMetrics.segmentsCount} crédit(s) × {prospects.filter((p) => !p.smsStopOptOut).length} dest. ={' '}
+                        {smsMetrics.segmentsCount * prospects.filter((p) => !p.smsStopOptOut).length} crédits (test)
                       </span>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const dest = prospects.filter((p) => !p.smsStopOptOut).length;
+                        setSavedCampaigns((prev) => [
+                          {
+                            id: `cmp-sms-${Date.now()}`,
+                            channel: 'SMS',
+                            name: smsDraftText.slice(0, 42) + '…',
+                            targetCount: dest,
+                            status: 'Brouillon SMS test (non envoyé)',
+                            createdAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
+                          },
+                          ...prev,
+                        ]);
+                        setCampaignFeedback(`Brouillon SMS enregistré pour ${dest} destinataire(s) hors STOP.`);
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer"
+                    >
+                      Enregistrer brouillon SMS (mode test sans envoi)
+                    </button>
                     <div className="text-[11px] cf-muted">
                       12 statuts ciblage : {LEAD_TARGETING_STATUSES.join(', ')} · Clients en vacances &amp; refus STOP exclus automatiquement.
                     </div>
@@ -1776,24 +2705,79 @@ export function LeadCommercialHubView({
               )}
 
               {commSubTab === 'logs' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                  <div className="cf-card p-4 space-y-2">
-                    <h3 className="text-sm font-extrabold">SMS envoyés (`/sms`)</h3>
-                    <div className="flex flex-wrap gap-1">
-                      {['Tous', 'À envoyer', 'Envoyé', 'Pas assez de crédit', 'Erreur'].map((s) => (
-                        <span key={s} className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700">{s}</span>
-                      ))}
+                <div className="cf-card p-4 space-y-3 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-sm font-extrabold">Historique SMS envoyés (`/sms`) &amp; Emails échangés (`/email`)</h3>
+                      <p className="cf-muted text-[11px]">Données de démonstration consultables, filtrables et exportables en CSV.</p>
                     </div>
-                    <p className="cf-muted">EX15 : motif d&apos;erreur prestataire ou retour STOP tracé sur ligne dédiée.</p>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {['Tous', 'Envoyé', 'Erreur'].map((st) => (
+                        <button
+                          key={st}
+                          type="button"
+                          onClick={() => setCommLogFilter(st)}
+                          className={`px-2 py-1 rounded border cursor-pointer ${
+                            commLogFilter === st ? 'bg-emerald-600 text-white border-emerald-400' : 'bg-slate-900 border-slate-700 text-slate-300'
+                          }`}
+                        >
+                          {st}
+                        </button>
+                      ))}
+                      {simulatedRole !== 'commercial' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const rows = commLogs
+                              .filter((l) => commLogFilter === 'Tous' || l.status === commLogFilter)
+                              .map((l) => `${l.channel};${l.recipient};${l.clubId};${l.status};${l.subjectOrPreview};${l.errorReason ?? ''};${l.sentAt}`);
+                            const csv = ['CANAL;DESTINATAIRE;CLUB;STATUT;OBJET_APERCU;ERREUR;HORODATAGE', ...rows].join('\n');
+                            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'historique-communication-lead.csv';
+                            a.click();
+                            URL.revokeObjectURL(url);
+                          }}
+                          className="px-2.5 py-1 rounded bg-violet-600 text-white font-bold cursor-pointer inline-flex items-center gap-1"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          Export CSV
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="cf-card p-4 space-y-2">
-                    <h3 className="text-sm font-extrabold">Emails échangés (`/email`)</h3>
-                    <div className="flex flex-wrap gap-1">
-                      {['Tous', 'À envoyer', 'Envoyé', 'Erreur', 'Reçu', 'En cours d\'envoi'].map((s) => (
-                        <span key={s} className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700">{s}</span>
-                      ))}
-                    </div>
-                    <p className="cf-muted">Export CSV / Excel contrôlé par rôle et journalisé.</p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-800 text-slate-400">
+                          <th className="py-1.5 pr-3">Canal</th>
+                          <th className="py-1.5 pr-3">Destinataire</th>
+                          <th className="py-1.5 pr-3">Club</th>
+                          <th className="py-1.5 pr-3">Statut</th>
+                          <th className="py-1.5 pr-3">Message / Erreur</th>
+                          <th className="py-1.5">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {commLogs
+                          .filter((l) => commLogFilter === 'Tous' || l.status === commLogFilter)
+                          .map((l) => (
+                            <tr key={l.id} className="border-b border-slate-800/60">
+                              <td className="py-1.5 pr-3 font-mono font-bold">{l.channel}</td>
+                              <td className="py-1.5 pr-3">{l.recipient}</td>
+                              <td className="py-1.5 pr-3 font-mono">{l.clubId}</td>
+                              <td className="py-1.5 pr-3">{l.status}</td>
+                              <td className="py-1.5 pr-3">
+                                {l.subjectOrPreview}
+                                {l.errorReason && <span className="text-rose-400 ml-1">({l.errorReason})</span>}
+                              </td>
+                              <td className="py-1.5 font-mono text-[10px]">{l.sentAt}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               )}
@@ -1900,18 +2884,13 @@ export function LeadCommercialHubView({
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {LEAD_STATISTICS_8_TABLES.map((tbl) => {
-                      const activeProspects = prospects.filter((p) => {
-                        if (!multiClubCds && p.clubId === 'carre-de-soie') return false;
-                        if (!multiClubBeynost && p.clubId === 'beynost') return false;
-                        if (ignoreArchivedStats && p.stage === 'Perdu') return false;
-                        return true;
+                      const stats = computeLeadReportBreakdown(tbl.id, prospects, {
+                        periodId: statsPeriodId,
+                        multiClubCds,
+                        multiClubBeynost,
+                        ignoreArchived: ignoreArchivedStats,
+                        compareToPreviousYear,
                       });
-                      const cdsCount = activeProspects.filter((p) => p.clubId === 'carre-de-soie').length;
-                      const beyCount = activeProspects.filter((p) => p.clubId === 'beynost').length;
-                      const convertedCount = activeProspects.filter((p) => p.stage === 'Adhérent').length;
-                      const convPct = activeProspects.length
-                        ? Math.round((convertedCount / activeProspects.length) * 100)
-                        : 0;
                       return (
                         <div key={tbl.id} className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
                           <div className="flex items-center justify-between">
@@ -1919,7 +2898,7 @@ export function LeadCommercialHubView({
                               {tbl.group} · {tbl.tab}
                             </strong>
                             <span className="text-[10px] font-mono cf-muted">
-                              Clubs: {(multiClubCds ? 1 : 0) + (multiClubBeynost ? 1 : 0)}
+                              Période : {statsPeriodId} · Clubs: {(multiClubCds ? 1 : 0) + (multiClubBeynost ? 1 : 0)}
                             </span>
                           </div>
                           <div className="flex flex-wrap gap-1">
@@ -1931,20 +2910,43 @@ export function LeadCommercialHubView({
                           </div>
                           <div className="grid grid-cols-3 gap-1.5 pt-1 text-[11px] font-mono">
                             <div className="p-1.5 rounded bg-slate-950 border border-slate-800">
-                              <div className="text-[9px] text-slate-400">Volume filtré</div>
-                              <div className="font-bold text-white">{activeProspects.length}</div>
+                              <div className="text-[9px] text-slate-400">Volume période</div>
+                              <div className="font-bold text-white">
+                                {stats.filteredCount}
+                                {stats.previousYearCount !== null && (
+                                  <span className="text-[10px] text-amber-300 ml-1">(N-1: {stats.previousYearCount})</span>
+                                )}
+                              </div>
                             </div>
                             <div className="p-1.5 rounded bg-slate-950 border border-slate-800">
                               <div className="text-[9px] text-slate-400">CDS / BEY</div>
-                              <div className="font-bold text-violet-300">{cdsCount} / {beyCount}</div>
+                              <div className="font-bold text-violet-300">
+                                {stats.cdsCount} / {stats.beyCount}
+                              </div>
                             </div>
                             <div className="p-1.5 rounded bg-slate-950 border border-slate-800">
                               <div className="text-[9px] text-slate-400">Transformation</div>
                               <div className="font-bold text-emerald-400">
-                                {convertedCount} ({convPct}%)
+                                {stats.convertedCount} ({stats.conversionPct}%)
                               </div>
                             </div>
                           </div>
+                          {stats.rows.length === 0 ? (
+                            <div className="text-[11px] cf-muted italic py-1">
+                              Aucune donnée sur cette période / sélection de clubs.
+                            </div>
+                          ) : (
+                            <div className="space-y-1 pt-1 border-t border-slate-800/80 text-[10px]">
+                              {stats.rows.map((r) => (
+                                <div key={r.label} className="flex items-center justify-between">
+                                  <span className="font-semibold text-slate-200">{r.label}</span>
+                                  <span className="font-mono text-slate-400">
+                                    {r.volume} ({r.cdsCount}/{r.beyCount}) · {r.conversionPct}%
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -1953,11 +2955,108 @@ export function LeadCommercialHubView({
               )}
 
               {analyticsSubTab === 'sales' && (
-                <div className="cf-card p-4 space-y-2 text-xs">
-                  <h3 className="text-sm font-extrabold">Ventes (`/sales`) — Filtre date sur fin d’abonnement</h3>
-                  <p className="cf-muted">
-                    Critère vérifié : <strong>Se termine après / Se termine avant</strong> (distinction explicite avec la date d’encaissement).
-                  </p>
+                <div className="cf-card p-4 space-y-3 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-sm font-extrabold">Ventes (`/sales`) — Filtre date sur fin d’abonnement</h3>
+                      <p className="cf-muted">
+                        Critère : <strong>Se termine après / Se termine avant</strong> (données de démonstration, sans connecteur comptable réel).
+                      </p>
+                    </div>
+                    {simulatedRole !== 'commercial' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const filtered = filterFictiveSales(INITIAL_FICTIVE_SALES, {
+                            clubCds: multiClubCds,
+                            clubBeynost: multiClubBeynost,
+                            endsAfter: salesEndsAfter,
+                            endsBefore: salesEndsBefore,
+                          });
+                          const csv = [
+                            'MEMBRE;ABONNEMENT;CLUB;MONTANT_EUR;ENCAISSEMENT;FIN_ABONNEMENT;STATUT',
+                            ...filtered.map(
+                              (s) =>
+                                `${s.memberName};${s.planName};${s.clubId};${s.amountEur.toFixed(2)};${s.paidAt};${s.subscriptionEndDate};${s.status}`
+                            ),
+                          ].join('\n');
+                          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = 'ventes-fin-abonnement-demo.csv';
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg bg-violet-600 text-white font-bold inline-flex items-center gap-1 cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Export CSV ventes
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <label>
+                      Se termine après (date fin abonnement)
+                      <input
+                        type="date"
+                        value={salesEndsAfter}
+                        onChange={(e) => setSalesEndsAfter(e.target.value)}
+                        className="w-full mt-1 px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
+                      />
+                    </label>
+                    <label>
+                      Se termine avant (date fin abonnement)
+                      <input
+                        type="date"
+                        value={salesEndsBefore}
+                        onChange={(e) => setSalesEndsBefore(e.target.value)}
+                        className="w-full mt-1 px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
+                      />
+                    </label>
+                  </div>
+                  {(() => {
+                    const visibleSales = filterFictiveSales(INITIAL_FICTIVE_SALES, {
+                      clubCds: multiClubCds,
+                      clubBeynost: multiClubBeynost,
+                      endsAfter: salesEndsAfter,
+                      endsBefore: salesEndsBefore,
+                    });
+                    return visibleSales.length === 0 ? (
+                      <div className="p-3 rounded-lg bg-slate-900/60 border border-slate-800 text-center cf-muted">
+                        Aucune vente ne correspond à ces critères de fin d&apos;abonnement.
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="border-b border-slate-800 text-slate-400">
+                              <th className="py-1.5 pr-3">Adhérent</th>
+                              <th className="py-1.5 pr-3">Formule</th>
+                              <th className="py-1.5 pr-3">Club</th>
+                              <th className="py-1.5 pr-3">Montant</th>
+                              <th className="py-1.5 pr-3">Encaissement</th>
+                              <th className="py-1.5 pr-3">Fin abonnement</th>
+                              <th className="py-1.5">Statut</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {visibleSales.map((s) => (
+                              <tr key={s.id} className="border-b border-slate-800/60">
+                                <td className="py-1.5 pr-3 font-bold">{s.memberName}</td>
+                                <td className="py-1.5 pr-3">{s.planName}</td>
+                                <td className="py-1.5 pr-3 font-mono">{s.clubId}</td>
+                                <td className="py-1.5 pr-3 font-mono">{s.amountEur.toFixed(2)} €</td>
+                                <td className="py-1.5 pr-3 font-mono">{s.paidAt}</td>
+                                <td className="py-1.5 pr-3 font-mono text-amber-300">{s.subscriptionEndDate}</td>
+                                <td className="py-1.5">{s.status}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
@@ -1966,38 +3065,86 @@ export function LeadCommercialHubView({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <h3 className="text-sm font-extrabold">
-                        Formulaires (`/forms`) — UI-01 corrigé &amp; ACL-01 appliqué
+                        Formulaires (`/forms`) — Création, Sections, Publication &amp; Réponses
                       </h3>
                       <p className="cf-muted">
-                        Colonne 1 renommée en « Nom du formulaire » · Bouton « Ajouter une section » empilé à 390 px (RSP-01).
+                        Persistance locale après rechargement · Contrôle ACL-01 (lecture seule pour Commercial).
                       </p>
                     </div>
                     {evaluateLeadModuleAccess(simulatedRole, 'form_write').allowed && (
                       <button
                         type="button"
-                        onClick={() =>
-                          setFormsList((prev) => [
-                            ...prev,
-                            {
-                              id: `frm-${Date.now()}`,
-                              name: 'Nouveau formulaire fictif',
-                              clubId: clubFilter === 'beynost' ? 'beynost' : 'carre-de-soie',
-                              responsesCount: 0,
-                              createdAt: '2026-11-18',
-                              published: false,
-                              sections: 1,
-                            },
-                          ])
-                        }
-                        className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold cursor-pointer"
+                        onClick={() => {
+                          setNewFormClub(clubFilter === 'beynost' ? 'beynost' : 'carre-de-soie');
+                          setShowNewFormDialog((v) => !v);
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer"
                       >
-                        + Ajouter un formulaire / une section
+                        + Créer un formulaire
                       </button>
                     )}
                   </div>
 
+                  {showNewFormDialog && (
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (!newFormName.trim()) return;
+                        const created: FictiveFormRow = {
+                          id: `frm-${Date.now()}`,
+                          name: newFormName.trim(),
+                          description: newFormDesc.trim(),
+                          clubId: newFormClub,
+                          responsesCount: 0,
+                          createdAt: new Date().toISOString().slice(0, 10),
+                          published: false,
+                          sections: 1,
+                          sectionTitles: ['Coordonnées & Consentement RGPD'],
+                          sampleResponses: [],
+                        };
+                        setFormsList((prev) => [created, ...prev]);
+                        setSelectedFormId(created.id);
+                        setNewFormName('');
+                        setNewFormDesc('');
+                        setShowNewFormDialog(false);
+                        setFormAccessMessage(`Formulaire « ${created.name} » créé et persisté.`);
+                      }}
+                      className="p-3 rounded-xl bg-slate-900/70 border border-emerald-500/40 grid grid-cols-1 sm:grid-cols-4 gap-2"
+                    >
+                      <input
+                        type="text"
+                        required
+                        placeholder="Nom du formulaire"
+                        value={newFormName}
+                        onChange={(e) => setNewFormName(e.target.value)}
+                        className="px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Description courte"
+                        value={newFormDesc}
+                        onChange={(e) => setNewFormDesc(e.target.value)}
+                        className="px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
+                      />
+                      <select
+                        value={newFormClub}
+                        onChange={(e) => setNewFormClub(e.target.value as 'carre-de-soie' | 'beynost')}
+                        className="px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
+                      >
+                        <option value="carre-de-soie">Carré de Soie</option>
+                        <option value="beynost">Beynost</option>
+                      </select>
+                      <button
+                        type="submit"
+                        className="px-3 py-1.5 rounded bg-emerald-600 text-white font-bold cursor-pointer"
+                      >
+                        Enregistrer le formulaire
+                      </button>
+                    </form>
+                  )}
+
                   {formAccessMessage && (
-                    <div className="p-2.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-200 font-semibold">
+                    <div className="p-2.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-200 font-semibold">
                       {formAccessMessage}
                     </div>
                   )}
@@ -2015,16 +3162,47 @@ export function LeadCommercialHubView({
                       </thead>
                       <tbody>
                         {formsList.map((f) => {
+                          const canWrite = evaluateLeadModuleAccess(simulatedRole, 'form_write').allowed;
                           const canDelete = evaluateLeadModuleAccess(simulatedRole, 'form_delete').allowed;
                           return (
                             <tr key={f.id} className="border-b border-slate-800/60">
-                              <td className="py-2 pr-3 font-bold">{f.name}</td>
+                              <td className="py-2 pr-3">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedFormId(f.id)}
+                                  className="font-bold text-emerald-300 hover:underline cursor-pointer text-left"
+                                >
+                                  {f.name}
+                                </button>
+                              </td>
                               <td className="py-2 pr-3 font-mono">{f.clubId}</td>
                               <td className="py-2 pr-3">
                                 {f.sections} section(s) · {f.responsesCount} réponse(s)
                               </td>
                               <td className="py-2 pr-3">{f.published ? 'Publié' : 'Brouillon'}</td>
-                              <td className="py-2">
+                              <td className="py-2 flex flex-wrap gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedFormId(f.id)}
+                                  className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 cursor-pointer"
+                                >
+                                  Éditer / Réponses
+                                </button>
+                                {canWrite && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setFormsList((prev) =>
+                                        prev.map((row) =>
+                                          row.id === f.id ? { ...row, published: !row.published } : row
+                                        )
+                                      )
+                                    }
+                                    className="px-2 py-1 rounded bg-violet-600/80 hover:bg-violet-600 text-white cursor-pointer"
+                                  >
+                                    {f.published ? 'Dépublier' : 'Publier'}
+                                  </button>
+                                )}
                                 {canDelete ? (
                                   <button
                                     type="button"
@@ -2038,7 +3216,7 @@ export function LeadCommercialHubView({
                                 ) : (
                                   <span className="text-[11px] text-slate-400 inline-flex items-center gap-1">
                                     <Lock className="w-3 h-3 text-rose-400" />
-                                    Lecture seule (corbeille masquée)
+                                    Lecture seule
                                   </span>
                                 )}
                               </td>
@@ -2048,6 +3226,110 @@ export function LeadCommercialHubView({
                       </tbody>
                     </table>
                   </div>
+
+                  {(() => {
+                    const activeForm = formsList.find((f) => f.id === selectedFormId);
+                    if (!activeForm) return null;
+                    const canWrite = evaluateLeadModuleAccess(simulatedRole, 'form_write').allowed;
+                    return (
+                      <div className="p-3.5 rounded-xl bg-slate-900/70 border border-violet-500/40 space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <strong className="text-sm text-violet-300">{activeForm.name}</strong>
+                            <div className="text-[11px] cf-muted">
+                              Lien public isolé : <code>/forms/{activeForm.clubId}/{activeForm.id}</code> · Statut :{' '}
+                              <strong>{activeForm.published ? 'Publié' : 'Brouillon'}</strong>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedFormId(null)}
+                            className="text-[11px] text-slate-400 cursor-pointer"
+                          >
+                            Fermer l&apos;éditeur
+                          </button>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <div className="font-bold">Sections ({activeForm.sectionTitles?.length ?? activeForm.sections})</div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {(activeForm.sectionTitles ?? ['Section 1']).map((sec, idx) => (
+                              <span key={idx} className="px-2 py-1 rounded bg-slate-950 border border-slate-700">
+                                {idx + 1}. {sec}
+                              </span>
+                            ))}
+                          </div>
+                          {canWrite && (
+                            <div className="flex gap-2 pt-1">
+                              <input
+                                type="text"
+                                placeholder="Titre nouvelle section"
+                                value={newSectionTitle}
+                                onChange={(e) => setNewSectionTitle(e.target.value)}
+                                className="px-2.5 py-1 rounded bg-slate-950 border border-slate-700"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!newSectionTitle.trim()) return;
+                                  setFormsList((prev) =>
+                                    prev.map((row) =>
+                                      row.id === activeForm.id
+                                        ? {
+                                            ...row,
+                                            sections: row.sections + 1,
+                                            sectionTitles: [...(row.sectionTitles ?? []), newSectionTitle.trim()],
+                                          }
+                                        : row
+                                    )
+                                  );
+                                  setNewSectionTitle('');
+                                }}
+                                className="px-2.5 py-1 rounded bg-emerald-600 text-white font-bold cursor-pointer"
+                              >
+                                + Ajouter une section
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-1.5 pt-2 border-t border-slate-800">
+                          <div className="font-bold">Réponses collectées ({activeForm.sampleResponses?.length ?? 0} affichée(s))</div>
+                          {(activeForm.sampleResponses ?? []).length === 0 ? (
+                            <div className="text-[11px] cf-muted">Aucune réponse enregistrée pour ce formulaire.</div>
+                          ) : (
+                            (activeForm.sampleResponses ?? []).map((rep) => (
+                              <div key={rep.id} className="p-2 rounded bg-slate-950 border border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                                <span>
+                                  <strong>{rep.fullName}</strong> · {rep.email} · {rep.phone} · RGPD={rep.rgpdConsent ? 'OUI' : 'NON'}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const parts = rep.fullName.split(' ');
+                                    const res = createProspect({
+                                      firstName: parts[0] || rep.fullName,
+                                      lastName: parts.slice(1).join(' ') || 'Formulaire',
+                                      phone: rep.phone,
+                                      email: rep.email,
+                                      clubId: activeForm.clubId,
+                                      source: 'Site c.fitness',
+                                      goal: `Réponse formulaire ${activeForm.name}`,
+                                      rgpdConsent: rep.rgpdConsent,
+                                    });
+                                    setFormAccessMessage(res.message);
+                                  }}
+                                  className="px-2.5 py-1 rounded bg-violet-600 text-white font-bold cursor-pointer"
+                                >
+                                  Rattacher au pipeline
+                                </button>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>
@@ -2093,10 +3375,21 @@ export function LeadCommercialHubView({
                   );
                 })()}
 
-                {selectedSettingsTab === 'club-profile' && (
+                {(selectedSettingsTab === 'marketing' || selectedSettingsTab === 'club-profile') && (
                   <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
-                    <div className="font-bold text-emerald-300">
-                      Profil du Club (Nom, Adresse, Couleurs &amp; Logo)
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="font-bold text-emerald-300">
+                        Profil du Club (Nom, Adresse, Couleurs &amp; Logo) — Opérationnel (persistance locale par club)
+                      </div>
+                      <select
+                        value={selectedProfileClubId}
+                        onChange={(e) => setSelectedProfileClubId(e.target.value as 'carre-de-soie' | 'beynost')}
+                        aria-label="Club à configurer"
+                        className="px-2.5 py-1 rounded bg-slate-950 border border-slate-700 text-xs font-bold"
+                      >
+                        <option value="carre-de-soie">Carré de Soie</option>
+                        <option value="beynost">Beynost</option>
+                      </select>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       <label className="block">
@@ -2104,7 +3397,12 @@ export function LeadCommercialHubView({
                         <input
                           type="text"
                           value={clubProfileForm.name}
-                          onChange={(e) => setClubProfileForm((p) => ({ ...p, name: e.target.value }))}
+                          onChange={(e) =>
+                            setClubProfilesByClub((prev) => ({
+                              ...prev,
+                              [selectedProfileClubId]: { ...prev[selectedProfileClubId], name: e.target.value },
+                            }))
+                          }
                           className="w-full mt-0.5 px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
                         />
                       </label>
@@ -2113,7 +3411,12 @@ export function LeadCommercialHubView({
                         <input
                           type="text"
                           value={clubProfileForm.address}
-                          onChange={(e) => setClubProfileForm((p) => ({ ...p, address: e.target.value }))}
+                          onChange={(e) =>
+                            setClubProfilesByClub((prev) => ({
+                              ...prev,
+                              [selectedProfileClubId]: { ...prev[selectedProfileClubId], address: e.target.value },
+                            }))
+                          }
                           className="w-full mt-0.5 px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
                         />
                       </label>
@@ -2122,7 +3425,15 @@ export function LeadCommercialHubView({
                         <input
                           type="color"
                           value={clubProfileForm.primaryColor}
-                          onChange={(e) => setClubProfileForm((p) => ({ ...p, primaryColor: e.target.value }))}
+                          onChange={(e) =>
+                            setClubProfilesByClub((prev) => ({
+                              ...prev,
+                              [selectedProfileClubId]: {
+                                ...prev[selectedProfileClubId],
+                                primaryColor: e.target.value,
+                              },
+                            }))
+                          }
                           className="w-full mt-0.5 h-9 px-1 py-1 rounded bg-slate-950 border border-slate-700 cursor-pointer"
                         />
                       </label>
@@ -2130,9 +3441,14 @@ export function LeadCommercialHubView({
                         <span className="text-[10px] cf-muted">Sigle / Logo</span>
                         <input
                           type="text"
-                          maxLength={6}
+                          maxLength={10}
                           value={clubProfileForm.logoBadge}
-                          onChange={(e) => setClubProfileForm((p) => ({ ...p, logoBadge: e.target.value }))}
+                          onChange={(e) =>
+                            setClubProfilesByClub((prev) => ({
+                              ...prev,
+                              [selectedProfileClubId]: { ...prev[selectedProfileClubId], logoBadge: e.target.value },
+                            }))
+                          }
                           className="w-full mt-0.5 px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
                         />
                       </label>
@@ -2141,17 +3457,19 @@ export function LeadCommercialHubView({
                       {clubProfileSavedNotice ? (
                         <span className="text-[11px] font-bold text-emerald-400">{clubProfileSavedNotice}</span>
                       ) : (
-                        <span className="text-[10px] cf-muted">Sauvegarde locale persistante après rechargement</span>
+                        <span className="text-[10px] cf-muted">
+                          Profil actif pour {selectedProfileClubId} : <strong>{clubProfileForm.name}</strong> ({clubProfileForm.logoBadge})
+                        </span>
                       )}
                       <button
                         type="button"
                         onClick={() => {
                           try {
-                            localStorage.setItem('cfos_lead_club_profile_v1', JSON.stringify(clubProfileForm));
+                            localStorage.setItem('cfos_lead_club_profiles_v1', JSON.stringify(clubProfilesByClub));
                           } catch {
                             // ignore
                           }
-                          setClubProfileSavedNotice('Profil du club enregistré.');
+                          setClubProfileSavedNotice(`Profil du club ${selectedProfileClubId} enregistré et persisté.`);
                           setTimeout(() => setClubProfileSavedNotice(null), 3500);
                         }}
                         className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer"
@@ -2163,14 +3481,165 @@ export function LeadCommercialHubView({
                 )}
 
                 {selectedSettingsTab === 'app-settings' && (
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={statsAllowedForCommercial}
-                      onChange={(e) => setStatsAllowedForCommercial(e.target.checked)}
-                    />
-                    <span>Autoriser le rôle COMMERCIAL à consulter les Statistiques (app-settings)</span>
-                  </label>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={statsAllowedForCommercial}
+                        onChange={(e) => {
+                          const nextVal = e.target.checked;
+                          setStatsAllowedForCommercial(nextVal);
+                          try {
+                            localStorage.setItem(
+                              'cfos_lead_app_settings_v1',
+                              JSON.stringify({ statsAllowedForCommercial: nextVal })
+                            );
+                          } catch {
+                            // ignore
+                          }
+                          setCrmSettingsSavedNotice('Préférence Statistiques COMMERCIAL persistée localement.');
+                        }}
+                      />
+                      <span>Autoriser le rôle COMMERCIAL à consulter les Statistiques (persistance locale ; sync serveur à raccorder)</span>
+                    </label>
+                    {crmSettingsSavedNotice && (
+                      <div className="text-[11px] text-emerald-400 font-semibold">{crmSettingsSavedNotice}</div>
+                    )}
+                  </div>
+                )}
+
+                {['sms', 'script', 'prospects', 'notifications', 'exclusions', 'whatsapp', 'meetings', 'users'].includes(
+                  selectedSettingsTab
+                ) && (
+                  <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-emerald-300">Configuration {selectedSettingsTab}</span>
+                      <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold">
+                        Persistance locale (sans fournisseur externe en démo)
+                      </span>
+                    </div>
+                    {selectedSettingsTab === 'sms' && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <label>
+                          Crédits SMS Carré de Soie
+                          <input
+                            type="number"
+                            value={crmSettings.smsCreditsCds}
+                            onChange={(e) =>
+                              setCrmSettings((s) => ({ ...s, smsCreditsCds: Number(e.target.value) || 0 }))
+                            }
+                            className="w-full mt-1 px-2 py-1 rounded bg-slate-950 border border-slate-700"
+                          />
+                        </label>
+                        <label>
+                          Crédits SMS Beynost
+                          <input
+                            type="number"
+                            value={crmSettings.smsCreditsBeynost}
+                            onChange={(e) =>
+                              setCrmSettings((s) => ({ ...s, smsCreditsBeynost: Number(e.target.value) || 0 }))
+                            }
+                            className="w-full mt-1 px-2 py-1 rounded bg-slate-950 border border-slate-700"
+                          />
+                        </label>
+                      </div>
+                    )}
+                    {selectedSettingsTab === 'script' && (
+                      <textarea
+                        rows={4}
+                        value={crmSettings.salesScript}
+                        onChange={(e) => setCrmSettings((s) => ({ ...s, salesScript: e.target.value }))}
+                        className="w-full px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
+                      />
+                    )}
+                    {selectedSettingsTab === 'prospects' && (
+                      <label className="block">
+                        Seuil d&apos;archivage sans réponse entrante (jours)
+                        <input
+                          type="number"
+                          min={1}
+                          value={crmSettings.archiveThresholdDays}
+                          onChange={(e) =>
+                            setCrmSettings((s) => ({ ...s, archiveThresholdDays: Number(e.target.value) || 30 }))
+                          }
+                          className="w-full mt-1 px-2 py-1 rounded bg-slate-950 border border-slate-700"
+                        />
+                      </label>
+                    )}
+                    {selectedSettingsTab === 'notifications' && (
+                      <label className="block">
+                        Email destinataire des alertes
+                        <input
+                          type="email"
+                          value={crmSettings.notifEmail}
+                          onChange={(e) => setCrmSettings((s) => ({ ...s, notifEmail: e.target.value }))}
+                          className="w-full mt-1 px-2 py-1 rounded bg-slate-950 border border-slate-700"
+                        />
+                      </label>
+                    )}
+                    {selectedSettingsTab === 'exclusions' && (
+                      <label className="block">
+                        Offre Heitz déclenchant le passage Client
+                        <input
+                          type="text"
+                          value={crmSettings.clientPassOffer}
+                          onChange={(e) => setCrmSettings((s) => ({ ...s, clientPassOffer: e.target.value }))}
+                          className="w-full mt-1 px-2 py-1 rounded bg-slate-950 border border-slate-700"
+                        />
+                      </label>
+                    )}
+                    {selectedSettingsTab === 'whatsapp' && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <label>
+                          Numéro Meta Carré de Soie
+                          <input
+                            type="text"
+                            value={crmSettings.whatsappNumberCds}
+                            onChange={(e) => setCrmSettings((s) => ({ ...s, whatsappNumberCds: e.target.value }))}
+                            className="w-full mt-1 px-2 py-1 rounded bg-slate-950 border border-slate-700"
+                          />
+                        </label>
+                        <label>
+                          Numéro Meta Beynost
+                          <input
+                            type="text"
+                            value={crmSettings.whatsappNumberBeynost}
+                            onChange={(e) => setCrmSettings((s) => ({ ...s, whatsappNumberBeynost: e.target.value }))}
+                            className="w-full mt-1 px-2 py-1 rounded bg-slate-950 border border-slate-700"
+                          />
+                        </label>
+                      </div>
+                    )}
+                    {(selectedSettingsTab === 'meetings' || selectedSettingsTab === 'users') && (
+                      <div className="text-[11px] cf-muted">
+                        {selectedSettingsTab === 'meetings'
+                          ? 'Les paramètres de capacité, délai minimum et anti-collision RDV-01 sont pilotés dans l’onglet Planning RDV.'
+                          : 'Les rôles et permissions utilisateurs sont gérés dans Droits d’accès (RBAC) et le backend Rust.'}
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between gap-2">
+                      {crmSettingsSavedNotice ? (
+                        <span className="text-[11px] text-emerald-400 font-bold">{crmSettingsSavedNotice}</span>
+                      ) : (
+                        <span />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          try {
+                            localStorage.setItem('cfos_lead_crm_settings_v1', JSON.stringify(crmSettings));
+                          } catch {
+                            // ignore
+                          }
+                          setCrmSettingsSavedNotice(`Paramètres « ${selectedSettingsTab} » enregistrés localement.`);
+                          setTimeout(() => setCrmSettingsSavedNotice(null), 3000);
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold cursor-pointer"
+                      >
+                        Enregistrer
+                      </button>
+                    </div>
+                  </div>
                 )}
 
                 {selectedSettingsTab === 'automation' && (

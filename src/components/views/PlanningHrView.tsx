@@ -141,11 +141,15 @@ export function PlanningHrView({
   canViewSalaries = true,
   isReadOnly = false,
   forcedClubScope,
+  personalScopeOnly = false,
+  scopedEmployeeId,
 }: {
   forcedSubTab?: 'POINTAGES' | 'CONGES' | 'SILAE';
   canViewSalaries?: boolean;
   isReadOnly?: boolean;
   forcedClubScope?: ClubId;
+  personalScopeOnly?: boolean;
+  scopedEmployeeId?: string;
 } = {}) {
   const {
     clubFilter,
@@ -401,12 +405,12 @@ export function PlanningHrView({
   }, [navSubTarget]);
 
   // Skello Badgeuse Simulator state
-  const [kioskEmpId, setKioskEmpId] = useState<string>('emp-maxime');
-  const [kioskPin, setKioskPin] = useState<string>('3310');
-  const [kioskClub, setKioskClub] = useState<ClubId>('carre-de-soie');
+  const [kioskEmpId, setKioskEmpId] = useState<string>(scopedEmployeeId ?? 'emp-maxime');
+  const [kioskPin, setKioskPin] = useState<string>(personalScopeOnly ? '' : '3310');
+  const [kioskClub, setKioskClub] = useState<ClubId>(forcedClubScope ?? 'carre-de-soie');
 
   // Leave request creation state (Skello / Lucca style)
-  const [leaveEmpId, setLeaveEmpId] = useState('emp-maxime');
+  const [leaveEmpId, setLeaveEmpId] = useState(scopedEmployeeId ?? 'emp-maxime');
   const [leaveType, setLeaveType] = useState<LeaveRequest['type']>('CP');
   const [leaveStart, setLeaveStart] = useState('2026-11-02');
   const [leaveEnd, setLeaveEnd] = useState('2026-11-06');
@@ -474,10 +478,21 @@ export function PlanningHrView({
 
   const filteredEmployees = employees.filter((e) => {
     if (e.role === 'kiosque') return false;
+    if (personalScopeOnly && scopedEmployeeId && e.id !== scopedEmployeeId) return false;
     if (clubFilter !== 'all' && e.clubId !== clubFilter) return false;
     if (roleFilter !== 'ALL' && e.role !== roleFilter) return false;
     return true;
   });
+
+  const visibleTimeEntries =
+    personalScopeOnly && scopedEmployeeId
+      ? timeEntries.filter((t) => t.employeeId === scopedEmployeeId)
+      : timeEntries;
+
+  const visibleLeaveRequests =
+    personalScopeOnly && scopedEmployeeId
+      ? leaveRequests.filter((l) => l.employeeId === scopedEmployeeId)
+      : leaveRequests;
 
   const previewShift: Shift = {
     id: 'preview-shift',
@@ -2018,24 +2033,30 @@ export function PlanningHrView({
                       Borne d&apos;accueil
                     </label>
                     <select
-                      value={kioskClub}
+                      value={personalScopeOnly && filteredEmployees[0] ? filteredEmployees[0].clubId : kioskClub}
+                      disabled={personalScopeOnly}
                       onChange={(e) => setKioskClub(e.target.value as ClubId)}
-                      className="w-full px-2.5 py-2 rounded-lg bg-[#2B3674] border border-white/15 text-white font-semibold"
+                      className="w-full px-2.5 py-2 rounded-lg bg-[#2B3674] border border-white/15 text-white font-semibold disabled:opacity-75"
                     >
-                      <option value="carre-de-soie">Carré de Soie</option>
-                      <option value="beynost">Beynost</option>
+                      {(!personalScopeOnly || filteredEmployees[0]?.clubId === 'carre-de-soie') && (
+                        <option value="carre-de-soie">Carré de Soie</option>
+                      )}
+                      {(!personalScopeOnly || filteredEmployees[0]?.clubId === 'beynost') && (
+                        <option value="beynost">Beynost</option>
+                      )}
                     </select>
                   </div>
                   <div>
                     <label className="block text-[11px] text-slate-300 mb-1">Collaborateur</label>
                     <select
-                      value={kioskEmpId}
+                      value={personalScopeOnly && scopedEmployeeId ? scopedEmployeeId : kioskEmpId}
+                      disabled={personalScopeOnly}
                       onChange={(e) => {
                         const target = employees.find((emp) => emp.id === e.target.value);
                         setKioskEmpId(e.target.value);
-                        if (target) setKioskPin(target.pinCode);
+                        if (target && !personalScopeOnly) setKioskPin(target.pinCode);
                       }}
-                      className="w-full px-2.5 py-2 rounded-lg bg-[#2B3674] border border-white/15 text-white font-semibold"
+                      className="w-full px-2.5 py-2 rounded-lg bg-[#2B3674] border border-white/15 text-white font-semibold disabled:opacity-75"
                     >
                       {filteredEmployees.map((e) => (
                         <option key={e.id} value={e.id}>
@@ -2095,42 +2116,44 @@ export function PlanningHrView({
                 </div>
               </div>
 
-              {/* Manager PIN Reset Strip */}
-              <div className="pt-3 border-t border-white/15 space-y-2">
-                <div className="text-[11px] font-bold text-slate-300">
-                  Codes PIN Collaborateurs &amp; Déverrouillage Manager :
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-40 overflow-y-auto pr-1">
-                  {filteredEmployees.map((emp) => (
-                    <div
-                      key={emp.id}
-                      className="px-2.5 py-1.5 rounded-lg bg-[#2B3674] flex items-center justify-between text-[11px]"
-                    >
-                      <div>
-                        <div className="font-bold text-white truncate">
-                          {emp.firstName} {emp.lastName[0]}.
-                        </div>
-                        <div className="font-mono text-[10px] text-slate-300">
-                          PIN: {emp.pinCode} ({emp.failedPinAttempts}/5)
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          unlockEmployeePin(emp.id);
-                          setFeedbackBanner(
-                            `PIN Kiosque réinitialisé pour ${emp.firstName} ${emp.lastName}.`
-                          );
-                        }}
-                        className="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-[#00C48C] font-semibold flex items-center gap-1 cursor-pointer"
+              {/* Manager PIN Reset Strip (masqué en périmètre personnel employé — CFOS-058) */}
+              {!personalScopeOnly && (
+                <div className="pt-3 border-t border-white/15 space-y-2">
+                  <div className="text-[11px] font-bold text-slate-300">
+                    Codes PIN Collaborateurs &amp; Déverrouillage Manager :
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-40 overflow-y-auto pr-1">
+                    {filteredEmployees.map((emp) => (
+                      <div
+                        key={emp.id}
+                        className="px-2.5 py-1.5 rounded-lg bg-[#2B3674] flex items-center justify-between text-[11px]"
                       >
-                        <Unlock className="w-3 h-3" />
-                        Reset
-                      </button>
-                    </div>
-                  ))}
+                        <div>
+                          <div className="font-bold text-white truncate">
+                            {emp.firstName} {emp.lastName[0]}.
+                          </div>
+                          <div className="font-mono text-[10px] text-slate-300">
+                            PIN: {emp.pinCode} ({emp.failedPinAttempts}/5)
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            unlockEmployeePin(emp.id);
+                            setFeedbackBanner(
+                              `PIN Kiosque réinitialisé pour ${emp.firstName} ${emp.lastName}.`
+                            );
+                          }}
+                          className="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-[#00C48C] font-semibold flex items-center gap-1 cursor-pointer"
+                        >
+                          <Unlock className="w-3 h-3" />
+                          Reset
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Right: Skello Feuille d'Émargement (Planifié vs Réel Pointé) */}
@@ -2145,7 +2168,7 @@ export function PlanningHrView({
                   </p>
                 </div>
                 <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">
-                  {timeEntries.length} pointages horodatés
+                  {visibleTimeEntries.length} pointages horodatés
                 </span>
               </div>
 
@@ -2161,7 +2184,7 @@ export function PlanningHrView({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {timeEntries.map((pt) => {
+                    {visibleTimeEntries.map((pt) => {
                       const emp = employees.find((e) => e.id === pt.employeeId);
                       return (
                         <tr key={pt.id} className="hover:bg-slate-50">
@@ -2204,7 +2227,7 @@ export function PlanningHrView({
                 Validation des Demandes d&apos;Absence Skello (CP, RTT, Maladie, CFA BPJEPS)
               </h2>
               <div className="divide-y divide-slate-100 text-xs">
-                {leaveRequests.map((lv) => {
+                {visibleLeaveRequests.map((lv) => {
                   const emp = employees.find((e) => e.id === lv.employeeId);
                   return (
                     <div

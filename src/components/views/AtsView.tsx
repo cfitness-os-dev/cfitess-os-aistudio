@@ -65,8 +65,14 @@ function getJobBoardBadgeStyle(channel: string): string {
 
 export function AtsView({
   initialTab,
+  personalScopeOnly = false,
+  scopedEmployeeId,
+  canManageRecruitment = true,
 }: {
   initialTab?: 'FLATCHR_KANBAN' | 'YOUSIGN_PARAPHEUR';
+  personalScopeOnly?: boolean;
+  scopedEmployeeId?: string;
+  canManageRecruitment?: boolean;
 } = {}) {
   const {
     clubFilter,
@@ -74,6 +80,7 @@ export function AtsView({
     jobOffers,
     hrDocuments,
     employees,
+    currentUser,
     signDocumentWithInternalProof,
     moveCandidateStage,
     ingestEmailCandidate,
@@ -83,10 +90,16 @@ export function AtsView({
   } = useCfos();
 
   const [atsMode, setAtsMode] = useState<'FLATCHR_KANBAN' | 'YOUSIGN_PARAPHEUR'>(
-    initialTab ?? (navSubTarget === 'ats' ? 'FLATCHR_KANBAN' : 'YOUSIGN_PARAPHEUR')
+    !canManageRecruitment
+      ? 'YOUSIGN_PARAPHEUR'
+      : initialTab ?? (navSubTarget === 'ats' ? 'FLATCHR_KANBAN' : 'YOUSIGN_PARAPHEUR')
   );
 
   React.useEffect(() => {
+    if (!canManageRecruitment) {
+      setAtsMode('YOUSIGN_PARAPHEUR');
+      return;
+    }
     if (initialTab) {
       setAtsMode(initialTab);
     } else if (navSubTarget === 'documents') {
@@ -94,7 +107,7 @@ export function AtsView({
     } else if (navSubTarget === 'ats') {
       setAtsMode('FLATCHR_KANBAN');
     }
-  }, [initialTab, navSubTarget]);
+  }, [initialTab, navSubTarget, canManageRecruitment]);
 
   const [otpInputByDoc, setOtpInputByDoc] = useState<Record<string, string>>({});
   const [simulateRollback, setSimulateRollback] = useState(false);
@@ -174,7 +187,11 @@ export function AtsView({
     });
   };
 
+  const effectiveSelfId = scopedEmployeeId ?? currentUser.id;
   const contractDocs = [...extraDocs, ...hrDocuments].filter((d) => {
+    if (personalScopeOnly && d.employeeId !== effectiveSelfId) {
+      return false;
+    }
     if (docFolderFilter === 'ALL') {
       return d.category === 'Contrat' || d.category === 'Avenant' || Boolean(d.contractBodyText);
     }
@@ -308,28 +325,32 @@ export function AtsView({
                 <FileSignature className="w-4 h-4" />
                 <span>1. Documents &amp; Contrats à Signer ({contractDocs.length})</span>
               </button>
-              <button
-                onClick={() => setAtsMode('FLATCHR_KANBAN')}
-                className={`px-3.5 py-2 rounded-lg font-bold flex items-center gap-2 cursor-pointer transition-colors ${
-                  atsMode === 'FLATCHR_KANBAN'
-                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-2xs'
-                    : 'text-slate-600 hover:bg-white hover:text-slate-900'
-                }`}
-              >
-                <Briefcase className="w-4 h-4" />
-                <span>2. Recrutement ATS &amp; Candidats ({filteredCandidates.length})</span>
-              </button>
+              {canManageRecruitment && (
+                <button
+                  onClick={() => setAtsMode('FLATCHR_KANBAN')}
+                  className={`px-3.5 py-2 rounded-lg font-bold flex items-center gap-2 cursor-pointer transition-colors ${
+                    atsMode === 'FLATCHR_KANBAN'
+                      ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-2xs'
+                      : 'text-slate-600 hover:bg-white hover:text-slate-900'
+                  }`}
+                >
+                  <Briefcase className="w-4 h-4" />
+                  <span>2. Recrutement ATS &amp; Candidats ({filteredCandidates.length})</span>
+                </button>
+              )}
             </div>
           </div>
 
-          <label className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 font-semibold cursor-pointer shrink-0">
-            <input
-              type="checkbox"
-              checked={simulateRollback}
-              onChange={(e) => setSimulateRollback(e.target.checked)}
-            />
-            <span>Mode test sécurité transactionnelle</span>
-          </label>
+          {canManageRecruitment && (
+            <label className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 font-semibold cursor-pointer shrink-0">
+              <input
+                type="checkbox"
+                checked={simulateRollback}
+                onChange={(e) => setSimulateRollback(e.target.checked)}
+              />
+              <span>Mode test sécurité transactionnelle</span>
+            </label>
+          )}
         </div>
 
         {transactionBanner && (
@@ -373,7 +394,7 @@ export function AtsView({
         {/* ===================================================================== */}
         {/* MODE 1: FLATCHR MULTIPOSTING & CANDIDATE KANBAN                       */}
         {/* ===================================================================== */}
-        {atsMode === 'FLATCHR_KANBAN' && (
+        {canManageRecruitment && atsMode === 'FLATCHR_KANBAN' && (
           <div className="p-4 space-y-4 bg-slate-50">
             {/* Multiposting Job Offers Strip with Brand Job-Board Pills */}
             <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
@@ -858,7 +879,7 @@ export function AtsView({
                             )}
                           </div>
 
-                          {!isSigned && (
+                          {!isSigned && (!personalScopeOnly || doc.employeeId === effectiveSelfId) && (
                             <div className="space-y-2 pt-1">
                               <div className="flex items-center gap-2">
                                 <input

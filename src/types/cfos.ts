@@ -182,6 +182,9 @@ export interface Prospect {
   pendingSmsDraft?: string;
   heitzPassageQrCode?: string;
   heitzBookingId?: number;
+  segments?: string[];
+  leadStatus?: string;
+  address?: string;
 }
 
 export interface PhoneLine {

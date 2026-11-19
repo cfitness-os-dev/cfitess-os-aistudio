@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { CFitnessApiEngine } from './apiEngine';
+import {
+  INITIAL_FICTIVE_SALES,
+  computeActivityDueBucket,
+  computeLeadReportBreakdown,
+  filterFictiveSales,
+  parseCsvLineWithQuotes,
+} from './leadHubHelpers';
 import { INITIAL_ROLE_PROFILES } from './permissionsMatrixSeed';
 import { computeShiftNetMinutes, formatMinutesAsHours, getControlState } from './rbac';
 import {
@@ -1203,4 +1210,79 @@ test('LEAD-TST05 — WhatsApp 24h & replis WA-01/WA-02/INC-001, collisions RDV-0
   assert.equal(whTrial.entryType, 'demande_essai');
   const whMissing = ingestLeadClubEntryWebhook({ apiKey: 'secret-demo', club: 'beynost' });
   assert.equal(whMissing.status, 400);
+});
+
+test('LEAD-TST06 — Statistiques par période, ventes fin abonnement, CSV guillemets et échéances activités', () => {
+  // CSV avec point-virgule protégé par guillemets (CFOS-050)
+  const cols = parseCsvLineWithQuotes('F;Camille;Garnier;"12 Rue;Lyon";0611223344', ';');
+  assert.equal(cols.length, 5);
+  assert.equal(cols[3], '12 Rue;Lyon');
+
+  // Ventes filtrées par date de fin d'abonnement (CFOS-020/044)
+  const decSales = filterFictiveSales(INITIAL_FICTIVE_SALES, {
+    clubCds: true,
+    clubBeynost: true,
+    endsAfter: '2026-12-01',
+    endsBefore: '2026-12-31',
+  });
+  assert.equal(decSales.length, 1);
+  assert.equal(decSales[0].clubId, 'beynost');
+
+  // Statistiques par période + série N-1 distincte
+  const sampleProspects: Prospect[] = [
+    {
+      id: 'st-1',
+      firstName: 'A',
+      lastName: 'B',
+      phone: '0600000001',
+      email: 'a@test.fr',
+      clubId: 'carre-de-soie',
+      source: 'Site c.fitness',
+      stage: 'Adhérent',
+      assignedToId: 'emp-maxime',
+      rgpdConsent: true,
+      bloctelListed: false,
+      smsStopOptOut: false,
+      retryCount: 0,
+      goal: 'Test',
+      notes: '',
+      createdAt: '2026-10-25',
+    },
+    {
+      id: 'st-2',
+      firstName: 'C',
+      lastName: 'D',
+      phone: '0600000002',
+      email: 'c@test.fr',
+      clubId: 'beynost',
+      source: 'Parrainage',
+      stage: 'Nouveau',
+      assignedToId: 'emp-chloe',
+      rgpdConsent: true,
+      bloctelListed: false,
+      smsStopOptOut: false,
+      retryCount: 1,
+      goal: 'Test',
+      notes: '',
+      createdAt: '2025-10-25',
+    },
+  ];
+  const statsToday = computeLeadReportBreakdown('source', sampleProspects, {
+    periodId: 'today',
+    multiClubCds: true,
+    multiClubBeynost: true,
+    ignoreArchived: true,
+    compareToPreviousYear: true,
+    referenceDate: new Date('2026-10-25T12:00:00Z'),
+  });
+  assert.equal(statsToday.filteredCount, 1);
+  assert.equal(statsToday.previousYearCount, 1);
+  assert.equal(statsToday.rows[0].label, 'Site c.fitness');
+
+  // Échéances activités dynamiques (CFOS-046/047)
+  const ref = new Date('2026-11-19T12:00:00Z');
+  assert.equal(computeActivityDueBucket('2026-11-18T10:00', 'todo', ref), 'En retard');
+  assert.equal(computeActivityDueBucket('2026-11-19T15:00', 'todo', ref), "Aujourd'hui");
+  assert.equal(computeActivityDueBucket('2026-11-20T09:00', 'todo', ref), 'Demain');
+  assert.equal(computeActivityDueBucket('2026-11-18T10:00', 'done', ref), 'Faites');
 });

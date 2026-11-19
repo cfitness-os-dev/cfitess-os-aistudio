@@ -660,19 +660,32 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
 
               {hubTab === 'mon-compte' && activeSection === 'MC04' && (
                 <div className="space-y-4">
-                  <PlanningHrView forcedSubTab="CONGES" />
+                  <PlanningHrView
+                    forcedSubTab="CONGES"
+                    personalScopeOnly={!isShellAdmin}
+                    scopedEmployeeId={!isShellAdmin ? currentUser.id : undefined}
+                  />
                 </div>
               )}
 
               {hubTab === 'mon-compte' && activeSection === 'MC05' && (
                 <div className="space-y-4">
-                  <PlanningHrView forcedSubTab="POINTAGES" />
+                  <PlanningHrView
+                    forcedSubTab="POINTAGES"
+                    personalScopeOnly={!isShellAdmin}
+                    scopedEmployeeId={!isShellAdmin ? currentUser.id : undefined}
+                  />
                 </div>
               )}
 
               {hubTab === 'mon-compte' && activeSection === 'MC06' && (
                 <div className="space-y-4">
-                  <AtsView initialTab="YOUSIGN_PARAPHEUR" />
+                  <AtsView
+                    initialTab="YOUSIGN_PARAPHEUR"
+                    personalScopeOnly={!isShellAdmin}
+                    scopedEmployeeId={!isShellAdmin ? currentUser.id : undefined}
+                    canManageRecruitment={isShellAdmin}
+                  />
                 </div>
               )}
 
@@ -701,7 +714,13 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
 
               {hubTab === 'mon-compte' && activeSection === 'MC12' && (
                 <div className="space-y-4">
-                  <AtsView initialTab="FLATCHR_KANBAN" />
+                  {isShellAdmin ? (
+                    <AtsView initialTab="FLATCHR_KANBAN" />
+                  ) : (
+                    <div className="cf-card p-6 text-sm text-amber-200 border border-amber-500/30 bg-amber-500/10 rounded-xl">
+                      Accès refusé (RBAC) : l&apos;espace Recrutement ATS est réservé aux profils RH / Direction habilités.
+                    </div>
+                  )}
                 </div>
               )}
 
