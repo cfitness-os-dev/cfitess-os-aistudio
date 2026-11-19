@@ -136,7 +136,11 @@ function getSkelloShiftBlockStyle(roleLabel: string, clubId: ClubId): {
       };
 }
 
-export function PlanningHrView() {
+export function PlanningHrView({
+  forcedSubTab,
+}: {
+  forcedSubTab?: 'POINTAGES' | 'CONGES' | 'SILAE';
+} = {}) {
   const {
     clubFilter,
     setClubFilter,
@@ -163,7 +167,13 @@ export function PlanningHrView() {
 
   const [subTab, setSubTab] = useState<
     'PLANNING' | 'POINTAGES' | 'CONGES' | 'SILAE'
-  >('PLANNING');
+  >(forcedSubTab ?? 'PLANNING');
+
+  useEffect(() => {
+    if (forcedSubTab) {
+      setSubTab(forcedSubTab);
+    }
+  }, [forcedSubTab]);
 
   // Add Shift Drawer / Form state
   const [showShiftCreator, setShowShiftCreator] = useState<boolean>(false);
@@ -541,6 +551,7 @@ export function PlanningHrView() {
       {/* EN-TÊTE UNIFIÉ C.FITNESS OS — PLANNING / COURS COLLECTIFS / PAIE      */}
       {/* ===================================================================== */}
       <div className="rounded-2xl overflow-hidden border border-slate-200/80 shadow-2xs bg-white">
+        {!forcedSubTab && (
         <div className="bg-white border-b border-slate-200/80 px-5 py-4 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-3.5 pr-4 xl:border-r border-slate-200/80">
@@ -635,9 +646,10 @@ export function PlanningHrView() {
             )}
           </div>
         </div>
+        )}
 
         {/* Dedicated Group Classes Banner when Cours collectifs is active */}
-        {isCoursCollectifsView && (
+        {!forcedSubTab && isCoursCollectifsView && (
           <div className="p-4 bg-gradient-to-r from-rose-50/60 via-violet-50/50 to-sky-50/60 dark:from-[#181d2f] dark:via-[#151a2a] dark:to-[#181d2f] border-b border-slate-200 dark:border-slate-800 space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
@@ -720,6 +732,7 @@ export function PlanningHrView() {
         )}
 
         {/* Skello Sub-Toolbar: Week Date Picker + Role Filters + Legend */}
+        {!forcedSubTab && (
         <div className="bg-slate-50 border-b border-slate-200 px-4 py-2.5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 text-xs">
           <div className="flex flex-wrap items-center gap-2">
             {/* Skello Week Selector */}
@@ -912,6 +925,7 @@ export function PlanningHrView() {
             )}
           </div>
         </div>
+        )}
 
         {/* Multi-Source Layer Filter Bar (RH + Mywellness + Heitz + Interne without duplication) */}
         {subTab === 'PLANNING' && (

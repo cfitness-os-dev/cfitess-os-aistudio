@@ -74,13 +74,13 @@ function parseInitialTarget(subTarget?: string | null): {
 }
 
 export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompteRhHubViewProps) {
-  const { clubFilter, setClubFilter, isTechnicalMode } = useCfos();
+  const { clubFilter, setClubFilter, isTechnicalMode, setActiveSection: setShellSection } = useCfos();
   const initialTarget = parseInitialTarget(subTarget);
 
   const [hubTab, setHubTab] = useState<MonCompteHubTab>(initialTarget.tab);
 
   useEffect(() => {
-    if (!isTechnicalMode && hubTab === 'traceability') {
+    if (!isTechnicalMode && (hubTab === 'traceability' || hubTab === 'github-planning')) {
       setHubTab('mon-compte');
     }
   }, [isTechnicalMode, hubTab]);
@@ -303,22 +303,20 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
               </span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => setHubTab('github-planning')}
-              className={`px-3 py-2 rounded-btn text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
-                hubTab === 'github-planning'
-                  ? 'cf-brand-gradient text-white shadow-sm'
-                  : 'cf-card-secondary hover:border-violet-500/50'
-              }`}
-            >
-              <SlidersHorizontal className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>
-                {isTechnicalMode
-                  ? 'Planning Unifié, Pointage & Contrats CDI (Vue GitHub CFOS)'
-                  : 'Planning, Pointage & Contrats'}
-              </span>
-            </button>
+            {isTechnicalMode && (
+              <button
+                type="button"
+                onClick={() => setHubTab('github-planning')}
+                className={`px-3 py-2 rounded-btn text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+                  hubTab === 'github-planning'
+                    ? 'cf-brand-gradient text-white shadow-sm'
+                    : 'cf-card-secondary hover:border-violet-500/50'
+                }`}
+              >
+                <SlidersHorizontal className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Planning Unifié, Pointage &amp; Contrats CDI (Vue GitHub CFOS)</span>
+              </button>
+            )}
           </div>
 
           {dashboard && (
@@ -433,6 +431,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                 )}
                 {registry.sections.map((sec) => {
                   const secId = sec.id as McSectionId;
+                  if (!isTechnicalMode && secId === 'MC03') return null;
                   const isVisible = dashboard.session.visibleSections.includes(secId);
                   if (!isVisible) return null;
                   const isActive =
@@ -541,9 +540,27 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
               {hubTab === 'mon-compte' && activeSection === 'MC01' && (
                 <DashboardView
                   dashboard={dashboard}
-                  onOpenPlanning={() => void handleNavigateSection('MC03')}
+                  onOpenPlanning={() => setShellSection('planning-hr', 'planning')}
                   onOpenPreferences={() => void handleNavigateSection('MC13')}
                 />
+              )}
+
+              {hubTab === 'mon-compte' && activeSection === 'MC04' && (
+                <div className="space-y-4">
+                  <PlanningHrView forcedSubTab="CONGES" />
+                </div>
+              )}
+
+              {hubTab === 'mon-compte' && activeSection === 'MC05' && (
+                <div className="space-y-4">
+                  <PlanningHrView forcedSubTab="POINTAGES" />
+                </div>
+              )}
+
+              {hubTab === 'mon-compte' && activeSection === 'MC07' && (
+                <div className="space-y-4">
+                  <PlanningHrView forcedSubTab="SILAE" />
+                </div>
               )}
 
               {hubTab === 'mon-compte' && activeSection === 'MC11' && (
@@ -564,6 +581,9 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
 
               {hubTab === 'mon-compte' &&
                 activeSection !== 'MC01' &&
+                activeSection !== 'MC04' &&
+                activeSection !== 'MC05' &&
+                activeSection !== 'MC07' &&
                 activeSection !== 'MC11' &&
                 activeSection !== 'MC13' && (
                   <PlanningAndModulesView
