@@ -72,6 +72,10 @@ interface MaintenanceTicket {
     | 'Cardio (Tapis, Vélos, Rameurs)'
     | 'Poids, Haltères & Barres'
     | 'Câbles, Poulies & Sellerie'
+    | 'Sonorisation, Micros & Ampli'
+    | 'Écrans TV, Affichage & Bornes'
+    | 'Caméras Vidéosurveillance & Alarme'
+    | 'Éclairage, Vestiaires & Casiers'
     | 'Portillons Heitz RFID/BT'
     | 'CVC / Sauna / Douches'
     | 'Informatique / VoIP';
@@ -2107,9 +2111,13 @@ export function OrchestratorMaintenanceView() {
                     <option value="Cardio (Tapis, Vélos, Rameurs)">Cardio (Tapis, Vélos, Rameurs)</option>
                     <option value="Poids, Haltères & Barres">Poids, Haltères &amp; Barres</option>
                     <option value="Câbles, Poulies & Sellerie">Câbles, Poulies &amp; Sellerie</option>
+                    <option value="Sonorisation, Micros & Ampli">Sonorisation, Micros &amp; Ampli</option>
+                    <option value="Écrans TV, Affichage & Bornes">Écrans TV, Affichage &amp; Bornes</option>
+                    <option value="Caméras Vidéosurveillance & Alarme">Caméras Vidéosurveillance &amp; Alarme</option>
+                    <option value="Éclairage, Vestiaires & Casiers">Éclairage, Vestiaires &amp; Casiers</option>
                     <option value="Portillons Heitz RFID/BT">Portillons Heitz RFID/BT</option>
                     <option value="CVC / Sauna / Douches">CVC / Sauna / Douches</option>
-                    <option value="Informatique / VoIP">Informatique / VoIP</option>
+                    <option value="Informatique / VoIP">Informatique / VoIP / Réseau</option>
                   </select>
                 </div>
                 <div className="sm:col-span-3">
