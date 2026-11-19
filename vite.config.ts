@@ -473,6 +473,24 @@ export default defineConfig({
       '@': path.resolve(__dirname, '.'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'vendor-react';
+          }
+          if (id.includes('node_modules/lucide-react')) {
+            return 'vendor-icons';
+          }
+          if (id.includes('referenceRegistry') || id.includes('leadAuditRegistry')) {
+            return 'cfos-registries';
+          }
+          return undefined;
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     host: '127.0.0.1',

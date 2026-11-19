@@ -5,13 +5,14 @@ mod seed;
 
 use crate::routes::{api_router, SharedAppState};
 use crate::seed::load_or_init_state;
+use axum::http::HeaderValue;
 use axum::Router;
 use std::env;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tower_http::cors::CorsLayer;
+use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -44,7 +45,28 @@ async fn main() {
         db: RwLock::new(initial_state),
         data_dir,
         sessions: RwLock::new(std::collections::HashMap::new()),
+        login_attempts: RwLock::new(std::collections::HashMap::new()),
     });
+
+    let cors_layer = match env::var("CFITNESS_ALLOWED_ORIGINS") {
+        Ok(raw) if !raw.trim().is_empty() => {
+            let origins: Vec<HeaderValue> = raw
+                .split(',')
+                .filter_map(|s| HeaderValue::from_str(s.trim()).ok())
+                .collect();
+            if origins.is_empty() {
+                tracing::warn!("CFITNESS_ALLOWED_ORIGINS vide/invalide -> fallback CorsLayer::permissive()");
+                CorsLayer::permissive()
+            } else {
+                tracing::info!("CORS restreint aux origines autorisées ({} entrées)", origins.len());
+                CorsLayer::very_permissive().allow_origin(AllowOrigin::list(origins))
+            }
+        }
+        _ => {
+            tracing::warn!("CFITNESS_ALLOWED_ORIGINS non défini : CORS permissif actif (mode LAN/démo)");
+            CorsLayer::permissive()
+        }
+    };
 
     let index_file = frontend_dir.join("index.html");
     let spa_service = ServeDir::new(&frontend_dir)
@@ -53,7 +75,7 @@ async fn main() {
 
     let app: Router = api_router(shared)
         .fallback_service(spa_service)
-        .layer(CorsLayer::permissive())
+        .layer(cors_layer)
         .layer(TraceLayer::new_for_http());
 
     let addr: SocketAddr = bind_addr

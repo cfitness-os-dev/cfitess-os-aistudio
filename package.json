@@ -7,7 +7,7 @@
     "dev": "vite",
     "lint": "tsc --noEmit",
     "test": "tsx src/domain/rules.test.ts",
-    "build": "vite build",
+    "build": "tsc --noEmit && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

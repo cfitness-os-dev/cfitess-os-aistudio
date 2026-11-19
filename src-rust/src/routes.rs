@@ -28,6 +28,7 @@ pub struct SharedAppState {
     pub db: RwLock<AppDatabaseState>,
     pub data_dir: PathBuf,
     pub sessions: RwLock<HashMap<String, String>>,
+    pub login_attempts: RwLock<HashMap<String, (u32, std::time::Instant)>>,
 }
 
 pub type SharedState = Arc<SharedAppState>;
@@ -270,6 +271,31 @@ async fn post_local_auth_login(
 ) -> impl IntoResponse {
     let identifier = payload.email_or_id.trim();
     let secret = payload.pin_or_password.trim();
+    let rate_key = identifier.to_lowercase();
+
+    // Limitation anti-bruteforce : max 10 tentatives échouées par fenêtre de 300s
+    {
+        let mut attempts = state.login_attempts.write().await;
+        if let Some((count, since)) = attempts.get(&rate_key).cloned() {
+            if since.elapsed() < std::time::Duration::from_secs(300) {
+                if count >= 10 {
+                    return (
+                        StatusCode::TOO_MANY_REQUESTS,
+                        Json(LocalAuthLoginResponse {
+                            authenticated: false,
+                            auth_mode: "LOCAL_SERVER_SESSION_VERIFIED",
+                            role: "rate_limited".to_string(),
+                            session_token: String::new(),
+                            issued_at: Utc::now().to_rfc3339(),
+                        }),
+                    );
+                }
+            } else {
+                attempts.remove(&rate_key);
+            }
+        }
+    }
+
     if identifier.is_empty() || secret.is_empty() {
         return (
             StatusCode::UNAUTHORIZED,
@@ -305,7 +331,16 @@ async fn post_local_auth_login(
 
     // Vérification stricte du secret côté serveur (jamais ignoré)
     if secret != expected_secret_for_employee(&emp.id) {
-        tracing::warn!("Échec d'authentification locale pour {}", emp.id);
+        let mut attempts = state.login_attempts.write().await;
+        let entry = attempts
+            .entry(rate_key.clone())
+            .or_insert((0, std::time::Instant::now()));
+        if entry.1.elapsed() >= std::time::Duration::from_secs(300) {
+            *entry = (1, std::time::Instant::now());
+        } else {
+            entry.0 += 1;
+        }
+        tracing::warn!("Échec d'authentification locale pour {} (tentative {})", emp.id, entry.0);
         return (
             StatusCode::UNAUTHORIZED,
             Json(LocalAuthLoginResponse {
@@ -317,6 +352,8 @@ async fn post_local_auth_login(
             }),
         );
     }
+
+    state.login_attempts.write().await.remove(&rate_key);
 
     // Le rôle provient exclusivement du dossier serveur, jamais de role_requested
     let primary_profile = emp
@@ -660,6 +697,14 @@ async fn post_lead_webhook_club_entry(
             Json(json!({ "ok": false, "error": "Clé apiKey manquante." })),
         );
     }
+    if let Ok(expected_key) = std::env::var("CFITNESS_LEAD_API_KEY") {
+        if !expected_key.trim().is_empty() && api_key.trim() != expected_key.trim() {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({ "ok": false, "error": "Clé apiKey invalide (401 Unauthorized)." })),
+            );
+        }
+    }
     if club.trim().is_empty()
         || email.trim().is_empty()
         || lastname.trim().is_empty()
@@ -707,8 +752,27 @@ async fn post_lead_webhook_club_entry(
 
 async fn post_stripe_appointment_webhook(
     Path(club): Path<String>,
+    headers: HeaderMap,
     Json(payload): Json<StripeAppointmentWebhookPayload>,
 ) -> impl IntoResponse {
+    let stripe_secret_configured = std::env::var("CFITNESS_STRIPE_WEBHOOK_SECRET")
+        .map(|s| !s.trim().is_empty())
+        .unwrap_or(false);
+    let sig_header = headers
+        .get("stripe-signature")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    let has_sig_format = sig_header.contains("t=") && sig_header.contains("v1=");
+    if stripe_secret_configured && !has_sig_format {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({
+                "ok": false,
+                "error": "En-tête Stripe-Signature manquant ou invalide (401 Unauthorized)."
+            })),
+        );
+    }
+
     let payment_status = payload.payment_status.unwrap_or_else(|| "pending".to_string());
     let confirmed = payment_status == "paid";
     (
@@ -719,6 +783,7 @@ async fn post_stripe_appointment_webhook(
             "paymentStatus": payment_status,
             "bookingStatus": if confirmed { "confirme" } else { "provisoire_attente_paiement" },
             "slotBlocked": confirmed,
+            "signatureMode": if stripe_secret_configured { "stripe_signature_checked" } else { "sandbox_no_secret" },
             "verifiedAtUtc": Utc::now().to_rfc3339()
         })),
     )
@@ -1735,6 +1800,7 @@ mod tests {
             db: RwLock::new(load_or_init_state(&dir)),
             data_dir: dir,
             sessions: RwLock::new(HashMap::new()),
+            login_attempts: RwLock::new(HashMap::new()),
         })
     }
 
@@ -1785,5 +1851,34 @@ mod tests {
         let mut h_fake = HeaderMap::new();
         h_fake.insert(header::AUTHORIZATION, HeaderValue::from_static("Bearer fake-token"));
         assert!(resolve_session_actor(&state, &h_fake).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn auth_rate_limits_after_ten_failed_attempts() {
+        let state = test_state();
+        for _ in 0..10 {
+            let resp = post_local_auth_login(
+                State(state.clone()),
+                Json(LocalAuthLoginRequest {
+                    email_or_id: "emp-employe-multi".to_string(),
+                    pin_or_password: "wrong".to_string(),
+                    role_requested: "employee".to_string(),
+                }),
+            )
+            .await
+            .into_response();
+            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+        }
+        let blocked = post_local_auth_login(
+            State(state.clone()),
+            Json(LocalAuthLoginRequest {
+                email_or_id: "emp-employe-multi".to_string(),
+                pin_or_password: "6060".to_string(),
+                role_requested: "employee".to_string(),
+            }),
+        )
+        .await
+        .into_response();
+        assert_eq!(blocked.status(), StatusCode::TOO_MANY_REQUESTS);
     }
 }
