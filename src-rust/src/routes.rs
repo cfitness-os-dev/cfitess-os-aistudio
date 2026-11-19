@@ -270,16 +270,24 @@ pub struct BackupSnapshotIngestRequest {
     pub checksum: String,
 }
 
-fn expected_secret_for_employee(emp_id: &str) -> &'static str {
+fn is_valid_secret_for_employee(emp_id: &str, secret: &str) -> bool {
     match emp_id {
-        "emp-admin" | "emp-mario" => "0766",
-        "emp-master" => "2026",
-        "emp-planif-av" => "3030",
-        "emp-planif-std" => "4040",
-        "emp-readonly" => "5050",
-        "emp-employe-multi" => "6060",
-        "emp-accueil-cs" => "7070",
-        _ => "1234",
+        "emp-admin" => secret == "0766",
+        "emp-mario" => secret == "1010" || secret == "0766",
+        "emp-daniel" => secret == "2020",
+        "emp-greg" => secret == "4040",
+        "emp-sarah" => secret == "3141",
+        "emp-maxime" => secret == "4210",
+        "emp-chloe" => secret == "5320",
+        "emp-karim" => secret == "6430",
+        "emp-lea" => secret == "7540",
+        "emp-master" => secret == "2026",
+        "emp-planif-av" => secret == "3030",
+        "emp-planif-std" => secret == "4040",
+        "emp-readonly" => secret == "5050",
+        "emp-employe-multi" => secret == "6060",
+        "emp-accueil-cs" => secret == "7070",
+        _ => secret == "1234",
     }
 }
 
@@ -348,7 +356,7 @@ async fn post_local_auth_login(
     };
 
     // Vérification stricte du secret côté serveur (jamais ignoré)
-    if secret != expected_secret_for_employee(&emp.id) {
+    if !is_valid_secret_for_employee(&emp.id, secret) {
         let mut attempts = state.login_attempts.write().await;
         let entry = attempts
             .entry(rate_key.clone())
@@ -1535,6 +1543,35 @@ async fn put_employee_site_accesses(
                 ));
             }
         }
+        if !acc.managed_team_ids.is_empty()
+            && !matches!(
+                acc.profile_id.as_str(),
+                "planificateur_standard" | "planificateur_avance" | "master_avance" | "admin_systeme"
+            )
+        {
+            return Err(err_resp(
+                StatusCode::BAD_REQUEST,
+                format!(
+                    "Le profil {} ne peut pas encadrer d'équipes sur {}.",
+                    acc.profile_id, acc.site_id
+                ),
+            ));
+        }
+        for tid in &acc.managed_team_ids {
+            let valid_team = db
+                .teams
+                .iter()
+                .any(|t| t.id == *tid && t.site_id == acc.site_id);
+            if !valid_team {
+                return Err(err_resp(
+                    StatusCode::BAD_REQUEST,
+                    format!(
+                        "Équipe encadrée {} inexistante ou n'appartenant pas au club {}.",
+                        tid, acc.site_id
+                    ),
+                ));
+            }
+        }
         for pid in &acc.position_ids {
             let valid_pos = db
                 .positions
@@ -1577,6 +1614,7 @@ async fn put_employee_site_accesses(
                     n.is_primary != old_sa.is_primary
                         || n.profile_id != old_sa.profile_id
                         || n.team_ids != old_sa.team_ids
+                        || n.managed_team_ids != old_sa.managed_team_ids
                         || n.show_on_planning != old_sa.show_on_planning
                         || n.position_ids != old_sa.position_ids
                 }
@@ -2165,6 +2203,7 @@ mod tests {
                     is_primary: true,
                     profile_id: "employe_standard".to_string(),
                     team_ids: vec!["team-bey-accueil".to_string()],
+                    managed_team_ids: vec![],
                     show_on_planning: true,
                     position_ids: vec![],
                 }],
@@ -2186,6 +2225,7 @@ mod tests {
                     is_primary: true,
                     profile_id: "admin_systeme".to_string(),
                     team_ids: vec![],
+                    managed_team_ids: vec![],
                     show_on_planning: true,
                     position_ids: vec![],
                 }],
@@ -2207,6 +2247,7 @@ mod tests {
                     is_primary: true,
                     profile_id: "employe_standard".to_string(),
                     team_ids: vec![],
+                    managed_team_ids: vec![],
                     show_on_planning: true,
                     position_ids: vec![],
                 }],
@@ -2228,6 +2269,7 @@ mod tests {
                     is_primary: true,
                     profile_id: "employe_standard".to_string(),
                     team_ids: vec!["team-bey-coaching".to_string()],
+                    managed_team_ids: vec![],
                     show_on_planning: true,
                     position_ids: vec![],
                 }],
@@ -2248,6 +2290,7 @@ mod tests {
                         is_primary: true,
                         profile_id: "master_avance".to_string(),
                         team_ids: vec!["team-cs-accueil".to_string(), "team-cs-coaching".to_string()],
+                        managed_team_ids: vec![],
                         show_on_planning: true,
                         position_ids: vec![],
                     },
@@ -2256,6 +2299,7 @@ mod tests {
                         is_primary: false,
                         profile_id: "lecture_seule_avancee".to_string(),
                         team_ids: vec!["team-bey-coaching".to_string()],
+                        managed_team_ids: vec![],
                         show_on_planning: true,
                         position_ids: vec![],
                     },
@@ -2292,6 +2336,7 @@ mod tests {
                         is_primary: true,
                         profile_id: "employe_standard".to_string(),
                         team_ids: vec!["team-cs-accueil".to_string()],
+                        managed_team_ids: vec![],
                         show_on_planning: true,
                         position_ids: vec![],
                     },
@@ -2300,6 +2345,7 @@ mod tests {
                         is_primary: false,
                         profile_id: "master_avance".to_string(), // inchangé -> conservé !
                         team_ids: vec!["team-bey-coaching".to_string()],
+                        managed_team_ids: vec![],
                         show_on_planning: true,
                         position_ids: vec![],
                     },
@@ -2321,6 +2367,7 @@ mod tests {
                         is_primary: true,
                         profile_id: "employe_standard".to_string(),
                         team_ids: vec!["team-cs-accueil".to_string()],
+                        managed_team_ids: vec![],
                         show_on_planning: true,
                         position_ids: vec![],
                     },
@@ -2329,6 +2376,7 @@ mod tests {
                         is_primary: false,
                         profile_id: "employe_standard".to_string(),
                         team_ids: vec!["team-bey-coaching".to_string()],
+                        managed_team_ids: vec![],
                         show_on_planning: true,
                         position_ids: vec![],
                     },
@@ -2337,5 +2385,160 @@ mod tests {
         )
         .await;
         assert_eq!(forbidden_bey.unwrap_err().0, StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn canonical_bearer_session_and_managed_teams_work_across_two_sessions() {
+        let state = test_state();
+
+        // 1. Authentification Bearer réelle pour Mario (emp-mario) et Sarah (emp-sarah)
+        let mario_login = post_local_auth_login(
+            State(state.clone()),
+            Json(LocalAuthLoginRequest {
+                email_or_id: "emp-mario".to_string(),
+                pin_or_password: "1010".to_string(),
+                role_requested: String::new(),
+            }),
+        )
+        .await
+        .into_response();
+        assert_eq!(mario_login.status(), StatusCode::OK);
+        let mario_body = axum::body::to_bytes(mario_login.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let mario_json: Value = serde_json::from_slice(&mario_body).unwrap();
+        let mario_token = mario_json["sessionToken"].as_str().unwrap().to_string();
+
+        let sarah_login = post_local_auth_login(
+            State(state.clone()),
+            Json(LocalAuthLoginRequest {
+                email_or_id: "emp-sarah".to_string(),
+                pin_or_password: "3141".to_string(),
+                role_requested: String::new(),
+            }),
+        )
+        .await
+        .into_response();
+        assert_eq!(sarah_login.status(), StatusCode::OK);
+        let sarah_body = axum::body::to_bytes(sarah_login.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let sarah_json: Value = serde_json::from_slice(&sarah_body).unwrap();
+        let sarah_token = sarah_json["sessionToken"].as_str().unwrap().to_string();
+
+        // 2. Session 1 (Mario avec Bearer, sans x-cfitness-actor-id) met à jour emp-maxime (2 clubs, équipes + équipes encadrées)
+        let mut h_mario = HeaderMap::new();
+        h_mario.insert(
+            header::AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {}", mario_token)).unwrap(),
+        );
+        let ok_put = put_employee_site_accesses(
+            State(state.clone()),
+            h_mario,
+            Path("emp-maxime".to_string()),
+            Json(PutEmployeeSiteAccessesPayload {
+                site_accesses: vec![
+                    crate::models::EmployeeSiteAccess {
+                        site_id: "club-carre-soie".to_string(),
+                        is_primary: true,
+                        profile_id: "planificateur_standard".to_string(),
+                        team_ids: vec!["team-cs-accueil".to_string(), "team-cs-coaching".to_string()],
+                        managed_team_ids: vec!["team-cs-accueil".to_string(), "team-cs-coaching".to_string()],
+                        show_on_planning: true,
+                        position_ids: vec!["pos-cs-accueil".to_string()],
+                    },
+                    crate::models::EmployeeSiteAccess {
+                        site_id: "club-beynost".to_string(),
+                        is_primary: false,
+                        profile_id: "employe_standard".to_string(),
+                        team_ids: vec!["team-bey-accueil".to_string()],
+                        managed_team_ids: vec![],
+                        show_on_planning: true,
+                        position_ids: vec!["pos-bey-accueil".to_string()],
+                    },
+                ],
+            }),
+        )
+        .await;
+        assert!(ok_put.is_ok());
+
+        // 3. Session 2 (Sarah avec Bearer) relit le dashboard et voit bien emp-maxime avec 2 clubs et 2 équipes encadrées
+        let mut h_sarah = HeaderMap::new();
+        h_sarah.insert(
+            header::AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {}", sarah_token)).unwrap(),
+        );
+        h_sarah.insert("x-cfitness-site-id", HeaderValue::from_static("club-carre-soie"));
+        let sarah_dash = get_dashboard(State(state.clone()), h_sarah.clone()).await.unwrap().0;
+        assert_eq!(sarah_dash.session.employee.id, "emp-sarah");
+        let maxime = sarah_dash
+            .visible_employees
+            .iter()
+            .find(|e| e.id == "emp-maxime")
+            .unwrap();
+        assert_eq!(maxime.site_accesses.len(), 2);
+        assert_eq!(maxime.site_accesses[0].managed_team_ids.len(), 2);
+
+        // 4. Refus 403 hors délégation : Sarah (Carré de Soie uniquement) tente de modifier Beynost sur emp-maxime -> 403
+        let sarah_forbidden_bey = put_employee_site_accesses(
+            State(state.clone()),
+            h_sarah.clone(),
+            Path("emp-maxime".to_string()),
+            Json(PutEmployeeSiteAccessesPayload {
+                site_accesses: vec![
+                    crate::models::EmployeeSiteAccess {
+                        site_id: "club-carre-soie".to_string(),
+                        is_primary: true,
+                        profile_id: "planificateur_standard".to_string(),
+                        team_ids: vec!["team-cs-accueil".to_string()],
+                        managed_team_ids: vec!["team-cs-accueil".to_string()],
+                        show_on_planning: true,
+                        position_ids: vec![],
+                    },
+                    crate::models::EmployeeSiteAccess {
+                        site_id: "club-beynost".to_string(),
+                        is_primary: false,
+                        profile_id: "planificateur_standard".to_string(),
+                        team_ids: vec!["team-bey-accueil".to_string()],
+                        managed_team_ids: vec![],
+                        show_on_planning: true,
+                        position_ids: vec![],
+                    },
+                ],
+            }),
+        )
+        .await;
+        assert_eq!(sarah_forbidden_bey.unwrap_err().0, StatusCode::FORBIDDEN);
+
+        // 5. Refus 400 : managedTeamIds non vide sur employe_standard -> 400 BAD_REQUEST
+        let invalid_managed = put_employee_site_accesses(
+            State(state),
+            h_sarah,
+            Path("emp-maxime".to_string()),
+            Json(PutEmployeeSiteAccessesPayload {
+                site_accesses: vec![
+                    crate::models::EmployeeSiteAccess {
+                        site_id: "club-carre-soie".to_string(),
+                        is_primary: true,
+                        profile_id: "employe_standard".to_string(),
+                        team_ids: vec!["team-cs-accueil".to_string()],
+                        managed_team_ids: vec!["team-cs-accueil".to_string()],
+                        show_on_planning: true,
+                        position_ids: vec![],
+                    },
+                    crate::models::EmployeeSiteAccess {
+                        site_id: "club-beynost".to_string(),
+                        is_primary: false,
+                        profile_id: "employe_standard".to_string(),
+                        team_ids: vec!["team-bey-accueil".to_string()],
+                        managed_team_ids: vec![],
+                        show_on_planning: true,
+                        position_ids: vec![],
+                    },
+                ],
+            }),
+        )
+        .await;
+        assert_eq!(invalid_managed.unwrap_err().0, StatusCode::BAD_REQUEST);
     }
 }

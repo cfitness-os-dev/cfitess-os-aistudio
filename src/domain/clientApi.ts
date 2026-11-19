@@ -10,6 +10,7 @@ import type {
   AmbiguityRecord,
   AppDatabaseState,
   AuditEvent,
+  EmployeeSiteAccess,
   McSectionId,
   Organization,
   ProfileId,
@@ -52,6 +53,24 @@ export class ApiClientError extends Error {
 export interface ApiAuthContext {
   actorId: string;
   siteId: string | 'all';
+  token?: string | null;
+}
+
+function resolveBearerToken(auth: ApiAuthContext): string | null {
+  if (auth.token && auth.token.trim().length > 0) {
+    return auth.token.trim();
+  }
+  if (typeof window === 'undefined') return null;
+  try {
+    const storedToken = window.sessionStorage.getItem('cfos_bearer_token');
+    const storedActor = window.sessionStorage.getItem('cfos_bearer_actor_id');
+    if (storedToken && storedActor === auth.actorId) {
+      return storedToken;
+    }
+  } catch {
+    // ignore storage errors
+  }
+  return null;
 }
 
 async function requestJson<T>(
@@ -62,6 +81,10 @@ async function requestJson<T>(
   const headers = new Headers(init?.headers);
   headers.set('x-cfitness-actor-id', auth.actorId);
   headers.set('x-cfitness-site-id', auth.siteId);
+  const bearer = resolveBearerToken(auth);
+  if (bearer && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${bearer}`);
+  }
   if (init?.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
@@ -253,17 +276,46 @@ export const clientApi = {
       isPrimary: boolean;
       profileId: ProfileId;
       teamIds: string[];
+      managedTeamIds?: string[];
       showOnPlanning: boolean;
       positionIds: string[];
     }>
-  ): Promise<{ ok: boolean; employeeId: string }> {
-    return requestJson<{ ok: boolean; employeeId: string }>(
+  ): Promise<{ ok: boolean; employeeId: string; siteAccesses?: EmployeeSiteAccess[] }> {
+    return requestJson<{ ok: boolean; employeeId: string; siteAccesses?: EmployeeSiteAccess[] }>(
       `/api/admin/employees/${encodeURIComponent(employeeId)}/site-accesses`,
       auth,
       {
         method: 'PUT',
         body: JSON.stringify({ siteAccesses }),
       }
+    );
+  },
+
+  loginLocal(
+    emailOrId: string,
+    pinOrPassword: string
+  ): Promise<{
+    authenticated: boolean;
+    authMode: string;
+    role: string;
+    sessionToken: string;
+    issuedAt: string;
+  }> {
+    return requestJson(
+      '/api/auth/login',
+      { actorId: emailOrId, siteId: 'club-carre-soie' },
+      {
+        method: 'POST',
+        body: JSON.stringify({ emailOrId, pinOrPassword }),
+      }
+    );
+  },
+
+  logoutSession(token: string): Promise<{ ok: boolean }> {
+    return requestJson(
+      '/api/auth/logout',
+      { actorId: 'emp-employe-multi', siteId: 'club-carre-soie', token },
+      { method: 'POST' }
     );
   },
 

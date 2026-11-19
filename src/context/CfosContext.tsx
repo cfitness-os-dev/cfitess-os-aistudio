@@ -737,6 +737,27 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     setBannerNotice({ tone, text });
   };
 
+  const syncServerBearerSession = (employeeId: string, secret: string) => {
+    if (typeof window === 'undefined') return;
+    void fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emailOrId: employeeId, pinOrPassword: secret }),
+    })
+      .then(async (res) => {
+        if (!res.ok) return;
+        const data = (await res.json()) as { authenticated?: boolean; sessionToken?: string };
+        if (data?.authenticated && data?.sessionToken) {
+          window.sessionStorage.setItem('cfos_bearer_token', data.sessionToken);
+          window.sessionStorage.setItem('cfos_bearer_actor_id', employeeId);
+          window.dispatchEvent(new CustomEvent('cfos-bearer-updated', { detail: { employeeId, token: data.sessionToken } }));
+        }
+      })
+      .catch(() => {
+        // Fallback démo si offline
+      });
+  };
+
   const switchUserSession = (employeeId: string, preferredShell?: ShellMode) => {
     const target = state.employees.find((e) => e.id === employeeId);
     if (!target) return;
@@ -746,9 +767,12 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     try {
       window.sessionStorage.setItem('cfos_local_auth_active', 'true');
       window.sessionStorage.setItem('cfos_local_auth_user_id', target.id);
+      window.sessionStorage.removeItem('cfos_bearer_token');
+      window.sessionStorage.removeItem('cfos_bearer_actor_id');
     } catch {
       // ignore storage errors
     }
+    syncServerBearerSession(target.id, target.pinCode);
     if (preferredShell) {
       setShellMode(preferredShell);
     } else if (target.role === 'coach' || target.role === 'apprenti') {
@@ -827,9 +851,12 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     try {
       window.sessionStorage.setItem('cfos_local_auth_active', 'true');
       window.sessionStorage.setItem('cfos_local_auth_user_id', target.id);
+      window.sessionStorage.removeItem('cfos_bearer_token');
+      window.sessionStorage.removeItem('cfos_bearer_actor_id');
     } catch {
       // ignore storage errors
     }
+    syncServerBearerSession(target.id, isValidLocalPassword ? target.pinCode : normalizedSecret);
 
     if (preferredShell) {
       setShellMode(preferredShell);
@@ -866,7 +893,16 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     setIsArchitectUnlocked(false);
     setIsAuthenticated(false);
     try {
+      const existingToken = window.sessionStorage.getItem('cfos_bearer_token');
+      if (existingToken) {
+        void fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${existingToken}` },
+        }).catch(() => {});
+      }
       window.sessionStorage.removeItem('cfos_local_auth_active');
+      window.sessionStorage.removeItem('cfos_bearer_token');
+      window.sessionStorage.removeItem('cfos_bearer_actor_id');
       window.sessionStorage.removeItem('cfos_architect_pin_unlocked');
       window.localStorage.removeItem('cfos_architect_pin_unlocked');
     } catch {

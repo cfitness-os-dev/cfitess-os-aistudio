@@ -495,6 +495,7 @@ export function PlanningAndModulesView({
         isPrimary: boolean;
         profileId: ProfileId;
         teamIds: string[];
+        managedTeamIds?: string[];
         showOnPlanning: boolean;
         positionIds: string[];
       }>
@@ -534,14 +535,17 @@ export function PlanningAndModulesView({
       isPrimary: boolean;
       profileId: ProfileId;
       teamIds: string[];
+      managedTeamIds?: string[];
       showOnPlanning: boolean;
       positionIds: string[];
     }>,
     successText: string
   ) => {
     try {
-      await clientApi.updateEmployeeSiteAccesses(auth, targetEmpId, nextAccesses);
-      const nextMap = { ...siteAccessOverrides, [targetEmpId]: nextAccesses };
+      const putRes = await clientApi.updateEmployeeSiteAccesses(auth, targetEmpId, nextAccesses);
+      const serverAccesses = putRes.siteAccesses;
+      const nextMap = { ...siteAccessOverrides };
+      delete nextMap[targetEmpId];
       setSiteAccessOverrides(nextMap);
       try {
         localStorage.setItem('cfos_mc02_site_accesses_v1', JSON.stringify(nextMap));
@@ -550,7 +554,7 @@ export function PlanningAndModulesView({
       }
       updateStaffEmployeeSiteAssignments(
         targetEmpId,
-        nextAccesses.map((item) => ({
+        (serverAccesses ?? nextAccesses).map((item) => ({
           clubId: item.siteId === 'club-beynost' ? 'beynost' : 'carre-de-soie',
           isPrimary: item.isPrimary,
           roleInClub:
@@ -561,12 +565,30 @@ export function PlanningAndModulesView({
               : 'commercial',
           profileId: item.profileId,
           teamIds: item.teamIds,
+          managedTeamIds: item.managedTeamIds ?? [],
           showOnPlanning: item.showOnPlanning,
           positionIds: item.positionIds,
         }))
       );
-      onRefreshDashboard();
-      setModuleFeedback({ kind: 'ok', text: `${successText} (persisté serveur)` });
+      try {
+        await onRefreshDashboard();
+      } catch (refreshErr) {
+        setModuleFeedback({
+          kind: 'err',
+          text: `Sauvegarde envoyée mais échec de relecture serveur : ${refreshErr instanceof Error ? refreshErr.message : 'erreur inconnue'}`,
+        });
+        return;
+      }
+      const concurrentDiff =
+        serverAccesses &&
+        (serverAccesses.length !== nextAccesses.length ||
+          serverAccesses.some((sa, idx) => sa.profileId !== nextAccesses[idx]?.profileId));
+      setModuleFeedback({
+        kind: 'ok',
+        text: concurrentDiff
+          ? `${successText} (rechargé depuis la réponse serveur)`
+          : `${successText} (persisté et relu depuis le serveur)`,
+      });
     } catch (err) {
       if (err instanceof ApiClientError) {
         setModuleFeedback({
@@ -2342,8 +2364,19 @@ export function PlanningAndModulesView({
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           <div className="cf-card p-3 space-y-2">
-            <div className="text-xs font-semibold px-2 pt-1 cf-muted uppercase">
-              Effectif accessible ({unifiedEmployees.length})
+            <div className="flex items-center justify-between gap-2 px-2 pt-1">
+              <div className="text-xs font-semibold cf-muted uppercase">
+                Effectif accessible ({unifiedEmployees.length})
+              </div>
+              {selectedEmp && selectedEmp.id !== dashboard.session.employee.id && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedEmpId(dashboard.session.employee.id)}
+                  className="text-[11px] px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-200 border border-cyan-500/40 hover:bg-cyan-500/30"
+                >
+                  Mon dossier
+                </button>
+              )}
             </div>
             {unifiedEmployees.map((emp) => (
               <button
@@ -2466,6 +2499,7 @@ export function PlanningAndModulesView({
                                         )),
                                     profileId: existing?.profileId ?? ('employe_standard' as ProfileId),
                                     teamIds: existing?.teamIds ?? [],
+                                    managedTeamIds: existing?.managedTeamIds ?? [],
                                     showOnPlanning: existing?.showOnPlanning ?? true,
                                     positionIds: existing?.positionIds ?? [],
                                   };
@@ -2515,8 +2549,19 @@ export function PlanningAndModulesView({
                                 value={acc.profileId}
                                 onChange={(e) => {
                                   const nextProf = e.target.value as ProfileId;
+                                  const canManageTeams =
+                                    nextProf === 'planificateur_standard' ||
+                                    nextProf === 'planificateur_avance' ||
+                                    nextProf === 'master_avance' ||
+                                    nextProf === 'admin_systeme';
                                   const nextAccesses = selectedEmp.siteAccesses.map((item) =>
-                                    item.siteId === acc.siteId ? { ...item, profileId: nextProf } : item
+                                    item.siteId === acc.siteId
+                                      ? {
+                                          ...item,
+                                          profileId: nextProf,
+                                          managedTeamIds: canManageTeams ? item.managedTeamIds ?? [] : [],
+                                        }
+                                      : item
                                   );
                                   void persistSiteAccessesToServer(
                                     selectedEmp.id,
@@ -2531,6 +2576,11 @@ export function PlanningAndModulesView({
                                 <option value="planificateur_standard">Planif. standard (équipe)</option>
                                 <option value="planificateur_avance">Planif. avancé (club)</option>
                                 <option value="master_avance">Responsable club</option>
+                                {acc.profileId === 'admin_systeme' && (
+                                  <option value="admin_systeme" disabled>
+                                    Administrateur système (non attribuable)
+                                  </option>
+                                )}
                               </select>
                             ) : (
                               <div className="cf-mono text-[11px] cf-muted">
@@ -2539,7 +2589,7 @@ export function PlanningAndModulesView({
                             )}
                           </div>
                           <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-                            <span className="cf-muted">Équipes ({siteMap.get(acc.siteId) ?? acc.siteId}) :</span>
+                            <span className="cf-muted">Équipes d&apos;appartenance ({siteMap.get(acc.siteId) ?? acc.siteId}) :</span>
                             {teamOptions.map((tm) => {
                               const activeTeam = acc.teamIds.includes(tm.id);
                               return (
@@ -2570,6 +2620,49 @@ export function PlanningAndModulesView({
                                 </button>
                               );
                             })}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                            <span className="cf-muted">Équipes encadrées :</span>
+                            {acc.profileId === 'employe_standard' ||
+                            acc.profileId === 'lecture_seule_avancee' ? (
+                              <span className="cf-mono text-[10px] cf-muted">
+                                Aucune (profil non encadrant)
+                              </span>
+                            ) : (
+                              teamOptions.map((tm) => {
+                                const currentManaged = acc.managedTeamIds ?? [];
+                                const activeManaged = currentManaged.includes(tm.id);
+                                return (
+                                  <button
+                                    key={`managed-${tm.id}`}
+                                    type="button"
+                                    disabled={!canEditThisClub}
+                                    onClick={() => {
+                                      const nextManaged = activeManaged
+                                        ? currentManaged.filter((t: string) => t !== tm.id)
+                                        : [...currentManaged, tm.id];
+                                      const nextAccesses = selectedEmp.siteAccesses.map((item) =>
+                                        item.siteId === acc.siteId
+                                          ? { ...item, managedTeamIds: nextManaged }
+                                          : item
+                                      );
+                                      void persistSiteAccessesToServer(
+                                        selectedEmp.id,
+                                        nextAccesses,
+                                        `Équipes encadrées sur ${siteMap.get(acc.siteId) ?? acc.siteId} mises à jour`
+                                      );
+                                    }}
+                                    className={`px-2 py-0.5 rounded border ${
+                                      activeManaged
+                                        ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-200 font-semibold'
+                                        : 'bg-slate-900/40 border-slate-700 text-slate-400'
+                                    } ${canEditThisClub ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}
+                                  >
+                                    {tm.name}
+                                  </button>
+                                );
+                              })
+                            )}
                           </div>
                         </div>
                       );

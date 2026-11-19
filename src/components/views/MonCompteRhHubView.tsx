@@ -87,11 +87,30 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
   const isShellAdmin = currentUser.role === 'admin' || currentUser.role === 'manager';
   const isStrictAdmin = currentUser.role === 'admin';
 
+  const CANONICAL_SERVER_ACTORS = new Set([
+    'emp-mario',
+    'emp-daniel',
+    'emp-greg',
+    'emp-sarah',
+    'emp-maxime',
+    'emp-chloe',
+    'emp-karim',
+    'emp-lea',
+    'emp-admin',
+    'emp-master',
+    'emp-planif-av',
+    'emp-planif-std',
+    'emp-readonly',
+    'emp-employe-multi',
+    'emp-accueil-cs',
+  ]);
+
   const defaultActorForShellUser = () => {
-    if (isStrictAdmin) return 'emp-admin';
-    if (currentUser.role === 'manager') return 'emp-master';
-    if (currentUser.role === 'commercial') return 'emp-accueil-cs';
-    return 'emp-employe-multi';
+    if (CANONICAL_SERVER_ACTORS.has(currentUser.id)) return currentUser.id;
+    if (isStrictAdmin) return 'emp-mario';
+    if (currentUser.role === 'manager') return 'emp-sarah';
+    if (currentUser.role === 'commercial') return 'emp-maxime';
+    return 'emp-karim';
   };
 
   const [hubTab, setHubTab] = useState<MonCompteHubTab>(initialTarget.tab);
@@ -102,14 +121,42 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
     }
   }, [isTechnicalMode, hubTab]);
   const [activeActorId, setActiveActorId] = useState<string>(defaultActorForShellUser);
+  const [bearerToken, setBearerToken] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const tok = window.sessionStorage.getItem('cfos_bearer_token');
+      const actor = window.sessionStorage.getItem('cfos_bearer_actor_id');
+      return tok && actor === defaultActorForShellUser() ? tok : null;
+    } catch {
+      return null;
+    }
+  });
   const [activeSiteId, setActiveSiteId] = useState<string | 'all'>(() =>
     currentUser.clubId === 'beynost' ? 'club-beynost' : 'club-carre-soie'
   );
   const [activeSection, setActiveSection] = useState<McSectionId>(initialTarget.section);
 
   useEffect(() => {
+    const onBearerUpdated = (ev: Event) => {
+      const detail = (ev as CustomEvent<{ employeeId?: string; token?: string }>).detail;
+      if (detail?.employeeId === activeActorId && detail?.token) {
+        setBearerToken(detail.token);
+      }
+    };
+    window.addEventListener('cfos-bearer-updated', onBearerUpdated);
+    return () => window.removeEventListener('cfos-bearer-updated', onBearerUpdated);
+  }, [activeActorId]);
+
+  useEffect(() => {
     const nextActor = defaultActorForShellUser();
     setActiveActorId(nextActor);
+    try {
+      const tok = window.sessionStorage.getItem('cfos_bearer_token');
+      const actor = window.sessionStorage.getItem('cfos_bearer_actor_id');
+      setBearerToken(tok && actor === nextActor ? tok : null);
+    } catch {
+      setBearerToken(null);
+    }
     const primarySite = currentUser.clubId === 'beynost' ? 'club-beynost' : 'club-carre-soie';
     setActiveSiteId(primarySite);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -123,7 +170,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
   const [loading, setLoading] = useState<boolean>(true);
   const [fatalError, setFatalError] = useState<string | null>(null);
 
-  const auth = { actorId: activeActorId, siteId: activeSiteId };
+  const auth = { actorId: activeActorId, siteId: activeSiteId, token: bearerToken };
 
   async function refreshAll(nextAuth = auth, verifySection?: McSectionId) {
     setLoading(true);
@@ -174,11 +221,11 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
 
   useEffect(() => {
     void refreshAll(
-      { actorId: activeActorId, siteId: activeSiteId },
+      { actorId: activeActorId, siteId: activeSiteId, token: bearerToken },
       hubTab === 'mon-compte' ? activeSection : undefined
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeActorId, activeSiteId]);
+  }, [activeActorId, activeSiteId, bearerToken]);
 
   // Synchronisation lorsque la navigation globale AdminShell change subTarget
   useEffect(() => {
@@ -256,10 +303,9 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
     }
   }
 
-  // Projection de l'identité réelle du collaborateur connecté (ex: Maxime, Chloé, Sarah)
-  // lorsque l'utilisateur n'est pas administrateur système global (#1 / #9)
+  // Projection client uniquement si l'utilisateur courant n'est pas déjà servi canoniquement par le backend
   const effectiveDashboard: DashboardPayload | null =
-    dashboard && !isStrictAdmin
+    dashboard && dashboard.session.employee.id !== currentUser.id
       ? (() => {
           const userSiteId =
             currentUser.clubId === 'beynost' ? 'club-beynost' : 'club-carre-soie';

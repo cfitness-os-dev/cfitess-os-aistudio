@@ -157,6 +157,8 @@ pub struct EmployeeSiteAccess {
     pub profile_id: String,
     pub show_on_planning: bool,
     pub team_ids: Vec<String>,
+    #[serde(default)]
+    pub managed_team_ids: Vec<String>,
     pub position_ids: Vec<String>,
 }
 

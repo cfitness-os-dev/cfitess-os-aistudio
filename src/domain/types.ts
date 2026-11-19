@@ -116,6 +116,7 @@ export interface EmployeeSiteAccess {
   profileId: ProfileId;
   showOnPlanning: boolean;
   teamIds: string[];
+  managedTeamIds?: string[];
   positionIds: string[];
 }
 
