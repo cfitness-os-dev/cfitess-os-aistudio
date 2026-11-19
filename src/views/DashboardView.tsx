@@ -119,7 +119,7 @@ export function DashboardView({
             <div className="flex items-center justify-between">
               <div className="font-semibold text-sm flex items-center gap-2">
                 <CalendarClock className="w-4 h-4 text-cyan-400" />
-                Mes prochains shifts publiés ({myShifts.length})
+                Mes shifts publiés (période démo · {myShifts.length})
               </div>
               <span className="text-[11px] cf-mono cf-muted">
                 Durée nette déduite de la pause

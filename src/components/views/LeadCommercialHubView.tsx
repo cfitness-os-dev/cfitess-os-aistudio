@@ -1814,11 +1814,17 @@ export function LeadCommercialHubView({
                                 className="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-700 text-[10px]"
                               >
                                 <option value="">Réassocier…</option>
-                                {prospects.map((pr) => (
-                                  <option key={pr.id} value={pr.id}>
-                                    {pr.firstName} {pr.lastName} ({pr.clubId})
-                                  </option>
-                                ))}
+                                {prospects
+                                  .filter((pr) =>
+                                    clubFilter !== 'all'
+                                      ? pr.clubId === clubFilter
+                                      : currentUser.role === 'admin' || pr.clubId === currentUser.clubId
+                                  )
+                                  .map((pr) => (
+                                    <option key={pr.id} value={pr.id}>
+                                      {pr.firstName} {pr.lastName} ({pr.clubId})
+                                    </option>
+                                  ))}
                               </select>
                             </div>
                           )}

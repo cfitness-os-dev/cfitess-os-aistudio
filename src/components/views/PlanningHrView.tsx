@@ -479,10 +479,13 @@ export function PlanningHrView({
   const filteredEmployees = employees.filter((e) => {
     if (e.role === 'kiosque') return false;
     if (personalScopeOnly && scopedEmployeeId && e.id !== scopedEmployeeId) return false;
-    if (clubFilter !== 'all' && e.clubId !== clubFilter) return false;
+    if (forcedClubScope && e.clubId !== forcedClubScope) return false;
+    if (!forcedClubScope && clubFilter !== 'all' && e.clubId !== clubFilter) return false;
     if (roleFilter !== 'ALL' && e.role !== roleFilter) return false;
     return true;
   });
+
+  const canEditPlanning = !isReadOnly && !personalScopeOnly;
 
   const visibleTimeEntries =
     personalScopeOnly && scopedEmployeeId
@@ -666,10 +669,14 @@ export function PlanningHrView({
                     : 'Planning · Planning Général des Équipes, Pointeuse & Export Paie'}
                 </div>
                 <h2 className="font-extrabold text-lg tracking-tight text-slate-900">
-                  {isCoursCollectifsView
+                  {personalScopeOnly
+                    ? 'Mon Planning Personnel'
+                    : isCoursCollectifsView
                     ? 'Cours collectifs — 28 cours/sem Carré de Soie · 32 cours/sem Beynost'
                     : isPlanningOnlyView
-                    ? 'Planning des Équipes — Carré de Soie & Beynost'
+                    ? forcedClubScope
+                      ? `Planning Équipe — ${formatClubName(forcedClubScope, true)}`
+                      : 'Planning des Équipes — Carré de Soie & Beynost'
                     : 'Planning Équipes, Pointeuse & Export Paie Silae'}
                 </h2>
                 <div className="text-xs text-slate-500">
@@ -685,13 +692,15 @@ export function PlanningHrView({
               <nav className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
                 {[
                   { id: 'PLANNING', label: '1. Planning & Cours' },
-                  { id: 'POINTAGES', label: `2. La Pointeuse (${timeEntries.length})` },
+                  { id: 'POINTAGES', label: `2. La Pointeuse (${visibleTimeEntries.length})` },
                   {
                     id: 'CONGES',
-                    label: `3. Absences & CP (${leaveRequests.length})`,
+                    label: `3. Absences & CP (${visibleLeaveRequests.length})`,
                     badge: pendingLeavesCount > 0 ? pendingLeavesCount : undefined,
                   },
-                  { id: 'SILAE', label: '4. Export Paie Silae' },
+                  ...(!personalScopeOnly && canViewSalaries
+                    ? [{ id: 'SILAE', label: '4. Export Paie Silae' }]
+                    : []),
                 ].map((t) => (
                   <button
                     key={t.id}
@@ -914,7 +923,7 @@ export function PlanningHrView({
               </div>
             )}
 
-            {subTab === 'PLANNING' && !isCoursCollectifsView && (
+            {subTab === 'PLANNING' && !isCoursCollectifsView && canEditPlanning && (
               <>
                 <button
                   type="button"
@@ -1541,19 +1550,25 @@ export function PlanningHrView({
                                     </div>
                                   </div>
                                 ) : dayShifts.length === 0 && dayExternalEvents.length === 0 ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleQuickCellClick(emp.id, d.date, emp.clubId)}
-                                    className="w-full h-16 rounded-md border border-dashed border-transparent hover:border-slate-300 hover:bg-white text-slate-300 hover:text-slate-600 flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer group"
-                                    title="Cliquer pour planifier un créneau sur ce jour"
-                                  >
-                                    <span className="text-[10px] font-medium group-hover:hidden">
+                                  canEditPlanning ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleQuickCellClick(emp.id, d.date, emp.clubId)}
+                                      className="w-full h-16 rounded-md border border-dashed border-transparent hover:border-slate-300 hover:bg-white text-slate-300 hover:text-slate-600 flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer group"
+                                      title="Cliquer pour planifier un créneau sur ce jour"
+                                    >
+                                      <span className="text-[10px] font-medium group-hover:hidden">
+                                        Repos
+                                      </span>
+                                      <span className="hidden group-hover:inline-flex items-center gap-1 text-[10px] font-semibold text-[#4318FF]">
+                                        <Plus className="w-3 h-3" /> Shift
+                                      </span>
+                                    </button>
+                                  ) : (
+                                    <div className="w-full h-16 flex items-center justify-center text-[10px] text-slate-400">
                                       Repos
-                                    </span>
-                                    <span className="hidden group-hover:inline-flex items-center gap-1 text-[10px] font-semibold text-[#4318FF]">
-                                      <Plus className="w-3 h-3" /> Shift
-                                    </span>
-                                  </button>
+                                    </div>
+                                  )
                                 ) : (
                                   <div className="space-y-1.5">
                                     {dayShifts.map((s) => {
@@ -1566,37 +1581,44 @@ export function PlanningHrView({
                                       return (
                                         <div
                                           key={s.id}
-                                          draggable={!isCurrentWeekLocked}
-                                          onDragStart={(e) => handleShiftDragStart(e, s.id)}
+                                          draggable={canEditPlanning && !isCurrentWeekLocked}
+                                          onDragStart={(e) => {
+                                            if (!canEditPlanning) return;
+                                            handleShiftDragStart(e, s.id);
+                                          }}
                                           title={
-                                            isCurrentWeekLocked
+                                            !canEditPlanning
+                                              ? 'Consultation uniquement (lecture seule)'
+                                              : isCurrentWeekLocked
                                               ? 'Semaine verrouillée'
                                               : 'Glisser-déposer vers un autre jour, un autre salarié ou la ligne Non assignés'
                                           }
                                           className={`p-2 rounded-md text-[11px] shadow-2xs transition-transform ${
-                                            isCurrentWeekLocked ? '' : 'cursor-grab active:cursor-grabbing'
+                                            !canEditPlanning || isCurrentWeekLocked ? '' : 'cursor-grab active:cursor-grabbing'
                                           } ${st.card}`}
                                         >
                                           <div className="flex items-center justify-between gap-1">
                                             <span className="font-mono font-extrabold text-xs tabular-nums">
                                               {s.startTime} - {s.endTime}
                                             </span>
-                                            <button
-                                              type="button"
-                                              onClick={() => {
-                                                if (isCurrentWeekLocked) {
-                                                  setFeedbackBanner(
-                                                    `Semaine ${currentWeekNumber} verrouillée (verrou rouge paie). Déverrouillez pour supprimer un créneau.`
-                                                  );
-                                                  return;
-                                                }
-                                                deleteShift(s.id);
-                                              }}
-                                              title="Supprimer ce shift RH"
-                                              className="text-slate-400 hover:text-rose-600 cursor-pointer p-0.5"
-                                            >
-                                              <Trash2 className="w-3 h-3" />
-                                            </button>
+                                            {canEditPlanning && (
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  if (isCurrentWeekLocked) {
+                                                    setFeedbackBanner(
+                                                      `Semaine ${currentWeekNumber} verrouillée (verrou rouge paie). Déverrouillez pour supprimer un créneau.`
+                                                    );
+                                                    return;
+                                                  }
+                                                  deleteShift(s.id);
+                                                }}
+                                                title="Supprimer ce shift RH"
+                                                className="text-slate-400 hover:text-rose-600 cursor-pointer p-0.5"
+                                              >
+                                                <Trash2 className="w-3 h-3" />
+                                              </button>
+                                            )}
                                           </div>
 
                                           <div className="mt-1">
@@ -1959,26 +1981,30 @@ export function PlanningHrView({
                       <span className="text-slate-400 text-[11px]">Heures planifiées : </span>
                       <span className="font-bold text-white">{totalPlannedHours.toFixed(1)} h</span>
                     </div>
-                    <div>
-                      <span className="text-slate-400 text-[11px]">Coût chargé estimé : </span>
-                      <span className="font-bold text-emerald-400">
-                        {totalEstimatedGrossEur.toLocaleString('fr-FR')} €
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 text-[11px]">Ratio MS / CA hebdo : </span>
-                      <span
-                        className={`font-bold ${
-                          totalEstimatedGrossEur / 25600 <= 0.25 ? 'text-emerald-400' : 'text-amber-400'
-                        }`}
-                      >
-                        {((totalEstimatedGrossEur / 25600) * 100).toFixed(1)} %
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 text-[11px]">Taux Horaire Gr. 1 : </span>
-                      <span className="font-bold text-white">12,02 € brut/h</span>
-                    </div>
+                    {canViewSalaries && !personalScopeOnly && (
+                      <>
+                        <div>
+                          <span className="text-slate-400 text-[11px]">Coût chargé estimé : </span>
+                          <span className="font-bold text-emerald-400">
+                            {totalEstimatedGrossEur.toLocaleString('fr-FR')} €
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 text-[11px]">Ratio MS / CA hebdo : </span>
+                          <span
+                            className={`font-bold ${
+                              totalEstimatedGrossEur / 25600 <= 0.25 ? 'text-emerald-400' : 'text-amber-400'
+                            }`}
+                          >
+                            {((totalEstimatedGrossEur / 25600) * 100).toFixed(1)} %
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 text-[11px]">Taux Horaire Gr. 1 : </span>
+                          <span className="font-bold text-white">12,02 € brut/h</span>
+                        </div>
+                      </>
+                    )}
                     <div>
                       <span className="text-slate-400 text-[11px]">Conformité IDCC 2511 : </span>
                       <span

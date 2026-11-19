@@ -622,8 +622,8 @@ export function PlanningAndModulesView({
         }))
     : [];
 
-  const unifiedMc02Employees = [...dashboard.visibleEmployees, ...extraStaffViewsForMc02].map(
-    (emp) => {
+  const unifiedMc02Employees = [...dashboard.visibleEmployees, ...extraStaffViewsForMc02]
+    .map((emp) => {
       const cOver = contractOverrides[emp.id];
       const sOver = siteAccessOverrides[emp.id];
       return {
@@ -638,8 +638,13 @@ export function PlanningAndModulesView({
             }
           : emp.contract,
       };
-    }
-  );
+    })
+    .filter((emp) => {
+      if (currentUser.role !== 'manager') return true;
+      const managerSiteId = currentUser.clubId === 'beynost' ? 'club-beynost' : 'club-carre-soie';
+      if (emp.siteAccesses.some((sa) => sa.profileId === 'admin_systeme')) return false;
+      return emp.siteAccesses.some((sa) => sa.siteId === managerSiteId);
+    });
 
   useEffect(() => {
     const stillVisible = unifiedMc02Employees.some(
