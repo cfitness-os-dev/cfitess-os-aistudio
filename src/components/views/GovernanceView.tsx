@@ -45,7 +45,97 @@ export type ArchitectTabId =
   | 'server_hardware'
   | 'onsite_runbook'
   | 'third_party_updates'
-  | 'governance_backups';
+  | 'governance_backups'
+  | 'field_guide';
+
+const ANTI_GAFFE_RULES = [
+  'NE JAMAIS débrancher la box Internet ou le serveur Windows Heitz en pleine journée : les portillons bloqueraient les adhérents. Branche toujours notre serveur sur un port RJ45 libre du switch.',
+  'NE JAMAIS changer l’adresse IP de la box ou du serveur Heitz existant : c’est notre serveur qui s’adapte au réseau du club (via un bail DHCP fixe dans la box), jamais l’inverse.',
+  'NE JAMAIS redémarrer un portillon, un switch ou une passerelle téléphonie sans prévenir l’accueil (fais les tests critiques tôt le matin, en heure creuse 14h–16h, ou après 21h).',
+  'NE JAMAIS résilier Skello, Ringover ou Lead avant 15 jours de double fonctionnement validé avec l’équipe : garde toujours les anciens logiciels en filet de sécurité pendant la transition.',
+  'NE JAMAIS quitter le club sans avoir fait 1 vrai redémarrage du serveur (sudo reboot) pour vérifier que C.Fitness OS + Ollama redémarrent tout seuls et sans vérifier la sauvegarde externe.',
+];
+
+const FIELD_GUIDE_PHASES = [
+  {
+    id: 'fg-1',
+    phase: 'Phase 1 · Avant de partir au club (J-7 à J-1)',
+    duration: 'À distance',
+    goal: 'Arriver sur place avec tous les accès et zéro surprise.',
+    checks: [
+      { id: 'fg-1-a', text: 'Envoyer au client la liste des 8 prérequis (onglet 2 → bouton « Copier la liste client ») et récupérer le contact de son prestataire informatique / box.' },
+      { id: 'fg-1-b', text: 'Prendre dans ta sacoche : 2 câbles RJ45 Cat6 (3m), 1 multiprise, 1 clavier + souris USB, 1 écran ou câble HDMI, 1 clé USB de secours, 1 PC portable.' },
+      { id: 'fg-1-c', text: 'Réserver un créneau calme avec le gérant (ex. mardi ou jeudi 14h–16h) pour travailler sereinement sans gêner l’accueil.' },
+    ],
+    verifyTip: 'Tu dois connaître l’adresse du club principal (Carré de Soie — 2 rue Jacquard) et avoir le contact du technicien/gérant sur place.',
+  },
+  {
+    id: 'fg-2',
+    phase: 'Phase 2 · Installer le serveur à Carré de Soie (1 serveur pour les 2 clubs)',
+    duration: '30 min',
+    goal: 'Brancher le serveur sur onduleur et lui donner une adresse IP fixe sur le réseau du club.',
+    checks: [
+      { id: 'fg-2-a', text: 'Brancher l’onduleur (UPS) sur une prise murale, puis brancher le serveur C.Fitness OS (et idéalement le switch/box) sur les prises secourues batterie de l’onduleur.' },
+      { id: 'fg-2-b', text: 'Relier le serveur au switch / box Internet du club avec un câble RJ45 sur un port libre (sans débrancher aucun câble existant !).' },
+      { id: 'fg-2-c', text: 'Sur le serveur Debian, noter son IP actuelle avec la commande : hostname -I' },
+      { id: 'fg-2-d', text: 'Dans l’interface de la box Internet du club (ou avec le prestataire IT), fixer cette IP en « Bail DHCP statique » pour que l’IP du serveur ne change jamais après une coupure de courant.' },
+    ],
+    verifyTip: 'Test simple : depuis le PC d’accueil de Carré de Soie, ouvre un terminal et tape ping IP_DU_SERVEUR → tu dois voir des réponses (< 2 ms).',
+  },
+  {
+    id: 'fg-3',
+    phase: 'Phase 3 · Démarrer C.Fitness OS & l’Agent IA local (Ollama)',
+    duration: '20 min',
+    goal: 'Lancer l’application + l’IA locale et vérifier qu’elle s’ouvre depuis l’accueil.',
+    checks: [
+      { id: 'fg-3-a', text: 'Vérifier le fichier .env (CFITNESS_BIND_ADDR=0.0.0.0:8080, OLLAMA_BASE_URL=http://127.0.0.1:11434, OLLAMA_DEFAULT_MODEL=qwen2.5:3b).' },
+      { id: 'fg-3-b', text: 'Lancer le script d’installation ./deploy-linux.sh (disponible dans l’onglet 2) et vérifier que le service démarre automatiquement au boot (systemctl status cfitness-os).' },
+      { id: 'fg-3-c', text: 'Depuis le PC d’accueil de Carré de Soie, ouvrir http://IP_DU_SERVEUR:8080 dans Chrome, créer un favori « C.Fitness OS » sur le bureau.' },
+      { id: 'fg-3-d', text: 'Ouvrir le menu Recouvrement et vérifier que le voyant « Agent IA local (Ollama) » est vert (En ligne) et qu’il répond à un message test.' },
+    ],
+    verifyTip: 'Si le PC d’accueil n’affiche pas la page, vérifie le pare-feu du serveur : sudo ufw allow 8080/tcp',
+  },
+  {
+    id: 'fg-4',
+    phase: 'Phase 4 · Relier le 2e club (Beynost) au serveur de Carré de Soie',
+    duration: '15 min',
+    goal: 'Permettre aux PC de Beynost d’utiliser le même serveur sans ouvrir de port dangereux sur Internet.',
+    checks: [
+      { id: 'fg-4-a', text: 'Option la plus simple (recommandée débutant) : installer Tailscale (VPN privé gratuit/pro en 2 min) sur le serveur de Carré de Soie ET sur les PC d’accueil / direction de Beynost (ou utiliser le VPN WireGuard entre les 2 box).' },
+      { id: 'fg-4-b', text: 'Noter l’adresse IP privée Tailscale du serveur (ex. 100.x.y.z) et ouvrir http://100.x.y.z:8080 depuis un PC à Beynost.' },
+      { id: 'fg-4-c', text: 'Créer le raccourci « C.Fitness OS » sur le bureau des PC de Beynost et tester la connexion avec le compte d’un collaborateur Beynost.' },
+    ],
+    verifyTip: 'En faisant comme ça, ZÉRO port n’est ouvert sur Internet, les 2 clubs partagent la même base temps réel, et si Internet coupe à Beynost, les portillons Heitz continuent d’ouvrir en local.',
+  },
+  {
+    id: 'fg-5',
+    phase: 'Phase 5 · Connecter les logiciels externes & le matériel club (1 par 1)',
+    duration: '45 min',
+    goal: 'Brancher chaque partenaire sans jamais casser ce qui marche déjà.',
+    checks: [
+      { id: 'fg-5-a', text: 'HEITZ SYSTEM : noter l’IP locale du PC/serveur Heitz, vérifier le ping depuis notre serveur, renseigner HEITZ_WS_URL + HEITZ_API_KEY dans .env, et faire un 1er import CSV des adhérents dans Adhérents → Importer.' },
+      { id: 'fg-5-b', text: 'TECHNOGYM MYWELLNESS : saisir MYWELLNESS_API_KEY + les 2 Facility IDs (Carré de Soie & Beynost) dans .env et tester le lien direct Mywellness sur une fiche adhérent.' },
+      { id: 'fg-5-c', text: 'SILAE (COMPTABLE) : aller dans Personnel & RH → Préparation de paie, exporter 1 fichier CSV Silae test et l’envoyer par email au comptable pour qu’il confirme les codes rubriques.' },
+      { id: 'fg-5-d', text: 'DOUCHETTE CODE-BARRES USB : brancher simplement la douchette sur un port USB du PC d’accueil (zéro pilote), aller dans Stock & Achats, cliquer dans le champ « Douchette EAN » et biper un produit.' },
+      { id: 'fg-5-e', text: 'TÉLÉPHONIE (RINGOVER → OVH / YEASTAR 4G) : brancher la passerelle Yeastar sur le switch + insérer les cartes SIM 07, faire 1 appel sortant + 1 appel entrant test, et NE lancer la portabilité Ringover qu’après ce test réussi.' },
+      { id: 'fg-5-f', text: 'TABLETTES POINTEUSE PIN : ouvrir C.Fitness OS en mode plein écran sur les tablettes accueil (Carré de Soie & Beynost) et tester 1 pointage PIN.' },
+    ],
+    verifyTip: 'Travaille TOUJOURS logiciel par logiciel : valide le #1 avant de passer au #2.',
+  },
+  {
+    id: 'fg-6',
+    phase: 'Phase 6 · Recette finale & Sauvegarde avant de partir',
+    duration: '15 min',
+    goal: 'Prouver au client que tout fonctionne et qu’en cas de coupure électrique tout repart tout seul.',
+    checks: [
+      { id: 'fg-6-a', text: 'Brancher le disque dur / NAS externe de sauvegarde et vérifier qu’une sauvegarde chiffrée est bien créée dessus (onglet 4).' },
+      { id: 'fg-6-b', text: 'Faire un redémarrage complet du serveur (sudo reboot), attendre 2 minutes, puis rafraîchir le PC d’accueil : C.Fitness OS et Ollama doivent revenir en ligne automatiquement sans aucune intervention.' },
+      { id: 'fg-6-c', text: 'Faire tester en direct devant le client : 1 fiche Adhérent, 1 shift Planning, 1 pointage PIN, 1 scan Douchette Stock, 1 question Agent IA Recouvrement.' },
+      { id: 'fg-6-d', text: 'Noter dans un document remis au gérant : l’IP du serveur, l’IP Tailscale, les comptes admin, et ton numéro de support pendant les 15 jours de transition.' },
+    ],
+    verifyTip: 'Bravo : si le reboot automatique + la sauvegarde + les 5 tests passent devant le client, ton installation est 100 % réussie !',
+  },
+];
 
 const CLIENT_INSTALL_PREREQUISITES = [
   {
@@ -680,6 +770,44 @@ export function GovernanceView() {
     }
   });
   const [copiedClientReqs, setCopiedClientReqs] = useState(false);
+  const [checkedFieldSteps, setCheckedFieldSteps] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('cfos_field_guide_checks');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [copiedFieldGuide, setCopiedFieldGuide] = useState(false);
+
+  const toggleFieldStep = (id: string) => {
+    setCheckedFieldSteps((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      try {
+        localStorage.setItem('cfos_field_guide_checks', JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
+
+  const handleCopyFieldGuide = () => {
+    const text =
+      '=== GUIDE TERRAIN INSTALLATION SERVEUR C.FITNESS OS (CARRÉ DE SOIE + BEYNOST) ===\n\n' +
+      '--- 5 RÈGLES D’OR ANTI-GAFFE ---\n' +
+      ANTI_GAFFE_RULES.map((r, i) => `${i + 1}. ${r}`).join('\n') +
+      '\n\n--- CHECKLIST PAS À PAS JOUR J ---\n\n' +
+      FIELD_GUIDE_PHASES.map(
+        (p) =>
+          `${p.phase} (${p.duration})\nObjectif : ${p.goal}\n` +
+          p.checks.map((c) => `  ${checkedFieldSteps[c.id] ? '[x]' : '[ ]'} ${c.text}`).join('\n') +
+          `\n  Vérification : ${p.verifyTip}`
+      ).join('\n\n');
+    navigator.clipboard?.writeText(text).catch(() => {});
+    setCopiedFieldGuide(true);
+    setTimeout(() => setCopiedFieldGuide(false), 2500);
+  };
 
   const toggleClientReq = (id: string) => {
     setCheckedClientReqs((prev) => {
@@ -1043,8 +1171,8 @@ ${ONSITE_INSTALLATION_STEPS.map(
           </button>
         </div>
 
-        {/* Navigation horizontale claire en 4 onglets */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 pt-3 border-t border-slate-200/70 dark:border-slate-800">
+        {/* Navigation horizontale claire en 5 onglets */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 pt-3 border-t border-slate-200/70 dark:border-slate-800">
           <button
             type="button"
             onClick={() => setActiveTab('server_hardware')}
@@ -1103,6 +1231,21 @@ ${ONSITE_INSTALLATION_STEPS.map(
           >
             <ShieldCheck className="w-4 h-4 shrink-0" />
             <span className="truncate">4. Sauvegardes 3-2-1 &amp; Secours</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('field_guide')}
+            className={`px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+              activeTab === 'field_guide'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : isDark
+                ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-950/70'
+                : 'bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100'
+            }`}
+          >
+            <FileText className="w-4 h-4 shrink-0" />
+            <span className="truncate">5. Guide Terrain &amp; Anti-Gaffe</span>
           </button>
         </div>
       </div>
@@ -2036,6 +2179,183 @@ ${ONSITE_INSTALLATION_STEPS.map(
           </div>
         </div>
       )}
+
+      {/* =====================================================================
+          ONGLET 5 : GUIDE TERRAIN PAS À PAS & ANTI-GAFFE (1 SERVEUR POUR 2 CLUBS)
+         ===================================================================== */}
+      {activeTab === 'field_guide' && (() => {
+        const allFieldChecks = FIELD_GUIDE_PHASES.flatMap((p) => p.checks);
+        const doneFieldCount = allFieldChecks.filter((c) => checkedFieldSteps[c.id]).length;
+        const fieldPct = Math.round((doneFieldCount / allFieldChecks.length) * 100);
+
+        return (
+          <div className="space-y-4">
+            {/* Barre titre + progression + Copier / Imprimer */}
+            <div
+              className={`rounded-2xl border p-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 ${
+                isDark ? 'bg-[#151A2A] border-emerald-500/40' : 'bg-emerald-50/60 border-emerald-300'
+              }`}
+            >
+              <div className="space-y-1 flex-1 min-w-0">
+                <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-emerald-500">
+                  Copilote Installation Terrain · Expliqué simplement étape par étape
+                </div>
+                <h2 className="text-base font-extrabold">
+                  Guide d&apos;Installation Serveur Bi-Club &amp; Checklist Anti-Gaffe ({doneFieldCount}/{allFieldChecks.length} · {fieldPct}%)
+                </h2>
+                <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden mt-2">
+                  <div
+                    className="h-full bg-emerald-500 transition-all duration-300 rounded-full"
+                    style={{ width: `${fieldPct}%` }}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleCopyFieldGuide}
+                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                >
+                  {copiedFieldGuide ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedFieldGuide ? 'Guide copié !' : 'Copier le Guide Terrain'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Imprimer / PDF</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Bloc 1 : 5 Règles d'Or Anti-Gaffe */}
+            <div
+              className={`rounded-2xl border p-4 space-y-2.5 ${
+                isDark ? 'bg-rose-950/25 border-rose-500/40' : 'bg-rose-50 border-rose-300'
+              }`}
+            >
+              <div className="text-xs font-extrabold uppercase tracking-wider text-rose-500 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>Les 5 Règles d&apos;Or Anti-Gaffe devant le client (À lire avant de toucher un câble)</span>
+              </div>
+              <ul className="space-y-1.5 text-xs">
+                {ANTI_GAFFE_RULES.map((rule, idx) => (
+                  <li key={idx} className="flex items-start gap-2 leading-relaxed">
+                    <span className="font-mono font-black text-rose-500 shrink-0">{idx + 1}.</span>
+                    <span>{rule}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Bloc 2 : Schéma ultra simple 1 serveur pour 2 clubs */}
+            <div
+              className={`rounded-2xl border p-4 space-y-2 text-xs ${
+                isDark ? 'bg-[#151A2A] border-slate-800' : 'bg-white border-slate-200'
+              }`}
+            >
+              <div className="font-extrabold text-sm flex items-center gap-2 text-violet-500">
+                <Server className="w-4 h-4" />
+                <span>Comment 1 seul serveur à Carré de Soie gère les 2 clubs (explication simple)</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                <div className={`p-3 rounded-xl border ${isDark ? 'bg-slate-900/60 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                  <div className="font-bold text-violet-400">1. Club Carré de Soie (Maître)</div>
+                  <p className="text-[11px] opacity-85 mt-1 leading-relaxed">
+                    On pose le serveur sur onduleur + câble RJ45 sur le switch du club. Les PC d&apos;accueil, tablettes et Heitz local communiquent en direct à très haute vitesse (LAN).
+                  </p>
+                </div>
+                <div className={`p-3 rounded-xl border ${isDark ? 'bg-slate-900/60 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                  <div className="font-bold text-emerald-400">2. Tunnel Privé (Tailscale / WireGuard)</div>
+                  <p className="text-[11px] opacity-85 mt-1 leading-relaxed">
+                    Au lieu d&apos;ouvrir des ports compliqués sur la box Internet, Tailscale crée un tunnel privé chiffré en 2 minutes entre le serveur de Carré de Soie et les PC de Beynost.
+                  </p>
+                </div>
+                <div className={`p-3 rounded-xl border ${isDark ? 'bg-slate-900/60 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                  <div className="font-bold text-sky-400">3. Club Beynost (Client léger)</div>
+                  <p className="text-[11px] opacity-85 mt-1 leading-relaxed">
+                    Zéro serveur à installer à Beynost : les PC ouvrent simplement Chrome sur l&apos;IP privée du serveur. Et si Internet coupe, les portillons Heitz restent autonomes sur place.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Bloc 3 : Les 6 Phases Pas à Pas cochables */}
+            <div className="space-y-3">
+              {FIELD_GUIDE_PHASES.map((phase) => {
+                const phaseDone = phase.checks.filter((c) => checkedFieldSteps[c.id]).length;
+                return (
+                  <div
+                    key={phase.id}
+                    className={`rounded-2xl border p-4 space-y-3 ${
+                      isDark ? 'bg-[#151A2A] border-slate-800' : 'bg-white border-slate-200'
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/60 dark:border-slate-800 pb-2">
+                      <div>
+                        <div className="font-extrabold text-sm">{phase.phase}</div>
+                        <div className="text-xs opacity-75">{phase.goal}</div>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs font-mono">
+                        <span className="px-2 py-0.5 rounded bg-violet-500/15 text-violet-400 font-bold">
+                          {phase.duration}
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-bold">
+                          {phaseDone}/{phase.checks.length}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 text-xs">
+                      {phase.checks.map((chk) => {
+                        const isChecked = Boolean(checkedFieldSteps[chk.id]);
+                        return (
+                          <button
+                            key={chk.id}
+                            type="button"
+                            onClick={() => toggleFieldStep(chk.id)}
+                            className={`w-full p-2.5 rounded-xl border text-left flex items-start gap-2.5 transition-colors cursor-pointer ${
+                              isChecked
+                                ? isDark
+                                  ? 'bg-emerald-950/30 border-emerald-600/40 opacity-80'
+                                  : 'bg-emerald-50 border-emerald-300 opacity-85'
+                                : isDark
+                                ? 'bg-slate-900/60 border-slate-700 hover:border-violet-500/50'
+                                : 'bg-slate-50 border-slate-200 hover:border-violet-400'
+                            }`}
+                          >
+                            {isChecked ? (
+                              <CheckSquare className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                            ) : (
+                              <Square className="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
+                            )}
+                            <span className={`leading-relaxed ${isChecked ? 'line-through opacity-75' : ''}`}>
+                              {chk.text}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div
+                      className={`p-2.5 rounded-xl text-[11px] flex items-start gap-2 ${
+                        isDark ? 'bg-sky-950/30 text-sky-300 border border-sky-500/30' : 'bg-sky-50 text-sky-900 border border-sky-200'
+                      }`}
+                    >
+                      <Info className="w-4 h-4 shrink-0 mt-0.5 text-sky-500" />
+                      <span>
+                        <strong>Comment vérifier que c&apos;est bon :</strong> {phase.verifyTip}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
