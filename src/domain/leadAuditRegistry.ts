@@ -770,6 +770,15 @@ export interface AppointmentBookingDecision {
   reason: string;
 }
 
+function parseTimeToMinutes(hhmm: string): number | null {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm.trim());
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (h < 0 || h > 23 || min < 0 || min > 59) return null;
+  return h * 60 + min;
+}
+
 export function validateAppointmentBooking(
   existingSlots: AppointmentSlotRecord[],
   candidate: {
@@ -778,43 +787,99 @@ export function validateAppointmentBooking(
     typeName: string;
     date: string;
     startTime: string;
+    durationMinutes?: number;
     hoursBeforeSlot: number;
     minDelayHours: number;
     capacityMax: number;
     requiresStripePayment: boolean;
     stripePaidConfirmed: boolean;
+    referenceNow?: Date;
   },
   preventCrossTypeCollision = true
 ): AppointmentBookingDecision {
-  if (candidate.hoursBeforeSlot < candidate.minDelayHours) {
+  const startMin = parseTimeToMinutes(candidate.startTime);
+  if (startMin === null || !/^\d{4}-\d{2}-\d{2}$/.test(candidate.date)) {
     return {
       accepted: false,
       bookingStatus: 'refuse',
       collisionDetected: false,
-      reason: `Délai minimum non respecté (${candidate.hoursBeforeSlot}h < ${candidate.minDelayHours}h requises).`,
+      reason: 'Date ou heure de créneau invalide (format attendu YYYY-MM-DD et HH:MM).',
     };
   }
 
-  const sameTimeAllTypes = existingSlots.filter(
-    (s) =>
-      s.clubId === candidate.clubId &&
-      s.coachId === candidate.coachId &&
-      s.date === candidate.date &&
-      s.startTime === candidate.startTime
-  );
+  let effectiveHoursBefore = candidate.hoursBeforeSlot;
+  if (candidate.referenceNow) {
+    const slotDt = new Date(`${candidate.date}T${candidate.startTime.padStart(5, '0')}:00`);
+    if (Number.isNaN(slotDt.getTime())) {
+      return {
+        accepted: false,
+        bookingStatus: 'refuse',
+        collisionDetected: false,
+        reason: 'Date de rendez-vous invalide.',
+      };
+    }
+    effectiveHoursBefore = (slotDt.getTime() - candidate.referenceNow.getTime()) / 3600000;
+    if (effectiveHoursBefore < 0) {
+      return {
+        accepted: false,
+        bookingStatus: 'refuse',
+        collisionDetected: false,
+        reason: 'Impossible de réserver un créneau dans le passé.',
+      };
+    }
+  }
 
-  // RDV-01 : prévention de collisions entre types distincts sur le même coach/créneau
-  const crossTypeOccupied = sameTimeAllTypes.find((s) => s.typeName !== candidate.typeName && s.currentBookedCount > 0);
+  if (effectiveHoursBefore < candidate.minDelayHours) {
+    return {
+      accepted: false,
+      bookingStatus: 'refuse',
+      collisionDetected: false,
+      reason: `Délai minimum non respecté (${effectiveHoursBefore.toFixed(1)}h < ${candidate.minDelayHours}h requises).`,
+    };
+  }
+
+  const candDur = candidate.durationMinutes && candidate.durationMinutes > 0 ? candidate.durationMinutes : 45;
+  const candEnd = startMin + candDur;
+
+  const overlappingSameCoach = existingSlots.filter((s) => {
+    if (s.coachId !== candidate.coachId || s.date !== candidate.date || s.currentBookedCount <= 0) {
+      return false;
+    }
+    const sStart = parseTimeToMinutes(s.startTime);
+    if (sStart === null) return s.startTime === candidate.startTime;
+    const sEnd = sStart + (s.durationMinutes > 0 ? s.durationMinutes : 45);
+    return startMin < sEnd && sStart < candEnd;
+  });
+
+  // Collision inter-clubs pour un même coach
+  const interClubOverlap = overlappingSameCoach.find((s) => s.clubId !== candidate.clubId);
+  if (interClubOverlap) {
+    return {
+      accepted: false,
+      bookingStatus: 'refuse',
+      collisionDetected: true,
+      reason: `Conflit inter-clubs : ce coach a déjà un créneau (${interClubOverlap.startTime}) sur l'autre établissement.`,
+    };
+  }
+
+  const sameClubOverlap = overlappingSameCoach.filter((s) => s.clubId === candidate.clubId);
+
+  // RDV-01 : prévention de collisions entre types distincts sur le même coach/plage
+  const crossTypeOccupied = sameClubOverlap.find(
+    (s) => s.typeName !== candidate.typeName || s.startTime !== candidate.startTime
+  );
   if (preventCrossTypeCollision && crossTypeOccupied) {
     return {
       accepted: false,
       bookingStatus: 'refuse',
       collisionDetected: true,
-      reason: `Collision inter-types (RDV-01) : créneau déjà occupé par "${crossTypeOccupied.typeName}" sur ce coach.`,
+      reason: `Collision de plage horaire (RDV-01) : chevauchement avec "${crossTypeOccupied.typeName}" (${crossTypeOccupied.startTime}).`,
     };
   }
 
-  const sameType = sameTimeAllTypes.find((s) => s.typeName === candidate.typeName);
+  const sameType = sameClubOverlap.find(
+    (s) => s.typeName === candidate.typeName && s.startTime === candidate.startTime
+  );
   if (candidate.capacityMax > 0 && sameType && sameType.currentBookedCount >= candidate.capacityMax) {
     return {
       accepted: false,

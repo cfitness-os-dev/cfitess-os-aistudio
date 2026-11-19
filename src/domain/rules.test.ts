@@ -7,6 +7,7 @@ import {
   computeLeadReportBreakdown,
   filterFictiveSales,
   parseCsvLineWithQuotes,
+  parseCsvRowsWithQuotes,
 } from './leadHubHelpers';
 import { INITIAL_ROLE_PROFILES } from './permissionsMatrixSeed';
 import { computeShiftNetMinutes, formatMinutesAsHours, getControlState } from './rbac';
@@ -32,6 +33,7 @@ import {
   LEAD_IMPORT_COLUMNS_11,
   LEAD_PARTNERS_9,
   LEAD_SETTINGS_TABS_14,
+  LEAD_STATISTICS_8_TABLES,
   resolveWhatsAppSendDecision,
   validateAndParseLeadImportRows,
   validateAppointmentBooking,
@@ -1285,4 +1287,130 @@ test('LEAD-TST06 — Statistiques par période, ventes fin abonnement, CSV guill
   assert.equal(computeActivityDueBucket('2026-11-19T15:00', 'todo', ref), "Aujourd'hui");
   assert.equal(computeActivityDueBucket('2026-11-20T09:00', 'todo', ref), 'Demain');
   assert.equal(computeActivityDueBucket('2026-11-18T10:00', 'done', ref), 'Faites');
+});
+
+test('LEAD-TST07 — 8 vrais IDs stats, périodes YTD/last_week, CSV multiligne et RDV chevauchement/inter-club', () => {
+  const sampleProspects = [
+    {
+      id: 'p-1',
+      firstName: 'Marie-Claire',
+      lastName: 'Dupont',
+      phone: '0600000001',
+      email: 'mc@exemple.fr',
+      clubId: 'carre-de-soie' as const,
+      source: 'Parrainage' as const,
+      stage: 'Adhérent' as const,
+      assignedToId: 'emp-maxime',
+      rgpdConsent: true,
+      smsStopOptOut: false,
+      bloctelListed: false,
+      retryCount: 1,
+      estimatedValueEur: 500,
+      goal: 'Biocircuit',
+      notes: '',
+      createdAt: '2026-11-12',
+    },
+    {
+      id: 'p-2',
+      firstName: 'Lucas',
+      lastName: 'Morel',
+      phone: '0600000002',
+      email: 'lucas@exemple.fr',
+      clubId: 'beynost' as const,
+      source: 'Site c.fitness' as const,
+      stage: 'Nouveau' as const,
+      assignedToId: 'emp-chloe',
+      rgpdConsent: true,
+      smsStopOptOut: false,
+      bloctelListed: false,
+      retryCount: 0,
+      estimatedValueEur: 400,
+      goal: 'Remise en forme',
+      notes: '',
+      createdAt: '2026-03-10',
+    },
+  ];
+
+  // Les 8 vrais IDs de LEAD_STATISTICS_8_TABLES produisent les bonnes dimensions
+  assert.equal(LEAD_STATISTICS_8_TABLES.length, 8);
+  const comReport = computeLeadReportBreakdown('st-tunnel-com', sampleProspects, {
+    periodId: 'year_to_date',
+    multiClubCds: true,
+    multiClubBeynost: true,
+    ignoreArchived: true,
+    compareToPreviousYear: true,
+    referenceDate: new Date('2026-11-19T12:00:00Z'),
+    commercialLabelById: { 'emp-maxime': 'Maxime Giraud', 'emp-chloe': 'Chloé Morel' },
+  });
+  assert.equal(comReport.dimension, 'commercial');
+  assert.equal(comReport.filteredCount, 2);
+  assert.equal(comReport.rows[0].label, 'Maxime Giraud');
+
+  const srcReport = computeLeadReportBreakdown('st-act-src', sampleProspects, {
+    periodId: 'last_week',
+    multiClubCds: true,
+    multiClubBeynost: true,
+    ignoreArchived: true,
+    compareToPreviousYear: false,
+    referenceDate: new Date('2026-11-19T12:00:00Z'), // semaine précédente = 2026-11-09..2026-11-15
+  });
+  assert.equal(srcReport.dimension, 'source');
+  assert.equal(srcReport.filteredCount, 1);
+  assert.equal(srcReport.rows[0].label, 'Parrainage');
+
+  // Parseur CSV complet avec retour ligne et point-virgule entre guillemets
+  const csvRows = parseCsvRowsWithQuotes(
+    'GENRE;PRENOM;NOM;EMAIL;COMMENTAIRE\nF;Marie-Claire;Dupont;mc@ex.fr;"Ligne 1;avec ;\nLigne 2"'
+  );
+  assert.equal(csvRows.length, 2);
+  assert.equal(csvRows[1][1], 'Marie-Claire');
+  assert.ok(csvRows[1][4].includes('Ligne 2'));
+
+  // RDV chevauchement de plage horaire et conflit inter-club sur le même coach
+  const existing = [
+    {
+      id: 'sl-1',
+      clubId: 'carre-de-soie' as const,
+      coachId: 'emp-karim',
+      typeName: 'Coaching',
+      date: '2026-12-01',
+      startTime: '10:00',
+      durationMinutes: 45,
+      capacityMax: 1,
+      currentBookedCount: 1,
+      paidRequired: false,
+      paymentStatus: 'non_requis' as const,
+    },
+  ];
+  const overlap = validateAppointmentBooking(existing, {
+    clubId: 'carre-de-soie',
+    coachId: 'emp-karim',
+    typeName: 'Bilan',
+    date: '2026-12-01',
+    startTime: '10:15',
+    durationMinutes: 45,
+    hoursBeforeSlot: 12,
+    minDelayHours: 2,
+    capacityMax: 1,
+    requiresStripePayment: false,
+    stripePaidConfirmed: false,
+  });
+  assert.equal(overlap.accepted, false);
+  assert.equal(overlap.collisionDetected, true);
+
+  const interClub = validateAppointmentBooking(existing, {
+    clubId: 'beynost',
+    coachId: 'emp-karim',
+    typeName: 'Coaching',
+    date: '2026-12-01',
+    startTime: '10:15',
+    durationMinutes: 45,
+    hoursBeforeSlot: 12,
+    minDelayHours: 2,
+    capacityMax: 1,
+    requiresStripePayment: false,
+    stripePaidConfirmed: false,
+  });
+  assert.equal(interClub.accepted, false);
+  assert.equal(interClub.collisionDetected, true);
 });

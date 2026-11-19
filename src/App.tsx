@@ -6,9 +6,12 @@ import { KioskTabletShell } from './components/shells/KioskTabletShell';
 import { SoftphoneShell } from './components/shells/SoftphoneShell';
 import { LocalLoginGate } from './components/LocalLoginGate';
 import { MywellnessSportSheetModal } from './components/MywellnessSportSheetModal';
+import { PublicLeadPortalView } from './components/PublicLeadPortalView';
 
 function CfosRouter() {
   const { shellMode, themeMode, accentColor } = useCfos();
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '/';
+  const isPublicPortal = pathname.startsWith('/forms/') || pathname.startsWith('/book/');
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
@@ -17,6 +20,10 @@ function CfosRouter() {
       document.documentElement.setAttribute('data-accent', accentColor);
     }
   }, [themeMode, accentColor]);
+
+  if (isPublicPortal) {
+    return <PublicLeadPortalView pathname={pathname} />;
+  }
 
   const renderShell = () => {
     if (shellMode === 'employe') {

@@ -73,30 +73,56 @@ export function filterFictiveSales(
 }
 
 /**
- * Parse une ligne CSV en respectant les guillemets doubles (ex: "a;b";c).
+ * Parse un fichier CSV complet en respectant les guillemets doubles et les retours à la ligne internes.
  */
-export function parseCsvLineWithQuotes(line: string, delimiter = ';'): string[] {
-  const result: string[] = [];
-  let current = '';
+export function parseCsvRowsWithQuotes(csvText: string, delimiter = ';'): string[][] {
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentCell = '';
   let inQuotes = false;
-  for (let i = 0; i < line.length; i += 1) {
-    const ch = line[i];
+
+  for (let i = 0; i < csvText.length; i += 1) {
+    const ch = csvText[i];
     if (ch === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
+      if (inQuotes && csvText[i + 1] === '"') {
+        currentCell += '"';
         i += 1;
       } else {
         inQuotes = !inQuotes;
       }
     } else if (ch === delimiter && !inQuotes) {
-      result.push(current.trim());
-      current = '';
+      currentRow.push(currentCell.trim());
+      currentCell = '';
+    } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+      if (ch === '\r' && csvText[i + 1] === '\n') {
+        i += 1;
+      }
+      currentRow.push(currentCell.trim());
+      if (currentRow.some((cell) => cell.length > 0)) {
+        rows.push(currentRow);
+      }
+      currentRow = [];
+      currentCell = '';
     } else {
-      current += ch;
+      currentCell += ch;
     }
   }
-  result.push(current.trim());
-  return result;
+
+  if (currentCell.length > 0 || currentRow.length > 0) {
+    currentRow.push(currentCell.trim());
+    if (currentRow.some((cell) => cell.length > 0)) {
+      rows.push(currentRow);
+    }
+  }
+  return rows;
+}
+
+/**
+ * Parse une ligne CSV en respectant les guillemets doubles (ex: "a;b";c).
+ */
+export function parseCsvLineWithQuotes(line: string, delimiter = ';'): string[] {
+  const rows = parseCsvRowsWithQuotes(line, delimiter);
+  return rows[0] ?? [''];
 }
 
 export function isProspectInStatsPeriod(
@@ -106,7 +132,7 @@ export function isProspectInStatsPeriod(
 ): boolean {
   if (!periodId || periodId === 'all' || periodId === 'all_time') return true;
   const parsed = new Date(createdAt);
-  if (Number.isNaN(parsed.getTime())) return true;
+  if (Number.isNaN(parsed.getTime())) return false;
   const refDay = new Date(
     Date.UTC(referenceDate.getUTCFullYear(), referenceDate.getUTCMonth(), referenceDate.getUTCDate())
   );
@@ -116,11 +142,19 @@ export function isProspectInStatsPeriod(
   const diffDays = Math.floor((refDay.getTime() - itemDay.getTime()) / 86400000);
   if (periodId === 'today') return diffDays === 0;
   if (periodId === 'yesterday') return diffDays === 1;
-  if (periodId === 'last_week') return diffDays >= 0 && diffDays <= 7;
+  if (periodId === 'last_week') {
+    // Semaine calendaire précédente (lundi -> dimanche)
+    const dow = (refDay.getUTCDay() + 6) % 7; // 0 = lundi, 6 = dimanche
+    const currentWeekMonday = new Date(refDay.getTime() - dow * 86400000);
+    const prevWeekMonday = new Date(currentWeekMonday.getTime() - 7 * 86400000);
+    const prevWeekSunday = new Date(currentWeekMonday.getTime() - 86400000);
+    return itemDay >= prevWeekMonday && itemDay <= prevWeekSunday;
+  }
   if (periodId === 'current_month') {
     return (
       parsed.getUTCFullYear() === referenceDate.getUTCFullYear() &&
-      parsed.getUTCMonth() === referenceDate.getUTCMonth()
+      parsed.getUTCMonth() === referenceDate.getUTCMonth() &&
+      itemDay <= refDay
     );
   }
   if (periodId === 'last_month') {
@@ -133,7 +167,30 @@ export function isProspectInStatsPeriod(
     );
   }
   if (periodId === 'last_30_days') return diffDays >= 0 && diffDays <= 30;
-  return true;
+  if (periodId === 'year_to_date') {
+    const jan1 = new Date(Date.UTC(referenceDate.getUTCFullYear(), 0, 1));
+    return itemDay >= jan1 && itemDay <= refDay;
+  }
+  return false;
+}
+
+export type LeadReportDimension = 'rdv' | 'commercial' | 'utm' | 'source' | 'stage';
+
+export function resolveLeadReportDimension(tableId: string): LeadReportDimension {
+  const idLower = tableId.toLowerCase();
+  if (idLower === 'st-tunnel-com' || idLower === 'st-act-com' || idLower.includes('commercial') || idLower.includes('sales_rep')) {
+    return 'commercial';
+  }
+  if (idLower === 'st-tunnel-src' || idLower === 'st-act-src' || idLower.includes('source')) {
+    return 'source';
+  }
+  if (idLower === 'st-tunnel-utm' || idLower === 'st-act-utm' || idLower.includes('utm')) {
+    return 'utm';
+  }
+  if (idLower === 'st-tunnel-rdv' || idLower === 'st-act-rdv' || idLower.includes('rdv') || idLower.includes('meeting') || idLower.includes('appointment')) {
+    return 'rdv';
+  }
+  return 'stage';
 }
 
 export interface StatsReportBreakdownItem {
@@ -141,6 +198,8 @@ export interface StatsReportBreakdownItem {
   volume: number;
   cdsCount: number;
   beyCount: number;
+  rdvTakenCount: number;
+  visitedCount: number;
   convertedCount: number;
   conversionPct: number;
 }
@@ -155,8 +214,11 @@ export function computeLeadReportBreakdown(
     ignoreArchived: boolean;
     compareToPreviousYear: boolean;
     referenceDate?: Date;
+    dimension?: LeadReportDimension;
+    commercialLabelById?: Record<string, string>;
   }
 ): {
+  dimension: LeadReportDimension;
   filteredCount: number;
   cdsCount: number;
   beyCount: number;
@@ -165,7 +227,8 @@ export function computeLeadReportBreakdown(
   previousYearCount: number | null;
   rows: StatsReportBreakdownItem[];
 } {
-  const ref = opts.referenceDate ?? new Date('2026-10-25T12:00:00Z');
+  const ref = opts.referenceDate ?? new Date();
+  const dimension = opts.dimension ?? resolveLeadReportDimension(tableId);
   const filtered = prospects.filter((p) => {
     if (!opts.multiClubCds && p.clubId === 'carre-de-soie') return false;
     if (!opts.multiClubBeynost && p.clubId === 'beynost') return false;
@@ -191,19 +254,18 @@ export function computeLeadReportBreakdown(
     : null;
 
   const groupKey = (p: Prospect): string => {
-    const idLower = tableId.toLowerCase();
-    if (idLower.includes('source')) return p.source;
-    if (idLower.includes('commercial') || idLower.includes('sales_rep')) {
-      return p.assignedToId || 'Non assigné';
+    if (dimension === 'source') return p.source || 'Source non renseignée';
+    if (dimension === 'commercial') {
+      const assigned = p.assignedToId?.trim();
+      if (!assigned) return 'Non assigné';
+      return opts.commercialLabelById?.[assigned] ?? assigned;
     }
-    if (idLower.includes('utm')) {
-      return p.source === 'Site c.fitness' ? 'utm_site_cfitness' : `utm_${p.clubId}`;
+    if (dimension === 'utm') {
+      const collectedUtm = (p as Prospect & { utmCampaign?: string }).utmCampaign?.trim();
+      return collectedUtm && collectedUtm.length > 0 ? collectedUtm : 'Sans UTM collectée';
     }
-    if (idLower.includes('rdv') || idLower.includes('meeting') || idLower.includes('appointment')) {
-      return p.trialDate ? 'RDV planifié' : 'Sans RDV';
-    }
-    if (idLower.includes('activity') || idLower.includes('activite')) {
-      return p.retryCount > 0 ? `Relancé (${p.retryCount}x)` : 'Nouveau contact';
+    if (dimension === 'rdv') {
+      return p.trialDate ? 'Séance / RDV planifié' : 'Sans RDV planifié';
     }
     return p.stage;
   };
@@ -219,18 +281,25 @@ export function computeLeadReportBreakdown(
   const rows: StatsReportBreakdownItem[] = Array.from(buckets.entries()).map(([label, list]) => {
     const c = list.filter((p) => p.clubId === 'carre-de-soie').length;
     const b = list.filter((p) => p.clubId === 'beynost').length;
+    const rdvTakenCount = list.filter(
+      (p) => Boolean(p.trialDate) || p.stage === 'Séance planifiée' || p.stage === 'Venu' || p.stage === 'Adhérent'
+    ).length;
+    const visitedCount = list.filter((p) => p.stage === 'Venu' || p.stage === 'Adhérent').length;
     const conv = list.filter((p) => p.stage === 'Adhérent').length;
     return {
       label,
       volume: list.length,
       cdsCount: c,
       beyCount: b,
+      rdvTakenCount,
+      visitedCount,
       convertedCount: conv,
       conversionPct: list.length ? Math.round((conv / list.length) * 100) : 0,
     };
   });
 
   return {
+    dimension,
     filteredCount: filtered.length,
     cdsCount,
     beyCount,

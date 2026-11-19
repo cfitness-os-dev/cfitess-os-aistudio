@@ -30,6 +30,7 @@ import {
   computeLeadReportBreakdown,
   filterFictiveSales,
   parseCsvLineWithQuotes,
+  parseCsvRowsWithQuotes,
 } from '../../domain/leadHubHelpers';
 import {
   computeSmsSegmentMetrics,
@@ -119,6 +120,12 @@ interface FictiveFormRow {
   published: boolean;
   sections: number;
   sectionTitles?: string[];
+  fields?: Array<{
+    id: string;
+    label: string;
+    type: 'text' | 'email' | 'tel' | 'select' | 'checkbox';
+    required: boolean;
+  }>;
   sampleResponses?: Array<{
     id: string;
     fullName: string;
@@ -240,6 +247,18 @@ export function LeadCommercialHubView({
     updateProspect,
     assignSegmentToProspects,
   } = useCfos();
+
+  const allowedClubIds: Array<'carre-de-soie' | 'beynost'> =
+    currentUser.role === 'admin'
+      ? ['carre-de-soie', 'beynost']
+      : currentUser.siteAssignments?.length
+      ? currentUser.siteAssignments.map((sa) => sa.clubId)
+      : [currentUser.clubId];
+  const isClubAuthorized = (cid: 'carre-de-soie' | 'beynost') => allowedClubIds.includes(cid);
+  const authorizedProspects = prospects.filter((p) => isClubAuthorized(p.clubId));
+  const commercialLabelById: Record<string, string> = Object.fromEntries(
+    employees.map((e) => [e.id, `${e.firstName} ${e.lastName}`])
+  );
 
   // États persistants pour WhatsApp conversation (CFOS-007), Constructeur Email (CFOS-006) et Profil Club (CFOS-005)
   const [waComposerOpen, setWaComposerOpen] = useState(false);
@@ -481,7 +500,19 @@ export function LeadCommercialHubView({
     'Bonjour %prenom%, venez tester le Biocircuit avec un coach dédié cette semaine.'
   );
   const [savedCampaigns, setSavedCampaigns] = useState<
-    Array<{ id: string; channel: 'EMAIL' | 'SMS'; name: string; targetCount: number; status: string; createdAt: string }>
+    Array<{
+      id: string;
+      channel: 'EMAIL' | 'SMS';
+      name: string;
+      sender?: string;
+      subject?: string;
+      body?: string;
+      segmentTarget?: string;
+      recipientIds?: string[];
+      targetCount: number;
+      status: string;
+      createdAt: string;
+    }>
   >(() => {
     try {
       const raw = localStorage.getItem('cfos_lead_campaigns_v1');
@@ -674,11 +705,7 @@ export function LeadCommercialHubView({
   );
 
   const importSummary = useMemo(() => {
-    const parsedRows = importCsvText
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => parseCsvLineWithQuotes(line, ';'));
+    const parsedRows = parseCsvRowsWithQuotes(importCsvText, ';');
     const existingEmails = prospects.map((p) => p.email);
     const existingPhones = prospects.map((p) => p.phone);
     return validateAndParseLeadImportRows(parsedRows, existingEmails, existingPhones);
@@ -987,14 +1014,36 @@ export function LeadCommercialHubView({
                         1re ligne ignorée · Email requis · Consentement RGPD décoché (<code>false</code>) par défaut
                       </p>
                     </div>
-                    <a
-                      href="/references/lead_audit/LEAD_AUDIT_EN_COURS/sources/template_import_prospects_officiel.xlsx"
-                      download
-                      className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      Modèle .xlsx officiel
-                    </a>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const csv = [
+                            LEAD_IMPORT_COLUMNS_11.join(';'),
+                            'F;Marie-Claire;Dupont;marie.claire@exemple.fr;0611223344;12 Rue République;69120;Vaulx-en-Velin;15/05/1995;VRAI;"Note;avec point-virgule"',
+                          ].join('\n');
+                          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = 'modele-import-prospects-11-colonnes.csv';
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Modèle .csv (UTF-8)
+                      </button>
+                      <a
+                        href="/references/lead_audit/LEAD_AUDIT_EN_COURS/sources/template_import_prospects_officiel.xlsx"
+                        download
+                        className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Modèle .xlsx officiel
+                      </a>
+                    </div>
                   </div>
 
                   <div className="flex flex-wrap gap-1 text-[10px]">
@@ -1033,34 +1082,40 @@ export function LeadCommercialHubView({
                       type="button"
                       disabled={importSummary.validCount === 0 || simulatedRole === 'commercial'}
                       onClick={() => {
-                        const rawLines = importCsvText
-                          .split(/\r?\n/)
-                          .map((line) => line.trim())
-                          .filter(Boolean)
-                          .map((line) => parseCsvLineWithQuotes(line, ';'));
+                        const rawRows = parseCsvRowsWithQuotes(importCsvText, ';');
+                        const targetClub: 'carre-de-soie' | 'beynost' =
+                          allowedClubIds.length === 1
+                            ? allowedClubIds[0]
+                            : clubFilter === 'beynost'
+                            ? 'beynost'
+                            : 'carre-de-soie';
                         let created = 0;
                         let skipped = 0;
                         for (const row of importSummary.results) {
                           if (row.status !== 'valide') continue;
-                          const parts = row.fullName.trim().split(/\s+/);
-                          const firstName = parts[0] || 'Prospect';
-                          const lastName = parts.slice(1).join(' ') || 'Importé';
-                          const rawPhone = rawLines[row.rowNumber - 1]?.[4] || '0600000000';
+                          const cols = rawRows[row.rowNumber - 1] ?? [];
+                          const firstName = (cols[1] || '').trim() || 'Prospect';
+                          const lastName = (cols[2] || '').trim() || 'Importé';
+                          const rawPhone = (cols[4] || '').trim() || '0600000000';
+                          const comment = (cols[10] || '').trim();
+                          const addressSummary = [cols[5], cols[6], cols[7]].filter(Boolean).join(' ');
+                          const birthInfo = cols[8] ? `Né(e) ${cols[8]}` : '';
+                          const goalParts = [comment, addressSummary, birthInfo].filter(Boolean);
                           const res = createProspect({
                             firstName,
                             lastName,
                             phone: rawPhone,
                             email: row.email,
-                            clubId: clubFilter === 'beynost' ? 'beynost' : 'carre-de-soie',
+                            clubId: targetClub,
                             source: 'Site c.fitness',
-                            goal: 'Import CSV 11 colonnes',
+                            goal: goalParts.join(' · ') || 'Import CSV 11 colonnes',
                             rgpdConsent: row.consentGranted,
                           });
                           if (res.ok) created += 1;
                           else skipped += 1;
                         }
                         setImportFeedback(
-                          `Import exécuté : ${created} prospect(s) créé(s), ${skipped} doublon(s)/rejet(s) ignoré(s).`
+                          `Import exécuté (${targetClub}) : ${created} prospect(s) créé(s) avec les 11 champs conservés, ${skipped} doublon(s)/rejet(s) ignoré(s).`
                         );
                       }}
                       className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-xs font-bold cursor-pointer"
@@ -1896,12 +1951,16 @@ export function LeadCommercialHubView({
                   <label>
                     Club
                     <select
-                      value={rdvClubId}
+                      value={isClubAuthorized(rdvClubId) ? rdvClubId : allowedClubIds[0]}
                       onChange={(e) => setRdvClubId(e.target.value as 'carre-de-soie' | 'beynost')}
                       className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700"
                     >
-                      <option value="carre-de-soie">Carré de Soie</option>
-                      <option value="beynost">Beynost</option>
+                      {isClubAuthorized('carre-de-soie') && (
+                        <option value="carre-de-soie">Carré de Soie</option>
+                      )}
+                      {isClubAuthorized('beynost') && (
+                        <option value="beynost">Beynost</option>
+                      )}
                     </select>
                   </label>
                   <label>
@@ -1937,13 +1996,17 @@ export function LeadCommercialHubView({
                   <label>
                     Prospect concerné
                     <select
-                      value={rdvProspectId || prospects[0]?.id || ''}
+                      value={
+                        authorizedProspects.some((p) => p.id === rdvProspectId)
+                          ? rdvProspectId
+                          : authorizedProspects[0]?.id || ''
+                      }
                       onChange={(e) => setRdvProspectId(e.target.value)}
                       className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700"
                     >
-                      {prospects.map((p) => (
+                      {authorizedProspects.map((p) => (
                         <option key={p.id} value={p.id}>
-                          {p.firstName} {p.lastName}
+                          {p.firstName} {p.lastName} ({p.clubId})
                         </option>
                       ))}
                     </select>
@@ -2043,17 +2106,25 @@ export function LeadCommercialHubView({
                   type="button"
                   disabled={!rdvBookingDecision.accepted}
                   onClick={() => {
+                    const effectiveClub: 'carre-de-soie' | 'beynost' = isClubAuthorized(rdvClubId)
+                      ? rdvClubId
+                      : allowedClubIds[0];
                     const targetProspect =
-                      prospects.find((p) => p.id === rdvProspectId) ?? prospects[0];
+                      authorizedProspects.find((p) => p.id === rdvProspectId) ?? authorizedProspects[0];
+                    const resolvedDuration =
+                      rdvTypeCandidate.toLowerCase().includes('coaching') ||
+                      rdvTypeCandidate.toLowerCase().includes('checkup')
+                        ? 60
+                        : 45;
                     const newSlot: AppointmentSlotRecord = {
                       id: `slot-${Date.now()}`,
-                      clubId: rdvClubId,
+                      clubId: effectiveClub,
                       coachId: rdvCoachId,
                       typeName: `${rdvTypeCandidate} (${targetProspect ? `${targetProspect.firstName} ${targetProspect.lastName}` : 'Prospect'})`,
                       date: rdvDate,
                       startTime: rdvTime,
-                      durationMinutes: 45,
-                      capacityMax: rdvCapacityMax || 1,
+                      durationMinutes: resolvedDuration,
+                      capacityMax: rdvCapacityMax,
                       currentBookedCount: 1,
                       paidRequired: rdvRequiresStripe,
                       paymentStatus: rdvRequiresStripe
@@ -2064,6 +2135,9 @@ export function LeadCommercialHubView({
                     };
                     setRdvBookings((prev) => [newSlot, ...prev]);
                     if (targetProspect) {
+                      updateProspect(targetProspect.id, {
+                        leadStatus: 'Séance planifiée',
+                      });
                       setActivities((prev) => [
                         {
                           id: `act-rdv-${Date.now()}`,
@@ -2071,7 +2145,7 @@ export function LeadCommercialHubView({
                           title: `RDV ${rdvTypeCandidate}`,
                           prospectId: targetProspect.id,
                           prospectName: `${targetProspect.firstName} ${targetProspect.lastName}`,
-                          clubId: rdvClubId,
+                          clubId: effectiveClub,
                           dueAt: `${rdvDate}T${rdvTime}`,
                           status: 'todo',
                           assignedToId: rdvCoachId,
@@ -2081,7 +2155,7 @@ export function LeadCommercialHubView({
                       ]);
                     }
                     setRdvActionMessage(
-                      `RDV réservé le ${rdvDate} à ${rdvTime} (${rdvClubId}) et lié aux activités.`
+                      `RDV réservé le ${rdvDate} à ${rdvTime} (${resolvedDuration} min, ${effectiveClub}) et synchronisé avec le prospect et les activités.`
                     );
                   }}
                   className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-xs font-bold cursor-pointer"
@@ -2094,9 +2168,13 @@ export function LeadCommercialHubView({
               </div>
 
               <div className="cf-card p-4 space-y-3 text-xs">
-                <h3 className="text-sm font-extrabold">Agenda des créneaux réservés ({rdvBookings.length})</h3>
+                <h3 className="text-sm font-extrabold">
+                  Agenda des créneaux réservés ({rdvBookings.filter((s) => isClubAuthorized(s.clubId)).length})
+                </h3>
                 <div className="space-y-1.5 max-h-64 overflow-y-auto">
-                  {rdvBookings.map((slot) => (
+                  {rdvBookings
+                    .filter((s) => isClubAuthorized(s.clubId))
+                    .map((slot) => (
                     <div
                       key={slot.id}
                       className="p-2.5 rounded-lg bg-slate-900/70 border border-slate-800 flex flex-wrap items-center justify-between gap-2"
@@ -2104,22 +2182,43 @@ export function LeadCommercialHubView({
                       <div>
                         <div className="font-bold">{slot.typeName}</div>
                         <div className="text-[10px] cf-muted font-mono">
-                          {slot.date} à {slot.startTime} · {slot.clubId} · {slot.coachId} · {slot.paymentStatus}
+                          {slot.date} à {slot.startTime} ({slot.durationMinutes} min) · {slot.clubId} · {slot.coachId} · {slot.paymentStatus}
                         </div>
                       </div>
                       <div className="flex gap-1.5">
                         <button
                           type="button"
                           onClick={() => {
-                            const nextHour = String(
-                              (Number(slot.startTime.split(':')[0] || 10) + 1) % 20 || 10
-                            ).padStart(2, '0');
+                            const [hhStr, mmStr] = slot.startTime.split(':');
+                            const curH = Number(hhStr ?? 10);
+                            const curM = mmStr ?? '00';
+                            if (curH + 1 > 20) {
+                              setRdvActionMessage('Report +1h refusé : dépasse l’horaire de fermeture (20h).');
+                              return;
+                            }
+                            const nextTime = `${String(curH + 1).padStart(2, '0')}:${curM}`;
+                            const others = rdvBookings.filter((s) => s.id !== slot.id);
+                            const check = validateAppointmentBooking(others, {
+                              clubId: slot.clubId,
+                              coachId: slot.coachId,
+                              typeName: slot.typeName,
+                              date: slot.date,
+                              startTime: nextTime,
+                              durationMinutes: slot.durationMinutes,
+                              hoursBeforeSlot: rdvHoursBeforeSlot,
+                              minDelayHours: rdvMinDelayHours,
+                              capacityMax: slot.capacityMax,
+                              requiresStripePayment: slot.paidRequired,
+                              stripePaidConfirmed: slot.paymentStatus === 'paye',
+                            });
+                            if (!check.accepted) {
+                              setRdvActionMessage(`Report +1h refusé : ${check.reason}`);
+                              return;
+                            }
                             setRdvBookings((prev) =>
-                              prev.map((s) =>
-                                s.id === slot.id ? { ...s, startTime: `${nextHour}:00` } : s
-                              )
+                              prev.map((s) => (s.id === slot.id ? { ...s, startTime: nextTime } : s))
                             );
-                            setRdvActionMessage(`Créneau déplacé à ${nextHour}:00.`);
+                            setRdvActionMessage(`Créneau reporté à ${nextTime} (validation sans collision).`);
                           }}
                           className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] cursor-pointer"
                         >
@@ -2140,7 +2239,14 @@ export function LeadCommercialHubView({
                   ))}
                 </div>
                 <p className="cf-muted text-[11px]">
-                  Liens publics isolés (hors paiement Stripe réel en démo) : <code>/book/carre-de-soie/coaching-decouverte</code> · <code>/book/beynost/bilan-checkup-technogym</code>
+                  Liens publics isolés :{' '}
+                  <a href="/book/carre-de-soie/coaching-decouverte" target="_blank" rel="noreferrer" className="text-cyan-300 underline">
+                    /book/carre-de-soie/coaching-decouverte
+                  </a>{' '}
+                  ·{' '}
+                  <a href="/book/beynost/bilan-checkup-technogym" target="_blank" rel="noreferrer" className="text-cyan-300 underline">
+                    /book/beynost/bilan-checkup-technogym
+                  </a>
                 </p>
               </div>
             </div>
@@ -2503,7 +2609,75 @@ export function LeadCommercialHubView({
                 </div>
               )}
 
-              {commSubTab === 'campaigns' && (
+              {commSubTab === 'campaigns' && (() => {
+                const computeCampaignTargets = (channel: 'EMAIL' | 'SMS') => {
+                  let excludedRgpd = 0;
+                  let excludedStop = 0;
+                  let excludedLost = 0;
+                  let excludedVacation = 0;
+                  let excludedSegment = 0;
+                  const eligible = authorizedProspects.filter((p) => {
+                    if (p.stage === 'Perdu') {
+                      excludedLost += 1;
+                      return false;
+                    }
+                    if (!p.rgpdConsent) {
+                      excludedRgpd += 1;
+                      return false;
+                    }
+                    if (channel === 'SMS' && p.smsStopOptOut) {
+                      excludedStop += 1;
+                      return false;
+                    }
+                    if (p.leadStatus === 'Clients en vacances' || p.segments?.includes('Vacances')) {
+                      excludedVacation += 1;
+                      return false;
+                    }
+                    if (campaignSegmentTarget === 'Relance Biocircuit') {
+                      const matchesBio =
+                        p.goal.toLowerCase().includes('biocircuit') ||
+                        p.source.toLowerCase().includes('biocircuit') ||
+                        p.stage === 'Contacté' ||
+                        p.stage === 'Séance planifiée';
+                      if (!matchesBio) {
+                        excludedSegment += 1;
+                        return false;
+                      }
+                    } else if (campaignSegmentTarget === 'VIP Carré de Soie') {
+                      if (p.clubId !== 'carre-de-soie') {
+                        excludedSegment += 1;
+                        return false;
+                      }
+                    }
+                    return true;
+                  });
+                  return {
+                    eligible,
+                    excludedRgpd,
+                    excludedStop,
+                    excludedLost,
+                    excludedVacation,
+                    excludedSegment,
+                  };
+                };
+
+                const emailTargets = computeCampaignTargets('EMAIL');
+                const smsTargets = computeCampaignTargets('SMS');
+
+                const validateEmailStepUpTo = (targetStep: 1 | 2 | 3 | 4): boolean => {
+                  if (targetStep >= 3 && (!campaignEmailSubject.trim() || !campaignSenderName.trim())) {
+                    setCampaignFeedback('Objet et expéditeur obligatoires avant de continuer.');
+                    return false;
+                  }
+                  if (targetStep >= 4 && !campaignEmailContent.trim()) {
+                    setCampaignFeedback('Contenu du message obligatoire avant le contrôle final.');
+                    return false;
+                  }
+                  setCampaignFeedback(null);
+                  return true;
+                };
+
+                return (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {/* Assistant Email 4 étapes (RSP-02 corrigé) */}
                   <div className="cf-card p-4 space-y-3">
@@ -2511,18 +2685,25 @@ export function LeadCommercialHubView({
                       Assistant Campagne Email (4 étapes CM-01 · Mobile sticky RSP-02)
                     </h3>
                     <div className="grid grid-cols-4 gap-1 text-[11px] font-bold text-center">
-                      {(['1. Cibler', '2. Composer', '3. Objet', '4. Vérifier'] as const).map((lbl, idx) => (
+                      {(['1. Cibler', '2. Objet & Expéd.', '3. Contenu', '4. Vérifier'] as const).map((lbl, idx) => {
+                        const targetStep = (idx + 1) as 1 | 2 | 3 | 4;
+                        return (
                         <button
                           key={lbl}
                           type="button"
-                          onClick={() => setEmailStep((idx + 1) as 1 | 2 | 3 | 4)}
+                          onClick={() => {
+                            if (validateEmailStepUpTo(targetStep)) {
+                              setEmailStep(targetStep);
+                            }
+                          }}
                           className={`py-1.5 rounded-lg cursor-pointer ${
-                            emailStep === idx + 1 ? 'bg-violet-600 text-white' : 'bg-slate-900 text-slate-400'
+                            emailStep === targetStep ? 'bg-violet-600 text-white' : 'bg-slate-900 text-slate-400'
                           }`}
                         >
                           {lbl}
                         </button>
-                      ))}
+                        );
+                      })}
                     </div>
                     {/* Campagne Email 4 étapes — Mode test sans envoi (CFOS-006/008/021) */}
                     {emailStep === 1 && (
@@ -2540,11 +2721,10 @@ export function LeadCommercialHubView({
                           <option value="VIP Carré de Soie">Segment : VIP Carré de Soie</option>
                         </select>
                         <div className="text-[11px] cf-muted">
-                          Cible calculée :{' '}
-                          <strong>
-                            {prospects.filter((p) => p.rgpdConsent && p.stage !== 'Perdu').length} prospect(s) éligible(s)
-                          </strong>{' '}
-                          (exclusions RGPD=false et Perdu appliquées).
+                          Segment « {campaignSegmentTarget} » :{' '}
+                          <strong>{emailTargets.eligible.length} éligible(s)</strong> · Exclusions :{' '}
+                          {emailTargets.excludedRgpd} RGPD=false, {emailTargets.excludedLost} Perdu,{' '}
+                          {emailTargets.excludedVacation} Vacances, {emailTargets.excludedSegment} hors segment.
                         </div>
                       </div>
                     )}
@@ -2582,18 +2762,24 @@ export function LeadCommercialHubView({
                       <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2 text-xs">
                         <div className="font-bold text-emerald-300">Étape 4/4 : Contrôle final &amp; Brouillon (sans envoi réel)</div>
                         <div>
-                          Expéditeur : <strong>{campaignSenderName}</strong> · Objet : <strong>{campaignEmailSubject}</strong> · Cible :{' '}
-                          <strong>{prospects.filter((p) => p.rgpdConsent && p.stage !== 'Perdu').length}</strong> destinataire(s).
+                          Segment : <strong>{campaignSegmentTarget}</strong> · Expéditeur : <strong>{campaignSenderName}</strong> · Objet : <strong>{campaignEmailSubject}</strong> · Cible :{' '}
+                          <strong>{emailTargets.eligible.length}</strong> destinataire(s).
                         </div>
                         <button
                           type="button"
                           onClick={() => {
-                            const count = prospects.filter((p) => p.rgpdConsent && p.stage !== 'Perdu').length;
+                            if (!validateEmailStepUpTo(4)) return;
+                            const count = emailTargets.eligible.length;
                             setSavedCampaigns((prev) => [
                               {
                                 id: `cmp-${Date.now()}`,
                                 channel: 'EMAIL',
-                                name: campaignEmailSubject || 'Campagne Email',
+                                name: campaignEmailSubject.trim(),
+                                sender: campaignSenderName.trim(),
+                                subject: campaignEmailSubject.trim(),
+                                body: campaignEmailContent,
+                                segmentTarget: campaignSegmentTarget,
+                                recipientIds: emailTargets.eligible.map((p) => p.id),
                                 targetCount: count,
                                 status: 'Brouillon test (non envoyé)',
                                 createdAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
@@ -2601,7 +2787,7 @@ export function LeadCommercialHubView({
                               ...prev,
                             ]);
                             setCampaignFeedback(
-                              `Brouillon campagne email « ${campaignEmailSubject} » enregistré (${count} destinataires, aucun envoi SMTP réel).`
+                              `Brouillon campagne email « ${campaignEmailSubject} » enregistré (${count} destinataires, segment ${campaignSegmentTarget}, aucun envoi SMTP réel).`
                             );
                           }}
                           className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-bold cursor-pointer"
@@ -2616,11 +2802,33 @@ export function LeadCommercialHubView({
                       </div>
                     )}
                     {savedCampaigns.length > 0 && (
-                      <div className="text-[11px] space-y-1">
-                        {savedCampaigns.slice(0, 3).map((c) => (
-                          <div key={c.id} className="px-2 py-1 rounded bg-slate-900/60 border border-slate-800 flex justify-between">
-                            <span>[{c.channel}] {c.name} ({c.targetCount} dest.)</span>
-                            <span className="text-amber-300">{c.status}</span>
+                      <div className="text-[11px] space-y-1 max-h-40 overflow-y-auto">
+                        {savedCampaigns.map((c) => (
+                          <div key={c.id} className="px-2 py-1 rounded bg-slate-900/60 border border-slate-800 flex items-center justify-between gap-2">
+                            <span className="truncate">
+                              [{c.channel}] {c.name} · {c.segmentTarget ?? 'Tous'} ({c.targetCount} dest.)
+                            </span>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-amber-300">{c.status}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (c.segmentTarget) setCampaignSegmentTarget(c.segmentTarget);
+                                  if (c.channel === 'EMAIL') {
+                                    if (c.sender) setCampaignSenderName(c.sender);
+                                    if (c.subject) setCampaignEmailSubject(c.subject);
+                                    if (c.body) setCampaignEmailContent(c.body);
+                                    setEmailStep(1);
+                                  } else if (c.body) {
+                                    setSmsDraftText(c.body);
+                                  }
+                                  setCampaignFeedback(`Brouillon « ${c.name} » réouvert pour édition.`);
+                                }}
+                                className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-200 border border-cyan-500/40 cursor-pointer"
+                              >
+                                Réouvrir
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -2636,16 +2844,10 @@ export function LeadCommercialHubView({
                       <button
                         type="button"
                         onClick={() => {
-                          if (emailStep === 2 && (!campaignEmailSubject.trim() || !campaignSenderName.trim())) {
-                            setCampaignFeedback('Objet et expéditeur obligatoires avant de passer à l’étape 3.');
-                            return;
+                          const next = (emailStep < 4 ? emailStep + 1 : 4) as 1 | 2 | 3 | 4;
+                          if (validateEmailStepUpTo(next)) {
+                            setEmailStep(next);
                           }
-                          if (emailStep === 3 && !campaignEmailContent.trim()) {
-                            setCampaignFeedback('Contenu obligatoire avant le contrôle final.');
-                            return;
-                          }
-                          setCampaignFeedback(null);
-                          setEmailStep((s) => (s < 4 ? ((s + 1) as 1 | 2 | 3 | 4) : 4));
                         }}
                         className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold cursor-pointer"
                       >
@@ -2666,31 +2868,41 @@ export function LeadCommercialHubView({
                       aria-label="Message campagne SMS"
                       className="w-full rounded-xl bg-slate-950 border border-slate-700 p-2.5 text-xs"
                     />
+                    <div className="text-[11px] cf-muted">
+                      Cible SMS ({campaignSegmentTarget}) : <strong>{smsTargets.eligible.length} éligible(s)</strong> · Exclusions : {smsTargets.excludedStop} STOP, {smsTargets.excludedRgpd} sans RGPD, {smsTargets.excludedVacation} Vacances, {smsTargets.excludedLost} Perdu, {smsTargets.excludedSegment} hors segment.
+                    </div>
                     <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
                       <span>
                         Encodage : <strong>{smsMetrics.encoding}</strong> ({smsMetrics.charCount} car. / {smsMetrics.maxPerSms})
                       </span>
                       <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-bold">
-                        {smsMetrics.segmentsCount} crédit(s) × {prospects.filter((p) => !p.smsStopOptOut).length} dest. ={' '}
-                        {smsMetrics.segmentsCount * prospects.filter((p) => !p.smsStopOptOut).length} crédits (test)
+                        {smsMetrics.segmentsCount} crédit(s) × {smsTargets.eligible.length} dest. ={' '}
+                        {smsMetrics.segmentsCount * smsTargets.eligible.length} crédits (test)
                       </span>
                     </div>
                     <button
                       type="button"
                       onClick={() => {
-                        const dest = prospects.filter((p) => !p.smsStopOptOut).length;
+                        if (!smsDraftText.trim()) {
+                          setCampaignFeedback('Contenu SMS obligatoire.');
+                          return;
+                        }
+                        const dest = smsTargets.eligible.length;
                         setSavedCampaigns((prev) => [
                           {
                             id: `cmp-sms-${Date.now()}`,
                             channel: 'SMS',
                             name: smsDraftText.slice(0, 42) + '…',
+                            body: smsDraftText,
+                            segmentTarget: campaignSegmentTarget,
+                            recipientIds: smsTargets.eligible.map((p) => p.id),
                             targetCount: dest,
                             status: 'Brouillon SMS test (non envoyé)',
                             createdAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
                           },
                           ...prev,
                         ]);
-                        setCampaignFeedback(`Brouillon SMS enregistré pour ${dest} destinataire(s) hors STOP.`);
+                        setCampaignFeedback(`Brouillon SMS enregistré pour ${dest} destinataire(s) éligible(s) (hors STOP/Vacances/RGPD=false).`);
                       }}
                       className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer"
                     >
@@ -2701,7 +2913,8 @@ export function LeadCommercialHubView({
                     </div>
                   </div>
                 </div>
-              )}
+                );
+              })()}
 
               {commSubTab === 'utm' && (
                 <div className="cf-card p-4 space-y-3 text-xs">
@@ -2986,12 +3199,16 @@ export function LeadCommercialHubView({
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {LEAD_STATISTICS_8_TABLES.map((tbl) => {
-                      const stats = computeLeadReportBreakdown(tbl.id, prospects, {
+                      const effectiveCds = multiClubCds && isClubAuthorized('carre-de-soie');
+                      const effectiveBey = multiClubBeynost && isClubAuthorized('beynost');
+                      const stats = computeLeadReportBreakdown(tbl.id, authorizedProspects, {
                         periodId: statsPeriodId,
-                        multiClubCds,
-                        multiClubBeynost,
+                        multiClubCds: effectiveCds,
+                        multiClubBeynost: effectiveBey,
                         ignoreArchived: ignoreArchivedStats,
                         compareToPreviousYear,
+                        referenceDate: new Date(),
+                        commercialLabelById,
                       });
                       return (
                         <div key={tbl.id} className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
@@ -3000,7 +3217,7 @@ export function LeadCommercialHubView({
                               {tbl.group} · {tbl.tab}
                             </strong>
                             <span className="text-[10px] font-mono cf-muted">
-                              Période : {statsPeriodId} · Clubs: {(multiClubCds ? 1 : 0) + (multiClubBeynost ? 1 : 0)}
+                              Période : {statsPeriodId} · Clubs: {(effectiveCds ? 1 : 0) + (effectiveBey ? 1 : 0)}
                             </span>
                           </div>
                           <div className="flex flex-wrap gap-1">
@@ -3032,6 +3249,23 @@ export function LeadCommercialHubView({
                                 {stats.convertedCount} ({stats.conversionPct}%)
                               </div>
                             </div>
+                          </div>
+                          <div className="space-y-1 pt-1 border-t border-slate-800/80">
+                            {stats.rows.length === 0 ? (
+                              <div className="text-[10px] cf-muted">Aucune donnée sur cette période.</div>
+                            ) : (
+                              stats.rows.map((r) => (
+                                <div
+                                  key={r.label}
+                                  className="flex items-center justify-between text-[11px] px-2 py-1 rounded bg-slate-950/70 border border-slate-800/70"
+                                >
+                                  <span className="font-medium truncate">{r.label}</span>
+                                  <span className="font-mono text-slate-300">
+                                    {r.volume} leads · {r.rdvTakenCount} RDV · {r.visitedCount} venus · {r.convertedCount} abos ({r.conversionPct}%)
+                                  </span>
+                                </div>
+                              ))
+                            )}
                           </div>
                           {stats.rows.length === 0 ? (
                             <div className="text-[11px] cf-muted italic py-1">
@@ -3070,8 +3304,8 @@ export function LeadCommercialHubView({
                         type="button"
                         onClick={() => {
                           const filtered = filterFictiveSales(INITIAL_FICTIVE_SALES, {
-                            clubCds: multiClubCds,
-                            clubBeynost: multiClubBeynost,
+                            clubCds: multiClubCds && isClubAuthorized('carre-de-soie'),
+                            clubBeynost: multiClubBeynost && isClubAuthorized('beynost'),
                             endsAfter: salesEndsAfter,
                             endsBefore: salesEndsBefore,
                           });
@@ -3119,8 +3353,8 @@ export function LeadCommercialHubView({
                   </div>
                   {(() => {
                     const visibleSales = filterFictiveSales(INITIAL_FICTIVE_SALES, {
-                      clubCds: multiClubCds,
-                      clubBeynost: multiClubBeynost,
+                      clubCds: multiClubCds && isClubAuthorized('carre-de-soie'),
+                      clubBeynost: multiClubBeynost && isClubAuthorized('beynost'),
                       endsAfter: salesEndsAfter,
                       endsBefore: salesEndsBefore,
                     });
@@ -3263,9 +3497,15 @@ export function LeadCommercialHubView({
                         </tr>
                       </thead>
                       <tbody>
-                        {formsList.map((f) => {
-                          const canWrite = evaluateLeadModuleAccess(simulatedRole, 'form_write').allowed;
-                          const canDelete = evaluateLeadModuleAccess(simulatedRole, 'form_delete').allowed;
+                        {formsList
+                          .filter((f) => isClubAuthorized(f.clubId))
+                          .map((f) => {
+                          const canWrite =
+                            isClubAuthorized(f.clubId) &&
+                            evaluateLeadModuleAccess(simulatedRole, 'form_write').allowed;
+                          const canDelete =
+                            isClubAuthorized(f.clubId) &&
+                            evaluateLeadModuleAccess(simulatedRole, 'form_delete').allowed;
                           return (
                             <tr key={f.id} className="border-b border-slate-800/60">
                               <td className="py-2 pr-3">
@@ -3330,17 +3570,37 @@ export function LeadCommercialHubView({
                   </div>
 
                   {(() => {
-                    const activeForm = formsList.find((f) => f.id === selectedFormId);
+                    const activeForm = formsList.find(
+                      (f) => f.id === selectedFormId && isClubAuthorized(f.clubId)
+                    );
                     if (!activeForm) return null;
-                    const canWrite = evaluateLeadModuleAccess(simulatedRole, 'form_write').allowed;
+                    const canWrite =
+                      isClubAuthorized(activeForm.clubId) &&
+                      evaluateLeadModuleAccess(simulatedRole, 'form_write').allowed;
+                    const formFields = activeForm.fields ?? [
+                      { id: 'fld-fn', label: 'Prénom', type: 'text' as const, required: true },
+                      { id: 'fld-em', label: 'Email', type: 'email' as const, required: true },
+                      { id: 'fld-rgpd', label: 'Accord RGPD obligatoire', type: 'checkbox' as const, required: true },
+                    ];
                     return (
                       <div className="p-3.5 rounded-xl bg-slate-900/70 border border-violet-500/40 space-y-3">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div>
                             <strong className="text-sm text-violet-300">{activeForm.name}</strong>
                             <div className="text-[11px] cf-muted">
-                              Lien public isolé : <code>/forms/{activeForm.clubId}/{activeForm.id}</code> · Statut :{' '}
-                              <strong>{activeForm.published ? 'Publié' : 'Brouillon'}</strong>
+                              Lien public isolé :{' '}
+                              <a
+                                href={`/forms/${activeForm.clubId}/${activeForm.id}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-cyan-300 underline"
+                              >
+                                /forms/{activeForm.clubId}/{activeForm.id}
+                              </a>{' '}
+                              · Statut : <strong>{activeForm.published ? 'Publié' : 'Brouillon'}</strong> ·{' '}
+                              <span>
+                                {(activeForm.sampleResponses ?? []).length} exemple(s) détaillé(s) sur {activeForm.responsesCount} réponse(s)
+                              </span>
                             </div>
                           </div>
                           <button
@@ -3350,6 +3610,66 @@ export function LeadCommercialHubView({
                           >
                             Fermer l&apos;éditeur
                           </button>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <div className="font-bold">Champs du formulaire ({formFields.length})</div>
+                          <div className="space-y-1">
+                            {formFields.map((fld) => (
+                              <div key={fld.id} className="flex items-center justify-between px-2 py-1 rounded bg-slate-950 border border-slate-800 text-[11px]">
+                                <span>
+                                  <strong>{fld.label}</strong> ({fld.type}) {fld.required ? '· Obligatoire' : '· Optionnel'}
+                                </span>
+                                {canWrite && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setFormsList((prev) =>
+                                        prev.map((row) =>
+                                          row.id === activeForm.id
+                                            ? { ...row, fields: formFields.filter((x) => x.id !== fld.id) }
+                                            : row
+                                        )
+                                      )
+                                    }
+                                    className="text-rose-300 hover:underline cursor-pointer"
+                                  >
+                                    Retirer
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                          {canWrite && (
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setFormsList((prev) =>
+                                    prev.map((row) =>
+                                      row.id === activeForm.id
+                                        ? {
+                                            ...row,
+                                            fields: [
+                                              ...formFields,
+                                              {
+                                                id: `fld-${Date.now()}`,
+                                                label: newSectionTitle.trim() || 'Téléphone',
+                                                type: 'tel',
+                                                required: true,
+                                              },
+                                            ],
+                                          }
+                                        : row
+                                    )
+                                  )
+                                }
+                                className="px-2.5 py-1 rounded bg-cyan-600 text-white text-[11px] font-bold cursor-pointer"
+                              >
+                                + Ajouter champ (téléphone / texte)
+                              </button>
+                            </div>
+                          )}
                         </div>
 
                         <div className="space-y-1.5">
