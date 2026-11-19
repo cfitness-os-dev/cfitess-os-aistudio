@@ -338,6 +338,109 @@ export const clientApi = {
     );
   },
 
+  getLeadWorkspace(auth: ApiAuthContext): Promise<{
+    allowedClubs: string[];
+    forms: Array<{
+      id: string;
+      name: string;
+      clubId: 'carre-de-soie' | 'beynost';
+      published: boolean;
+      sectionTitles?: string[];
+      fields?: Array<{ id: string; label: string; type: 'text' | 'email' | 'tel' | 'select' | 'checkbox'; required: boolean; options?: string[] }>;
+      responsesCount: number;
+      sampleResponses?: Array<{
+        id: string;
+        fullName: string;
+        email: string;
+        phone: string;
+        rgpdConsent: boolean;
+        answers?: Record<string, string | boolean>;
+        submittedAt: string;
+        linkedProspectId?: string;
+      }>;
+    }>;
+    prospects: Array<{
+      id: string;
+      gender: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+      street: string;
+      postalCode: string;
+      city: string;
+      birthDate: string;
+      comment: string;
+      clubId: 'carre-de-soie' | 'beynost';
+      source: string;
+      stage: string;
+      leadStatus: string;
+      rgpdConsent: boolean;
+      segments: string[];
+      trialDate?: string;
+      createdAt: string;
+    }>;
+    appointments: Array<{
+      id: string;
+      clubId: 'carre-de-soie' | 'beynost';
+      coachId: string;
+      typeName: string;
+      prospectId?: string;
+      prospectName?: string;
+      prospectEmail?: string;
+      activityId?: string;
+      date: string;
+      startTime: string;
+      durationMinutes: number;
+      capacityMax: number;
+      currentBookedCount: number;
+      paymentStatus: string;
+      status: string;
+    }>;
+    activities: Array<{
+      id: string;
+      type: string;
+      title: string;
+      prospectId?: string;
+      prospectName: string;
+      clubId: 'carre-de-soie' | 'beynost';
+      dueAt: string;
+      status: 'todo' | 'done';
+      assignedToId: string;
+      statusLabel: string;
+    }>;
+  }> {
+    return requestJson('/api/lead/workspace', auth);
+  },
+
+  putLeadForm(
+    auth: ApiAuthContext,
+    formId: string,
+    payload: { published?: boolean; name?: string }
+  ): Promise<{ ok: boolean }> {
+    return requestJson(`/api/lead/forms/${encodeURIComponent(formId)}`, auth, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  patchLeadAppointment(
+    auth: ApiAuthContext,
+    slotId: string,
+    startTime: string
+  ): Promise<{ ok: boolean }> {
+    return requestJson(`/api/lead/appointments/${encodeURIComponent(slotId)}`, auth, {
+      method: 'PATCH',
+      body: JSON.stringify({ startTime }),
+    });
+  },
+
+  deleteLeadAppointment(auth: ApiAuthContext, slotId: string): Promise<{ ok: boolean }> {
+    return requestJson(`/api/lead/appointments/${encodeURIComponent(slotId)}`, auth, {
+      method: 'DELETE',
+    });
+  },
+
   revokeCalendarToken(auth: ApiAuthContext): Promise<UserPreferences> {
     return requestJson<UserPreferences>('/api/me/calendar-token/revoke', auth, {
       method: 'POST',

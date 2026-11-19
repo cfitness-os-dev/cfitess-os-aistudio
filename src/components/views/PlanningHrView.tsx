@@ -220,9 +220,11 @@ export function PlanningHrView({
   // Skello Week Navigation, Publish, Lock & Copy Week -> S+1
   const [weekOffset, setWeekOffset] = useState<number>(0);
   const [serverShifts, setServerShifts] = useState<Shift[]>([]);
+  const [serverSyncError, setServerSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    setServerSyncError(null);
     const targetSite =
       (forcedClubScope ?? clubFilter) === 'beynost'
         ? 'club-beynost'
@@ -251,36 +253,50 @@ export function PlanningHrView({
         }
         const mapped = Array.from(byId.values());
         setServerShifts(mapped);
-        if (
-          personalScopeOnly &&
-          mapped.some(
-            (s) =>
-              s.employeeId === (scopedEmployeeId ?? currentUser.id) &&
-              s.date >= '2026-11-16' &&
-              s.date <= '2026-11-22'
-          )
-        ) {
-          setWeekOffset(4);
+        if (personalScopeOnly) {
+          const ownTargetId = scopedEmployeeId ?? currentUser.id;
+          const ownServerDates = mapped
+            .filter((s) => s.employeeId === ownTargetId)
+            .map((s) => s.date)
+            .sort();
+          const firstDate = ownServerDates[0];
+          if (firstDate) {
+            const parsed = new Date(`${firstDate}T00:00:00Z`);
+            if (!Number.isNaN(parsed.getTime())) {
+              const baseMondayMs = Date.UTC(2026, 9, 19); // 2026-10-19 (S43)
+              const dow = (parsed.getUTCDay() + 6) % 7;
+              const shiftMondayMs = parsed.getTime() - dow * 86400000;
+              const computedOffset = Math.round((shiftMondayMs - baseMondayMs) / (7 * 86400000));
+              setWeekOffset(computedOffset);
+            }
+          }
         }
       })
-      .catch(() => {
-        // Fallback silencieux sur shifts locaux
+      .catch((err) => {
+        if (!cancelled) {
+          setServerSyncError(
+            err instanceof Error
+              ? `Synchronisation planning serveur indisponible : ${err.message}`
+              : 'Synchronisation planning serveur indisponible.'
+          );
+        }
       });
     return () => {
       cancelled = true;
     };
   }, [currentUser.id, forcedClubScope, clubFilter, personalScopeOnly, scopedEmployeeId]);
 
+  // Priorité stricte aux shifts serveur sur les copies locales en cas d'ID ou créneau identique
   const mergedShifts: Shift[] = [
-    ...shifts,
-    ...serverShifts.filter(
-      (ss) =>
-        !shifts.some(
-          (ls) =>
-            ls.id === ss.id ||
-            (ls.employeeId === ss.employeeId &&
-              ls.date === ss.date &&
-              ls.startTime === ss.startTime)
+    ...serverShifts,
+    ...shifts.filter(
+      (ls) =>
+        !serverShifts.some(
+          (ss) =>
+            ss.id === ls.id ||
+            (ss.employeeId === ls.employeeId &&
+              ss.date === ls.date &&
+              ss.startTime === ls.startTime)
         )
     ),
   ];
@@ -739,6 +755,12 @@ export function PlanningHrView({
 
   return (
     <div className="space-y-4">
+      {serverSyncError && (
+        <div className="p-3 rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-xs flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+          <span>{serverSyncError}</span>
+        </div>
+      )}
       {/* ===================================================================== */}
       {/* EN-TÊTE UNIFIÉ C.FITNESS OS — PLANNING / COURS COLLECTIFS / PAIE      */}
       {/* ===================================================================== */}

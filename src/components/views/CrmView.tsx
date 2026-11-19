@@ -310,11 +310,11 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
-              Tout le Pipeline ({prospects.filter((p) => clubFilter === 'all' || p.clubId === clubFilter).length})
+              Tout le Pipeline ({prospects.filter((p) => allowedClubIds.includes(p.clubId) && (clubFilter === 'all' || p.clubId === clubFilter)).length})
             </button>
             {STAGES.map((st, idx) => {
               const count = prospects.filter(
-                (p) => (clubFilter === 'all' || p.clubId === clubFilter) && p.stage === st
+                (p) => allowedClubIds.includes(p.clubId) && (clubFilter === 'all' || p.clubId === clubFilter) && p.stage === st
               ).length;
               const stageEur = Math.round(count * DEAL_ANNUAL_VALUE_EUR);
               const isSelected = selectedStageFilter === st;

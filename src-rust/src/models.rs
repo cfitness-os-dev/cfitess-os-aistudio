@@ -341,6 +341,129 @@ pub struct AmbiguityRecord {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct LeadFormFieldRecord {
+    pub id: String,
+    pub label: String,
+    #[serde(rename = "type")]
+    pub field_type: String,
+    pub required: bool,
+    #[serde(default)]
+    pub options: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LeadFormSampleResponseRecord {
+    pub id: String,
+    pub full_name: String,
+    pub email: String,
+    pub phone: String,
+    pub rgpd_consent: bool,
+    #[serde(default)]
+    pub answers: serde_json::Value,
+    pub submitted_at: String,
+    #[serde(default)]
+    pub linked_prospect_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LeadFormRecord {
+    pub id: String,
+    pub name: String,
+    pub club_id: String,
+    pub published: bool,
+    #[serde(default)]
+    pub section_titles: Vec<String>,
+    #[serde(default)]
+    pub fields: Vec<LeadFormFieldRecord>,
+    pub responses_count: u32,
+    #[serde(default)]
+    pub sample_responses: Vec<LeadFormSampleResponseRecord>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LeadProspectRecord {
+    pub id: String,
+    #[serde(default)]
+    pub gender: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub email: String,
+    #[serde(default)]
+    pub phone: String,
+    #[serde(default)]
+    pub street: String,
+    #[serde(default)]
+    pub postal_code: String,
+    #[serde(default)]
+    pub city: String,
+    #[serde(default)]
+    pub birth_date: String,
+    #[serde(default)]
+    pub comment: String,
+    pub club_id: String,
+    pub source: String,
+    pub stage: String,
+    #[serde(default)]
+    pub lead_status: String,
+    pub rgpd_consent: bool,
+    #[serde(default)]
+    pub segments: Vec<String>,
+    #[serde(default)]
+    pub trial_date: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LeadAppointmentRecord {
+    pub id: String,
+    pub club_id: String,
+    pub coach_id: String,
+    pub type_name: String,
+    #[serde(default)]
+    pub prospect_id: Option<String>,
+    #[serde(default)]
+    pub prospect_name: Option<String>,
+    #[serde(default)]
+    pub prospect_email: Option<String>,
+    #[serde(default)]
+    pub activity_id: Option<String>,
+    pub date: String,
+    pub start_time: String,
+    pub duration_minutes: u32,
+    pub capacity_max: u32,
+    pub current_booked_count: u32,
+    pub payment_status: String,
+    #[serde(default = "default_rdv_status")]
+    pub status: String,
+}
+
+fn default_rdv_status() -> String {
+    "confirme".to_string()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LeadActivityRecord {
+    pub id: String,
+    #[serde(rename = "type")]
+    pub activity_type: String,
+    pub title: String,
+    #[serde(default)]
+    pub prospect_id: Option<String>,
+    pub prospect_name: String,
+    pub club_id: String,
+    pub due_at: String,
+    pub status: String,
+    pub assigned_to_id: String,
+    pub status_label: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AppDatabaseState {
     pub version: String,
     pub organization: Organization,
@@ -357,6 +480,14 @@ pub struct AppDatabaseState {
     pub preferences_by_employee: HashMap<String, UserPreferences>,
     pub ambiguities: Vec<AmbiguityRecord>,
     pub org02_billing_policy: String,
+    #[serde(default)]
+    pub lead_forms: Vec<LeadFormRecord>,
+    #[serde(default)]
+    pub lead_prospects: Vec<LeadProspectRecord>,
+    #[serde(default)]
+    pub lead_appointments: Vec<LeadAppointmentRecord>,
+    #[serde(default)]
+    pub lead_activities: Vec<LeadActivityRecord>,
 }
 
 #[derive(Debug, Clone, Serialize)]

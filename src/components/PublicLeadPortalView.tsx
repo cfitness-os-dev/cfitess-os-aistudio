@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CheckCircle2, Lock, Calendar, FileText } from 'lucide-react';
-import { validateAppointmentBooking, type AppointmentSlotRecord } from '../domain/leadAuditRegistry';
 
 interface PublicFormField {
   id: string;
@@ -10,96 +9,25 @@ interface PublicFormField {
   options?: string[];
 }
 
-interface StoredLeadForm {
+interface PublicFormSchema {
   id: string;
   name: string;
   clubId: 'carre-de-soie' | 'beynost';
-  published?: boolean;
-  status?: 'published' | 'draft';
-  sections?: number | string[];
+  published: boolean;
   sectionTitles?: string[];
-  fields?: PublicFormField[];
-  responsesCount: number;
-  lastResponsePreview?: string;
-  sampleResponses?: Array<{
-    id: string;
-    fullName: string;
-    email: string;
-    phone: string;
-    rgpdConsent: boolean;
-    answers?: Record<string, string | boolean>;
-    submittedAt: string;
-  }>;
+  fields: PublicFormField[];
 }
-
-const DEFAULT_PUBLIC_FORMS: StoredLeadForm[] = [
-  {
-    id: 'frm-1',
-    name: 'Séance Découverte Carré de Soie',
-    clubId: 'carre-de-soie',
-    published: true,
-    sectionTitles: ['Coordonnées', 'Objectif fitness', 'Consentement RGPD'],
-    fields: [
-      { id: 'fld-fn', label: 'Prénom', type: 'text', required: true },
-      { id: 'fld-ln', label: 'Nom', type: 'text', required: true },
-      { id: 'fld-em', label: 'Email', type: 'email', required: true },
-      { id: 'fld-ph', label: 'Téléphone', type: 'tel', required: false },
-      { id: 'fld-rgpd', label: 'J’accepte le traitement RGPD de mes données', type: 'checkbox', required: true },
-    ],
-    responsesCount: 42,
-    sampleResponses: [
-      {
-        id: 'rep-1',
-        fullName: 'Camille Garnier',
-        email: 'camille.garnier@exemple.fr',
-        phone: '0611223344',
-        rgpdConsent: true,
-        submittedAt: '2026-11-16 14:20',
-      },
-    ],
-  },
-  {
-    id: 'frm-2',
-    name: 'Bilan Checkup Beynost',
-    clubId: 'beynost',
-    published: true,
-    sectionTitles: ['Identité', 'Disponibilités', 'Accord RGPD'],
-    fields: [
-      { id: 'fld-fn2', label: 'Prénom', type: 'text', required: true },
-      { id: 'fld-em2', label: 'Email', type: 'email', required: true },
-      { id: 'fld-rgpd2', label: 'Accord RGPD obligatoire', type: 'checkbox', required: true },
-    ],
-    responsesCount: 19,
-    sampleResponses: [
-      {
-        id: 'rep-2',
-        fullName: 'Hugo Lefebvre',
-        email: 'hugo.lefebvre@exemple.fr',
-        phone: '0677889900',
-        rgpdConsent: true,
-        submittedAt: '2026-11-15 11:05',
-      },
-    ],
-  },
-  {
-    id: 'frm-3',
-    name: 'Offre Rentrée Coaching (Brouillon)',
-    clubId: 'carre-de-soie',
-    published: false,
-    sectionTitles: ['Identité'],
-    fields: [{ id: 'fld-fn3', label: 'Prénom', type: 'text', required: true }],
-    responsesCount: 0,
-    sampleResponses: [],
-  },
-];
 
 export function PublicLeadPortalView({ pathname }: { pathname: string }) {
   const parts = pathname.split('/').filter(Boolean);
   const kind = parts[0]; // 'forms' | 'book'
-  const rawClubSlug = parts[1];
-  const validClub = rawClubSlug === 'carre-de-soie' || rawClubSlug === 'beynost';
-  const clubSlug: 'carre-de-soie' | 'beynost' = rawClubSlug === 'beynost' ? 'beynost' : 'carre-de-soie';
+  const clubSlug = parts[1] ?? '';
   const itemId = parts[2] ?? '';
+
+  const [loading, setLoading] = useState(true);
+  const [notFoundErr, setNotFoundErr] = useState<string | null>(null);
+  const [formSchema, setFormSchema] = useState<PublicFormSchema | null>(null);
+  const [bookInfo, setBookInfo] = useState<{ label: string; durationMinutes: number } | null>(null);
 
   const [values, setValues] = useState<Record<string, string | boolean>>({});
   const [bookDate, setBookDate] = useState(() => {
@@ -108,31 +36,77 @@ export function PublicLeadPortalView({ pathname }: { pathname: string }) {
   });
   const [bookTime, setBookTime] = useState('10:00');
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  if (kind === 'book') {
-    const knownBookTypes: Record<string, { label: string; duration: number }> = {
-      'coaching-decouverte': { label: 'Séance Découverte Coaching', duration: 60 },
-      'bilan-checkup-technogym': { label: 'Bilan Checkup Technogym', duration: 60 },
-    };
-    const typeCfg = knownBookTypes[itemId];
-    if (!validClub || !typeCfg) {
-      return (
-        <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
-          <div className="max-w-md w-full rounded-2xl bg-slate-900 border border-red-500/40 p-6 space-y-3 text-center">
-            <Lock className="w-8 h-8 text-red-400 mx-auto" />
-            <h1 className="text-base font-bold">Lien de réservation introuvable</h1>
-            <p className="text-xs text-slate-400">
-              Le club ou le type de créneau demandé ({pathname}) n&apos;existe pas.
-            </p>
-          </div>
-        </div>
-      );
-    }
-    const slotLabel = typeCfg.label;
-    const durationMinutes = typeCfg.duration;
-    const coachId = clubSlug === 'beynost' ? 'emp-sarah' : 'emp-karim';
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setNotFoundErr(null);
 
+    if (kind === 'book') {
+      void fetch(`/api/public/book/${encodeURIComponent(clubSlug)}/${encodeURIComponent(itemId)}`)
+        .then(async (res) => {
+          if (cancelled) return;
+          if (!res.ok) {
+            setNotFoundErr('Lien de réservation introuvable.');
+            return;
+          }
+          const data = (await res.json()) as { label: string; durationMinutes: number };
+          setBookInfo(data);
+        })
+        .catch(() => {
+          if (!cancelled) setNotFoundErr('Serveur de réservation indisponible.');
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    } else {
+      void fetch(`/api/public/forms/${encodeURIComponent(clubSlug)}/${encodeURIComponent(itemId)}`)
+        .then(async (res) => {
+          if (cancelled) return;
+          if (!res.ok) {
+            setNotFoundErr('Formulaire indisponible ou non publié.');
+            return;
+          }
+          const data = (await res.json()) as PublicFormSchema;
+          setFormSchema(data);
+        })
+        .catch(() => {
+          if (!cancelled) setNotFoundErr('Serveur de formulaires indisponible.');
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [kind, clubSlug, itemId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-300 flex items-center justify-center p-4 text-xs">
+        Chargement depuis le serveur…
+      </div>
+    );
+  }
+
+  if (notFoundErr) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
+        <div className="max-w-md w-full rounded-2xl bg-slate-900 border border-red-500/40 p-6 space-y-3 text-center">
+          <Lock className="w-8 h-8 text-red-400 mx-auto" />
+          <h1 className="text-base font-bold">{notFoundErr}</h1>
+          <p className="text-xs text-slate-400">
+            Ce lien public ({pathname}) n&apos;est pas actif. Aucun accès interne n&apos;est exposé.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (kind === 'book' && bookInfo) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
         <div className="max-w-md w-full rounded-2xl bg-slate-900 border border-slate-800 p-6 space-y-4">
@@ -141,16 +115,16 @@ export function PublicLeadPortalView({ pathname }: { pathname: string }) {
             <span>Réservation publique — {clubSlug === 'beynost' ? 'C.Fitness Beynost' : 'C.Fitness Carré de Soie'}</span>
           </div>
           <p className="text-xs text-slate-400">
-            Créneau <strong>{slotLabel}</strong> ({durationMinutes} min) · Page publique isolée (aucune donnée interne exposée).
+            Créneau <strong>{bookInfo.label}</strong> ({bookInfo.durationMinutes} min) · Persistance serveur partagée.
           </p>
           {submitted ? (
             <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-200 text-xs flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 shrink-0" />
-              <span>Créneau réservé le {bookDate} à {bookTime} et enregistré dans l&apos;agenda du club.</span>
+              <span>Créneau réservé le {bookDate} à {bookTime} et enregistré côté serveur pour le club.</span>
             </div>
           ) : (
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 const fullName = String(values.name || '').trim();
                 const email = String(values.email || '').trim();
@@ -158,82 +132,33 @@ export function PublicLeadPortalView({ pathname }: { pathname: string }) {
                   setErrorMsg('Nom et e-mail requis.');
                   return;
                 }
-                let existingSlots: AppointmentSlotRecord[] = [];
-                try {
-                  const raw = localStorage.getItem('cfos_lead_rdv_slots_v1');
-                  if (raw) existingSlots = JSON.parse(raw) as AppointmentSlotRecord[];
-                } catch {
-                  // ignore
-                }
-                const decision = validateAppointmentBooking(existingSlots, {
-                  clubId: clubSlug,
-                  coachId,
-                  typeName: slotLabel,
-                  date: bookDate,
-                  startTime: bookTime,
-                  durationMinutes,
-                  hoursBeforeSlot: 24,
-                  minDelayHours: 2,
-                  capacityMax: 1,
-                  requiresStripePayment: false,
-                  stripePaidConfirmed: false,
-                  referenceNow: new Date(),
-                });
-                if (!decision.accepted) {
-                  setErrorMsg(decision.reason);
-                  return;
-                }
-                const slotId = `slot-pub-${Date.now()}`;
-                const nextSlot: AppointmentSlotRecord & {
-                  prospectName?: string;
-                  prospectEmail?: string;
-                  activityId?: string;
-                } = {
-                  id: slotId,
-                  clubId: clubSlug,
-                  coachId,
-                  typeName: slotLabel,
-                  prospectName: fullName,
-                  prospectEmail: email,
-                  activityId: `act-${slotId}`,
-                  date: bookDate,
-                  startTime: bookTime,
-                  durationMinutes,
-                  capacityMax: 1,
-                  currentBookedCount: 1,
-                  paidRequired: false,
-                  paymentStatus: 'non_requis',
-                };
-                try {
-                  localStorage.setItem(
-                    'cfos_lead_rdv_slots_v1',
-                    JSON.stringify([nextSlot, ...existingSlots])
-                  );
-                  const rawActs = localStorage.getItem('cfos_lead_activities_v1');
-                  const prevActs = rawActs ? (JSON.parse(rawActs) as unknown[]) : [];
-                  localStorage.setItem(
-                    'cfos_lead_activities_v1',
-                    JSON.stringify([
-                      {
-                        id: `act-${slotId}`,
-                        type: 'APPOINTMENT',
-                        title: `RDV public : ${slotLabel}`,
-                        prospectName: fullName,
-                        clubId: clubSlug,
-                        dueAt: `${bookDate}T${bookTime}`,
-                        status: 'todo',
-                        assignedToId: coachId,
-                        statusLabel: `Réservé (${email})`,
-                      },
-                      ...prevActs,
-                    ])
-                  );
-                } catch {
-                  setErrorMsg('Erreur de persistance locale : réservation non enregistrée.');
-                  return;
-                }
+                setSubmitting(true);
                 setErrorMsg(null);
-                setSubmitted(true);
+                try {
+                  const res = await fetch(
+                    `/api/public/book/${encodeURIComponent(clubSlug)}/${encodeURIComponent(itemId)}`,
+                    {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        fullName,
+                        email,
+                        date: bookDate,
+                        startTime: bookTime,
+                      }),
+                    }
+                  );
+                  if (!res.ok) {
+                    const errBody = (await res.json().catch(() => ({}))) as { error?: string };
+                    setErrorMsg(errBody.error || `Refus serveur (HTTP ${res.status}).`);
+                    return;
+                  }
+                  setSubmitted(true);
+                } catch {
+                  setErrorMsg('Erreur réseau : réservation non enregistrée.');
+                } finally {
+                  setSubmitting(false);
+                }
               }}
               className="space-y-3 text-xs"
             >
@@ -274,9 +199,10 @@ export function PublicLeadPortalView({ pathname }: { pathname: string }) {
               {errorMsg && <div className="text-red-300 font-semibold">{errorMsg}</div>}
               <button
                 type="submit"
-                className="w-full py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-bold cursor-pointer"
+                disabled={submitting}
+                className="w-full py-2 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-bold cursor-pointer"
               >
-                Confirmer ma réservation
+                {submitting ? 'Enregistrement…' : 'Confirmer ma réservation'}
               </button>
             </form>
           )}
@@ -285,44 +211,8 @@ export function PublicLeadPortalView({ pathname }: { pathname: string }) {
     );
   }
 
-  let forms: StoredLeadForm[] = DEFAULT_PUBLIC_FORMS;
-  try {
-    const raw = localStorage.getItem('cfos_lead_forms_v1');
-    if (raw) forms = JSON.parse(raw) as StoredLeadForm[];
-  } catch {
-    // fallback default
-  }
-
-  const form = forms.find((f) => f.id === itemId && f.clubId === clubSlug);
-  const isFormPublished = form
-    ? form.published !== undefined
-      ? form.published
-      : form.status === 'published'
-    : false;
-
-  if (!form || !isFormPublished) {
-    return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
-        <div className="max-w-md w-full rounded-2xl bg-slate-900 border border-red-500/40 p-6 space-y-3 text-center">
-          <Lock className="w-8 h-8 text-red-400 mx-auto" />
-          <h1 className="text-base font-bold">Formulaire indisponible ou non publié</h1>
-          <p className="text-xs text-slate-400">
-            Ce lien public ({pathname}) ne correspond à aucun formulaire publié actif. Aucun accès interne n&apos;est exposé.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  const fields: PublicFormField[] =
-    form.fields && form.fields.length > 0
-      ? form.fields
-      : [
-          { id: 'fld-fn', label: 'Prénom', type: 'text', required: true },
-          { id: 'fld-em', label: 'Email', type: 'email', required: true },
-          { id: 'fld-ph', label: 'Téléphone', type: 'tel', required: false },
-          { id: 'fld-rgpd', label: 'Consentement RGPD obligatoire', type: 'checkbox', required: true },
-        ];
+  if (!formSchema) return null;
+  const fields = formSchema.fields;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
@@ -331,9 +221,9 @@ export function PublicLeadPortalView({ pathname }: { pathname: string }) {
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-emerald-400" />
             <div>
-              <h1 className="text-base font-extrabold">{form.name}</h1>
+              <h1 className="text-base font-extrabold">{formSchema.name}</h1>
               <p className="text-[11px] text-slate-400">
-                {form.clubId === 'beynost' ? 'C.Fitness Beynost' : 'C.Fitness Carré de Soie'} · Formulaire public isolé
+                {formSchema.clubId === 'beynost' ? 'C.Fitness Beynost' : 'C.Fitness Carré de Soie'} · Formulaire public connecté serveur
               </p>
             </div>
           </div>
@@ -342,11 +232,11 @@ export function PublicLeadPortalView({ pathname }: { pathname: string }) {
         {submitted ? (
           <div className="p-4 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-200 text-xs flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 shrink-0" />
-            <span>Merci ! Votre réponse structurée a été enregistrée pour {form.name}.</span>
+            <span>Merci ! Votre réponse a été enregistrée côté serveur pour {formSchema.name}.</span>
           </div>
         ) : (
           <form
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
               for (const f of fields) {
                 const v = values[f.id];
@@ -384,32 +274,33 @@ export function PublicLeadPortalView({ pathname }: { pathname: string }) {
                 }
               }
               const fullName = nameParts.join(' ') || 'Contact public';
-              const structuredResponse = {
-                id: `rep-${Date.now()}`,
-                fullName,
-                email: resolvedEmail,
-                phone: resolvedPhone,
-                rgpdConsent: resolvedRgpd,
-                answers: { ...values },
-                submittedAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
-              };
+              setSubmitting(true);
               try {
-                const updatedForms = forms.map((item) =>
-                  item.id === form.id
-                    ? {
-                        ...item,
-                        responsesCount: item.responsesCount + 1,
-                        lastResponsePreview: `${fullName} · ${resolvedEmail}`,
-                        sampleResponses: [structuredResponse, ...(item.sampleResponses ?? [])],
-                      }
-                    : item
+                const res = await fetch(
+                  `/api/public/forms/${encodeURIComponent(clubSlug)}/${encodeURIComponent(itemId)}/submit`,
+                  {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      fullName,
+                      email: resolvedEmail,
+                      phone: resolvedPhone,
+                      rgpdConsent: resolvedRgpd,
+                      answers: values,
+                    }),
+                  }
                 );
-                localStorage.setItem('cfos_lead_forms_v1', JSON.stringify(updatedForms));
+                if (!res.ok) {
+                  const errBody = (await res.json().catch(() => ({}))) as { error?: string };
+                  setErrorMsg(errBody.error || `Erreur serveur (HTTP ${res.status}).`);
+                  return;
+                }
+                setSubmitted(true);
               } catch {
-                setErrorMsg('Erreur de stockage local : réponse non enregistrée.');
-                return;
+                setErrorMsg('Erreur réseau : réponse non enregistrée.');
+              } finally {
+                setSubmitting(false);
               }
-              setSubmitted(true);
             }}
             className="space-y-3 text-xs"
           >
@@ -462,9 +353,10 @@ export function PublicLeadPortalView({ pathname }: { pathname: string }) {
             {errorMsg && <div className="text-red-300 font-semibold">{errorMsg}</div>}
             <button
               type="submit"
-              className="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer"
+              disabled={submitting}
+              className="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold cursor-pointer"
             >
-              Envoyer ma demande
+              {submitting ? 'Envoi en cours…' : 'Envoyer ma demande'}
             </button>
           </form>
         )}

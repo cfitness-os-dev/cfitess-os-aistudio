@@ -149,6 +149,16 @@ pub fn api_router(state: SharedState) -> Router {
         .route("/api/health", get(health))
         .route("/api/lead/registry", get(get_lead_registry))
         .route("/api/lead/webhooks/clubEntry", post(post_lead_webhook_club_entry))
+        .route("/api/public/forms/:club_id/:form_id", get(get_public_lead_form))
+        .route("/api/public/forms/:club_id/:form_id/submit", post(post_public_lead_form_submit))
+        .route("/api/public/book/:club_id/:slot_type", get(get_public_book_slot).post(post_public_book_slot))
+        .route("/api/lead/workspace", get(get_lead_workspace))
+        .route("/api/lead/forms/:form_id", put(put_lead_form))
+        .route("/api/lead/prospects/import", post(post_lead_prospects_import))
+        .route(
+            "/api/lead/appointments/:slot_id",
+            patch(patch_lead_appointment).delete(delete_lead_appointment),
+        )
         .route(
             "/api/v2/appointment/webhooks/stripe/:club",
             post(post_stripe_appointment_webhook),
@@ -2275,6 +2285,683 @@ async fn post_ollama_chat(Json(payload): Json<OllamaChatPayload>) -> Json<Value>
     }
 }
 
+fn site_id_to_club_id(site_id: &str) -> &'static str {
+    if site_id == "club-beynost" || site_id == "beynost" {
+        "beynost"
+    } else {
+        "carre-de-soie"
+    }
+}
+
+fn authorized_clubs_for_actor(db: &AppDatabaseState, actor_id: &str) -> HashSet<String> {
+    let mut clubs = HashSet::new();
+    if let Some(emp) = db.employees.iter().find(|e| e.id == actor_id) {
+        if emp.site_accesses.iter().any(|sa| sa.profile_id == "admin_systeme") {
+            clubs.insert("carre-de-soie".to_string());
+            clubs.insert("beynost".to_string());
+            return clubs;
+        }
+        for sa in &emp.site_accesses {
+            clubs.insert(site_id_to_club_id(&sa.site_id).to_string());
+        }
+    }
+    clubs
+}
+
+fn parse_hhmm_minutes(hhmm: &str) -> Option<u32> {
+    let mut parts = hhmm.trim().split(':');
+    let h: u32 = parts.next()?.parse().ok()?;
+    let m: u32 = parts.next()?.parse().ok()?;
+    if h > 23 || m > 59 {
+        return None;
+    }
+    Some(h * 60 + m)
+}
+
+async fn get_public_lead_form(
+    State(state): State<SharedState>,
+    Path((club_id, form_id)): Path<(String, String)>,
+) -> Result<(StatusCode, Json<Value>), (StatusCode, Json<Value>)> {
+    if club_id != "carre-de-soie" && club_id != "beynost" {
+        return Err(err_resp(StatusCode::NOT_FOUND, "Club introuvable."));
+    }
+    let db = state.db.read().await;
+    let form = db
+        .lead_forms
+        .iter()
+        .find(|f| f.id == form_id && f.club_id == club_id && f.published)
+        .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Formulaire indisponible ou non publié."))?;
+
+    Ok((
+        StatusCode::OK,
+        Json(json!({
+            "id": form.id,
+            "name": form.name,
+            "clubId": form.club_id,
+            "published": form.published,
+            "sectionTitles": form.section_titles,
+            "fields": form.fields
+        })),
+    ))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicFormSubmitPayload {
+    pub full_name: String,
+    pub email: String,
+    #[serde(default)]
+    pub phone: String,
+    pub rgpd_consent: bool,
+    #[serde(default)]
+    pub answers: Value,
+}
+
+async fn post_public_lead_form_submit(
+    State(state): State<SharedState>,
+    Path((club_id, form_id)): Path<(String, String)>,
+    Json(payload): Json<PublicFormSubmitPayload>,
+) -> Result<(StatusCode, Json<Value>), (StatusCode, Json<Value>)> {
+    if club_id != "carre-de-soie" && club_id != "beynost" {
+        return Err(err_resp(StatusCode::NOT_FOUND, "Club introuvable."));
+    }
+    let email = payload.email.trim().to_lowercase();
+    let full_name = payload.full_name.trim().to_string();
+    if full_name.is_empty() || email.is_empty() || !email.contains('@') {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            "Nom et e-mail valide requis.",
+        ));
+    }
+
+    let mut db = state.db.write().await;
+    let form_idx = db
+        .lead_forms
+        .iter()
+        .position(|f| f.id == form_id && f.club_id == club_id && f.published)
+        .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Formulaire indisponible ou non publié."))?;
+
+    let form_name = db.lead_forms[form_idx].name.clone();
+
+    // Rattachement ou création canonique du prospect (idempotent par e-mail + club)
+    let prospect_id = if let Some(existing) = db
+        .lead_prospects
+        .iter_mut()
+        .find(|p| p.email.eq_ignore_ascii_case(&email) && p.club_id == club_id)
+    {
+        if existing.rgpd_consent != payload.rgpd_consent && payload.rgpd_consent {
+            existing.rgpd_consent = true;
+        }
+        existing.id.clone()
+    } else {
+        let mut parts = full_name.splitn(2, ' ');
+        let first_name = parts.next().unwrap_or("Contact").to_string();
+        let last_name = parts.next().unwrap_or("Public").to_string();
+        let new_pid = format!("pr-pub-{}", Utc::now().timestamp_millis());
+        db.lead_prospects.insert(
+            0,
+            crate::models::LeadProspectRecord {
+                id: new_pid.clone(),
+                gender: String::new(),
+                first_name,
+                last_name,
+                email: email.clone(),
+                phone: payload.phone.trim().to_string(),
+                street: String::new(),
+                postal_code: String::new(),
+                city: String::new(),
+                birth_date: String::new(),
+                comment: format!("Soumission formulaire {}", form_name),
+                club_id: club_id.clone(),
+                source: "Formulaire public".into(),
+                stage: "Nouveau".into(),
+                lead_status: "Nouveau".into(),
+                rgpd_consent: payload.rgpd_consent,
+                segments: vec![],
+                trial_date: None,
+                created_at: Utc::now().format("%Y-%m-%d").to_string(),
+            },
+        );
+        new_pid
+    };
+
+    let response_id = format!("rep-pub-{}", Utc::now().timestamp_millis());
+    let sample = crate::models::LeadFormSampleResponseRecord {
+        id: response_id.clone(),
+        full_name: full_name.clone(),
+        email: email.clone(),
+        phone: payload.phone.trim().to_string(),
+        rgpd_consent: payload.rgpd_consent,
+        answers: payload.answers,
+        submitted_at: Utc::now().format("%Y-%m-%d %H:%M").to_string(),
+        linked_prospect_id: Some(prospect_id.clone()),
+    };
+
+    let form_name = db.lead_forms[form_idx].name.clone();
+    db.lead_forms[form_idx].responses_count += 1;
+    db.lead_forms[form_idx].sample_responses.insert(0, sample);
+
+    let act_id = format!("act-frm-{}", Utc::now().timestamp_millis());
+    db.lead_activities.insert(
+        0,
+        crate::models::LeadActivityRecord {
+            id: act_id.clone(),
+            activity_type: "CONTACT".into(),
+            title: format!("Formulaire public : {}", form_name),
+            prospect_id: Some(prospect_id.clone()),
+            prospect_name: full_name,
+            club_id: club_id.clone(),
+            due_at: Utc::now().format("%Y-%m-%dT%H:%M").to_string(),
+            status: "todo".into(),
+            assigned_to_id: if club_id == "beynost" {
+                "emp-chloe".into()
+            } else {
+                "emp-maxime".into()
+            },
+            status_label: "Nouvelle soumission".into(),
+        },
+    );
+
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec persistance serveur : {}", err_msg),
+        ));
+    }
+
+    Ok((
+        StatusCode::CREATED,
+        Json(json!({
+            "ok": true,
+            "responseId": response_id,
+            "prospectId": prospect_id,
+            "activityId": act_id
+        })),
+    ))
+}
+
+fn resolve_public_book_type(slot_type: &str) -> Option<(&'static str, u32)> {
+    match slot_type {
+        "coaching-decouverte" => Some(("Séance Découverte Coaching", 60)),
+        "bilan-checkup-technogym" => Some(("Bilan Checkup Technogym", 60)),
+        _ => None,
+    }
+}
+
+async fn get_public_book_slot(
+    State(state): State<SharedState>,
+    Path((club_id, slot_type)): Path<(String, String)>,
+) -> Result<(StatusCode, Json<Value>), (StatusCode, Json<Value>)> {
+    if club_id != "carre-de-soie" && club_id != "beynost" {
+        return Err(err_resp(StatusCode::NOT_FOUND, "Club introuvable."));
+    }
+    let (label, duration) = resolve_public_book_type(&slot_type)
+        .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Type de créneau introuvable."))?;
+
+    let db = state.db.read().await;
+    let busy: Vec<Value> = db
+        .lead_appointments
+        .iter()
+        .filter(|a| a.club_id == club_id && a.status != "annule")
+        .map(|a| json!({ "date": a.date, "startTime": a.start_time, "durationMinutes": a.duration_minutes }))
+        .collect();
+
+    Ok((
+        StatusCode::OK,
+        Json(json!({
+            "clubId": club_id,
+            "slotType": slot_type,
+            "label": label,
+            "durationMinutes": duration,
+            "busySlots": busy
+        })),
+    ))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicBookSlotPayload {
+    pub full_name: String,
+    pub email: String,
+    pub date: String,
+    pub start_time: String,
+}
+
+async fn post_public_book_slot(
+    State(state): State<SharedState>,
+    Path((club_id, slot_type)): Path<(String, String)>,
+    Json(payload): Json<PublicBookSlotPayload>,
+) -> Result<(StatusCode, Json<Value>), (StatusCode, Json<Value>)> {
+    if club_id != "carre-de-soie" && club_id != "beynost" {
+        return Err(err_resp(StatusCode::NOT_FOUND, "Club introuvable."));
+    }
+    let (label, duration) = resolve_public_book_type(&slot_type)
+        .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Type de créneau introuvable."))?;
+
+    let full_name = payload.full_name.trim().to_string();
+    let email = payload.email.trim().to_lowercase();
+    if full_name.is_empty() || email.is_empty() || !email.contains('@') {
+        return Err(err_resp(StatusCode::BAD_REQUEST, "Nom et e-mail valide requis."));
+    }
+    let start_min = parse_hhmm_minutes(&payload.start_time)
+        .ok_or_else(|| err_resp(StatusCode::BAD_REQUEST, "Heure invalide (HH:MM)."))?;
+    let today = Utc::now().format("%Y-%m-%d").to_string();
+    if payload.date.trim() < today.as_str() {
+        return Err(err_resp(StatusCode::BAD_REQUEST, "Impossible de réserver une date passée."));
+    }
+
+    let coach_id = if club_id == "beynost" { "emp-sarah" } else { "emp-karim" };
+    let cand_end = start_min + duration;
+
+    let mut db = state.db.write().await;
+    let conflict = db.lead_appointments.iter().any(|s| {
+        if s.status == "annule" || s.coach_id != coach_id || s.date != payload.date {
+            return false;
+        }
+        if let Some(s_start) = parse_hhmm_minutes(&s.start_time) {
+            let s_end = s_start + s.duration_minutes.max(30);
+            return start_min < s_end && s_start < cand_end;
+        }
+        false
+    });
+    if conflict {
+        return Err(err_resp(
+            StatusCode::CONFLICT,
+            "Créneau indisponible : chevauchement détecté sur ce coach.",
+        ));
+    }
+
+    let prospect_id = if let Some(existing) = db
+        .lead_prospects
+        .iter_mut()
+        .find(|p| p.email.eq_ignore_ascii_case(&email) && p.club_id == club_id)
+    {
+        existing.stage = "Séance planifiée".into();
+        existing.lead_status = "Séance planifiée".into();
+        existing.trial_date = Some(payload.date.clone());
+        existing.id.clone()
+    } else {
+        let mut parts = full_name.splitn(2, ' ');
+        let first_name = parts.next().unwrap_or("Contact").to_string();
+        let last_name = parts.next().unwrap_or("Public").to_string();
+        let new_pid = format!("pr-book-{}", Utc::now().timestamp_millis());
+        db.lead_prospects.insert(
+            0,
+            crate::models::LeadProspectRecord {
+                id: new_pid.clone(),
+                gender: String::new(),
+                first_name,
+                last_name,
+                email: email.clone(),
+                phone: String::new(),
+                street: String::new(),
+                postal_code: String::new(),
+                city: String::new(),
+                birth_date: String::new(),
+                comment: format!("Réservation publique {}", label),
+                club_id: club_id.clone(),
+                source: "Lien public RDV".into(),
+                stage: "Séance planifiée".into(),
+                lead_status: "Séance planifiée".into(),
+                rgpd_consent: true,
+                segments: vec![],
+                trial_date: Some(payload.date.clone()),
+                created_at: Utc::now().format("%Y-%m-%d").to_string(),
+            },
+        );
+        new_pid
+    };
+
+    let slot_id = format!("slot-pub-{}", Utc::now().timestamp_millis());
+    let act_id = format!("act-{}", slot_id);
+    let slot = crate::models::LeadAppointmentRecord {
+        id: slot_id.clone(),
+        club_id: club_id.clone(),
+        coach_id: coach_id.into(),
+        type_name: label.into(),
+        prospect_id: Some(prospect_id.clone()),
+        prospect_name: Some(full_name.clone()),
+        prospect_email: Some(email),
+        activity_id: Some(act_id.clone()),
+        date: payload.date.clone(),
+        start_time: payload.start_time.clone(),
+        duration_minutes: duration,
+        capacity_max: 1,
+        current_booked_count: 1,
+        payment_status: "non_requis".into(),
+        status: "confirme".into(),
+    };
+    db.lead_appointments.insert(0, slot.clone());
+    db.lead_activities.insert(
+        0,
+        crate::models::LeadActivityRecord {
+            id: act_id.clone(),
+            activity_type: "APPOINTMENT".into(),
+            title: format!("RDV public : {}", label),
+            prospect_id: Some(prospect_id.clone()),
+            prospect_name: full_name,
+            club_id,
+            due_at: format!("{}T{}", payload.date, payload.start_time),
+            status: "todo".into(),
+            assigned_to_id: coach_id.into(),
+            status_label: "Confirmé (public)".into(),
+        },
+    );
+
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec persistance serveur : {}", err_msg),
+        ));
+    }
+
+    Ok((
+        StatusCode::CREATED,
+        Json(json!({
+            "ok": true,
+            "slot": slot,
+            "prospectId": prospect_id,
+            "activityId": act_id
+        })),
+    ))
+}
+
+async fn get_lead_workspace(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let db = state.db.read().await;
+    let allowed = authorized_clubs_for_actor(&db, &actor_id);
+
+    let forms: Vec<_> = db
+        .lead_forms
+        .iter()
+        .filter(|f| allowed.contains(&f.club_id))
+        .cloned()
+        .collect();
+    let prospects: Vec<_> = db
+        .lead_prospects
+        .iter()
+        .filter(|p| allowed.contains(&p.club_id))
+        .cloned()
+        .collect();
+    let appointments: Vec<_> = db
+        .lead_appointments
+        .iter()
+        .filter(|a| allowed.contains(&a.club_id))
+        .cloned()
+        .collect();
+    let activities: Vec<_> = db
+        .lead_activities
+        .iter()
+        .filter(|a| allowed.contains(&a.club_id))
+        .cloned()
+        .collect();
+
+    Ok(Json(json!({
+        "allowedClubs": allowed.into_iter().collect::<Vec<_>>(),
+        "forms": forms,
+        "prospects": prospects,
+        "appointments": appointments,
+        "activities": activities
+    })))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PutLeadFormPayload {
+    pub published: Option<bool>,
+    pub name: Option<String>,
+    pub fields: Option<Vec<crate::models::LeadFormFieldRecord>>,
+}
+
+async fn put_lead_form(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Path(form_id): Path<String>,
+    Json(payload): Json<PutLeadFormPayload>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let mut db = state.db.write().await;
+    let allowed = authorized_clubs_for_actor(&db, &actor_id);
+
+    let idx = db
+        .lead_forms
+        .iter()
+        .position(|f| f.id == form_id)
+        .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Formulaire introuvable."))?;
+
+    if !allowed.contains(&db.lead_forms[idx].club_id) {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Accès refusé (403) : formulaire hors de vos clubs autorisés.",
+        ));
+    }
+
+    if let Some(pub_flag) = payload.published {
+        db.lead_forms[idx].published = pub_flag;
+    }
+    if let Some(name) = payload.name {
+        if !name.trim().is_empty() {
+            db.lead_forms[idx].name = name.trim().to_string();
+        }
+    }
+    if let Some(fields) = payload.fields {
+        db.lead_forms[idx].fields = fields;
+    }
+
+    let updated = db.lead_forms[idx].clone();
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec persistance serveur : {}", err_msg),
+        ));
+    }
+
+    Ok(Json(json!({ "ok": true, "form": updated })))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportLeadProspectItem {
+    #[serde(default)]
+    pub gender: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub email: String,
+    #[serde(default)]
+    pub phone: String,
+    #[serde(default)]
+    pub street: String,
+    #[serde(default)]
+    pub postal_code: String,
+    #[serde(default)]
+    pub city: String,
+    #[serde(default)]
+    pub birth_date: String,
+    #[serde(default)]
+    pub comment: String,
+    pub club_id: String,
+    #[serde(default)]
+    pub rgpd_consent: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportLeadProspectsPayload {
+    pub rows: Vec<ImportLeadProspectItem>,
+}
+
+async fn post_lead_prospects_import(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Json(payload): Json<ImportLeadProspectsPayload>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let mut db = state.db.write().await;
+    let allowed = authorized_clubs_for_actor(&db, &actor_id);
+
+    let mut created = 0u32;
+    let mut skipped_duplicates = 0u32;
+    let mut rejected = 0u32;
+
+    for item in payload.rows {
+        if !allowed.contains(&item.club_id) {
+            return Err(err_resp(
+                StatusCode::FORBIDDEN,
+                format!("Import refusé (403) : club {} non autorisé.", item.club_id),
+            ));
+        }
+        let email = item.email.trim().to_lowercase();
+        if email.is_empty() || !email.contains('@') {
+            rejected += 1;
+            continue;
+        }
+        if db
+            .lead_prospects
+            .iter()
+            .any(|p| p.email.eq_ignore_ascii_case(&email) && p.club_id == item.club_id)
+        {
+            skipped_duplicates += 1;
+            continue;
+        }
+        let pid = format!("pr-imp-{}-{}", Utc::now().timestamp_millis(), created);
+        db.lead_prospects.insert(
+            0,
+            crate::models::LeadProspectRecord {
+                id: pid,
+                gender: item.gender.trim().to_string(),
+                first_name: item.first_name.trim().to_string(),
+                last_name: item.last_name.trim().to_string(),
+                email,
+                phone: item.phone.trim().to_string(),
+                street: item.street.trim().to_string(),
+                postal_code: item.postal_code.trim().to_string(),
+                city: item.city.trim().to_string(),
+                birth_date: item.birth_date.trim().to_string(),
+                comment: item.comment.trim().to_string(),
+                club_id: item.club_id,
+                source: "Import CSV 11 colonnes".into(),
+                stage: "Nouveau".into(),
+                lead_status: "Nouveau".into(),
+                rgpd_consent: item.rgpd_consent,
+                segments: vec![],
+                trial_date: None,
+                created_at: Utc::now().format("%Y-%m-%d").to_string(),
+            },
+        );
+        created += 1;
+    }
+
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec persistance serveur : {}", err_msg),
+        ));
+    }
+
+    Ok(Json(json!({
+        "ok": true,
+        "created": created,
+        "skippedDuplicates": skipped_duplicates,
+        "rejected": rejected
+    })))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PatchLeadAppointmentPayload {
+    pub start_time: String,
+}
+
+async fn patch_lead_appointment(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Path(slot_id): Path<String>,
+    Json(payload): Json<PatchLeadAppointmentPayload>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let mut db = state.db.write().await;
+    let allowed = authorized_clubs_for_actor(&db, &actor_id);
+
+    let idx = db
+        .lead_appointments
+        .iter()
+        .position(|a| a.id == slot_id)
+        .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Rendez-vous introuvable."))?;
+
+    if !allowed.contains(&db.lead_appointments[idx].club_id) {
+        return Err(err_resp(StatusCode::FORBIDDEN, "Accès refusé (403) sur ce club."));
+    }
+    let start_min = parse_hhmm_minutes(&payload.start_time)
+        .ok_or_else(|| err_resp(StatusCode::BAD_REQUEST, "Heure invalide."))?;
+    let slot_snap = db.lead_appointments[idx].clone();
+    let cand_end = start_min + slot_snap.duration_minutes.max(30);
+
+    let conflict = db.lead_appointments.iter().any(|s| {
+        if s.id == slot_snap.id || s.status == "annule" || s.coach_id != slot_snap.coach_id || s.date != slot_snap.date {
+            return false;
+        }
+        if let Some(s_start) = parse_hhmm_minutes(&s.start_time) {
+            let s_end = s_start + s.duration_minutes.max(30);
+            return start_min < s_end && s_start < cand_end;
+        }
+        false
+    });
+    if conflict {
+        return Err(err_resp(StatusCode::CONFLICT, "Report refusé : collision horaire sur ce coach."));
+    }
+
+    db.lead_appointments[idx].start_time = payload.start_time.clone();
+    db.lead_appointments[idx].status = "reporte".into();
+    if let Some(act_id) = db.lead_appointments[idx].activity_id.clone() {
+        if let Some(act) = db.lead_activities.iter_mut().find(|a| a.id == act_id) {
+            act.due_at = format!("{}T{}", slot_snap.date, payload.start_time);
+            act.status_label = "Reporté".into();
+        }
+    }
+
+    let updated = db.lead_appointments[idx].clone();
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        return Err(err_resp(StatusCode::INTERNAL_SERVER_ERROR, format!("Échec persistance : {}", err_msg)));
+    }
+    Ok(Json(json!({ "ok": true, "slot": updated })))
+}
+
+async fn delete_lead_appointment(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Path(slot_id): Path<String>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let mut db = state.db.write().await;
+    let allowed = authorized_clubs_for_actor(&db, &actor_id);
+
+    let idx = db
+        .lead_appointments
+        .iter()
+        .position(|a| a.id == slot_id)
+        .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Rendez-vous introuvable."))?;
+
+    if !allowed.contains(&db.lead_appointments[idx].club_id) {
+        return Err(err_resp(StatusCode::FORBIDDEN, "Accès refusé (403) sur ce club."));
+    }
+
+    db.lead_appointments[idx].status = "annule".into();
+    if let Some(act_id) = db.lead_appointments[idx].activity_id.clone() {
+        if let Some(act) = db.lead_activities.iter_mut().find(|a| a.id == act_id) {
+            act.status = "done".into();
+            act.status_label = "Annulé".into();
+        }
+    }
+
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        return Err(err_resp(StatusCode::INTERNAL_SERVER_ERROR, format!("Échec persistance : {}", err_msg)));
+    }
+    Ok(Json(json!({ "ok": true, "slotId": slot_id })))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2835,5 +3522,121 @@ mod tests {
         // Vérification de la persistance disque
         let reloaded = load_or_init_state(&state.data_dir);
         assert!(reloaded.employees.iter().any(|e| e.id == created_id));
+    }
+
+    #[tokio::test]
+    async fn public_lead_portal_persists_to_server_and_scopes_by_club() {
+        let state = test_state();
+
+        // 1. Visiteur anonyme lit le formulaire publié CDS
+        let (st_get, form_json) = get_public_lead_form(
+            State(state.clone()),
+            Path(("carre-de-soie".to_string(), "frm-1".to_string())),
+        )
+        .await
+        .unwrap();
+        assert_eq!(st_get, StatusCode::OK);
+        assert_eq!(form_json.0["id"], "frm-1");
+
+        // Formulaire brouillon frm-3 -> 404
+        let draft_err = get_public_lead_form(
+            State(state.clone()),
+            Path(("carre-de-soie".to_string(), "frm-3".to_string())),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(draft_err.0, StatusCode::NOT_FOUND);
+
+        // 2. Visiteur anonyme soumet le formulaire avec réponses personnalisées par ID
+        let (st_sub, sub_json) = post_public_lead_form_submit(
+            State(state.clone()),
+            Path(("carre-de-soie".to_string(), "frm-1".to_string())),
+            Json(PublicFormSubmitPayload {
+                full_name: "Alice Visiteur".to_string(),
+                email: "alice.visiteur@exemple.fr".to_string(),
+                phone: "0612345678".to_string(),
+                rgpd_consent: true,
+                answers: json!({"fld-fn": "Alice", "fld-goal": "Biocircuit"}),
+            }),
+        )
+        .await
+        .unwrap();
+        assert_eq!(st_sub, StatusCode::CREATED);
+        let prospect_id = sub_json.0["prospectId"].as_str().unwrap().to_string();
+
+        // 3. Visiteur anonyme réserve un créneau public /book/carre-de-soie/coaching-decouverte
+        let (st_book, _) = post_public_book_slot(
+            State(state.clone()),
+            Path(("carre-de-soie".to_string(), "coaching-decouverte".to_string())),
+            Json(PublicBookSlotPayload {
+                full_name: "Alice Visiteur".to_string(),
+                email: "alice.visiteur@exemple.fr".to_string(),
+                date: "2026-12-10".to_string(),
+                start_time: "14:00".to_string(),
+            }),
+        )
+        .await
+        .unwrap();
+        assert_eq!(st_book, StatusCode::CREATED);
+
+        // Collision sur le même créneau (14:30 pendant 14:00-15:00) -> 409 CONFLICT
+        let collision = post_public_book_slot(
+            State(state.clone()),
+            Path(("carre-de-soie".to_string(), "coaching-decouverte".to_string())),
+            Json(PublicBookSlotPayload {
+                full_name: "Autre Visiteur".to_string(),
+                email: "autre@exemple.fr".to_string(),
+                date: "2026-12-10".to_string(),
+                start_time: "14:30".to_string(),
+            }),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(collision.0, StatusCode::CONFLICT);
+
+        // 4. Seconde session (Sarah CDS avec Bearer) relit GET /api/lead/workspace :
+        //    voit Alice Visiteur + réponse frm-1 + RDV + activité CDS, et AUCUNE donnée Beynost
+        let sarah_login = post_local_auth_login(
+            State(state.clone()),
+            Json(LocalAuthLoginRequest {
+                email_or_id: "emp-sarah".to_string(),
+                pin_or_password: "3141".to_string(),
+                role_requested: String::new(),
+            }),
+        )
+        .await
+        .into_response();
+        let sarah_bytes = axum::body::to_bytes(sarah_login.into_body(), usize::MAX).await.unwrap();
+        let sarah_json: Value = serde_json::from_slice(&sarah_bytes).unwrap();
+        let sarah_token = sarah_json["sessionToken"].as_str().unwrap().to_string();
+        let mut h_sarah = HeaderMap::new();
+        h_sarah.insert(header::AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", sarah_token)).unwrap());
+
+        let ws = get_lead_workspace(State(state.clone()), h_sarah.clone()).await.unwrap().0;
+        let prospects = ws["prospects"].as_array().unwrap();
+        assert!(prospects.iter().any(|p| p["id"] == prospect_id && p["email"] == "alice.visiteur@exemple.fr"));
+        assert!(!prospects.iter().any(|p| p["clubId"] == "beynost"));
+        let forms = ws["forms"].as_array().unwrap();
+        assert!(!forms.iter().any(|f| f["clubId"] == "beynost"));
+
+        // Sarah CDS tente de modifier frm-2 (Beynost) -> 403 FORBIDDEN
+        let forbidden_form = put_lead_form(
+            State(state.clone()),
+            h_sarah,
+            Path("frm-2".to_string()),
+            Json(PutLeadFormPayload {
+                published: Some(false),
+                name: None,
+                fields: None,
+            }),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(forbidden_form.0, StatusCode::FORBIDDEN);
+
+        // 5. Persistance après redémarrage (rechargement disque)
+        let reloaded = load_or_init_state(&state.data_dir);
+        assert!(reloaded.lead_prospects.iter().any(|p| p.id == prospect_id));
+        assert!(reloaded.lead_appointments.iter().any(|a| a.date == "2026-12-10" && a.start_time == "14:00"));
     }
 }

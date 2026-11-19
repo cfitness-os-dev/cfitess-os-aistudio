@@ -23,6 +23,7 @@ import {
   Webhook,
 } from 'lucide-react';
 import { useCfos } from '../../context/CfosContext';
+import { clientApi } from '../../domain/clientApi';
 import { cleanUiTree } from '../../domain/cleanModeSanitizer';
 import {
   INITIAL_FICTIVE_SALES,
@@ -259,6 +260,102 @@ export function LeadCommercialHubView({
   const commercialLabelById: Record<string, string> = Object.fromEntries(
     employees.map((e) => [e.id, `${e.firstName} ${e.lastName}`])
   );
+
+  // Synchronisation serveur partagée (visiteur public -> contact canonique -> formulaire / RDV / activité)
+  useEffect(() => {
+    let cancelled = false;
+    void clientApi
+      .getLeadWorkspace({ actorId: currentUser.id, siteId: 'all' })
+      .then((ws) => {
+        if (cancelled) return;
+        if (ws.forms?.length) {
+          setFormsList(
+            ws.forms.map((f) => ({
+              id: f.id,
+              name: f.name,
+              clubId: f.clubId,
+              responsesCount: f.responsesCount,
+              createdAt: '2026-11-16',
+              published: f.published,
+              sections: f.sectionTitles?.length ?? 1,
+              sectionTitles: f.sectionTitles ?? [],
+              fields: f.fields,
+              sampleResponses: f.sampleResponses ?? [],
+            }))
+          );
+        }
+        if (ws.appointments?.length) {
+          setRdvBookings((prev) => {
+            const serverIds = new Set(ws.appointments.map((a) => a.id));
+            const mapped = ws.appointments
+              .filter((a) => a.status !== 'annule')
+              .map((a) => ({
+                id: a.id,
+                clubId: a.clubId,
+                coachId: a.coachId,
+                typeName: a.prospectName ? `${a.typeName} (${a.prospectName})` : a.typeName,
+                date: a.date,
+                startTime: a.startTime,
+                durationMinutes: a.durationMinutes,
+                capacityMax: a.capacityMax,
+                currentBookedCount: a.currentBookedCount,
+                paidRequired: false,
+                paymentStatus: (a.paymentStatus as 'non_requis' | 'attente_paiement' | 'paye') || 'non_requis',
+              }));
+            return [...mapped, ...prev.filter((p) => !serverIds.has(p.id))];
+          });
+        }
+        if (ws.activities?.length) {
+          setActivities((prev) => {
+            const serverIds = new Set(ws.activities.map((a) => a.id));
+            const mapped = ws.activities.map((a) => ({
+              id: a.id,
+              type: (a.type as FictiveActivityRow['type']) || 'CONTACT',
+              title: a.title,
+              prospectId: a.prospectId,
+              prospectName: a.prospectName,
+              clubId: a.clubId,
+              dueAt: a.dueAt,
+              status: a.status,
+              assignedToId: a.assignedToId,
+              statusLabel: a.statusLabel,
+            }));
+            return [...mapped, ...prev.filter((p) => !serverIds.has(p.id))];
+          });
+        }
+        for (const sp of ws.prospects ?? []) {
+          const exists = prospects.some(
+            (lp) => lp.email.toLowerCase() === sp.email.toLowerCase() && lp.clubId === sp.clubId
+          );
+          if (!exists) {
+            createProspect({
+              firstName: sp.firstName,
+              lastName: sp.lastName,
+              phone: sp.phone,
+              email: sp.email,
+              clubId: sp.clubId,
+              source: 'Site c.fitness',
+              goal: sp.comment || 'Soumission publique serveur',
+              rgpdConsent: sp.rgpdConsent,
+              gender: sp.gender,
+              street: sp.street,
+              postalCode: sp.postalCode,
+              city: sp.city,
+              birthDate: sp.birthDate,
+              comment: sp.comment,
+              allowEmptyPhone: true,
+            });
+          }
+        }
+      })
+      .catch(() => {
+        // Fallback démo si offline
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser.id]);
 
   // États persistants pour WhatsApp conversation (CFOS-007), Constructeur Email (CFOS-006) et Profil Club (CFOS-005)
   const [waComposerOpen, setWaComposerOpen] = useState(false);
@@ -3533,13 +3630,19 @@ export function LeadCommercialHubView({
                                 {canWrite && (
                                   <button
                                     type="button"
-                                    onClick={() =>
+                                    onClick={() => {
+                                      const nextPub = !f.published;
                                       setFormsList((prev) =>
                                         prev.map((row) =>
-                                          row.id === f.id ? { ...row, published: !row.published } : row
+                                          row.id === f.id ? { ...row, published: nextPub } : row
                                         )
-                                      )
-                                    }
+                                      );
+                                      void clientApi.putLeadForm(
+                                        { actorId: currentUser.id, siteId: 'all' },
+                                        f.id,
+                                        { published: nextPub }
+                                      );
+                                    }}
                                     className="px-2 py-1 rounded bg-violet-600/80 hover:bg-violet-600 text-white cursor-pointer"
                                   >
                                     {f.published ? 'Dépublier' : 'Publier'}

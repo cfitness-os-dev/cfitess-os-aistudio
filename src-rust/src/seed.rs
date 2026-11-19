@@ -1,8 +1,9 @@
 use crate::models::{
     AmbiguityRecord, AppDatabaseState, AuditEvent, ContractSummary, Employee, EmployeeCounter,
-    EmployeeSiteAccess, LeaveRequest, NotificationPrefs, Organization, Position, RoleProfile,
-    SensitiveBankInfo, Shift, Site, SiteHrSettings, SiteKpis, Team, TimeclockAnomaly,
-    UserPreferences,
+    EmployeeSiteAccess, LeadActivityRecord, LeadAppointmentRecord, LeadFormFieldRecord,
+    LeadFormRecord, LeadFormSampleResponseRecord, LeadProspectRecord, LeaveRequest,
+    NotificationPrefs, Organization, Position, RoleProfile, SensitiveBankInfo, Shift, Site,
+    SiteHrSettings, SiteKpis, Team, TimeclockAnomaly, UserPreferences,
 };
 use std::collections::HashMap;
 use std::fs;
@@ -316,11 +317,11 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
             },
             Employee {
                 id: "emp-master".into(),
-                first_name: "Mehdi".into(),
-                last_name: "Benali".into(),
+                first_name: "Karim".into(),
+                last_name: "Haddad".into(),
                 birth_name: None,
                 matricule: "FICT-002".into(),
-                email: "mehdi.benali@cfitness-fictif.local".into(),
+                email: "karim.haddad@cfitness-fictif.local".into(),
                 phone: "06 00 00 00 02".into(),
                 active: true,
                 hr_file_status: "complete".into(),
@@ -1069,62 +1070,6 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
                 published: false,
             },
             Shift {
-                id: "sh-maxime-cs-1".into(),
-                site_id: "club-carre-soie".into(),
-                date: "2026-11-19".into(),
-                start_time: "09:00".into(),
-                end_time: "17:00".into(),
-                break_minutes: 60,
-                employee_id: Some("emp-maxime".into()),
-                position_id: "pos-cs-accueil".into(),
-                mission_label: None,
-                tasks: vec!["Accueil & Vente Carré de Soie".into()],
-                lock_state: "none".into(),
-                published: true,
-            },
-            Shift {
-                id: "sh-maxime-cs-2".into(),
-                site_id: "club-carre-soie".into(),
-                date: "2026-11-20".into(),
-                start_time: "10:00".into(),
-                end_time: "18:00".into(),
-                break_minutes: 60,
-                employee_id: Some("emp-maxime".into()),
-                position_id: "pos-cs-accueil".into(),
-                mission_label: None,
-                tasks: vec!["Relances prospects & visites".into()],
-                lock_state: "none".into(),
-                published: true,
-            },
-            Shift {
-                id: "sh-maxime-bey-1".into(),
-                site_id: "club-beynost".into(),
-                date: "2026-11-21".into(),
-                start_time: "09:30".into(),
-                end_time: "17:30".into(),
-                break_minutes: 60,
-                employee_id: Some("emp-maxime".into()),
-                position_id: "pos-bey-accueil".into(),
-                mission_label: None,
-                tasks: vec!["Renfort accueil Beynost".into()],
-                lock_state: "none".into(),
-                published: true,
-            },
-            Shift {
-                id: "sh-chloe-bey-1".into(),
-                site_id: "club-beynost".into(),
-                date: "2026-11-19".into(),
-                start_time: "09:00".into(),
-                end_time: "17:00".into(),
-                break_minutes: 60,
-                employee_id: Some("emp-chloe".into()),
-                position_id: "pos-bey-accueil".into(),
-                mission_label: None,
-                tasks: vec!["Accueil & Relance Beynost".into()],
-                lock_state: "none".into(),
-                published: true,
-            },
-            Shift {
                 id: "sh-bey-multi".into(),
                 site_id: "club-beynost".into(),
                 date: "2026-11-18".into(),
@@ -1265,6 +1210,148 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
         ],
         preferences_by_employee,
         ambiguities: ambiguities_baseline(),
+        lead_forms: vec![
+            LeadFormRecord {
+                id: "frm-1".into(),
+                name: "Séance Découverte Carré de Soie".into(),
+                club_id: "carre-de-soie".into(),
+                published: true,
+                section_titles: vec![
+                    "Coordonnées".into(),
+                    "Objectif fitness".into(),
+                    "Consentement RGPD".into(),
+                ],
+                fields: vec![
+                    LeadFormFieldRecord { id: "fld-fn".into(), label: "Prénom".into(), field_type: "text".into(), required: true, options: vec![] },
+                    LeadFormFieldRecord { id: "fld-ln".into(), label: "Nom".into(), field_type: "text".into(), required: true, options: vec![] },
+                    LeadFormFieldRecord { id: "fld-em".into(), label: "Email".into(), field_type: "email".into(), required: true, options: vec![] },
+                    LeadFormFieldRecord { id: "fld-ph".into(), label: "Téléphone".into(), field_type: "tel".into(), required: false, options: vec![] },
+                    LeadFormFieldRecord { id: "fld-goal".into(), label: "Objectif".into(), field_type: "select".into(), required: false, options: vec!["Biocircuit".into(), "Perte de poids".into(), "Remise en forme".into()] },
+                    LeadFormFieldRecord { id: "fld-rgpd".into(), label: "J’accepte le traitement RGPD de mes données".into(), field_type: "checkbox".into(), required: true, options: vec![] },
+                ],
+                responses_count: 1,
+                sample_responses: vec![LeadFormSampleResponseRecord {
+                    id: "rep-1".into(),
+                    full_name: "Camille Garnier".into(),
+                    email: "camille.garnier@exemple.fr".into(),
+                    phone: "0611223344".into(),
+                    rgpd_consent: true,
+                    answers: serde_json::json!({"fld-fn": "Camille", "fld-ln": "Garnier", "fld-em": "camille.garnier@exemple.fr", "fld-goal": "Biocircuit", "fld-rgpd": true}),
+                    submitted_at: "2026-11-16 14:20".into(),
+                    linked_prospect_id: Some("pr-1".into()),
+                }],
+            },
+            LeadFormRecord {
+                id: "frm-2".into(),
+                name: "Bilan Checkup Beynost".into(),
+                club_id: "beynost".into(),
+                published: true,
+                section_titles: vec!["Identité".into(), "Disponibilités".into(), "Accord RGPD".into()],
+                fields: vec![
+                    LeadFormFieldRecord { id: "fld-fn2".into(), label: "Prénom".into(), field_type: "text".into(), required: true, options: vec![] },
+                    LeadFormFieldRecord { id: "fld-em2".into(), label: "Email".into(), field_type: "email".into(), required: true, options: vec![] },
+                    LeadFormFieldRecord { id: "fld-rgpd2".into(), label: "Accord RGPD obligatoire".into(), field_type: "checkbox".into(), required: true, options: vec![] },
+                ],
+                responses_count: 1,
+                sample_responses: vec![LeadFormSampleResponseRecord {
+                    id: "rep-2".into(),
+                    full_name: "Hugo Lefebvre".into(),
+                    email: "hugo.lefebvre@exemple.fr".into(),
+                    phone: "0677889900".into(),
+                    rgpd_consent: true,
+                    answers: serde_json::json!({"fld-fn2": "Hugo", "fld-em2": "hugo.lefebvre@exemple.fr", "fld-rgpd2": true}),
+                    submitted_at: "2026-11-15 11:05".into(),
+                    linked_prospect_id: Some("pr-2".into()),
+                }],
+            },
+            LeadFormRecord {
+                id: "frm-3".into(),
+                name: "Offre Rentrée Coaching (Brouillon)".into(),
+                club_id: "carre-de-soie".into(),
+                published: false,
+                section_titles: vec!["Identité".into()],
+                fields: vec![LeadFormFieldRecord { id: "fld-fn3".into(), label: "Prénom".into(), field_type: "text".into(), required: true, options: vec![] }],
+                responses_count: 0,
+                sample_responses: vec![],
+            },
+        ],
+        lead_prospects: vec![
+            LeadProspectRecord {
+                id: "pr-1".into(),
+                gender: "F".into(),
+                first_name: "Camille".into(),
+                last_name: "Garnier".into(),
+                email: "camille.garnier@exemple.fr".into(),
+                phone: "0611223344".into(),
+                street: "12 Rue République".into(),
+                postal_code: "69120".into(),
+                city: "Vaulx-en-Velin".into(),
+                birth_date: "1995-05-15".into(),
+                comment: "Intéressée par le Biocircuit".into(),
+                club_id: "carre-de-soie".into(),
+                source: "Site c.fitness".into(),
+                stage: "Contacté".into(),
+                lead_status: "Contacté".into(),
+                rgpd_consent: true,
+                segments: vec!["Relance Biocircuit".into()],
+                trial_date: None,
+                created_at: "2026-11-16".into(),
+            },
+            LeadProspectRecord {
+                id: "pr-2".into(),
+                gender: "M".into(),
+                first_name: "Hugo".into(),
+                last_name: "Lefebvre".into(),
+                email: "hugo.lefebvre@exemple.fr".into(),
+                phone: "0677889900".into(),
+                street: "5 Av de Lyon".into(),
+                postal_code: "01700".into(),
+                city: "Beynost".into(),
+                birth_date: "1991-03-22".into(),
+                comment: "Checkup Technogym".into(),
+                club_id: "beynost".into(),
+                source: "Tablette accueil".into(),
+                stage: "Nouveau".into(),
+                lead_status: "Nouveau".into(),
+                rgpd_consent: true,
+                segments: vec![],
+                trial_date: None,
+                created_at: "2026-11-15".into(),
+            },
+        ],
+        lead_appointments: vec![
+            LeadAppointmentRecord {
+                id: "slot-seed-cds".into(),
+                club_id: "carre-de-soie".into(),
+                coach_id: "emp-karim".into(),
+                type_name: "Séance Découverte Coaching".into(),
+                prospect_id: Some("pr-1".into()),
+                prospect_name: Some("Camille Garnier".into()),
+                prospect_email: Some("camille.garnier@exemple.fr".into()),
+                activity_id: Some("act-seed-cds".into()),
+                date: "2026-11-25".into(),
+                start_time: "10:00".into(),
+                duration_minutes: 60,
+                capacity_max: 1,
+                current_booked_count: 1,
+                payment_status: "non_requis".into(),
+                status: "confirme".into(),
+            },
+        ],
+        lead_activities: vec![
+            LeadActivityRecord {
+                id: "act-seed-cds".into(),
+                activity_type: "APPOINTMENT".into(),
+                title: "RDV Séance Découverte Coaching".into(),
+                prospect_id: Some("pr-1".into()),
+                prospect_name: "Camille Garnier".into(),
+                club_id: "carre-de-soie".into(),
+                due_at: "2026-11-25T10:00".into(),
+                status: "todo".into(),
+                assigned_to_id: "emp-karim".into(),
+                status_label: "Confirmé".into(),
+            },
+        ],
     }
 }
 
@@ -1281,19 +1368,27 @@ pub fn load_or_init_state(data_dir: &Path) -> AppDatabaseState {
                         migrated = true;
                     }
                 }
-                if let Some(master) = parsed.employees.iter_mut().find(|e| e.id == "emp-master") {
-                    if master.first_name == "Karim" && master.last_name == "Haddad" {
-                        master.first_name = "Mehdi".into();
-                        master.last_name = "Benali".into();
-                        master.email = "mehdi.benali@cfitness-fictif.local".into();
-                        migrated = true;
-                    }
-                }
                 for seed_shift in baseline.shifts {
                     if !parsed.shifts.iter().any(|s| s.id == seed_shift.id) {
                         parsed.shifts.push(seed_shift);
                         migrated = true;
                     }
+                }
+                if parsed.lead_forms.is_empty() {
+                    parsed.lead_forms = baseline.lead_forms;
+                    migrated = true;
+                }
+                if parsed.lead_prospects.is_empty() {
+                    parsed.lead_prospects = baseline.lead_prospects;
+                    migrated = true;
+                }
+                if parsed.lead_appointments.is_empty() {
+                    parsed.lead_appointments = baseline.lead_appointments;
+                    migrated = true;
+                }
+                if parsed.lead_activities.is_empty() {
+                    parsed.lead_activities = baseline.lead_activities;
+                    migrated = true;
                 }
                 for (eid, prefs) in baseline.preferences_by_employee {
                     parsed.preferences_by_employee.entry(eid).or_insert_with(|| {
