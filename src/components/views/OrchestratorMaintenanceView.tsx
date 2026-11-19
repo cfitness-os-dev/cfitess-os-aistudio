@@ -24,6 +24,8 @@ import {
   Users,
   Wrench,
   XCircle,
+  Upload,
+  Download,
 } from 'lucide-react';
 import { useCfos } from '../../context/CfosContext';
 import { formatClubName } from '../../domain/rules';
@@ -490,6 +492,107 @@ export function OrchestratorMaintenanceView() {
   const [newStockSupplier, setNewStockSupplier] = useState('FitSupply Pro Lyon');
   const [newStockQty, setNewStockQty] = useState(20);
   const [newStockPrice, setNewStockPrice] = useState(12.5);
+  const [stockImportReport, setStockImportReport] = useState<string | null>(null);
+
+  const handleDownloadStockCsvTemplate = () => {
+    const csv =
+      'nom;categorie;club;fournisseur;quantite;seuil;prix_ht\n' +
+      'Boisson Isotonique Citron 500ml;Nutrition / Bar;carre-de-soie;FitSupply Pro Lyon;48;15;1.40\n' +
+      'Serviette Microfibre C.Fitness;Textile & Accueil;beynost;Textile Sport France;30;10;6.50\n';
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'modele-import-stocks-cfitness.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportStocksCsv = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result || '').replace(/^\uFEFF/, '');
+      const lines = text
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter(Boolean);
+      if (lines.length < 2) {
+        setStockImportReport('Fichier CSV vide ou incomplet (en-tête + au moins 1 produit requis).');
+        return;
+      }
+      const sep = lines[0].includes(';') ? ';' : ',';
+      const headers = lines[0]
+        .split(sep)
+        .map((h) => h.trim().toLowerCase().replace(/^"|"$/g, ''));
+      const findIdx = (keys: string[]) => headers.findIndex((h) => keys.some((k) => h.includes(k)));
+      const idxName = findIdx(['nom', 'produit', 'article', 'name', 'designation']);
+      const idxCat = findIdx(['cat', 'famille']);
+      const idxClub = findIdx(['club', 'site']);
+      const idxSupplier = findIdx(['fournisseur', 'supplier']);
+      const idxQty = findIdx(['quant', 'qty', 'stock']);
+      const idxMin = findIdx(['seuil', 'min']);
+      const idxPrice = findIdx(['prix', 'price', 'tarif']);
+
+      const existingKeys = new Set(
+        stocks.map((s) => `${s.name.trim().toLowerCase()}|${s.clubId}`)
+      );
+      const validCats: StockConsumableItem['category'][] = [
+        'Nutrition / Bar',
+        'Textile & Accueil',
+        'Badges & TPV',
+        'Hygiène & Plateau',
+      ];
+      const addedItems: StockConsumableItem[] = [];
+      let skipped = 0;
+
+      lines.slice(1).forEach((line, idx) => {
+        const cols = line.split(sep).map((c) => c.trim().replace(/^"|"$/g, ''));
+        const name = (idxName >= 0 ? cols[idxName] : cols[0] || '').trim();
+        if (!name) return;
+        const clubRaw = (idxClub >= 0 ? cols[idxClub] : '').toLowerCase();
+        const clubId: ClubId =
+          clubRaw.includes('bey') || clubRaw.includes('place') ? 'beynost' : 'carre-de-soie';
+        const key = `${name.toLowerCase()}|${clubId}`;
+        if (existingKeys.has(key)) {
+          skipped += 1;
+          return;
+        }
+        existingKeys.add(key);
+
+        const rawCat = (idxCat >= 0 ? cols[idxCat] : '').toLowerCase();
+        const category: StockConsumableItem['category'] =
+          validCats.find((c) => c.toLowerCase().includes(rawCat) && rawCat.length > 2) ||
+          'Nutrition / Bar';
+        const currentQty = Math.max(0, Number((idxQty >= 0 ? cols[idxQty] : '10').replace(',', '.')) || 10);
+        const minThreshold = Math.max(1, Number((idxMin >= 0 ? cols[idxMin] : '5').replace(',', '.')) || 5);
+        const unitPriceht = Math.max(0, Number((idxPrice >= 0 ? cols[idxPrice] : '0').replace(',', '.')) || 0);
+
+        addedItems.push({
+          id: `stk-imp-${Date.now()}-${idx}`,
+          name,
+          category,
+          clubId,
+          currentQty,
+          minThreshold,
+          unit: 'unités',
+          supplier: (idxSupplier >= 0 ? cols[idxSupplier] : 'Fournisseur Import CSV') || 'Fournisseur Import CSV',
+          unitPriceht,
+          autoOrderPrepared: currentQty < minThreshold,
+        });
+      });
+
+      if (addedItems.length > 0) {
+        setStocks((prev) => [...addedItems, ...prev]);
+      }
+      setStockImportReport(
+        `${file.name} importé : ${addedItems.length} produit(s) ajouté(s), ${skipped} doublon(s) ignoré(s).`
+      );
+      e.target.value = '';
+    };
+    reader.readAsText(file, 'utf-8');
+  };
 
   // New maintenance ticket form state
   const [newEquipment, setNewEquipment] = useState('');
@@ -1312,10 +1415,40 @@ export function OrchestratorMaintenanceView() {
                     État des Stocks, Consommables &amp; Produits Bar / Boutique ({filteredStocks.length})
                   </h2>
                 </div>
-                <span className="px-2.5 py-1 rounded-lg bg-orange-50 border border-orange-200 text-orange-800 font-bold text-xs">
-                  Surveillance Seuils Active
-                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Importer liste (.csv)</span>
+                    <input
+                      type="file"
+                      accept=".csv,.txt"
+                      onChange={handleImportStocksCsv}
+                      className="hidden"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleDownloadStockCsvTemplate}
+                    className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-semibold text-xs inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Modèle CSV</span>
+                  </button>
+                </div>
               </div>
+
+              {stockImportReport && (
+                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-semibold flex items-center justify-between gap-2">
+                  <span>{stockImportReport}</span>
+                  <button
+                    type="button"
+                    onClick={() => setStockImportReport(null)}
+                    className="text-[11px] underline cursor-pointer"
+                  >
+                    Fermer
+                  </button>
+                </div>
+              )}
 
               <div className="space-y-3 text-xs">
                 {filteredStocks.map((s) => {
