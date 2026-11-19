@@ -310,21 +310,66 @@ export function computeLeadReportBreakdown(
   };
 }
 
+const PARIS_TZ = 'Europe/Paris';
+const HAS_TZ_SUFFIX_RE = /(?:[zZ]|[+-]\d{2}:\d{2})$/;
+
+function toParisDateKeyFromDate(date: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: PARIS_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
+export function extractParisDateKey(dueAtIso: string): string | null {
+  const trimmed = (dueAtIso || '').trim();
+  if (!trimmed) return null;
+  if (HAS_TZ_SUFFIX_RE.test(trimmed)) {
+    const d = new Date(trimmed);
+    if (Number.isNaN(d.getTime())) return null;
+    return toParisDateKeyFromDate(d);
+  }
+  const datePart = trimmed.slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(datePart) ? datePart : null;
+}
+
+export function formatActivityDueAtParis(dueAtIso: string): string {
+  const trimmed = (dueAtIso || '').trim();
+  if (!trimmed) return '';
+  if (HAS_TZ_SUFFIX_RE.test(trimmed)) {
+    const d = new Date(trimmed);
+    if (!Number.isNaN(d.getTime())) {
+      const parts = new Intl.DateTimeFormat('fr-CA', {
+        timeZone: PARIS_TZ,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).formatToParts(d);
+      const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
+      return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}`;
+    }
+  }
+  return trimmed.replace('T', ' ').slice(0, 16);
+}
+
 export function computeActivityDueBucket(
   dueAtIso: string,
   status: 'todo' | 'done',
   referenceDate: Date = new Date()
 ): "En retard" | "Aujourd'hui" | "Demain" | "Cette semaine" | "Plus tard" | "Faites" {
   if (status === 'done') return 'Faites';
-  const due = new Date(dueAtIso);
-  if (Number.isNaN(due.getTime())) return 'Cette semaine';
-  const refDay = new Date(
-    Date.UTC(referenceDate.getUTCFullYear(), referenceDate.getUTCMonth(), referenceDate.getUTCDate())
-  );
-  const dueDay = new Date(
-    Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate())
-  );
-  const diffDays = Math.floor((dueDay.getTime() - refDay.getTime()) / 86400000);
+  const dueKey = extractParisDateKey(dueAtIso);
+  if (!dueKey) return 'Cette semaine';
+  const refKey = toParisDateKeyFromDate(referenceDate);
+  const [dy, dm, dd] = dueKey.split('-').map(Number);
+  const [ry, rm, rd] = refKey.split('-').map(Number);
+  const refDayMs = Date.UTC(ry, rm - 1, rd);
+  const dueDayMs = Date.UTC(dy, dm - 1, dd);
+  const diffDays = Math.floor((dueDayMs - refDayMs) / 86400000);
   if (diffDays < 0) return 'En retard';
   if (diffDays === 0) return "Aujourd'hui";
   if (diffDays === 1) return 'Demain';

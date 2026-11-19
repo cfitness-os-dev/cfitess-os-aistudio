@@ -31,6 +31,7 @@ import {
   computeActivityDueBucket,
   computeLeadReportBreakdown,
   filterFictiveSales,
+  formatActivityDueAtParis,
   parseCsvLineWithQuotes,
   parseCsvRowsWithQuotes,
 } from '../../domain/leadHubHelpers';
@@ -322,7 +323,7 @@ export function LeadCommercialHubView({
           phone: sp.phone,
           email: sp.email,
           clubId: sp.clubId,
-          source: 'Site c.fitness',
+          source: (sp.source as Prospect['source']) || 'Site c.fitness',
           stage: (sp.stage as Prospect['stage']) || 'Nouveau',
           assignedToId: sp.clubId === 'beynost' ? 'emp-chloe' : 'emp-maxime',
           rgpdConsent: sp.rgpdConsent,
@@ -1014,8 +1015,8 @@ export function LeadCommercialHubView({
             )}
             <h1 className="text-base sm:text-lg font-extrabold mt-1">
               {isTechnicalMode
-                ? `CRM Commercial Bi-Club, Communication Multicanal & Traçabilité Lead (${LEAD_AUDIT_META.totalFiles} fichiers)`
-                : 'Gestion Commerciale, Prospects & Suivi Client'}
+                ? `Prospection – Vente Bi-Club, Communication Multicanal & Traçabilité Lead (${LEAD_AUDIT_META.totalFiles} fichiers)`
+                : 'Prospection – Vente · Prospects, Suivi Commercial & Ventes'}
             </h1>
           </div>
 
@@ -1933,7 +1934,7 @@ export function LeadCommercialHubView({
                           </span>
                           <strong>{a.title}</strong> · {displayProspectName} ({a.clubId}) ·{' '}
                           <span className="font-mono text-[10px] text-slate-400">
-                            {a.dueAt.replace('T', ' ')}
+                            {formatActivityDueAtParis(a.dueAt)}
                           </span>
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5">

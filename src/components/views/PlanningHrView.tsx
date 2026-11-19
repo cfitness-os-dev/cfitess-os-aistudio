@@ -775,21 +775,21 @@ export function PlanningHrView({
               <div>
                 <div className="text-[11px] font-bold uppercase tracking-wider text-violet-600">
                   {isCoursCollectifsView
-                    ? 'Cours collectifs · Salles, Coachs & Top 5 Remplissage Bi-Club'
+                    ? 'Planning cours collectifs · Salles, Coachs & Top 5 Remplissage Bi-Club'
                     : isPlanningOnlyView
-                    ? 'Planning · Grille Hebdomadaire des Équipes (Skello)'
-                    : 'Planning · Planning Général des Équipes, Pointeuse & Export Paie'}
+                    ? 'Mon planning · Grille Hebdomadaire RH (Skello)'
+                    : 'Mon planning · Planning Général des Équipes, Pointeuse & Export Paie'}
                 </div>
                 <h2 className="font-extrabold text-lg tracking-tight text-slate-900">
                   {personalScopeOnly
-                    ? 'Mon Planning Personnel'
+                    ? 'Mon planning'
                     : isCoursCollectifsView
-                    ? 'Cours collectifs — 28 cours/sem Carré de Soie · 32 cours/sem Beynost'
+                    ? 'Planning cours collectifs — 28 cours/sem Carré de Soie · 32 cours/sem Beynost'
                     : isPlanningOnlyView
                     ? forcedClubScope
-                      ? `Planning Équipe — ${formatClubName(forcedClubScope, true)}`
-                      : 'Planning des Équipes — Carré de Soie & Beynost'
-                    : 'Planning Équipes, Pointeuse & Export Paie Silae'}
+                      ? `Mon planning (Équipe) — ${formatClubName(forcedClubScope, true)}`
+                      : 'Mon planning — Carré de Soie & Beynost'
+                    : 'Mon planning, Pointeuse & Export Paie Silae'}
                 </h2>
                 <div className="text-xs text-slate-500">
                   {isCoursCollectifsView

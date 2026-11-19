@@ -69,8 +69,16 @@ interface VisualNavItem {
 
 const VISUAL_SIDEBAR_ITEMS: VisualNavItem[] = [
   {
+    id: 'nav-crm',
+    label: 'Prospection – Vente',
+    icon: TrendingUp,
+    iconColor: 'text-emerald-500',
+    sectionId: 'crm',
+    hasChevron: true,
+  },
+  {
     id: 'nav-adherents',
-    label: 'Adhérents',
+    label: 'Adhérents – CRM',
     icon: Users,
     iconColor: 'text-amber-500',
     sectionId: 'devices',
@@ -78,19 +86,29 @@ const VISUAL_SIDEBAR_ITEMS: VisualNavItem[] = [
     hasChevron: true,
   },
   {
-    id: 'nav-crm',
-    label: 'CRM & Ventes (Lead)',
-    icon: TrendingUp,
-    iconColor: 'text-emerald-500',
-    sectionId: 'crm',
-    hasChevron: true,
-  },
-  {
     id: 'nav-marketing',
-    label: 'Marketing & Téléphonie',
+    label: 'Téléphonie',
     icon: Megaphone,
     iconColor: 'text-pink-500',
     sectionId: 'telephony',
+    hasChevron: true,
+  },
+  {
+    id: 'nav-planning',
+    label: 'Mon planning',
+    icon: Calendar,
+    iconColor: 'text-purple-500',
+    sectionId: 'planning-hr',
+    subTarget: 'planning',
+    hasChevron: true,
+  },
+  {
+    id: 'nav-cours',
+    label: 'Planning cours collectifs',
+    icon: Activity,
+    iconColor: 'text-rose-500',
+    sectionId: 'planning-hr',
+    subTarget: 'cours-collectifs',
     hasChevron: true,
   },
   {
@@ -102,24 +120,6 @@ const VISUAL_SIDEBAR_ITEMS: VisualNavItem[] = [
     subTarget: 'lead-traceability',
     hasChevron: true,
     technicalOnly: true,
-  },
-  {
-    id: 'nav-planning',
-    label: 'Planning',
-    icon: Calendar,
-    iconColor: 'text-purple-500',
-    sectionId: 'planning-hr',
-    subTarget: 'planning',
-    hasChevron: true,
-  },
-  {
-    id: 'nav-cours',
-    label: 'Cours collectifs',
-    icon: Activity,
-    iconColor: 'text-rose-500',
-    sectionId: 'planning-hr',
-    subTarget: 'cours-collectifs',
-    hasChevron: true,
   },
   {
     id: 'nav-personnel',
@@ -560,9 +560,7 @@ export function AdminShell() {
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <Icon className={`w-4 h-4 shrink-0 ${item.iconColor}`} />
-                    <span className="truncate">
-                      {item.id === 'nav-crm' && !isTechnicalMode ? 'CRM & Ventes' : item.label}
-                    </span>
+                    <span className="truncate">{item.label}</span>
                   </div>
                   {item.hasChevron && (
                     <ChevronRight className="w-3.5 h-3.5 text-slate-400/70 shrink-0" />
@@ -1173,7 +1171,7 @@ export function AdminShell() {
               {isTechnicalMode && (
                 <div className="cf-card p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
                   <span className="cf-muted">
-                    Module Marketing &amp; Téléphonie WebRTC 12 Lignes (GitHub CFOS)
+                    Module Téléphonie WebRTC 12 Lignes (Ringover · périmètre en attente d&apos;audit)
                   </span>
                   <button
                     type="button"
@@ -1276,7 +1274,7 @@ export function AdminShell() {
           >
             <Users className="w-4 h-4" />
             <span className="truncate">
-              {currentUser.role === 'coach' || currentUser.role === 'apprenti' ? 'Bilans' : 'Adhérents'}
+              {currentUser.role === 'coach' || currentUser.role === 'apprenti' ? 'Bilans' : 'Adhérents – CRM'}
             </span>
           </button>
 
@@ -1293,7 +1291,7 @@ export function AdminShell() {
             }`}
           >
             <Calendar className="w-4 h-4" />
-            <span className="truncate">Planning</span>
+            <span className="truncate">Mon planning</span>
           </button>
 
           <button

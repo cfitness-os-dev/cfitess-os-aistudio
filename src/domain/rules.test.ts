@@ -6,6 +6,7 @@ import {
   computeActivityDueBucket,
   computeLeadReportBreakdown,
   filterFictiveSales,
+  formatActivityDueAtParis,
   parseCsvLineWithQuotes,
   parseCsvRowsWithQuotes,
 } from './leadHubHelpers';
@@ -1287,6 +1288,16 @@ test('LEAD-TST06 — Statistiques par période, ventes fin abonnement, CSV guill
   assert.equal(computeActivityDueBucket('2026-11-19T15:00', 'todo', ref), "Aujourd'hui");
   assert.equal(computeActivityDueBucket('2026-11-20T09:00', 'todo', ref), 'Demain');
   assert.equal(computeActivityDueBucket('2026-11-18T10:00', 'done', ref), 'Faites');
+
+  // Fuseau Europe/Paris : passage de jour, heure d'hiver (UTC+1) & heure d'été (UTC+2)
+  assert.equal(formatActivityDueAtParis('2026-11-19T17:29:00Z'), '2026-11-19 18:29');
+  assert.equal(formatActivityDueAtParis('2026-07-15T22:30:00Z'), '2026-07-16 00:30');
+  assert.equal(formatActivityDueAtParis('2026-01-15T22:30:00Z'), '2026-01-15 23:30');
+  const refWinterEvening = new Date('2026-11-19T22:30:00Z'); // 23:30 Paris le 19 nov
+  assert.equal(computeActivityDueBucket('2026-11-19T23:30:00Z', 'todo', refWinterEvening), 'Demain'); // 00:30 Paris le 20 nov
+  const refSummerLate = new Date('2026-07-15T22:15:00Z'); // 00:15 Paris le 16 juil (CEST UTC+2)
+  assert.equal(computeActivityDueBucket('2026-07-15T21:30:00Z', 'todo', refSummerLate), 'En retard'); // 23:30 Paris le 15 juil
+  assert.equal(computeActivityDueBucket('2026-07-15T22:30:00Z', 'todo', refSummerLate), "Aujourd'hui"); // 00:30 Paris le 16 juil
 });
 
 test('LEAD-TST07 — 8 vrais IDs stats, périodes YTD/last_week, CSV multiligne et RDV chevauchement/inter-club', () => {

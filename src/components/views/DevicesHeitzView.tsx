@@ -453,12 +453,12 @@ export function DevicesHeitzView() {
                 <div className="text-[11px] font-bold uppercase tracking-wider text-violet-600">
                   {isFinancesView
                     ? 'Finances · Chiffre d’Affaires, Prélèvements SEPA & Caisse NF525'
-                    : 'Adhérents · Gestion des Abonnements, Contrôle d’Accès & Bilans'}
+                    : 'Adhérents – CRM · Dossiers HeitzSystem, Abonnements & Contrôle d’Accès'}
                 </div>
                 <h2 className="font-extrabold text-lg tracking-tight text-slate-900">
                   {isFinancesView
                     ? 'Finances, Caisse TPV NF525 & Relance des Impayés SEPA (102 450 €)'
-                    : 'Adhérents Actifs (1 248), Abonnements & Portillons Heitz Bi-Club'}
+                    : 'Adhérents – CRM (1 248), Abonnements & Portillons HeitzSystem Bi-Club'}
                 </h2>
                 <div className="text-xs text-slate-500">
                   {isFinancesView

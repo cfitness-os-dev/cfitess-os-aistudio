@@ -2480,7 +2480,7 @@ async fn post_public_lead_form_submit(
             prospect_id: Some(prospect_id.clone()),
             prospect_name: full_name,
             club_id: club_id.clone(),
-            due_at: Utc::now().format("%Y-%m-%dT%H:%M").to_string(),
+            due_at: Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
             status: "todo".into(),
             assigned_to_id: if club_id == "beynost" {
                 "emp-chloe".into()
