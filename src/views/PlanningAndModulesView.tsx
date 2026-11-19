@@ -1939,7 +1939,9 @@ export function PlanningAndModulesView({
           <div>
             <div className="text-xs cf-mono text-sky-300 flex items-center gap-2">
               <Users className="w-4 h-4" />
-              MC02 • EMP01–EMP06, CPT01–CPT05, EXT01 (DPAE) & EXT02 (Onboarding)
+              {isTechnicalMode
+                ? 'MC02 • EMP01–EMP06, CPT01–CPT05, EXT01 (DPAE) & EXT02 (Onboarding)'
+                : 'Dossiers Collaborateurs & RH'}
             </div>
             <h1 className="text-xl font-bold mt-1">
               Dossiers collaborateurs, contrats & compteurs RH

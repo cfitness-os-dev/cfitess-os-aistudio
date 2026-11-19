@@ -358,11 +358,11 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                     <span className="text-sm font-extrabold">Planning des équipes</span>
                   </div>
                 )}
-                {isTechnicalMode && (
+                {!planningOnly && (
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-violet-400 shrink-0" />
                     <label htmlFor="hub-persona-select" className="text-xs cf-muted hidden sm:inline">
-                      Compte simulé :
+                      {isTechnicalMode ? 'Compte simulé :' : 'Collaborateur :'}
                     </label>
                     <select
                       id="hub-persona-select"
