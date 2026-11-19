@@ -770,7 +770,7 @@ async fn get_session(
     State(state): State<SharedState>,
     headers: HeaderMap,
 ) -> Result<Json<SessionContext>, (StatusCode, Json<Value>)> {
-    let (actor_id, site_id) = extract_actor_site(&headers);
+    let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
     let db = state.db.read().await;
     build_session_context(&db, &actor_id, &site_id)
         .map(Json)
@@ -782,7 +782,7 @@ async fn get_section_access(
     headers: HeaderMap,
     Path(section_id): Path<String>,
 ) -> Result<Json<SessionContext>, (StatusCode, Json<Value>)> {
-    let (actor_id, site_id) = extract_actor_site(&headers);
+    let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
     let db = state.db.read().await;
     let session = build_session_context(&db, &actor_id, &site_id)
         .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Session invalide."))?;
@@ -804,7 +804,7 @@ async fn get_dashboard(
     State(state): State<SharedState>,
     headers: HeaderMap,
 ) -> Result<Json<DashboardPayload>, (StatusCode, Json<Value>)> {
-    let (actor_id, site_id) = extract_actor_site(&headers);
+    let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
     let db = state.db.read().await;
     let session = build_session_context(&db, &actor_id, &site_id)
         .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Utilisateur introuvable."))?;
