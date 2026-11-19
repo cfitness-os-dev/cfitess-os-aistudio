@@ -67,12 +67,24 @@ interface MaintenanceTicket {
   id: string;
   clubId: ClubId;
   equipmentName: string;
-  category: 'Technogym / Checkup' | 'Portillons Heitz RFID/BT' | 'CVC / Sauna / Douches' | 'Informatique / VoIP';
+  category:
+    | 'Technogym / Checkup'
+    | 'Cardio (Tapis, Vélos, Rameurs)'
+    | 'Poids, Haltères & Barres'
+    | 'Câbles, Poulies & Sellerie'
+    | 'Portillons Heitz RFID/BT'
+    | 'CVC / Sauna / Douches'
+    | 'Informatique / VoIP';
   issueDescription: string;
   priority: 'Urgente' | 'Normale' | 'Préventive';
-  status: 'Signalé (Agent Maintenance)' | 'Technicien planifié' | 'Résolu';
+  status:
+    | 'Signalé (Agent Maintenance)'
+    | 'Pièce commandée'
+    | 'Technicien planifié'
+    | 'Résolu';
   supplierName: string;
   estimatedCostEur: number;
+  usedPartName?: string;
   createdAt: string;
 }
 
@@ -81,7 +93,12 @@ interface StockConsumableItem {
   clubId: ClubId;
   name: string;
   barcode?: string;
-  category: 'Nutrition / Bar' | 'Textile & Accueil' | 'Hygiène & Plateau' | 'Badges & TPV';
+  category:
+    | 'Nutrition / Bar'
+    | 'Textile & Accueil'
+    | 'Hygiène & Plateau'
+    | 'Badges & TPV'
+    | 'Pièces Détachées & Maintenance';
   currentQty: number;
   minThreshold: number;
   unit: string;
@@ -369,6 +386,45 @@ const INITIAL_STOCKS: StockConsumableItem[] = [
     autoOrderPrepared: false,
   },
   {
+    id: 'stk-maint-1',
+    clubId: 'carre-de-soie',
+    name: 'Câble Acier Gainé 5mm (Poulies & Machines Guidées)',
+    barcode: '3760123450103',
+    category: 'Pièces Détachées & Maintenance',
+    currentQty: 6,
+    minThreshold: 4,
+    unit: 'câbles',
+    supplier: 'Technogym France SAV',
+    unitPriceht: 28.5,
+    autoOrderPrepared: false,
+  },
+  {
+    id: 'stk-maint-2',
+    clubId: 'beynost',
+    name: 'Lubrifiant Silicone Tapis de Course (Bidon 1L) + Goupilles 10mm',
+    barcode: '3760123450110',
+    category: 'Pièces Détachées & Maintenance',
+    currentQty: 3,
+    minThreshold: 5,
+    unit: 'kits',
+    supplier: 'FitSupply Pro Lyon',
+    unitPriceht: 19.9,
+    autoOrderPrepared: true,
+  },
+  {
+    id: 'stk-maint-3',
+    clubId: 'carre-de-soie',
+    name: 'Kit Visserie, Bagues & Embouts Haltères / Barres Olympiques',
+    barcode: '3760123450127',
+    category: 'Pièces Détachées & Maintenance',
+    currentQty: 12,
+    minThreshold: 5,
+    unit: 'kits',
+    supplier: 'FitSupply Pro Lyon',
+    unitPriceht: 14.0,
+    autoOrderPrepared: false,
+  },
+  {
     id: 'stk-5',
     clubId: 'carre-de-soie',
     name: 'Isolat Whey Native Vanille & Chocolat (Pots 2kg)',
@@ -616,6 +672,7 @@ export function OrchestratorMaintenanceView() {
         'Textile & Accueil',
         'Badges & TPV',
         'Hygiène & Plateau',
+        'Pièces Détachées & Maintenance',
       ];
       const addedItems: StockConsumableItem[] = [];
       let skipped = 0;
@@ -675,6 +732,10 @@ export function OrchestratorMaintenanceView() {
   const [newPriority, setNewPriority] =
     useState<MaintenanceTicket['priority']>('Normale');
   const [newIssue, setNewIssue] = useState('');
+  const [newSupplierName, setNewSupplierName] = useState('');
+  const [newEstimatedCost, setNewEstimatedCost] = useState('0');
+  const [newUsedStockId, setNewUsedStockId] = useState('');
+  const [ticketStatusFilter, setTicketStatusFilter] = useState<'ALL' | MaintenanceTicket['status']>('ALL');
 
   const handleApproveDecision = (id: string) => {
     setDecisions((prev) =>
@@ -727,6 +788,20 @@ export function OrchestratorMaintenanceView() {
   const handleAddTicket = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEquipment.trim()) return;
+    const usedPart = newUsedStockId ? stocks.find((s) => s.id === newUsedStockId) : undefined;
+    if (usedPart) {
+      setStocks((prev) =>
+        prev.map((s) =>
+          s.id === usedPart.id
+            ? {
+                ...s,
+                currentQty: Math.max(0, s.currentQty - 1),
+                autoOrderPrepared: Math.max(0, s.currentQty - 1) < s.minThreshold,
+              }
+            : s
+        )
+      );
+    }
     const created: MaintenanceTicket = {
       id: `mnt-${Date.now()}`,
       clubId: newClubId,
@@ -737,17 +812,24 @@ export function OrchestratorMaintenanceView() {
       priority: newPriority,
       status: 'Signalé (Agent Maintenance)',
       supplierName:
-        newCategory === 'Technogym / Checkup'
+        newSupplierName.trim() ||
+        (newCategory === 'Technogym / Checkup' || newCategory === 'Cardio (Tapis, Vélos, Rameurs)'
           ? 'Technogym France SAV'
           : newCategory === 'Portillons Heitz RFID/BT'
           ? 'Heitz System Support'
-          : 'Prestataire Maintenance Club',
-      estimatedCostEur: 0,
+          : newCategory === 'Poids, Haltères & Barres' || newCategory === 'Câbles, Poulies & Sellerie'
+          ? 'Technicien Interne / FitSupply'
+          : 'Prestataire Maintenance Club'),
+      estimatedCostEur: Math.max(0, Number(newEstimatedCost) || 0),
+      usedPartName: usedPart ? usedPart.name : undefined,
       createdAt: new Date().toISOString().slice(0, 10),
     };
     setTickets((prev) => [created, ...prev]);
     setNewEquipment('');
     setNewIssue('');
+    setNewSupplierName('');
+    setNewEstimatedCost('0');
+    setNewUsedStockId('');
   };
 
   const handleAdvanceTicketStatus = (id: string) => {
@@ -756,6 +838,8 @@ export function OrchestratorMaintenanceView() {
         if (t.id !== id) return t;
         const nextStatus: MaintenanceTicket['status'] =
           t.status === 'Signalé (Agent Maintenance)'
+            ? 'Pièce commandée'
+            : t.status === 'Pièce commandée'
             ? 'Technicien planifié'
             : t.status === 'Technicien planifié'
             ? 'Résolu'
@@ -1782,6 +1866,7 @@ export function OrchestratorMaintenanceView() {
                         <option value="Textile & Accueil">Textile &amp; Accueil</option>
                         <option value="Badges & TPV">Badges &amp; TPV</option>
                         <option value="Hygiène & Plateau">Hygiène &amp; Plateau</option>
+                        <option value="Pièces Détachées & Maintenance">Pièces Détachées &amp; Maintenance</option>
                       </select>
                     </div>
 
@@ -1989,27 +2074,27 @@ export function OrchestratorMaintenanceView() {
                 </button>
               </div>
 
-              {/* Quick Add Ticket Form */}
+              {/* Complete Gym Maintenance Intervention Form */}
               <form
                 onSubmit={handleAddTicket}
                 className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-1 sm:grid-cols-12 gap-2.5 text-xs"
               >
                 <div className="sm:col-span-4">
                   <label className="block font-semibold text-slate-700 mb-1">
-                    Équipement concerné
+                    Équipement / Machine / Haltère *
                   </label>
                   <input
                     type="text"
                     required
                     value={newEquipment}
                     onChange={(e) => setNewEquipment(e.target.value)}
-                    placeholder="Ex: Tapis Technogym Excite #4..."
+                    placeholder="Ex: Poulie #2, Haltère 24kg, Tapis Excite #4..."
                     className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
                   />
                 </div>
                 <div className="sm:col-span-3">
                   <label className="block font-semibold text-slate-700 mb-1">
-                    Catégorie
+                    Catégorie matériel
                   </label>
                   <select
                     value={newCategory}
@@ -2019,21 +2104,87 @@ export function OrchestratorMaintenanceView() {
                     className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
                   >
                     <option value="Technogym / Checkup">Technogym / Checkup</option>
+                    <option value="Cardio (Tapis, Vélos, Rameurs)">Cardio (Tapis, Vélos, Rameurs)</option>
+                    <option value="Poids, Haltères & Barres">Poids, Haltères &amp; Barres</option>
+                    <option value="Câbles, Poulies & Sellerie">Câbles, Poulies &amp; Sellerie</option>
                     <option value="Portillons Heitz RFID/BT">Portillons Heitz RFID/BT</option>
                     <option value="CVC / Sauna / Douches">CVC / Sauna / Douches</option>
                     <option value="Informatique / VoIP">Informatique / VoIP</option>
                   </select>
                 </div>
-                <div className="sm:col-span-2">
+                <div className="sm:col-span-3">
                   <label className="block font-semibold text-slate-700 mb-1">Club</label>
                   <select
                     value={newClubId}
                     onChange={(e) => setNewClubId(e.target.value as ClubId)}
                     className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
                   >
-                    <option value="carre-de-soie">Center (CDS)</option>
-                    <option value="beynost">Place (BEY)</option>
+                    <option value="carre-de-soie">Carré de Soie (CDS)</option>
+                    <option value="beynost">Beynost (BEY)</option>
                   </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block font-semibold text-slate-700 mb-1">Priorité</label>
+                  <select
+                    value={newPriority}
+                    onChange={(e) => setNewPriority(e.target.value as MaintenanceTicket['priority'])}
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
+                  >
+                    <option value="Urgente">Urgente</option>
+                    <option value="Normale">Normale</option>
+                    <option value="Préventive">Préventive</option>
+                  </select>
+                </div>
+                <div className="sm:col-span-5">
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Pièce détachée / Produit consommé (déduit -1 du stock)
+                  </label>
+                  <select
+                    value={newUsedStockId}
+                    onChange={(e) => setNewUsedStockId(e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
+                  >
+                    <option value="">Aucune pièce sortie du stock</option>
+                    {stocks.map((st) => (
+                      <option key={st.id} value={st.id}>
+                        {st.name} (Stock : {st.currentQty} {st.unit})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="sm:col-span-4">
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Prestataire / Technicien (optionnel)
+                  </label>
+                  <input
+                    type="text"
+                    value={newSupplierName}
+                    onChange={(e) => setNewSupplierName(e.target.value)}
+                    placeholder="Auto selon catégorie ou nom..."
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
+                  />
+                </div>
+                <div className="sm:col-span-3">
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Coût estimé (€ HT)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="1"
+                    value={newEstimatedCost}
+                    onChange={(e) => setNewEstimatedCost(e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-mono"
+                  />
+                </div>
+                <div className="sm:col-span-9">
+                  <input
+                    type="text"
+                    value={newIssue}
+                    onChange={(e) => setNewIssue(e.target.value)}
+                    placeholder="Description du problème (ex: câble effiloché, vis desserrée sur haltère 24kg, sellerie déchirée)..."
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
+                  />
                 </div>
                 <div className="sm:col-span-3 flex items-end">
                   <button
@@ -2041,23 +2192,42 @@ export function OrchestratorMaintenanceView() {
                     className="w-full py-1.5 px-3 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold flex items-center justify-center gap-1 cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Créer Ticket SAV</span>
+                    <span>Créer Demande SAV</span>
                   </button>
-                </div>
-                <div className="sm:col-span-12">
-                  <input
-                    type="text"
-                    value={newIssue}
-                    onChange={(e) => setNewIssue(e.target.value)}
-                    placeholder="Description du symptôme ou de l'intervention préventive..."
-                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
-                  />
                 </div>
               </form>
 
+              {/* Status Filter Strip */}
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                {(
+                  [
+                    { id: 'ALL', label: `Toutes (${filteredTickets.length})` },
+                    { id: 'Signalé (Agent Maintenance)', label: '1. Signalé' },
+                    { id: 'Pièce commandée', label: '2. Pièce commandée' },
+                    { id: 'Technicien planifié', label: '3. En réparation' },
+                    { id: 'Résolu', label: '4. Réparé & Clôturé' },
+                  ] as const
+                ).map((st) => (
+                  <button
+                    key={st.id}
+                    type="button"
+                    onClick={() => setTicketStatusFilter(st.id)}
+                    className={`px-2.5 py-1 rounded-lg font-bold cursor-pointer border ${
+                      ticketStatusFilter === st.id
+                        ? 'bg-violet-600 text-white border-violet-600'
+                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    {st.label}
+                  </button>
+                ))}
+              </div>
+
               {/* Tickets List */}
               <div className="space-y-2.5 text-xs">
-                {filteredTickets.map((t) => (
+                {filteredTickets
+                  .filter((t) => ticketStatusFilter === 'ALL' || t.status === ticketStatusFilter)
+                  .map((t) => (
                   <div
                     key={t.id}
                     className="p-3.5 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
@@ -2073,10 +2243,23 @@ export function OrchestratorMaintenanceView() {
                         <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-semibold">
                           {t.category}
                         </span>
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            t.priority === 'Urgente'
+                              ? 'bg-rose-100 text-rose-800'
+                              : t.priority === 'Préventive'
+                              ? 'bg-sky-100 text-sky-800'
+                              : 'bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          {t.priority}
+                        </span>
                       </div>
                       <p className="text-slate-600">{t.issueDescription}</p>
                       <div className="text-[11px] text-slate-500 font-mono">
-                        Prestataire : <strong>{t.supplierName}</strong> · Échéance : {t.createdAt}
+                        Prestataire : <strong>{t.supplierName}</strong> · Date : {t.createdAt}
+                        {t.estimatedCostEur > 0 ? ` · Coût : ${t.estimatedCostEur} € HT` : ''}
+                        {t.usedPartName ? ` · Pièce stock : ${t.usedPartName}` : ''}
                       </div>
                     </div>
 
@@ -2087,10 +2270,18 @@ export function OrchestratorMaintenanceView() {
                             ? 'bg-emerald-100 text-emerald-800'
                             : t.status === 'Technicien planifié'
                             ? 'bg-blue-100 text-blue-800'
+                            : t.status === 'Pièce commandée'
+                            ? 'bg-violet-100 text-violet-800'
                             : 'bg-amber-100 text-amber-800'
                         }`}
                       >
-                        {t.status}
+                        {t.status === 'Signalé (Agent Maintenance)'
+                          ? '1. Signalé'
+                          : t.status === 'Pièce commandée'
+                          ? '2. Pièce commandée'
+                          : t.status === 'Technicien planifié'
+                          ? '3. En réparation'
+                          : '4. Réparé ✓'}
                       </span>
                       <button
                         type="button"
@@ -2101,7 +2292,7 @@ export function OrchestratorMaintenanceView() {
                             : 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white'
                         }`}
                       >
-                        {t.status === 'Résolu' ? 'Réouvrir ticket' : 'Valider étape'}
+                        {t.status === 'Résolu' ? 'Réouvrir' : 'Étape suivante →'}
                       </button>
                     </div>
                   </div>
