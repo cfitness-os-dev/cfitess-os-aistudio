@@ -313,7 +313,7 @@ const CLUB_HARDWARE_INVENTORY: HardwareNode[] = [
     id: 'hw-turnstiles-cds',
     clubId: 'carre-de-soie',
     category: 'ACCES_HEITZ',
-    shortName: 'Tourniquets RFID (Center)',
+    shortName: 'Tourniquets RFID (Carré de Soie)',
     roleShort: 'Contrôle d’accès Carré de Soie',
     ipAddress: '10.10.0.21',
     subnetMask: '255.255.255.0',
@@ -332,7 +332,7 @@ const CLUB_HARDWARE_INVENTORY: HardwareNode[] = [
     id: 'hw-turnstiles-bey',
     clubId: 'beynost',
     category: 'ACCES_HEITZ',
-    shortName: 'Tourniquets RFID (Place)',
+    shortName: 'Tourniquets RFID (Beynost)',
     roleShort: 'Contrôle d’accès Beynost',
     ipAddress: '10.20.0.21',
     subnetMask: '255.255.255.0',
@@ -370,7 +370,7 @@ const CLUB_HARDWARE_INVENTORY: HardwareNode[] = [
     id: 'hw-checkup-cds',
     clubId: 'carre-de-soie',
     category: 'BIOMETRIE_INBODY',
-    shortName: 'Technogym Checkup (Center)',
+    shortName: 'Technogym Checkup (Carré de Soie)',
     roleShort: 'Balance BIA & Caméra 3D CDS',
     ipAddress: '10.10.0.55',
     subnetMask: '255.255.255.0',
@@ -389,7 +389,7 @@ const CLUB_HARDWARE_INVENTORY: HardwareNode[] = [
     id: 'hw-checkup-inbody770-bey',
     clubId: 'beynost',
     category: 'BIOMETRIE_INBODY',
-    shortName: 'Technogym Checkup (Place)',
+    shortName: 'Technogym Checkup (Beynost)',
     roleShort: 'Balance BIA & Caméra 3D Beynost',
     ipAddress: '10.20.0.55',
     subnetMask: '255.255.255.0',
@@ -1398,9 +1398,9 @@ ${ONSITE_INSTALLATION_STEPS.map(
                           </td>
                           <td className="py-2.5 px-2 font-medium text-slate-500 dark:text-slate-400">
                             {hw.clubId === 'carre-de-soie'
-                              ? 'Center'
+                              ? 'Carré de Soie'
                               : hw.clubId === 'beynost'
-                              ? 'Place'
+                              ? 'Beynost'
                               : 'Bi-Club'}
                           </td>
                           <td className="py-2.5 px-2 font-mono font-bold text-violet-600 dark:text-violet-400">

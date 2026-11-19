@@ -513,16 +513,16 @@ export function EmployeeMobileShell() {
           {/* Greeting */}
           <div>
             <h2 className="text-xl font-extrabold flex items-center gap-1.5">
-              <span>Bonjour Thomas !</span>
+              <span>Bonjour {activeEmp.firstName} !</span>
               <span aria-hidden="true">👋</span>
             </h2>
             <p className="text-xs text-slate-400">
-              Lundi {selectedDayNum} avril 2025 ·{' '}
+              {new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date()).replace(/^\w/, (c) => c.toUpperCase())} ·{' '}
               {mobileClub === 'center' ? 'C.Fitness Carré de Soie' : 'C.Fitness Beynost'}
             </p>
           </div>
 
-          {/* Segmented Pill Toggle: Center | Place */}
+          {/* Segmented Pill Toggle: Carré de Soie | Beynost */}
           <div
             className={`grid grid-cols-2 p-1 rounded-full text-xs font-bold ${
               isDark ? 'bg-[#1B2135]' : 'bg-slate-100'
@@ -537,7 +537,7 @@ export function EmployeeMobileShell() {
                   : 'text-slate-400'
               }`}
             >
-              Center
+              Carré de Soie
             </button>
             <button
               type="button"
@@ -548,7 +548,7 @@ export function EmployeeMobileShell() {
                   : 'text-slate-400'
               }`}
             >
-              Place
+              Beynost
             </button>
           </div>
 
@@ -688,7 +688,7 @@ export function EmployeeMobileShell() {
                 time: '08:00',
                 title: 'BodyPump',
                 sub: '24 / 30 participants',
-                club: 'Center',
+                club: 'Carré de Soie',
                 iconBg: 'bg-violet-600',
                 action: () => setPhoneTab('planning'),
               },
@@ -696,7 +696,7 @@ export function EmployeeMobileShell() {
                 time: '10:00',
                 title: 'Rendez-vous commercial',
                 sub: 'Visite club - Prospect',
-                club: 'Place',
+                club: 'Beynost',
                 iconBg: 'bg-blue-600',
                 action: () => openAdminModule('crm'),
               },
@@ -704,7 +704,7 @@ export function EmployeeMobileShell() {
                 time: '12:30',
                 title: 'Maintenance',
                 sub: 'Climatisation - Espace...',
-                club: 'Center',
+                club: 'Carré de Soie',
                 iconBg: 'bg-emerald-500',
                 action: () => openAdminModule('orchestrator', 'maintenance'),
               },
@@ -729,7 +729,7 @@ export function EmployeeMobileShell() {
                 </div>
                 <span
                   className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                    item.club === 'Center'
+                    item.club === 'Carré de Soie'
                       ? 'bg-violet-500/15 text-violet-500'
                       : 'bg-blue-500/15 text-blue-500'
                   }`}
@@ -947,7 +947,7 @@ export function EmployeeMobileShell() {
                         {emp ? `${emp.firstName} ${emp.lastName}` : s.employeeId}
                       </div>
                       <div className="text-[10px] text-slate-400">
-                        {s.roleLabel} · {s.clubId === 'carre-de-soie' ? 'Center' : 'Place'}
+                        {s.roleLabel} · {s.clubId === 'carre-de-soie' ? 'Carré de Soie' : 'Beynost'}
                       </div>
                     </div>
                     <span className="font-mono font-bold text-violet-500 text-[11px]">
@@ -1104,7 +1104,7 @@ export function EmployeeMobileShell() {
                         {m.firstName} {m.lastName}
                       </div>
                       <div className="text-[10px] text-slate-400 font-mono">
-                        #{m.badgeCode} · {m.homeClubId === 'carre-de-soie' ? 'Center' : 'Place'}
+                        #{m.badgeCode} · {m.homeClubId === 'carre-de-soie' ? 'Carré de Soie' : 'Beynost'}
                       </div>
                     </div>
                     <span
@@ -1553,7 +1553,7 @@ export function EmployeeMobileShell() {
           >
             {fieldEmployees.map((e) => (
               <option key={e.id} value={e.id}>
-                {e.firstName} {e.lastName} ({e.clubId === 'carre-de-soie' ? 'Center' : 'Place'})
+                {e.firstName} {e.lastName} ({e.clubId === 'carre-de-soie' ? 'Carré de Soie' : 'Beynost'})
               </option>
             ))}
           </select>

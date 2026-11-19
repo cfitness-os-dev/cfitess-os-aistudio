@@ -286,7 +286,7 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
                         {badge.label}
                       </span>
                       <span className="font-mono text-[11px] text-slate-400">
-                        {emp.clubId === 'carre-de-soie' ? 'Center (CDS)' : 'Place (BEY)'}
+                        {emp.clubId === 'carre-de-soie' ? 'Carré de Soie' : 'Beynost'}
                       </span>
                     </div>
 

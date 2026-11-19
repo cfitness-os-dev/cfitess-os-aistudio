@@ -1270,7 +1270,7 @@ export function AdminShell() {
                       : 'bg-slate-100 border-slate-200 text-slate-700'
                   }`}
                 >
-                  Center
+                  Carré de Soie
                 </button>
                 <button
                   type="button"
@@ -1286,7 +1286,7 @@ export function AdminShell() {
                       : 'bg-slate-100 border-slate-200 text-slate-700'
                   }`}
                 >
-                  Place
+                  Beynost
                 </button>
               </div>
 

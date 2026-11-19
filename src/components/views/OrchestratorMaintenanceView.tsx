@@ -308,7 +308,7 @@ const INITIAL_MAINTENANCE_TICKETS: MaintenanceTicket[] = [
   {
     id: 'mnt-clim-center',
     clubId: 'carre-de-soie',
-    equipmentName: 'Climatisation – Espace musculation (Center · 12:30)',
+    equipmentName: 'Climatisation – Espace musculation (Carré de Soie · 12:30)',
     category: 'CVC / Sauna / Douches',
     issueDescription: 'Intervention maintenance climatisation plateau musculation programmée aujourd’hui à 12h30.',
     priority: 'Urgente',
@@ -1134,7 +1134,7 @@ export function OrchestratorMaintenanceView() {
                 {activeTab === 'MODULE_STOCKS' &&
                   'Suivi en temps réel des stocks (C.Fitness Carré de Soie & C.Fitness Beynost), alertes de seuil bas, réapprovisionnement automatique et bons de commande fournisseurs.'}
                 {activeTab === 'MODULE_MAINTENANCE' &&
-                  'Pilotage préventif et curatif du parc Technogym Biocircuit/Checkup, des centrales d’air CTA (Beynost & Center) et des portillons RFID/Bluetooth Heitz.'}
+                  'Pilotage préventif et curatif du parc Technogym Biocircuit/Checkup, des centrales d’air CTA (Beynost & Carré de Soie) et des portillons RFID/Bluetooth Heitz.'}
                 {activeTab === 'ARCHITECTURE_ORCHESTRATOR' &&
                   'Supervision des 6 Agents IA métier (RH, CRM, Recouvrement SEPA, Téléphonie, Maintenance, Pilotage) avec validation humaine en 1 clic.'}
                 {activeTab === 'INFRA_POSTGRES_TEMPORAL' &&
@@ -2185,7 +2185,7 @@ export function OrchestratorMaintenanceView() {
                 {filteredTickets.length} dossiers
               </div>
               <div className="text-[11px] text-violet-600 font-semibold mt-0.5">
-                Dont CTA Beynost (15 avr.) &amp; Clim Center (12:30)
+                Dont CTA Beynost (15 avr.) &amp; Clim Carré de Soie (12:30)
               </div>
             </div>
             <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs">
@@ -2497,7 +2497,7 @@ export function OrchestratorMaintenanceView() {
                 {[
                   {
                     partner: 'ClimRhône Maintenance (CVC / CTA)',
-                    scope: 'Centrales d’Air CTA Beynost & Climatisation Musculation Center',
+                    scope: 'Centrales d’Air CTA Beynost & Climatisation Musculation Carré de Soie',
                     nextDate: '14 & 15 avril 2025',
                     badge: '2 interventions cette semaine',
                   },

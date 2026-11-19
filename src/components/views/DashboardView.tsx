@@ -1191,11 +1191,11 @@ export function DashboardView() {
                       <span className="font-bold tabular-nums">{activePoint.total}</span>
                     </div>
                     <div className="flex items-center justify-between gap-4">
-                      <span className="flex items-center gap-1 text-violet-500">● Center</span>
+                      <span className="flex items-center gap-1 text-violet-500">● Carré de Soie</span>
                       <span className="font-bold tabular-nums">{activePoint.center}</span>
                     </div>
                     <div className="flex items-center justify-between gap-4">
-                      <span className="flex items-center gap-1 text-blue-500">● Place</span>
+                      <span className="flex items-center gap-1 text-blue-500">● Beynost</span>
                       <span className="font-bold tabular-nums">{activePoint.place}</span>
                     </div>
                   </div>
@@ -1317,8 +1317,8 @@ export function DashboardView() {
                     }`}
                   >
                     <option value="all">Tous les clubs</option>
-                    <option value="center">Center</option>
-                    <option value="place">Place</option>
+                    <option value="center">Carré de Soie</option>
+                    <option value="place">Beynost</option>
                   </select>
                 </div>
 
@@ -1684,7 +1684,7 @@ export function DashboardView() {
                     time: '08:00',
                     title: 'Cours BodyPump',
                     sub: '24 / 30 participants',
-                    club: 'Center',
+                    club: 'Carré de Soie',
                     clubStyle: isDark
                       ? 'bg-violet-500/20 text-violet-300'
                       : 'bg-violet-50 text-violet-700',
@@ -1696,7 +1696,7 @@ export function DashboardView() {
                     time: '10:00',
                     title: 'Rendez-vous commercial',
                     sub: 'Visite club – Prospect',
-                    club: 'Place',
+                    club: 'Beynost',
                     clubStyle: isDark
                       ? 'bg-blue-500/20 text-blue-300'
                       : 'bg-blue-50 text-blue-700',
@@ -1708,7 +1708,7 @@ export function DashboardView() {
                     time: '12:30',
                     title: 'Intervention maintenance',
                     sub: 'Climatisation – Espace musculation',
-                    club: 'Center',
+                    club: 'Carré de Soie',
                     clubStyle: isDark
                       ? 'bg-violet-500/20 text-violet-300'
                       : 'bg-violet-50 text-violet-700',
@@ -1720,7 +1720,7 @@ export function DashboardView() {
                     time: '18:00',
                     title: 'Cours Yoga',
                     sub: '28 / 30 participants',
-                    club: 'Place',
+                    club: 'Beynost',
                     clubStyle: isDark
                       ? 'bg-blue-500/20 text-blue-300'
                       : 'bg-blue-50 text-blue-700',

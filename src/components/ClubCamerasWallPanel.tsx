@@ -24,7 +24,7 @@ export interface ClubCameraFeed {
   name: string;
   clubId: ClubId;
   clubLabel: string;
-  clubShort: 'Center' | 'Place';
+  clubShort: 'Carré de Soie' | 'Beynost';
   zone: string;
   ipAddress: string;
   protocol: string;
@@ -46,7 +46,7 @@ export const CLUB_CAMERAS: ClubCameraFeed[] = [
     name: 'Accueil & Tourniquets Tripodes Heitz',
     clubId: 'carre-de-soie',
     clubLabel: 'C.Fitness Carré de Soie · Vaulx-en-Velin',
-    clubShort: 'Center',
+    clubShort: 'Carré de Soie',
     zone: 'Entrée Principale & Caisse TPV',
     ipAddress: '10.10.0.61',
     protocol: 'RTSP / WebRTC H.265+ PoE',
@@ -65,7 +65,7 @@ export const CLUB_CAMERAS: ClubCameraFeed[] = [
     name: 'Plateau Musculation & Racks Olympiques',
     clubId: 'carre-de-soie',
     clubLabel: 'C.Fitness Carré de Soie · Vaulx-en-Velin',
-    clubShort: 'Center',
+    clubShort: 'Carré de Soie',
     zone: 'Zone Force & Poids Libres',
     ipAddress: '10.10.0.62',
     protocol: 'RTSP / WebRTC H.265+ PoE',
@@ -84,7 +84,7 @@ export const CLUB_CAMERAS: ClubCameraFeed[] = [
     name: 'Espace Cardio & Biocircuit Technogym',
     clubId: 'carre-de-soie',
     clubLabel: 'C.Fitness Carré de Soie · Vaulx-en-Velin',
-    clubShort: 'Center',
+    clubShort: 'Carré de Soie',
     zone: 'Cardio Excite & Bornes Unity',
     ipAddress: '10.10.0.63',
     protocol: 'RTSP / WebRTC H.265+ PoE',
@@ -103,7 +103,7 @@ export const CLUB_CAMERAS: ClubCameraFeed[] = [
     name: 'Studio Cours Collectifs & Bilan Checkup',
     clubId: 'carre-de-soie',
     clubLabel: 'C.Fitness Carré de Soie · Vaulx-en-Velin',
-    clubShort: 'Center',
+    clubShort: 'Carré de Soie',
     zone: 'Studio LesMills & Salle Bilan',
     ipAddress: '10.10.0.64',
     protocol: 'RTSP / WebRTC H.265+ PoE',
@@ -122,7 +122,7 @@ export const CLUB_CAMERAS: ClubCameraFeed[] = [
     name: 'Accueil & Portillons RFID/BLE Heitz',
     clubId: 'beynost',
     clubLabel: 'C.Fitness Beynost · ZAC des Baterses',
-    clubShort: 'Place',
+    clubShort: 'Beynost',
     zone: 'Réception, TPV & Sas PMR',
     ipAddress: '10.20.0.61',
     protocol: 'RTSP / WebRTC H.265+ PoE',
@@ -141,7 +141,7 @@ export const CLUB_CAMERAS: ClubCameraFeed[] = [
     name: 'Plateau Musculation & Haltérophilie',
     clubId: 'beynost',
     clubLabel: 'C.Fitness Beynost · ZAC des Baterses',
-    clubShort: 'Place',
+    clubShort: 'Beynost',
     zone: 'Machines Guidées PureStrength',
     ipAddress: '10.20.0.62',
     protocol: 'RTSP / WebRTC H.265+ PoE',
@@ -160,7 +160,7 @@ export const CLUB_CAMERAS: ClubCameraFeed[] = [
     name: 'Zone Cross-Training & Cardio Technogym',
     clubId: 'beynost',
     clubLabel: 'C.Fitness Beynost · ZAC des Baterses',
-    clubShort: 'Place',
+    clubShort: 'Beynost',
     zone: 'Cage Rig Fonctionnel & Rameurs',
     ipAddress: '10.20.0.63',
     protocol: 'RTSP / WebRTC H.265+ PoE',
@@ -179,7 +179,7 @@ export const CLUB_CAMERAS: ClubCameraFeed[] = [
     name: 'Accès Parking & Issue de Secours ERP',
     clubId: 'beynost',
     clubLabel: 'C.Fitness Beynost · ZAC des Baterses',
-    clubShort: 'Place',
+    clubShort: 'Beynost',
     zone: 'Parking Adhérents & Issue Sud',
     ipAddress: '10.20.0.64',
     protocol: 'RTSP / WebRTC H.265+ IR Auto',
@@ -784,7 +784,7 @@ export function ClubCamerasWallPanel() {
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Center (4)
+              Carré de Soie (4)
             </button>
             <button
               type="button"
@@ -797,7 +797,7 @@ export function ClubCamerasWallPanel() {
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Place (4)
+              Beynost (4)
             </button>
           </div>
 
@@ -1131,8 +1131,8 @@ export function ClubCamerasWallPanel() {
                 Synchro Portillon Heitz :{' '}
                 <strong>{latestAccessEvent.memberName}</strong> (
                 {latestAccessEvent.clubId === 'carre-de-soie'
-                  ? 'Portillon Center'
-                  : 'Portillon Place'}
+                  ? 'Portillon Carré de Soie'
+                  : 'Portillon Beynost'}
                 )
               </span>
             </span>

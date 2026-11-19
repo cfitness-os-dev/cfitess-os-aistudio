@@ -150,7 +150,7 @@ export function AcademyView() {
                 1 248 <span className="text-xs font-bold text-emerald-600">↑ +12%</span>
               </div>
               <div className="text-[11px] text-slate-500">
-                Center : 682 (+10%) · Place : 566 (+14%)
+                Carré de Soie : 682 (+10%) · Beynost : 566 (+14%)
               </div>
               <button
                 type="button"
@@ -170,7 +170,7 @@ export function AcademyView() {
                 102 450 € <span className="text-xs font-bold text-emerald-600">↑ +8%</span>
               </div>
               <div className="text-[11px] text-slate-500">
-                Center : 54 230 € · Place : 48 220 €
+                Carré de Soie : 54 230 € · Beynost : 48 220 €
               </div>
               <button
                 type="button"
@@ -190,7 +190,7 @@ export function AcademyView() {
                 78 % <span className="text-xs font-bold text-emerald-600">↑ +6%</span>
               </div>
               <div className="text-[11px] text-slate-500">
-                Center : 76 % (28 cours) · Place : 80 % (32 cours)
+                Carré de Soie : 76 % (28 cours) · Beynost : 80 % (32 cours)
               </div>
               <button
                 type="button"

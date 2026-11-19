@@ -776,7 +776,7 @@ export function DevicesHeitzView() {
               <div className="text-lg font-black text-slate-900 mt-0.5">
                 1 248 <span className="text-emerald-600 text-xs font-bold">↑ +12%</span>
               </div>
-              <div className="text-[11px] text-slate-500">682 Center · 566 Place</div>
+              <div className="text-[11px] text-slate-500">682 Carré de Soie · 566 Beynost</div>
             </div>
             <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200">
               <div className="text-slate-500 font-medium">Abonnements Annuels (41 %)</div>
