@@ -50,8 +50,8 @@ export type ArchitectTabId =
 const CLIENT_INSTALL_PREREQUISITES = [
   {
     id: 'req-heitz',
-    system: '1. Heitz System (Adhérents, Portillons & SEPA)',
-    ask: 'IP locale du serveur Windows Heitz (Heitz-WS.exe + port), identifiants API Heitz, codes centres (Carré de Soie & Beynost) et export CSV initial des adhérents.',
+    system: '1. Heitz System (Adhérents, Portillons, Caisse & SEPA)',
+    ask: 'IP locale du serveur Windows Heitz (Heitz-WS.exe + port), identifiants API Heitz, codes centres (Carré de Soie & Beynost) et export CSV initial des adhérents + articles.',
     envHint: 'HEITZ_WS_URL, HEITZ_API_KEY',
   },
   {
@@ -68,21 +68,33 @@ const CLIENT_INSTALL_PREREQUISITES = [
   },
   {
     id: 'req-telecom',
-    system: '4. Téléphonie, SMS 07 & WhatsApp Business (CRM & Recouvrement)',
-    ask: 'Accès passerelle SIP/GSM (Yeastar / lignes 07) ou fournisseur SMS, plus identifiants Meta WhatsApp Business API (Phone Number ID + Token) pour les relances.',
+    system: '4. Migration Ringover & Lead → OVHcloud SIP (04), SIM 07 Yeastar & WhatsApp',
+    ask: 'RIO / portabilité fixes 04 (OVHcloud SIP), cartes SIM 07 + accès passerelle Yeastar 4G, identifiants Meta WhatsApp Business API, et export Excel initial des prospects Lead.',
     envHint: 'SIP_TRUNK_HOST, WHATSAPP_TOKEN, WHATSAPP_PHONE_ID',
   },
   {
     id: 'req-server-ollama',
-    system: '5. Serveur Local Club & Agent IA (Ollama)',
-    ask: 'Accès admin/SSH au serveur local du club (IP fixe LAN, ports 80/443/8080), URL Ollama locale + modèle IA choisi, et disque/NAS externe pour sauvegardes 3-2-1.',
+    system: '5. Serveur Local Club, Agent IA (Ollama), Caméras & Douchette',
+    ask: 'Accès admin/SSH au serveur local (IP fixe LAN, ports 80/443/8080), URL Ollama locale + modèle IA, NAS externe 3-2-1, flux RTSP caméras IP et test douchette USB EAN.',
     envHint: 'CFITNESS_BIND_ADDR, OLLAMA_BASE_URL, OLLAMA_DEFAULT_MODEL',
   },
   {
     id: 'req-domain-smtp',
     system: '6. Nom de domaine, Accès distant & Boîtes Email (SMTP)',
-    ask: 'Nom de domaine ou accès VPN/Zero Trust dirigeants, et identifiants SMTP (ex. contact@c.fitness, recrutement@c.fitness) pour les emails automatiques & relances.',
+    ask: 'Nom de domaine ou accès VPN/Zero Trust dirigeants, et identifiants SMTP (contact@c.fitness, recrutement@c.fitness) pour les emails automatiques, relances et candidatures.',
     envHint: 'SMTP_HOST, SMTP_USER, SMTP_PASS',
+  },
+  {
+    id: 'req-legal-docs',
+    system: '7. Modèles Contrats RH & CGV Adhérents (Recouvrement IA)',
+    ask: 'Validation juriste/comptable du CDI C.FITNESS déjà intégré + récupération des modèles CDD, Apprentissage BPJEPS, Avenants, Règlement intérieur et CGV adhérents à jour.',
+    envHint: 'Dossier /templates/rh-legal',
+  },
+  {
+    id: 'req-stocks-sav',
+    system: '8. Exports Initiaux Stocks, Codes EAN & Contrats SAV Clubs',
+    ask: 'Liste CSV des produits bar/boutique/pièces détachées (avec codes EAN) et contacts/contrats SAV des 2 clubs (Technogym, Hoist/Hammer/Matrix, Piscine/Spa, CVC, Sono/TV).',
+    envHint: 'Import CSV dans Stock & Achats',
   },
 ];
 
