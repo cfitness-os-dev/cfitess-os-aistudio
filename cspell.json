@@ -4,6 +4,7 @@
   "words": [
     "arcep",
     "arrivee",
+    "ascii",
     "avancee",
     "biclub",
     "bruteforce",
@@ -35,11 +36,16 @@
     "muscu",
     "nogo",
     "numero",
+    "ollama",
     "parametres",
     "persistee",
     "persistees",
     "persistes",
+    "persistée",
+    "persistées",
+    "persistés",
     "prelevement",
+    "qwen",
     "regularisation",
     "regularised",
     "reinitialisation",
@@ -51,9 +57,11 @@
     "sepa",
     "silae",
     "skello",
+    "systeme",
     "totp",
     "whatsapp",
-    "wiegand"
+    "wiegand",
+    "Dépublier"
   ],
   "ignorePaths": [
     "node_modules/**",
