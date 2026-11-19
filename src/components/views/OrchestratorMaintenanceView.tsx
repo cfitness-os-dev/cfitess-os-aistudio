@@ -26,6 +26,9 @@ import {
   XCircle,
   Upload,
   Download,
+  Barcode,
+  Trash2,
+  Search,
 } from 'lucide-react';
 import { useCfos } from '../../context/CfosContext';
 import { formatClubName } from '../../domain/rules';
@@ -77,6 +80,7 @@ interface StockConsumableItem {
   id: string;
   clubId: ClubId;
   name: string;
+  barcode?: string;
   category: 'Nutrition / Bar' | 'Textile & Accueil' | 'Hygiène & Plateau' | 'Badges & TPV';
   currentQty: number;
   minThreshold: number;
@@ -316,6 +320,7 @@ const INITIAL_STOCKS: StockConsumableItem[] = [
     id: 'stk-1',
     clubId: 'beynost',
     name: 'Cadenas Acier Haute Sécurité (Vente TPV 8 €)',
+    barcode: '3760123450011',
     category: 'Badges & TPV',
     currentQty: 4,
     minThreshold: 10,
@@ -328,6 +333,7 @@ const INITIAL_STOCKS: StockConsumableItem[] = [
     id: 'stk-2',
     clubId: 'carre-de-soie',
     name: 'Serviettes Microfibres Brodées C.Fitness',
+    barcode: '3760123450028',
     category: 'Textile & Accueil',
     currentQty: 18,
     minThreshold: 25,
@@ -340,6 +346,7 @@ const INITIAL_STOCKS: StockConsumableItem[] = [
     id: 'stk-3',
     clubId: 'carre-de-soie',
     name: 'Cartes / Badges RFID MIFARE Heitz Vierges',
+    barcode: '3760123450035',
     category: 'Badges & TPV',
     currentQty: 85,
     minThreshold: 30,
@@ -352,6 +359,7 @@ const INITIAL_STOCKS: StockConsumableItem[] = [
     id: 'stk-4',
     clubId: 'beynost',
     name: 'Spray Désinfectant Virucide Plateau (Bidons 5L)',
+    barcode: '3760123450042',
     category: 'Hygiène & Plateau',
     currentQty: 9,
     minThreshold: 6,
@@ -492,7 +500,72 @@ export function OrchestratorMaintenanceView() {
   const [newStockSupplier, setNewStockSupplier] = useState('FitSupply Pro Lyon');
   const [newStockQty, setNewStockQty] = useState(20);
   const [newStockPrice, setNewStockPrice] = useState(12.5);
+  const [newStockBarcode, setNewStockBarcode] = useState('');
   const [stockImportReport, setStockImportReport] = useState<string | null>(null);
+  const [barcodeInput, setBarcodeInput] = useState('');
+  const [scanMode, setScanMode] = useState<'OUT_1' | 'IN_1' | 'IN_10'>('OUT_1');
+  const [scanFeedback, setScanFeedback] = useState<string | null>(null);
+  const [stockSearch, setStockSearch] = useState('');
+  const [stockLowOnly, setStockLowOnly] = useState(false);
+
+  const handleBarcodeScanSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = barcodeInput.trim();
+    if (!code) return;
+    const match = stocks.find(
+      (s) =>
+        (s.barcode && s.barcode.toLowerCase() === code.toLowerCase()) ||
+        s.id.toLowerCase() === code.toLowerCase()
+    );
+    if (!match) {
+      setNewStockBarcode(code);
+      setScanFeedback(
+        `Code-barres « ${code} » inconnu : pré-rempli dans le formulaire à droite pour créer la fiche produit.`
+      );
+      setBarcodeInput('');
+      return;
+    }
+    const delta = scanMode === 'OUT_1' ? -1 : scanMode === 'IN_1' ? 1 : 10;
+    const nextQty = Math.max(0, match.currentQty + delta);
+    setStocks((prev) =>
+      prev.map((s) =>
+        s.id === match.id
+          ? { ...s, currentQty: nextQty, autoOrderPrepared: nextQty < s.minThreshold }
+          : s
+      )
+    );
+    const modeLabel =
+      scanMode === 'OUT_1' ? 'Sortie (-1)' : scanMode === 'IN_1' ? 'Entrée (+1)' : 'Réception (+10)';
+    setScanFeedback(
+      `Douchette OK · ${modeLabel} : ${match.name} (${code}) → Nouveau stock : ${nextQty} ${match.unit}.`
+    );
+    setBarcodeInput('');
+  };
+
+  const handleDeleteStock = (id: string) => {
+    const target = stocks.find((s) => s.id === id);
+    setStocks((prev) => prev.filter((s) => s.id !== id));
+    if (target) {
+      setScanFeedback(`Référence supprimée de l'inventaire : ${target.name}.`);
+    }
+  };
+
+  const handleExportStocksCsv = () => {
+    const header = 'nom;code_barre;categorie;club;fournisseur;quantite;seuil;prix_ht\n';
+    const rows = stocks
+      .map(
+        (s) =>
+          `${s.name};${s.barcode || ''};${s.category};${s.clubId};${s.supplier};${s.currentQty};${s.minThreshold};${s.unitPriceht.toFixed(2)}`
+      )
+      .join('\n');
+    const blob = new Blob(['\uFEFF' + header + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `inventaire-stocks-cfitness-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const handleDownloadStockCsvTemplate = () => {
     const csv =
@@ -748,6 +821,7 @@ export function OrchestratorMaintenanceView() {
       id: `stk-${Date.now()}`,
       clubId: newStockClub,
       name: newStockName.trim(),
+      barcode: newStockBarcode.trim() || undefined,
       category: newStockCategory,
       currentQty: newStockQty,
       minThreshold: Math.max(5, Math.round(newStockQty * 0.3)),
@@ -758,6 +832,7 @@ export function OrchestratorMaintenanceView() {
     };
     setStocks((prev) => [newStk, ...prev]);
     setNewStockName('');
+    setNewStockBarcode('');
   };
 
   const handleAdvancePoStatus = (id: string) => {
@@ -1434,7 +1509,97 @@ export function OrchestratorMaintenanceView() {
                     <Download className="w-3.5 h-3.5" />
                     <span>Modèle CSV</span>
                   </button>
+                  <button
+                    type="button"
+                    onClick={handleExportStocksCsv}
+                    className="px-2.5 py-1.5 rounded-xl bg-violet-50 hover:bg-violet-100 border border-violet-300 text-violet-800 font-semibold text-xs inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Exporter inventaire</span>
+                  </button>
                 </div>
+              </div>
+
+              {/* Douchette Code-Barres (USB / Bluetooth HID) + Recherche & Filtre */}
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5 text-xs">
+                <form onSubmit={handleBarcodeScanSubmit} className="flex flex-wrap items-center gap-2">
+                  <div className="inline-flex items-center gap-1.5 font-bold text-violet-700 shrink-0">
+                    <Barcode className="w-4 h-4" />
+                    <span>Douchette EAN :</span>
+                  </div>
+                  <div className="inline-flex rounded-lg border border-slate-300 bg-white p-0.5 text-[11px]">
+                    {(
+                      [
+                        { id: 'OUT_1', label: 'Sortie (-1)' },
+                        { id: 'IN_1', label: 'Entrée (+1)' },
+                        { id: 'IN_10', label: 'Réception (+10)' },
+                      ] as const
+                    ).map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => setScanMode(m.id)}
+                        className={`px-2 py-1 rounded font-bold cursor-pointer ${
+                          scanMode === m.id
+                            ? 'bg-violet-600 text-white'
+                            : 'text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    type="text"
+                    value={barcodeInput}
+                    onChange={(e) => setBarcodeInput(e.target.value)}
+                    placeholder="Scanner un code-barres (ex. 3760123450011) + Entrée..."
+                    className="flex-1 min-w-[200px] px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-900 font-mono text-xs"
+                  />
+                  <button
+                    type="submit"
+                    className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-bold cursor-pointer"
+                  >
+                    Valider scan
+                  </button>
+                </form>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="relative flex-1 min-w-[180px]">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={stockSearch}
+                      onChange={(e) => setStockSearch(e.target.value)}
+                      placeholder="Rechercher un produit, fournisseur ou code EAN..."
+                      className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-xs"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setStockLowOnly((prev) => !prev)}
+                    className={`px-2.5 py-1.5 rounded-lg border font-bold text-[11px] cursor-pointer ${
+                      stockLowOnly
+                        ? 'bg-rose-600 text-white border-rose-600'
+                        : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                    }`}
+                  >
+                    Seuils bas uniquement ({lowStockCount})
+                  </button>
+                </div>
+
+                {scanFeedback && (
+                  <div className="p-2 rounded-lg bg-violet-50 border border-violet-300 text-violet-900 font-semibold flex items-center justify-between gap-2">
+                    <span>{scanFeedback}</span>
+                    <button
+                      type="button"
+                      onClick={() => setScanFeedback(null)}
+                      className="text-[11px] underline cursor-pointer"
+                    >
+                      Fermer
+                    </button>
+                  </div>
+                )}
               </div>
 
               {stockImportReport && (
@@ -1451,7 +1616,18 @@ export function OrchestratorMaintenanceView() {
               )}
 
               <div className="space-y-3 text-xs">
-                {filteredStocks.map((s) => {
+                {filteredStocks
+                  .filter((s) => {
+                    if (stockLowOnly && s.currentQty >= s.minThreshold) return false;
+                    if (!stockSearch.trim()) return true;
+                    const q = stockSearch.toLowerCase();
+                    return (
+                      s.name.toLowerCase().includes(q) ||
+                      s.supplier.toLowerCase().includes(q) ||
+                      (s.barcode || '').toLowerCase().includes(q)
+                    );
+                  })
+                  .map((s) => {
                   const isLow = s.currentQty < s.minThreshold;
                   const ratio = Math.min(100, Math.round((s.currentQty / (s.minThreshold * 2)) * 100));
                   return (
@@ -1467,6 +1643,11 @@ export function OrchestratorMaintenanceView() {
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-bold text-slate-900 text-sm">{s.name}</span>
+                            {s.barcode && (
+                              <span className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-300 text-slate-600 font-mono text-[10px]">
+                                EAN {s.barcode}
+                              </span>
+                            )}
                             <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-600 text-[10px] font-semibold">
                               {s.category}
                             </span>
@@ -1528,6 +1709,14 @@ export function OrchestratorMaintenanceView() {
                             <ShoppingCart className="w-3.5 h-3.5" />
                             <span>Commander / Réceptionner (+25)</span>
                           </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteStock(s.id)}
+                            title="Supprimer cette référence du catalogue"
+                            className="p-1.5 rounded-lg bg-white hover:bg-rose-50 border border-slate-300 hover:border-rose-300 text-slate-500 hover:text-rose-600 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -1561,6 +1750,19 @@ export function OrchestratorMaintenanceView() {
                       onChange={(e) => setNewStockName(e.target.value)}
                       placeholder="Ex: Barres Protéinées Chocolat (Boîte x24)..."
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      Code-barres EAN / SKU (Douchette)
+                    </label>
+                    <input
+                      type="text"
+                      value={newStockBarcode}
+                      onChange={(e) => setNewStockBarcode(e.target.value)}
+                      placeholder="Ex: 3760123450099 (optionnel)"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-mono"
                     />
                   </div>
 
