@@ -419,10 +419,10 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
               )}
             </div>
 
-            {/* Barre des 13 sous-sections */}
+            {/* Barre des sous-sections (retour à la ligne sans scrollbar) */}
             {!planningOnly && (
-            <div className="overflow-x-auto pb-1">
-              <div className="flex items-center gap-1.5 min-w-max">
+            <div>
+              <div className="flex flex-wrap items-center gap-1.5">
                 {isTechnicalMode && (
                   <span className="text-[11px] cf-mono cf-muted mr-1.5 flex items-center gap-1">
                     <SlidersHorizontal className="w-3.5 h-3.5" />
