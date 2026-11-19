@@ -2340,8 +2340,6 @@ export function PlanningAndModulesView({
                       managedTeamIds: [],
                     });
                     addStaffEmployee({
-                      id: serverRes.employee.id,
-                      pinCode: '1234',
                       firstName: newEmpFirst.trim(),
                       lastName: newEmpLast.trim(),
                       contractType: newEmpContract,
@@ -2545,8 +2543,14 @@ export function PlanningAndModulesView({
                     {selectedEmp.siteAccesses.map((acc) => {
                       const canEditThisClub = canEditSiteAccess(acc.siteId);
                       const clubTeams = dashboard.teams.filter((t) => t.siteId === acc.siteId);
-                      const teamOptions = clubTeams.map((t) => ({ id: t.id, name: t.name }));
-                      const hasLoadedTeams = teamOptions.length > 0;
+                      const teamOptions =
+                        clubTeams.length > 0
+                          ? clubTeams.map((t) => ({ id: t.id, name: t.name }))
+                          : [
+                              { id: `${acc.siteId}-accueil`, name: 'Accueil' },
+                              { id: `${acc.siteId}-coaching`, name: 'Coaching' },
+                              { id: `${acc.siteId}-commercial`, name: 'Commercial' },
+                            ];
                       return (
                         <div
                           key={acc.siteId}
@@ -2608,11 +2612,7 @@ export function PlanningAndModulesView({
                           </div>
                           <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
                             <span className="cf-muted">Équipes d&apos;appartenance ({siteMap.get(acc.siteId) ?? acc.siteId}) :</span>
-                            {!hasLoadedTeams ? (
-                              <span className="cf-mono text-[10px] text-amber-300">
-                                {acc.teamIds.length > 0 ? acc.teamIds.join(', ') : 'Aucune'} · Référentiel club non chargé dans ce filtre (passez sur « Tous les clubs » ou ce club pour modifier)
-                              </span>
-                            ) : teamOptions.map((tm) => {
+                            {teamOptions.map((tm) => {
                               const activeTeam = acc.teamIds.includes(tm.id);
                               return (
                                 <button
@@ -2645,11 +2645,7 @@ export function PlanningAndModulesView({
                           </div>
                           <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
                             <span className="cf-muted">Équipes encadrées :</span>
-                            {!hasLoadedTeams ? (
-                              <span className="cf-mono text-[10px] cf-muted">
-                                {(acc.managedTeamIds ?? []).length > 0 ? (acc.managedTeamIds ?? []).join(', ') : 'Aucune'} (référentiel club non chargé)
-                              </span>
-                            ) : acc.profileId === 'employe_standard' ||
+                            {acc.profileId === 'employe_standard' ||
                             acc.profileId === 'lecture_seule_avancee' ? (
                               <span className="cf-mono text-[10px] cf-muted">
                                 Aucune (profil non encadrant)

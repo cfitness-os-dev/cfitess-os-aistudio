@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCfos } from '../../context/CfosContext';
+import { clientApi } from '../../domain/clientApi';
 import {
   FileText,
   Download,
@@ -152,6 +153,7 @@ export function PlanningHrView({
   scopedEmployeeId?: string;
 } = {}) {
   const {
+    currentUser,
     clubFilter,
     setClubFilter,
     employees,
@@ -217,9 +219,76 @@ export function PlanningHrView({
 
   // Skello Week Navigation, Publish, Lock & Copy Week -> S+1
   const [weekOffset, setWeekOffset] = useState<number>(0);
-  const [publishedWeeks, setPublishedWeeks] = useState<Record<number, boolean>>({ 0: true });
+  const [serverShifts, setServerShifts] = useState<Shift[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const targetSite =
+      (forcedClubScope ?? clubFilter) === 'beynost'
+        ? 'club-beynost'
+        : (forcedClubScope ?? clubFilter) === 'carre-de-soie'
+        ? 'club-carre-soie'
+        : 'all';
+    void clientApi
+      .getDashboard({ actorId: currentUser.id, siteId: targetSite })
+      .then((dash) => {
+        if (cancelled) return;
+        const combined = [...dash.myShifts, ...dash.teamShifts];
+        const byId = new Map<string, Shift>();
+        for (const s of combined) {
+          if (!s.employeeId || byId.has(s.id)) continue;
+          byId.set(s.id, {
+            id: s.id,
+            employeeId: s.employeeId,
+            clubId: s.siteId === 'club-beynost' ? 'beynost' : 'carre-de-soie',
+            date: s.date,
+            startTime: s.startTime,
+            endTime: s.endTime,
+            breakMinutes: s.breakMinutes,
+            roleLabel: s.tasks?.[0] ?? 'Service Club',
+            published: s.published,
+          });
+        }
+        const mapped = Array.from(byId.values());
+        setServerShifts(mapped);
+        if (
+          personalScopeOnly &&
+          mapped.some(
+            (s) =>
+              s.employeeId === (scopedEmployeeId ?? currentUser.id) &&
+              s.date >= '2026-11-16' &&
+              s.date <= '2026-11-22'
+          )
+        ) {
+          setWeekOffset(4);
+        }
+      })
+      .catch(() => {
+        // Fallback silencieux sur shifts locaux
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser.id, forcedClubScope, clubFilter, personalScopeOnly, scopedEmployeeId]);
+
+  const mergedShifts: Shift[] = [
+    ...shifts,
+    ...serverShifts.filter(
+      (ss) =>
+        !shifts.some(
+          (ls) =>
+            ls.id === ss.id ||
+            (ls.employeeId === ss.employeeId &&
+              ls.date === ss.date &&
+              ls.startTime === ss.startTime)
+        )
+    ),
+  ];
+
+  const [publishedWeeks, setPublishedWeeks] = useState<Record<number, boolean>>({ 0: true, 4: true });
   const [lockedWeeks, setLockedWeeks] = useState<Record<number, boolean>>({});
   const activeWeekDates = buildWeekDates(weekOffset);
+  const activeWeekDateSet = new Set(activeWeekDates.map((d) => d.date));
   const currentWeekNumber = 43 + weekOffset;
   const isCurrentWeekPublished = Boolean(publishedWeeks[weekOffset]);
   const isCurrentWeekLocked = Boolean(lockedWeeks[weekOffset]);
@@ -540,7 +609,7 @@ export function PlanningHrView({
   const silaeApiPayload = canViewSalaries
     ? buildSilaeApiPayload(payrollRows, silaePeriod, 'API_REST_SILAE')
     : { status: 'REDACTED_ORG04_10', message: 'Salaires masqués pour ce profil.' };
-  const allUnifiedEvents = buildUnifiedPlanningEvents(shifts, unifiedExternalEvents);
+  const allUnifiedEvents = buildUnifiedPlanningEvents(mergedShifts, unifiedExternalEvents);
 
   const selectedSilaeRow =
     payrollRows.find((r) => r.employeeId === selectedSilaeEmpId) || payrollRows[0];
@@ -562,9 +631,15 @@ export function PlanningHrView({
       selectedContractEmployee.monthlyGrossEur ?? CFITNESS_LEGAL_IDENTITY.salaireBrutMensuelEur,
   });
 
-  // Total KPIs for Skello bottom bar
+  // Total KPIs for Skello bottom bar (calculés strictement sur la semaine affichée et le club)
+  const effectiveClubScopeForTotals = forcedClubScope ?? (clubFilter !== 'all' ? clubFilter : null);
   const totalPlannedHours = filteredEmployees.reduce((sum, emp) => {
-    const empShifts = shifts.filter((s) => s.employeeId === emp.id);
+    const empShifts = mergedShifts.filter(
+      (s) =>
+        s.employeeId === emp.id &&
+        activeWeekDateSet.has(s.date) &&
+        (!effectiveClubScopeForTotals || s.clubId === effectiveClubScopeForTotals)
+    );
     return (
       sum +
       empShifts.reduce(
@@ -1061,13 +1136,17 @@ export function PlanningHrView({
               </span>
               {(() => {
                 const visibleEmpSet = new Set(filteredEmployees.map((e) => e.id));
-                const scopedShiftsCount = shifts.filter((s) => {
+                const scopedShiftsCount = mergedShifts.filter((s) => {
+                  if (!activeWeekDateSet.has(s.date)) return false;
                   if (forcedClubScope && s.clubId !== forcedClubScope) return false;
+                  if (!forcedClubScope && clubFilter !== 'all' && s.clubId !== clubFilter) return false;
                   if (personalScopeOnly && !visibleEmpSet.has(s.employeeId)) return false;
                   return true;
                 }).length;
                 const scopedExternal = unifiedExternalEvents.filter((e) => {
+                  if (!activeWeekDateSet.has(e.date)) return false;
                   if (forcedClubScope && e.clubId !== forcedClubScope) return false;
+                  if (!forcedClubScope && clubFilter !== 'all' && e.clubId !== clubFilter) return false;
                   if (personalScopeOnly && e.employeeId && !visibleEmpSet.has(e.employeeId)) return false;
                   return true;
                 });
@@ -1357,9 +1436,10 @@ export function PlanningHrView({
                         </div>
                       </th>
                       {activeWeekDates.map((d) => {
-                        const dayShifts = shifts.filter(
+                        const dayShifts = mergedShifts.filter(
                           (s) =>
                             s.date === d.date &&
+                            (!effectiveClubScopeForTotals || s.clubId === effectiveClubScopeForTotals) &&
                             filteredEmployees.some((e) => e.id === s.employeeId)
                         );
                         const dayHours = dayShifts.reduce(
@@ -1477,7 +1557,12 @@ export function PlanningHrView({
                     )}
 
                     {filteredEmployees.map((emp) => {
-                      const empShifts = shifts.filter((s) => s.employeeId === emp.id);
+                      const empShifts = mergedShifts.filter(
+                        (s) =>
+                          s.employeeId === emp.id &&
+                          activeWeekDateSet.has(s.date) &&
+                          (!effectiveClubScopeForTotals || s.clubId === effectiveClubScopeForTotals)
+                      );
                       const plannedHours = empShifts.reduce(
                         (acc, s) =>
                           acc + computeNetShiftHours(s.startTime, s.endTime, s.breakMinutes),
@@ -1692,14 +1777,16 @@ export function PlanningHrView({
                                             <span className="font-mono font-bold text-white">
                                               {ev.startTime} - {ev.endTime}
                                             </span>
-                                            <button
-                                              type="button"
-                                              onClick={() => deleteExternalPlanningEvent(ev.id)}
-                                              className="text-slate-400 hover:text-rose-300 cursor-pointer"
-                                              title="Retirer du planning"
-                                            >
-                                              <Trash2 className="w-2.5 h-2.5" />
-                                            </button>
+                                            {canEditPlanning && (
+                                              <button
+                                                type="button"
+                                                onClick={() => deleteExternalPlanningEvent(ev.id)}
+                                                className="text-slate-400 hover:text-rose-300 cursor-pointer"
+                                                title="Retirer du planning"
+                                              >
+                                                <Trash2 className="w-2.5 h-2.5" />
+                                              </button>
+                                            )}
                                           </div>
                                           <div className="flex items-center justify-between gap-1">
                                             <span className="px-1.5 py-0.2 rounded bg-white/15 text-[8px] font-black uppercase">

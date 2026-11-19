@@ -7,6 +7,7 @@ interface PublicFormField {
   label: string;
   type: 'text' | 'email' | 'tel' | 'select' | 'checkbox';
   required: boolean;
+  options?: string[];
 }
 
 interface StoredLeadForm {
@@ -26,6 +27,7 @@ interface StoredLeadForm {
     email: string;
     phone: string;
     rgpdConsent: boolean;
+    answers?: Record<string, string | boolean>;
     submittedAt: string;
   }>;
 }
@@ -94,7 +96,9 @@ const DEFAULT_PUBLIC_FORMS: StoredLeadForm[] = [
 export function PublicLeadPortalView({ pathname }: { pathname: string }) {
   const parts = pathname.split('/').filter(Boolean);
   const kind = parts[0]; // 'forms' | 'book'
-  const clubSlug: 'carre-de-soie' | 'beynost' = parts[1] === 'beynost' ? 'beynost' : 'carre-de-soie';
+  const rawClubSlug = parts[1];
+  const validClub = rawClubSlug === 'carre-de-soie' || rawClubSlug === 'beynost';
+  const clubSlug: 'carre-de-soie' | 'beynost' = rawClubSlug === 'beynost' ? 'beynost' : 'carre-de-soie';
   const itemId = parts[2] ?? '';
 
   const [values, setValues] = useState<Record<string, string | boolean>>({});
@@ -107,10 +111,26 @@ export function PublicLeadPortalView({ pathname }: { pathname: string }) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   if (kind === 'book') {
-    const slotLabel = itemId.includes('checkup')
-      ? 'Bilan Checkup Technogym'
-      : 'Séance Découverte Coaching';
-    const durationMinutes = 60;
+    const knownBookTypes: Record<string, { label: string; duration: number }> = {
+      'coaching-decouverte': { label: 'Séance Découverte Coaching', duration: 60 },
+      'bilan-checkup-technogym': { label: 'Bilan Checkup Technogym', duration: 60 },
+    };
+    const typeCfg = knownBookTypes[itemId];
+    if (!validClub || !typeCfg) {
+      return (
+        <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
+          <div className="max-w-md w-full rounded-2xl bg-slate-900 border border-red-500/40 p-6 space-y-3 text-center">
+            <Lock className="w-8 h-8 text-red-400 mx-auto" />
+            <h1 className="text-base font-bold">Lien de réservation introuvable</h1>
+            <p className="text-xs text-slate-400">
+              Le club ou le type de créneau demandé ({pathname}) n&apos;existe pas.
+            </p>
+          </div>
+        </div>
+      );
+    }
+    const slotLabel = typeCfg.label;
+    const durationMinutes = typeCfg.duration;
     const coachId = clubSlug === 'beynost' ? 'emp-sarah' : 'emp-karim';
 
     return (
@@ -163,11 +183,19 @@ export function PublicLeadPortalView({ pathname }: { pathname: string }) {
                   setErrorMsg(decision.reason);
                   return;
                 }
-                const nextSlot: AppointmentSlotRecord = {
-                  id: `slot-pub-${Date.now()}`,
+                const slotId = `slot-pub-${Date.now()}`;
+                const nextSlot: AppointmentSlotRecord & {
+                  prospectName?: string;
+                  prospectEmail?: string;
+                  activityId?: string;
+                } = {
+                  id: slotId,
                   clubId: clubSlug,
                   coachId,
                   typeName: slotLabel,
+                  prospectName: fullName,
+                  prospectEmail: email,
+                  activityId: `act-${slotId}`,
                   date: bookDate,
                   startTime: bookTime,
                   durationMinutes,
@@ -181,8 +209,28 @@ export function PublicLeadPortalView({ pathname }: { pathname: string }) {
                     'cfos_lead_rdv_slots_v1',
                     JSON.stringify([nextSlot, ...existingSlots])
                   );
+                  const rawActs = localStorage.getItem('cfos_lead_activities_v1');
+                  const prevActs = rawActs ? (JSON.parse(rawActs) as unknown[]) : [];
+                  localStorage.setItem(
+                    'cfos_lead_activities_v1',
+                    JSON.stringify([
+                      {
+                        id: `act-${slotId}`,
+                        type: 'APPOINTMENT',
+                        title: `RDV public : ${slotLabel}`,
+                        prospectName: fullName,
+                        clubId: clubSlug,
+                        dueAt: `${bookDate}T${bookTime}`,
+                        status: 'todo',
+                        assignedToId: coachId,
+                        statusLabel: `Réservé (${email})`,
+                      },
+                      ...prevActs,
+                    ])
+                  );
                 } catch {
-                  // ignore
+                  setErrorMsg('Erreur de persistance locale : réservation non enregistrée.');
+                  return;
                 }
                 setErrorMsg(null);
                 setSubmitted(true);
@@ -314,18 +362,35 @@ export function PublicLeadPortalView({ pathname }: { pathname: string }) {
                 }
               }
               setErrorMsg(null);
-              const fullName = [values['fld-fn'], values['fld-ln'], values['fld-fn2'], values['fld-fn3']]
-                .map((x) => String(x || '').trim())
-                .filter(Boolean)
-                .join(' ') || 'Contact public';
-              const email = String(values['fld-em'] || values['fld-em2'] || '').trim();
-              const phone = String(values['fld-ph'] || '').trim();
+              const nameParts: string[] = [];
+              let resolvedEmail = '';
+              let resolvedPhone = '';
+              let resolvedRgpd = false;
+              for (const f of fields) {
+                const val = values[f.id];
+                const lbl = f.label.toLowerCase();
+                if (f.type === 'email' || lbl.includes('email') || lbl.includes('e-mail')) {
+                  if (!resolvedEmail) resolvedEmail = String(val || '').trim();
+                } else if (f.type === 'tel' || lbl.includes('tél') || lbl.includes('tel') || lbl.includes('phone')) {
+                  if (!resolvedPhone) resolvedPhone = String(val || '').trim();
+                } else if (
+                  f.type === 'checkbox' &&
+                  (lbl.includes('rgpd') || lbl.includes('accord') || lbl.includes('consent'))
+                ) {
+                  resolvedRgpd = val === true;
+                } else if (lbl.includes('prénom') || lbl.includes('prenom') || lbl.includes('nom')) {
+                  const s = String(val || '').trim();
+                  if (s) nameParts.push(s);
+                }
+              }
+              const fullName = nameParts.join(' ') || 'Contact public';
               const structuredResponse = {
                 id: `rep-${Date.now()}`,
                 fullName,
-                email,
-                phone,
-                rgpdConsent: Boolean(values['fld-rgpd'] ?? values['fld-rgpd2'] ?? true),
+                email: resolvedEmail,
+                phone: resolvedPhone,
+                rgpdConsent: resolvedRgpd,
+                answers: { ...values },
                 submittedAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
               };
               try {
@@ -334,14 +399,15 @@ export function PublicLeadPortalView({ pathname }: { pathname: string }) {
                     ? {
                         ...item,
                         responsesCount: item.responsesCount + 1,
-                        lastResponsePreview: `${fullName} · ${email}`,
+                        lastResponsePreview: `${fullName} · ${resolvedEmail}`,
                         sampleResponses: [structuredResponse, ...(item.sampleResponses ?? [])],
                       }
                     : item
                 );
                 localStorage.setItem('cfos_lead_forms_v1', JSON.stringify(updatedForms));
               } catch {
-                // ignore
+                setErrorMsg('Erreur de stockage local : réponse non enregistrée.');
+                return;
               }
               setSubmitted(true);
             }}
@@ -360,13 +426,31 @@ export function PublicLeadPortalView({ pathname }: { pathname: string }) {
                       {f.label} {f.required && <span className="text-red-400">*</span>}
                     </span>
                   </label>
+                ) : f.type === 'select' ? (
+                  <label className="block space-y-1">
+                    <span className="text-slate-300">
+                      {f.label} {f.required && <span className="text-red-400">*</span>}
+                    </span>
+                    <select
+                      value={String(values[f.id] || '')}
+                      onChange={(e) => setValues((prev) => ({ ...prev, [f.id]: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700"
+                    >
+                      <option value="">-- Sélectionner --</option>
+                      {(f.options ?? ['Option 1', 'Option 2']).map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 ) : (
                   <label className="block space-y-1">
                     <span className="text-slate-300">
                       {f.label} {f.required && <span className="text-red-400">*</span>}
                     </span>
                     <input
-                      type={f.type === 'select' ? 'text' : f.type}
+                      type={f.type}
                       value={String(values[f.id] || '')}
                       onChange={(e) => setValues((prev) => ({ ...prev, [f.id]: e.target.value }))}
                       className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700"

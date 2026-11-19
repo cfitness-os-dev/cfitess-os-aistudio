@@ -722,12 +722,6 @@ export function LeadCommercialHubView({
     [archiveDaysInbound, archiveDaysOutbound, crmSettings.archiveThresholdDays]
   );
 
-  const rdvResolvedDuration =
-    rdvTypeCandidate.toLowerCase().includes('coaching') ||
-    rdvTypeCandidate.toLowerCase().includes('checkup')
-      ? 60
-      : 45;
-
   const rdvBookingDecision = useMemo(
     () =>
       validateAppointmentBooking(
@@ -738,13 +732,11 @@ export function LeadCommercialHubView({
           typeName: rdvTypeCandidate,
           date: rdvDate,
           startTime: rdvTime,
-          durationMinutes: rdvResolvedDuration,
           hoursBeforeSlot: rdvHoursBeforeSlot,
           minDelayHours: rdvMinDelayHours,
           capacityMax: rdvCapacityMax,
           requiresStripePayment: rdvRequiresStripe,
           stripePaidConfirmed: rdvStripePaid,
-          referenceNow: new Date(),
         },
         preventCrossTypeCollision
       ),
@@ -755,7 +747,6 @@ export function LeadCommercialHubView({
       rdvTypeCandidate,
       rdvDate,
       rdvTime,
-      rdvResolvedDuration,
       rdvHoursBeforeSlot,
       rdvMinDelayHours,
       rdvCapacityMax,
@@ -1103,15 +1094,13 @@ export function LeadCommercialHubView({
                         for (const row of importSummary.results) {
                           if (row.status !== 'valide') continue;
                           const cols = rawRows[row.rowNumber - 1] ?? [];
-                          const gender = (cols[0] || '').trim();
                           const firstName = (cols[1] || '').trim() || 'Prospect';
                           const lastName = (cols[2] || '').trim() || 'Importé';
-                          const rawPhone = (cols[4] || '').trim();
-                          const street = (cols[5] || '').trim();
-                          const postalCode = (cols[6] || '').trim();
-                          const city = (cols[7] || '').trim();
-                          const birthDate = (cols[8] || '').trim();
+                          const rawPhone = (cols[4] || '').trim() || '0600000000';
                           const comment = (cols[10] || '').trim();
+                          const addressSummary = [cols[5], cols[6], cols[7]].filter(Boolean).join(' ');
+                          const birthInfo = cols[8] ? `Né(e) ${cols[8]}` : '';
+                          const goalParts = [comment, addressSummary, birthInfo].filter(Boolean);
                           const res = createProspect({
                             firstName,
                             lastName,
@@ -1119,15 +1108,8 @@ export function LeadCommercialHubView({
                             email: row.email,
                             clubId: targetClub,
                             source: 'Site c.fitness',
-                            goal: 'Import CSV 11 colonnes',
+                            goal: goalParts.join(' · ') || 'Import CSV 11 colonnes',
                             rgpdConsent: row.consentGranted,
-                            gender,
-                            street,
-                            postalCode,
-                            city,
-                            birthDate,
-                            comment,
-                            allowEmptyPhone: true,
                           });
                           if (res.ok) created += 1;
                           else skipped += 1;
@@ -1205,10 +1187,10 @@ export function LeadCommercialHubView({
                           : 'bg-slate-900/60 border-slate-700 text-slate-300'
                       }`}
                     >
-                      Tous ({prospects.length})
+                      Tous ({authorizedProspects.length})
                     </button>
                     {LEAD_PROSPECT_STATUSES.map((st) => {
-                      const countForStatus = prospects.filter(
+                      const countForStatus = authorizedProspects.filter(
                         (p) => (p.leadStatus ?? p.stage) === st
                       ).length;
                       return (
@@ -1230,7 +1212,7 @@ export function LeadCommercialHubView({
 
                   {/* Sélection multiple -> Segments */}
                   {(() => {
-                    const filteredLeadList = prospects.filter((p) => {
+                    const filteredLeadList = authorizedProspects.filter((p) => {
                       if (clubFilter !== 'all' && p.clubId !== clubFilter) return false;
                       if (selectedLeadStatusFilter === 'ALL') return true;
                       return (p.leadStatus ?? p.stage) === selectedLeadStatusFilter;
@@ -2129,16 +2111,16 @@ export function LeadCommercialHubView({
                       : allowedClubIds[0];
                     const targetProspect =
                       authorizedProspects.find((p) => p.id === rdvProspectId) ?? authorizedProspects[0];
-                    const resolvedDuration = rdvResolvedDuration;
-                    const newSlotId = `slot-${Date.now()}`;
-                    const newSlot: AppointmentSlotRecord & { prospectId?: string; prospectName?: string; activityId?: string } = {
-                      id: newSlotId,
+                    const resolvedDuration =
+                      rdvTypeCandidate.toLowerCase().includes('coaching') ||
+                      rdvTypeCandidate.toLowerCase().includes('checkup')
+                        ? 60
+                        : 45;
+                    const newSlot: AppointmentSlotRecord = {
+                      id: `slot-${Date.now()}`,
                       clubId: effectiveClub,
                       coachId: rdvCoachId,
-                      typeName: rdvTypeCandidate,
-                      prospectId: targetProspect?.id,
-                      prospectName: targetProspect ? `${targetProspect.firstName} ${targetProspect.lastName}` : undefined,
-                      activityId: targetProspect ? `act-${newSlotId}` : undefined,
+                      typeName: `${rdvTypeCandidate} (${targetProspect ? `${targetProspect.firstName} ${targetProspect.lastName}` : 'Prospect'})`,
                       date: rdvDate,
                       startTime: rdvTime,
                       durationMinutes: resolvedDuration,
@@ -2158,7 +2140,7 @@ export function LeadCommercialHubView({
                       });
                       setActivities((prev) => [
                         {
-                          id: `act-${newSlotId}`,
+                          id: `act-rdv-${Date.now()}`,
                           type: 'APPOINTMENT',
                           title: `RDV ${rdvTypeCandidate}`,
                           prospectId: targetProspect.id,
@@ -2228,7 +2210,6 @@ export function LeadCommercialHubView({
                               capacityMax: slot.capacityMax,
                               requiresStripePayment: slot.paidRequired,
                               stripePaidConfirmed: slot.paymentStatus === 'paye',
-                              referenceNow: new Date(),
                             });
                             if (!check.accepted) {
                               setRdvActionMessage(`Report +1h refusé : ${check.reason}`);
@@ -2237,14 +2218,7 @@ export function LeadCommercialHubView({
                             setRdvBookings((prev) =>
                               prev.map((s) => (s.id === slot.id ? { ...s, startTime: nextTime } : s))
                             );
-                            setActivities((prev) =>
-                              prev.map((a) =>
-                                a.id === `act-${slot.id}`
-                                  ? { ...a, dueAt: `${slot.date}T${nextTime}`, statusLabel: 'RDV reporté +1h' }
-                                  : a
-                              )
-                            );
-                            setRdvActionMessage(`Créneau reporté à ${nextTime} (validation sans collision + activité synchronisée).`);
+                            setRdvActionMessage(`Créneau reporté à ${nextTime} (validation sans collision).`);
                           }}
                           className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] cursor-pointer"
                         >
@@ -2254,14 +2228,7 @@ export function LeadCommercialHubView({
                           type="button"
                           onClick={() => {
                             setRdvBookings((prev) => prev.filter((s) => s.id !== slot.id));
-                            setActivities((prev) =>
-                              prev.map((a) =>
-                                a.id === `act-${slot.id}`
-                                  ? { ...a, status: 'done', statusLabel: 'RDV annulé' }
-                                  : a
-                              )
-                            );
-                            setRdvActionMessage(`RDV « ${slot.typeName} » annulé et activité mise à jour.`);
+                            setRdvActionMessage(`RDV « ${slot.typeName} » annulé.`);
                           }}
                           className="px-2 py-1 rounded bg-rose-600/80 hover:bg-rose-600 text-white text-[11px] cursor-pointer"
                         >
@@ -2316,7 +2283,7 @@ export function LeadCommercialHubView({
                       onChange={(e) => setWaTargetId(e.target.value)}
                       className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700"
                     >
-                      {prospects.map((p) => (
+                      {authorizedProspects.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.firstName} {p.lastName} ({p.phone})
                         </option>
@@ -2340,7 +2307,7 @@ export function LeadCommercialHubView({
                       <button
                         type="button"
                         onClick={() => {
-                          const target = prospects.find((p) => p.id === waTargetId) || prospects[0];
+                          const target = authorizedProspects.find((p) => p.id === waTargetId) || authorizedProspects[0];
                           const entry = {
                             id: `wa-${Date.now()}`,
                             recipient: target ? `${target.firstName} ${target.lastName}` : 'Prospect',
@@ -2666,8 +2633,18 @@ export function LeadCommercialHubView({
                       excludedVacation += 1;
                       return false;
                     }
-                    if (campaignSegmentTarget !== 'Tous prospects RGPD') {
-                      if (!p.segments?.includes(campaignSegmentTarget)) {
+                    if (campaignSegmentTarget === 'Relance Biocircuit') {
+                      const matchesBio =
+                        p.goal.toLowerCase().includes('biocircuit') ||
+                        p.source.toLowerCase().includes('biocircuit') ||
+                        p.stage === 'Contacté' ||
+                        p.stage === 'Séance planifiée';
+                      if (!matchesBio) {
+                        excludedSegment += 1;
+                        return false;
+                      }
+                    } else if (campaignSegmentTarget === 'VIP Carré de Soie') {
+                      if (p.clubId !== 'carre-de-soie') {
                         excludedSegment += 1;
                         return false;
                       }
