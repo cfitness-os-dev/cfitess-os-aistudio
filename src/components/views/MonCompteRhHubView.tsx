@@ -88,7 +88,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
 
   const defaultActorForShellUser = () => {
     if (isStrictAdmin) return 'emp-admin';
-    if (currentUser.role === 'manager') return 'emp-master-cs';
+    if (currentUser.role === 'manager') return 'emp-master';
     if (currentUser.role === 'commercial') return 'emp-accueil-cs';
     return 'emp-employe-multi';
   };
@@ -138,7 +138,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
       setDashboard(dashRes);
       setRegistry(regRes);
       setAmbiguities(ambRes);
-      if (dashRes.session.activeSiteId !== nextAuth.siteId) {
+      if (isStrictAdmin && dashRes.session.activeSiteId !== nextAuth.siteId) {
         setActiveSiteId(dashRes.session.activeSiteId);
       }
 
@@ -299,7 +299,34 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                   },
                 ];
           const allowedSiteIds = new Set(derivedSiteAccesses.map((s) => s.siteId));
-          const filteredSites = dashboard.sites.filter((s) => allowedSiteIds.has(s.id));
+          const allKnownSites = [
+            ...dashboard.sites,
+            ...(dashboard.sites.some((s) => s.id === 'club-beynost')
+              ? []
+              : [
+                  {
+                    ...(dashboard.sites[0] ?? {}),
+                    id: 'club-beynost',
+                    name: 'C.Fitness Beynost',
+                    code: 'BEY',
+                    address: 'ZAC des Baterses, 01700 Beynost',
+                    city: 'Beynost',
+                  },
+                ]),
+            ...(dashboard.sites.some((s) => s.id === 'club-carre-soie')
+              ? []
+              : [
+                  {
+                    ...(dashboard.sites[0] ?? {}),
+                    id: 'club-carre-soie',
+                    name: 'C.Fitness Carré de Soie',
+                    code: 'CDS',
+                    address: '2 Rue Jacquard, 69120 Vaulx-en-Velin',
+                    city: 'Vaulx-en-Velin',
+                  },
+                ]),
+          ];
+          const filteredSites = allKnownSites.filter((s) => allowedSiteIds.has(s.id));
           const mappedEmployee = {
             ...dashboard.session.employee,
             id: currentUser.id,
@@ -371,12 +398,11 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
           return {
             ...dashboard,
             sites: filteredSites.length > 0 ? filteredSites : dashboard.sites,
-            myShifts: dashboard.myShifts.filter(
-              (s) => s.employeeId === currentUser.id || allowedSiteIds.has(s.siteId)
-            ),
+            myShifts: dashboard.myShifts.filter((s) => s.employeeId === currentUser.id),
             myRequests: dashboard.myRequests.filter((r) => r.employeeId === currentUser.id),
             session: {
               ...dashboard.session,
+              activeSiteId: allowedSiteIds.has(activeSiteId) ? activeSiteId : userSiteId,
               employee: mappedEmployee,
             },
             visibleEmployees: scopedVisibleEmployees,

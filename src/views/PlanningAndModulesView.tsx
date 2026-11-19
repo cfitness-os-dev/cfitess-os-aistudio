@@ -515,8 +515,12 @@ export function PlanningAndModulesView({
   // Unification référentiel : fusion des salariés persistés dans CfosContext (staffEmployees)
   // uniquement si l'utilisateur courant a un rôle de gestion (admin/manager), sinon uniquement soi-même (#1 / #4)
   const canSeeGlobalRoster = currentUser.role === 'admin' || currentUser.role === 'manager';
+  const canDelegateRhRights = Boolean(
+    dashboard.session.resolvedPermissions['ORG04-14']?.allowed ||
+      dashboard.session.resolvedPermissions['ORG04-12']?.allowed
+  );
   const canEditSiteAccess = (siteId: string) => {
-    if (!canSeeGlobalRoster) return false;
+    if (!canSeeGlobalRoster || !canDelegateRhRights) return false;
     const selfSiteAccess = dashboard.session.employee.siteAccesses.find((s) => s.siteId === siteId);
     if (selfSiteAccess?.profileId === 'lecture_seule_avancee') return false;
     if (currentUser.role === 'manager' && !selfSiteAccess) return false;

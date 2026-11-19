@@ -135,11 +135,11 @@ interface LeadCommercialHubViewProps {
 }
 
 const INITIAL_FICTIVE_ACTIVITIES: FictiveActivityRow[] = [
-  { id: 'act-1', type: 'SCHEDULED_CALL', title: 'Rappel essai Biocircuit', prospectId: 'p-1', prospectName: 'Camille Garnier', clubId: 'carre-de-soie', dueAt: new Date().toISOString().slice(0, 10) + 'T10:30', status: 'todo', assignedToId: 'emp-maxime', statusLabel: 'À traiter' },
-  { id: 'act-2', type: 'APPOINTMENT', title: 'Bilan Checkup Technogym', prospectId: 'p-2', prospectName: 'Lucas Morel', clubId: 'beynost', dueAt: new Date(Date.now() + 86400000).toISOString().slice(0, 10) + 'T14:00', status: 'todo', assignedToId: 'emp-chloe', statusLabel: 'Confirmé' },
-  { id: 'act-3', type: 'CONTACT', title: 'Demande formulaire site web', prospectName: 'Nadia Benali', clubId: 'carre-de-soie', dueAt: new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10) + 'T09:00', status: 'todo', assignedToId: 'emp-maxime', statusLabel: 'En retard (J-3)' },
-  { id: 'act-4', type: 'SCHEDULED_SMS', title: 'SMS rappel séance découverte', prospectName: 'Hugo Lefebvre', clubId: 'beynost', dueAt: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10) + 'T11:00', status: 'todo', assignedToId: 'emp-chloe', statusLabel: 'Planifié' },
-  { id: 'act-5', type: 'SCHEDULED_EMAIL', title: 'Email confirmation offre', prospectName: 'Claire Dubois', clubId: 'carre-de-soie', dueAt: new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10) + 'T16:00', status: 'todo', assignedToId: 'emp-maxime', statusLabel: 'En attente (EX08)' },
+  { id: 'act-1', type: 'SCHEDULED_CALL', title: 'Rappel essai Biocircuit', prospectId: 'pr-1', prospectName: 'Camille Garnier', clubId: 'carre-de-soie', dueAt: new Date().toISOString().slice(0, 10) + 'T10:30', status: 'todo', assignedToId: 'emp-maxime', statusLabel: 'À traiter' },
+  { id: 'act-2', type: 'APPOINTMENT', title: 'Bilan Checkup Technogym', prospectId: 'pr-2', prospectName: 'Lucas Morel', clubId: 'beynost', dueAt: new Date(Date.now() + 86400000).toISOString().slice(0, 10) + 'T14:00', status: 'todo', assignedToId: 'emp-chloe', statusLabel: 'Confirmé' },
+  { id: 'act-3', type: 'CONTACT', title: 'Demande formulaire site web', prospectId: 'pr-3', prospectName: 'Nadia Benali', clubId: 'carre-de-soie', dueAt: new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10) + 'T09:00', status: 'todo', assignedToId: 'emp-maxime', statusLabel: 'En retard (J-3)' },
+  { id: 'act-4', type: 'SCHEDULED_SMS', title: 'SMS rappel séance découverte', prospectId: 'pr-4', prospectName: 'Hugo Lefebvre', clubId: 'beynost', dueAt: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10) + 'T11:00', status: 'todo', assignedToId: 'emp-chloe', statusLabel: 'Planifié' },
+  { id: 'act-5', type: 'SCHEDULED_EMAIL', title: 'Email confirmation offre', prospectId: 'pr-5', prospectName: 'Claire Dubois', clubId: 'carre-de-soie', dueAt: new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10) + 'T16:00', status: 'todo', assignedToId: 'emp-maxime', statusLabel: 'En attente (EX08)' },
   { id: 'act-6', type: 'REVIEW', title: 'Avis club Google / Lead', prospectName: 'Antoine Rocher', clubId: 'beynost', dueAt: new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10) + 'T12:00', status: 'done', assignedToId: 'emp-chloe', statusLabel: 'Traité (EX09)' },
   { id: 'act-7', type: 'SMS', title: 'Réponse SMS entrante RDV', prospectName: 'Manon Faure', clubId: 'carre-de-soie', dueAt: new Date(Date.now() - 86400000).toISOString().slice(0, 10) + 'T15:00', status: 'done', assignedToId: 'emp-maxime', statusLabel: 'Reçu (EX07)' },
   { id: 'act-8', type: 'MAIL', title: 'Réponse email prospect', prospectName: 'Sébastien Girard', clubId: 'beynost', dueAt: new Date(Date.now() - 86400000).toISOString().slice(0, 10) + 'T17:00', status: 'done', assignedToId: 'emp-chloe', statusLabel: 'Lu' },
@@ -1682,6 +1682,12 @@ export function LeadCommercialHubView({
                 ) : (
                   filteredActivities.map((a) => {
                     const bucket = computeActivityDueBucket(a.dueAt, a.status);
+                    const linkedProspect = a.prospectId
+                      ? prospects.find((pr) => pr.id === a.prospectId)
+                      : undefined;
+                    const displayProspectName = linkedProspect
+                      ? `${linkedProspect.firstName} ${linkedProspect.lastName}`
+                      : a.prospectName;
                     return (
                       <div
                         key={a.id}
@@ -1691,7 +1697,7 @@ export function LeadCommercialHubView({
                           <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 mr-2">
                             {a.type}
                           </span>
-                          <strong>{a.title}</strong> · {a.prospectName} ({a.clubId}) ·{' '}
+                          <strong>{a.title}</strong> · {displayProspectName} ({a.clubId}) ·{' '}
                           <span className="font-mono text-[10px] text-slate-400">
                             {a.dueAt.replace('T', ' ')}
                           </span>
@@ -1744,19 +1750,23 @@ export function LeadCommercialHubView({
                               type="button"
                               onClick={() => {
                                 const p = prospects.find((pr) => pr.id === a.prospectId);
-                                if (p) {
-                                  setEditingProspectId(p.id);
-                                  setEditProspectForm({
-                                    firstName: p.firstName,
-                                    lastName: p.lastName,
-                                    phone: p.phone,
-                                    email: p.email,
-                                    goal: p.goal,
-                                    notes: p.notes,
-                                    address: p.address ?? '',
-                                    assignedToId: p.assignedToId,
-                                  });
+                                if (!p) {
+                                  setPurgeLog(
+                                    `Fiche prospect introuvable (archivée, supprimée ou hors périmètre) pour « ${a.title} ».`
+                                  );
+                                  return;
                                 }
+                                setEditingProspectId(p.id);
+                                setEditProspectForm({
+                                  firstName: p.firstName,
+                                  lastName: p.lastName,
+                                  phone: p.phone,
+                                  email: p.email,
+                                  goal: p.goal,
+                                  notes: p.notes,
+                                  address: p.address ?? '',
+                                  assignedToId: p.assignedToId,
+                                });
                                 setActiveTab('prospects');
                               }}
                               className="px-2 py-0.5 rounded bg-violet-600/80 hover:bg-violet-600 text-white cursor-pointer"
