@@ -750,14 +750,21 @@ export function LeadCommercialHubView({
   const smsMetrics = useMemo(() => computeSmsSegmentMetrics(smsDraftText), [smsDraftText]);
 
   const filteredActivities = useMemo(() => {
+    const allowedClubs =
+      currentUser.role === 'admin'
+        ? null
+        : currentUser.siteAssignments?.length
+        ? currentUser.siteAssignments.map((sa) => sa.clubId)
+        : [currentUser.clubId];
     return activities.filter((a) => {
+      if (allowedClubs && !allowedClubs.includes(a.clubId)) return false;
       if (clubFilter !== 'all' && a.clubId !== clubFilter) return false;
       if (actTypeFilter !== '*' && a.type !== actTypeFilter) return false;
       const bucket = computeActivityDueBucket(a.dueAt, a.status);
       if (actTimeFilter !== 'ALL' && bucket !== actTimeFilter) return false;
       return true;
     });
-  }, [activities, clubFilter, actTypeFilter, actTimeFilter]);
+  }, [activities, clubFilter, actTypeFilter, actTimeFilter, currentUser.role, currentUser.clubId, currentUser.siteAssignments]);
 
   const uniqueTraceRubriques = useMemo(() => {
     const set = new Set<string>();

@@ -266,6 +266,10 @@ export function PlanningHrView({
   const [alertBannerDismissed, setAlertBannerDismissed] = useState(false);
 
   const handleShiftDragStart = (e: React.DragEvent, shiftId: string) => {
+    if (!canEditPlanning) {
+      e.preventDefault();
+      return;
+    }
     if (isCurrentWeekLocked) {
       e.preventDefault();
       setFeedbackBanner(
@@ -280,6 +284,10 @@ export function PlanningHrView({
   const handleCellDrop = (e: React.DragEvent, targetEmpId: string, targetDate: string) => {
     e.preventDefault();
     setDragOverCellKey(null);
+    if (!canEditPlanning) {
+      setFeedbackBanner('Action refusée : droits en consultation uniquement.');
+      return;
+    }
     if (isCurrentWeekLocked) {
       setFeedbackBanner(
         `Semaine ${currentWeekNumber} verrouillée (verrou rouge paie). Déverrouillez pour déplacer un créneau.`
@@ -479,8 +487,10 @@ export function PlanningHrView({
   const filteredEmployees = employees.filter((e) => {
     if (e.role === 'kiosque') return false;
     if (personalScopeOnly && scopedEmployeeId && e.id !== scopedEmployeeId) return false;
-    if (forcedClubScope && e.clubId !== forcedClubScope) return false;
-    if (!forcedClubScope && clubFilter !== 'all' && e.clubId !== clubFilter) return false;
+    const matchesClub = (cid: ClubId) =>
+      e.clubId === cid || Boolean(e.siteAssignments?.some((sa) => sa.clubId === cid));
+    if (forcedClubScope && !matchesClub(forcedClubScope)) return false;
+    if (!forcedClubScope && clubFilter !== 'all' && !matchesClub(clubFilter)) return false;
     if (roleFilter !== 'ALL' && e.role !== roleFilter) return false;
     return true;
   });
@@ -576,6 +586,10 @@ export function PlanningHrView({
 
   const handleAddShift = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEditPlanning) {
+      setFeedbackBanner('Création refusée : droits insuffisants (lecture seule).');
+      return;
+    }
     if (isBreakInvalid || isNetDurationInvalid) {
       setFeedbackBanner(
         'Créneau refusé : la pause doit être comprise entre 0 et 180 min et la durée nette > 0 h.'
@@ -598,6 +612,7 @@ export function PlanningHrView({
   };
 
   const handleQuickCellClick = (targetEmpId: string, targetDate: string, defaultClub: ClubId) => {
+    if (!canEditPlanning) return;
     setEmpId(targetEmpId);
     setDate(targetDate);
     setShiftClub(defaultClub);
@@ -1044,30 +1059,44 @@ export function PlanningHrView({
                   ? 'Calques Cours & Coachs :'
                   : 'Calques Planning Centralisé (Sans Duplication) :'}
               </span>
-              {[
-                { id: 'ALL', label: `Tout afficher (${allUnifiedEvents.length})` },
-                ...(!isCoursCollectifsView
-                  ? [{ id: 'cfitness_rh', label: `Horaires RH (${shifts.length})` }]
-                  : []),
-                {
-                  id: 'mywellness_api',
-                  label: `Cours & Checkup Mywellness (${
-                    unifiedExternalEvents.filter((e) => e.originSystem === 'mywellness_api').length
-                  })`,
-                },
-                {
-                  id: 'heitz_api',
-                  label: `RDV Heitz System (${
-                    unifiedExternalEvents.filter((e) => e.originSystem === 'heitz_api').length
-                  })`,
-                },
-                {
-                  id: 'interne_club',
-                  label: `Événements Internes (${
-                    unifiedExternalEvents.filter((e) => e.originSystem === 'interne_club').length
-                  })`,
-                },
-              ].map((layer) => (
+              {(() => {
+                const visibleEmpSet = new Set(filteredEmployees.map((e) => e.id));
+                const scopedShiftsCount = shifts.filter((s) => {
+                  if (forcedClubScope && s.clubId !== forcedClubScope) return false;
+                  if (personalScopeOnly && !visibleEmpSet.has(s.employeeId)) return false;
+                  return true;
+                }).length;
+                const scopedExternal = unifiedExternalEvents.filter((e) => {
+                  if (forcedClubScope && e.clubId !== forcedClubScope) return false;
+                  if (personalScopeOnly && e.employeeId && !visibleEmpSet.has(e.employeeId)) return false;
+                  return true;
+                });
+                const scopedAllCount = scopedShiftsCount + scopedExternal.length;
+                return [
+                  { id: 'ALL', label: `Tout afficher (${scopedAllCount})` },
+                  ...(!isCoursCollectifsView
+                    ? [{ id: 'cfitness_rh', label: `Horaires RH (${scopedShiftsCount})` }]
+                    : []),
+                  {
+                    id: 'mywellness_api',
+                    label: `Cours & Checkup Mywellness (${
+                      scopedExternal.filter((e) => e.originSystem === 'mywellness_api').length
+                    })`,
+                  },
+                  {
+                    id: 'heitz_api',
+                    label: `RDV Heitz System (${
+                      scopedExternal.filter((e) => e.originSystem === 'heitz_api').length
+                    })`,
+                  },
+                  {
+                    id: 'interne_club',
+                    label: `Événements Internes (${
+                      scopedExternal.filter((e) => e.originSystem === 'interne_club').length
+                    })`,
+                  },
+                ];
+              })().map((layer) => (
                 <button
                   key={layer.id}
                   type="button"
@@ -1357,8 +1386,8 @@ export function PlanningHrView({
                   </thead>
 
                   <tbody className="divide-y divide-slate-200 text-xs">
-                    {/* Skello Top Row: Shifts non assignés / À remplacer (Drag & Drop compatible) */}
-                    {!isCoursCollectifsView && (
+                    {/* Skello Top Row: Shifts non assignés / À remplacer (masqué en lecture seule / périmètre personnel — #18) */}
+                    {!isCoursCollectifsView && canEditPlanning && (
                       <tr className="bg-amber-50/50 dark:bg-amber-950/20 border-b-2 border-amber-200/80">
                         <td className="p-3 align-top border-r border-slate-200">
                           <div className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">

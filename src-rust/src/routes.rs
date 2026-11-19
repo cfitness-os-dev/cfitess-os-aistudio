@@ -169,6 +169,10 @@ pub fn api_router(state: SharedState) -> Router {
         .route("/api/shifts/:shift_id", patch(patch_shift))
         .route("/api/admin/profiles", get(get_admin_profiles))
         .route("/api/admin/profiles/:profile_id", put(put_admin_profile))
+        .route(
+            "/api/admin/employees/:emp_id/site-accesses",
+            put(put_employee_site_accesses),
+        )
         .route("/api/admin/audit-log", get(get_audit_log))
         .route("/api/admin/audit-log/csv", get(get_audit_log_csv))
         .route("/api/admin/organization", put(put_organization))
@@ -1455,6 +1459,86 @@ async fn post_restore(
     Ok(Json(json!({ "restoredAt": now })))
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PutEmployeeSiteAccessesPayload {
+    pub site_accesses: Vec<crate::models::EmployeeSiteAccess>,
+}
+
+async fn put_employee_site_accesses(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Path(emp_id): Path<String>,
+    Json(payload): Json<PutEmployeeSiteAccessesPayload>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let mut db = state.db.write().await;
+
+    let actor = db
+        .employees
+        .iter()
+        .find(|e| e.id == actor_id)
+        .cloned()
+        .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Acteur introuvable."))?;
+
+    let is_global_admin = actor
+        .site_accesses
+        .iter()
+        .any(|sa| sa.profile_id == "admin_systeme");
+
+    for target_acc in &payload.site_accesses {
+        if !is_global_admin && target_acc.profile_id == "admin_systeme" {
+            return Err(err_resp(
+                StatusCode::FORBIDDEN,
+                "Non-élévation (403) : seul admin_systeme peut attribuer admin_systeme.",
+            ));
+        }
+        if !is_global_admin {
+            let actor_on_club = actor
+                .site_accesses
+                .iter()
+                .find(|sa| sa.site_id == target_acc.site_id);
+            let allowed_on_club = actor_on_club
+                .map(|sa| sa.profile_id == "master_avance" || sa.profile_id == "planificateur_avance")
+                .unwrap_or(false);
+            if !allowed_on_club {
+                return Err(err_resp(
+                    StatusCode::FORBIDDEN,
+                    format!(
+                        "Accès refusé (403) : aucune délégation d'attribution sur le club {}.",
+                        target_acc.site_id
+                    ),
+                ));
+            }
+        }
+    }
+
+    let emp = db
+        .employees
+        .iter_mut()
+        .find(|e| e.id == emp_id)
+        .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Salarié cible introuvable."))?;
+    emp.site_accesses = payload.site_accesses.clone();
+
+    append_audit(
+        &mut db,
+        &actor_id,
+        "Mise à jour affectations multi-clubs",
+        format!("{} accès enregistrés pour {}", payload.site_accesses.len(), emp_id),
+        "emp",
+        &emp_id,
+        None,
+        None,
+    );
+    let _ = persist_state(&state.data_dir, &db);
+
+    Ok(Json(json!({
+        "ok": true,
+        "employeeId": emp_id,
+        "siteAccesses": payload.site_accesses
+    })))
+}
+
 async fn put_preferences(
     State(state): State<SharedState>,
     headers: HeaderMap,
@@ -1929,5 +2013,87 @@ mod tests {
         .await
         .into_response();
         assert_eq!(blocked.status(), StatusCode::TOO_MANY_REQUESTS);
+    }
+
+    #[tokio::test]
+    async fn site_accesses_update_persists_and_blocks_unauthorized_club_or_elevation() {
+        let state = test_state();
+
+        // 1. emp-planif-av (Carré de Soie) tente de modifier Beynost -> 403 FORBIDDEN
+        let mut h_cs = HeaderMap::new();
+        h_cs.insert("x-cfitness-actor-id", HeaderValue::from_static("emp-planif-av"));
+        let forbidden_club = put_employee_site_accesses(
+            State(state.clone()),
+            h_cs.clone(),
+            Path("emp-employe-multi".to_string()),
+            Json(PutEmployeeSiteAccessesPayload {
+                site_accesses: vec![crate::models::EmployeeSiteAccess {
+                    site_id: "club-beynost".to_string(),
+                    is_primary: true,
+                    profile_id: "employe_standard".to_string(),
+                    team_ids: vec!["team-accueil".to_string()],
+                    show_on_planning: true,
+                    position_ids: vec![],
+                }],
+            }),
+        )
+        .await;
+        assert_eq!(forbidden_club.unwrap_err().0, StatusCode::FORBIDDEN);
+
+        // 2. emp-master tente d'attribuer admin_systeme -> 403 FORBIDDEN
+        let mut h_master = HeaderMap::new();
+        h_master.insert("x-cfitness-actor-id", HeaderValue::from_static("emp-master"));
+        let forbidden_elev = put_employee_site_accesses(
+            State(state.clone()),
+            h_master,
+            Path("emp-employe-multi".to_string()),
+            Json(PutEmployeeSiteAccessesPayload {
+                site_accesses: vec![crate::models::EmployeeSiteAccess {
+                    site_id: "club-carre-soie".to_string(),
+                    is_primary: true,
+                    profile_id: "admin_systeme".to_string(),
+                    team_ids: vec![],
+                    show_on_planning: true,
+                    position_ids: vec![],
+                }],
+            }),
+        )
+        .await;
+        assert_eq!(forbidden_elev.unwrap_err().0, StatusCode::FORBIDDEN);
+
+        // 3. emp-admin attribue deux clubs avec profils/équipes distincts -> 200 OK & persisté
+        let mut h_admin = HeaderMap::new();
+        h_admin.insert("x-cfitness-actor-id", HeaderValue::from_static("emp-admin"));
+        let ok = put_employee_site_accesses(
+            State(state.clone()),
+            h_admin,
+            Path("emp-employe-multi".to_string()),
+            Json(PutEmployeeSiteAccessesPayload {
+                site_accesses: vec![
+                    crate::models::EmployeeSiteAccess {
+                        site_id: "club-carre-soie".to_string(),
+                        is_primary: true,
+                        profile_id: "master_avance".to_string(),
+                        team_ids: vec!["team-accueil".to_string(), "team-commercial".to_string()],
+                        show_on_planning: true,
+                        position_ids: vec![],
+                    },
+                    crate::models::EmployeeSiteAccess {
+                        site_id: "club-beynost".to_string(),
+                        is_primary: false,
+                        profile_id: "lecture_seule_avancee".to_string(),
+                        team_ids: vec!["team-coaching".to_string()],
+                        show_on_planning: true,
+                        position_ids: vec![],
+                    },
+                ],
+            }),
+        )
+        .await;
+        assert!(ok.is_ok());
+        let db = state.db.read().await;
+        let updated = db.employees.iter().find(|e| e.id == "emp-employe-multi").unwrap();
+        assert_eq!(updated.site_accesses.len(), 2);
+        assert_eq!(updated.site_accesses[1].profile_id, "lecture_seule_avancee");
     }
 }
