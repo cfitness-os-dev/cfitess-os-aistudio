@@ -260,6 +260,91 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
         dashboard.session.resolvedPermissions['ORG04-38']?.allowed
     );
 
+  // Projection de l'identité réelle du collaborateur connecté (ex: Maxime Giraud)
+  // lorsque l'utilisateur n'est pas administrateur (évite d'afficher Julie Roux)
+  const effectiveDashboard: DashboardPayload | null =
+    dashboard && !isShellAdmin
+      ? (() => {
+          const userSiteId =
+            currentUser.clubId === 'beynost' ? 'club-beynost' : 'club-carre-soie';
+          const userContractType =
+            currentUser.contractType === 'Apprentissage'
+              ? ('Alternance' as const)
+              : (currentUser.contractType as 'CDI' | 'CDD' | 'Alternance');
+          const mappedEmployee = {
+            ...dashboard.session.employee,
+            id: currentUser.id,
+            firstName: currentUser.firstName,
+            lastName: currentUser.lastName,
+            matricule: currentUser.id.toUpperCase(),
+            active: true,
+            hrFileStatus: 'complete' as const,
+            siteAccesses: [
+              {
+                siteId: userSiteId,
+                isPrimary: true,
+                profileId: 'employe_standard' as const,
+                teamIds: [],
+                showOnPlanning: true,
+                positionIds: [],
+              },
+            ],
+            counter: {
+              ...dashboard.session.employee.counter,
+              cpAcquired: currentUser.cpBalance ?? 0,
+              cpTaken: 0,
+              cpRemaining: currentUser.cpBalance ?? 0,
+              cpNAcquired: currentUser.cpBalance ?? 0,
+              cpNTaken: 0,
+              cpNMinus1Remaining: 0,
+              rttAcquired: currentUser.rttBalance ?? 0,
+              rttRemaining: currentUser.rttBalance ?? 0,
+              rttInitialized: true,
+            },
+            contact: {
+              email: currentUser.email,
+              phone: currentUser.phone,
+              address:
+                currentUser.clubId === 'beynost'
+                  ? 'ZAC des Baterses, 01700 Beynost'
+                  : '2 Rue Jacquard, 69120 Vaulx-en-Velin',
+            },
+            contract: {
+              ...(dashboard.session.employee.contract || {
+                id: `CTR-${currentUser.id.toUpperCase()}`,
+                siteId: userSiteId,
+                regime: 'hours' as const,
+                loadedCostFactor: 1.42,
+              }),
+              id: `CTR-${currentUser.id.toUpperCase()}`,
+              siteId: userSiteId,
+              contractType: userContractType,
+              regime: 'hours' as const,
+              weeklyHours: currentUser.weeklyContractHours,
+              effectiveFrom: currentUser.hireDate,
+              hourlyRateEur: currentUser.hourlyRate ?? 0,
+              monthlyGrossEur: currentUser.monthlyGrossEur ?? 0,
+            },
+          };
+          const redactedVisibleEmployee = {
+            ...mappedEmployee,
+            contract: {
+              ...mappedEmployee.contract,
+              hourlyRateEur: null,
+              monthlyGrossEur: null,
+            },
+          };
+          return {
+            ...dashboard,
+            session: {
+              ...dashboard.session,
+              employee: mappedEmployee,
+            },
+            visibleEmployees: [redactedVisibleEmployee],
+          };
+        })()
+      : dashboard;
+
   return (
     <div className="space-y-5">
       {/* Bandeau de sélection de vue unifiée (V1.16 Mon compte <-> Traçabilité <-> Vues GitHub CFOS) */}
@@ -553,21 +638,21 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
             </div>
           ) : (
             <>
-              {hubTab === 'traceability' && (
+              {hubTab === 'traceability' && effectiveDashboard && (
                 <PlanningAndModulesView
                   mode="traceability"
                   activeSection={activeSection}
                   auth={auth}
-                  dashboard={dashboard}
+                  dashboard={effectiveDashboard}
                   registry={registry}
                   ambiguities={ambiguities}
                   onRefreshDashboard={() => refreshAll()}
                 />
               )}
 
-              {hubTab === 'mon-compte' && activeSection === 'MC01' && (
+              {hubTab === 'mon-compte' && activeSection === 'MC01' && effectiveDashboard && (
                 <DashboardView
-                  dashboard={dashboard}
+                  dashboard={effectiveDashboard}
                   onOpenPlanning={() => setShellSection('planning-hr', 'planning')}
                   onOpenPreferences={() => void handleNavigateSection('MC13')}
                 />
@@ -620,23 +705,24 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                 </div>
               )}
 
-              {hubTab === 'mon-compte' && activeSection === 'MC11' && (
+              {hubTab === 'mon-compte' && activeSection === 'MC11' && effectiveDashboard && (
                 <AdminRightsView
                   auth={auth}
-                  dashboard={dashboard}
+                  dashboard={effectiveDashboard}
                   onRefreshDashboard={() => refreshAll()}
                 />
               )}
 
-              {hubTab === 'mon-compte' && activeSection === 'MC13' && (
+              {hubTab === 'mon-compte' && activeSection === 'MC13' && effectiveDashboard && (
                 <PreferencesView
                   auth={auth}
-                  preferences={dashboard.preferences}
+                  preferences={effectiveDashboard.preferences}
                   onRefreshDashboard={() => refreshAll()}
                 />
               )}
 
               {hubTab === 'mon-compte' &&
+                effectiveDashboard &&
                 activeSection !== 'MC01' &&
                 activeSection !== 'MC04' &&
                 activeSection !== 'MC05' &&
@@ -649,7 +735,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                     mode={activeSection === 'MC03' ? 'planning' : 'blueprint'}
                     activeSection={activeSection}
                     auth={auth}
-                    dashboard={dashboard}
+                    dashboard={effectiveDashboard}
                     registry={registry}
                     ambiguities={ambiguities}
                     onRefreshDashboard={() => refreshAll()}
