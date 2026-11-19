@@ -1481,44 +1481,147 @@ async fn put_employee_site_accesses(
         .cloned()
         .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Acteur introuvable."))?;
 
+    let target_emp_snapshot = db
+        .employees
+        .iter()
+        .find(|e| e.id == emp_id)
+        .cloned()
+        .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Salarié cible introuvable."))?;
+
+    if payload.site_accesses.is_empty() {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            "Au moins un établissement est requis pour un salarié.",
+        ));
+    }
+
+    // 1. Validation référentiel : unicité des clubs, 1 seul principal, profils & équipes du club valides
+    let mut seen_sites = HashSet::new();
+    let mut primary_count = 0usize;
+    for acc in &payload.site_accesses {
+        if !seen_sites.insert(acc.site_id.as_str()) {
+            return Err(err_resp(
+                StatusCode::BAD_REQUEST,
+                format!("Doublon d'établissement dans le payload : {}", acc.site_id),
+            ));
+        }
+        if acc.is_primary {
+            primary_count += 1;
+        }
+        if !db.sites.iter().any(|s| s.id == acc.site_id) {
+            return Err(err_resp(
+                StatusCode::BAD_REQUEST,
+                format!("Établissement inexistant : {}", acc.site_id),
+            ));
+        }
+        if !db.profiles.iter().any(|p| p.id == acc.profile_id) {
+            return Err(err_resp(
+                StatusCode::BAD_REQUEST,
+                format!("Profil RH inexistant : {}", acc.profile_id),
+            ));
+        }
+        for tid in &acc.team_ids {
+            let valid_team = db
+                .teams
+                .iter()
+                .any(|t| t.id == *tid && t.site_id == acc.site_id);
+            if !valid_team {
+                return Err(err_resp(
+                    StatusCode::BAD_REQUEST,
+                    format!(
+                        "Équipe {} inexistante ou n'appartenant pas au club {}.",
+                        tid, acc.site_id
+                    ),
+                ));
+            }
+        }
+    }
+    if primary_count != 1 {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            "Exactement un établissement principal (isPrimary=true) est requis.",
+        ));
+    }
+
+    // 2. Contrôle différentiel AVANT/APRÈS : tout club ajouté, modifié ou retiré doit être autorisé
     let is_global_admin = actor
         .site_accesses
         .iter()
         .any(|sa| sa.profile_id == "admin_systeme");
 
-    for target_acc in &payload.site_accesses {
-        if !is_global_admin && target_acc.profile_id == "admin_systeme" {
-            return Err(err_resp(
-                StatusCode::FORBIDDEN,
-                "Non-élévation (403) : seul admin_systeme peut attribuer admin_systeme.",
-            ));
-        }
-        if !is_global_admin {
-            let actor_on_club = actor
+    if !is_global_admin {
+        let mut impacted_sites: HashSet<String> = HashSet::new();
+        for old_sa in &target_emp_snapshot.site_accesses {
+            let new_sa = payload
                 .site_accesses
                 .iter()
-                .find(|sa| sa.site_id == target_acc.site_id);
-            let allowed_on_club = actor_on_club
-                .map(|sa| sa.profile_id == "master_avance" || sa.profile_id == "planificateur_avance")
-                .unwrap_or(false);
+                .find(|n| n.site_id == old_sa.site_id);
+            let changed = match new_sa {
+                None => true,
+                Some(n) => {
+                    n.is_primary != old_sa.is_primary
+                        || n.profile_id != old_sa.profile_id
+                        || n.team_ids != old_sa.team_ids
+                        || n.show_on_planning != old_sa.show_on_planning
+                        || n.position_ids != old_sa.position_ids
+                }
+            };
+            if changed {
+                impacted_sites.insert(old_sa.site_id.clone());
+            }
+        }
+        for new_sa in &payload.site_accesses {
+            let existed = target_emp_snapshot
+                .site_accesses
+                .iter()
+                .any(|o| o.site_id == new_sa.site_id);
+            if !existed {
+                impacted_sites.insert(new_sa.site_id.clone());
+            }
+            if new_sa.profile_id == "admin_systeme" || new_sa.profile_id == "master_avance" {
+                return Err(err_resp(
+                    StatusCode::FORBIDDEN,
+                    "Non-élévation (403) : profil supérieur non attribuable hors admin_systeme.",
+                ));
+            }
+        }
+
+        for site_id in impacted_sites {
+            let allowed_on_club = actor
+                .site_accesses
+                .iter()
+                .any(|sa| sa.site_id == site_id)
+                && build_session_context(&db, &actor_id, &site_id)
+                    .map(|ctx| {
+                        ctx.resolved_permissions
+                            .get("ORG04-14")
+                            .map(|p| p.allowed)
+                            .unwrap_or(false)
+                            || ctx
+                                .resolved_permissions
+                                .get("ORG04-12")
+                                .map(|p| p.allowed)
+                                .unwrap_or(false)
+                    })
+                    .unwrap_or(false);
             if !allowed_on_club {
                 return Err(err_resp(
                     StatusCode::FORBIDDEN,
                     format!(
-                        "Accès refusé (403) : aucune délégation d'attribution sur le club {}.",
-                        target_acc.site_id
+                        "Accès refusé (403) : aucune délégation ORG04-12/ORG04-14 sur le club {}.",
+                        site_id
                     ),
                 ));
             }
         }
     }
 
-    let emp = db
-        .employees
-        .iter_mut()
-        .find(|e| e.id == emp_id)
-        .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Salarié cible introuvable."))?;
-    emp.site_accesses = payload.site_accesses.clone();
+    // 3. Mise à jour atomique + persistance disque obligatoire
+    let old_accesses = target_emp_snapshot.site_accesses;
+    let old_audit_len = db.audit_log.len();
+    if let Some(emp) = db.employees.iter_mut().find(|e| e.id == emp_id) {
+        emp.site_accesses = payload.site_accesses.clone();
+    }
 
     append_audit(
         &mut db,
@@ -1530,7 +1633,16 @@ async fn put_employee_site_accesses(
         None,
         None,
     );
-    let _ = persist_state(&state.data_dir, &db);
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        if let Some(emp) = db.employees.iter_mut().find(|e| e.id == emp_id) {
+            emp.site_accesses = old_accesses;
+        }
+        db.audit_log.truncate(old_audit_len);
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec persistance serveur : {}", err_msg),
+        ));
+    }
 
     Ok(Json(json!({
         "ok": true,
@@ -2031,7 +2143,7 @@ mod tests {
                     site_id: "club-beynost".to_string(),
                     is_primary: true,
                     profile_id: "employe_standard".to_string(),
-                    team_ids: vec!["team-accueil".to_string()],
+                    team_ids: vec!["team-bey-accueil".to_string()],
                     show_on_planning: true,
                     position_ids: vec![],
                 }],
@@ -2061,9 +2173,49 @@ mod tests {
         .await;
         assert_eq!(forbidden_elev.unwrap_err().0, StatusCode::FORBIDDEN);
 
-        // 3. emp-admin attribue deux clubs avec profils/équipes distincts -> 200 OK & persisté
+        // 3. emp-master (Carré de Soie) tente de retirer Beynost d'emp-employe-multi -> 403 FORBIDDEN
+        let mut h_master2 = HeaderMap::new();
+        h_master2.insert("x-cfitness-actor-id", HeaderValue::from_static("emp-master"));
+        let forbidden_remove = put_employee_site_accesses(
+            State(state.clone()),
+            h_master2,
+            Path("emp-employe-multi".to_string()),
+            Json(PutEmployeeSiteAccessesPayload {
+                site_accesses: vec![crate::models::EmployeeSiteAccess {
+                    site_id: "club-carre-soie".to_string(),
+                    is_primary: true,
+                    profile_id: "employe_standard".to_string(),
+                    team_ids: vec![],
+                    show_on_planning: true,
+                    position_ids: vec![],
+                }],
+            }),
+        )
+        .await;
+        assert_eq!(forbidden_remove.unwrap_err().0, StatusCode::FORBIDDEN);
+
+        // 4. Équipe d'un autre club refusée -> 400 BAD_REQUEST
         let mut h_admin = HeaderMap::new();
         h_admin.insert("x-cfitness-actor-id", HeaderValue::from_static("emp-admin"));
+        let bad_team = put_employee_site_accesses(
+            State(state.clone()),
+            h_admin.clone(),
+            Path("emp-employe-multi".to_string()),
+            Json(PutEmployeeSiteAccessesPayload {
+                site_accesses: vec![crate::models::EmployeeSiteAccess {
+                    site_id: "club-carre-soie".to_string(),
+                    is_primary: true,
+                    profile_id: "employe_standard".to_string(),
+                    team_ids: vec!["team-bey-coaching".to_string()],
+                    show_on_planning: true,
+                    position_ids: vec![],
+                }],
+            }),
+        )
+        .await;
+        assert_eq!(bad_team.unwrap_err().0, StatusCode::BAD_REQUEST);
+
+        // 5. emp-admin attribue deux clubs avec profils/équipes valides -> 200 OK & persisté sur disque
         let ok = put_employee_site_accesses(
             State(state.clone()),
             h_admin,
@@ -2074,7 +2226,7 @@ mod tests {
                         site_id: "club-carre-soie".to_string(),
                         is_primary: true,
                         profile_id: "master_avance".to_string(),
-                        team_ids: vec!["team-accueil".to_string(), "team-commercial".to_string()],
+                        team_ids: vec!["team-cs-accueil".to_string(), "team-cs-coaching".to_string()],
                         show_on_planning: true,
                         position_ids: vec![],
                     },
@@ -2082,7 +2234,7 @@ mod tests {
                         site_id: "club-beynost".to_string(),
                         is_primary: false,
                         profile_id: "lecture_seule_avancee".to_string(),
-                        team_ids: vec!["team-coaching".to_string()],
+                        team_ids: vec!["team-bey-coaching".to_string()],
                         show_on_planning: true,
                         position_ids: vec![],
                     },
@@ -2091,9 +2243,12 @@ mod tests {
         )
         .await;
         assert!(ok.is_ok());
-        let db = state.db.read().await;
-        let updated = db.employees.iter().find(|e| e.id == "emp-employe-multi").unwrap();
+
+        // Rechargement réel depuis le disque pour prouver la persistance durable
+        let reloaded = load_or_init_state(&state.data_dir);
+        let updated = reloaded.employees.iter().find(|e| e.id == "emp-employe-multi").unwrap();
         assert_eq!(updated.site_accesses.len(), 2);
         assert_eq!(updated.site_accesses[1].profile_id, "lecture_seule_avancee");
+        assert_eq!(updated.site_accesses[0].team_ids.len(), 2);
     }
 }

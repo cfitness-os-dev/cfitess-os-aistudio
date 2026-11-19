@@ -1576,17 +1576,29 @@ export function LeadCommercialHubView({
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (!newActTitle.trim()) return;
-                  const targetProspect =
-                    prospects.find((p) => p.id === newActProspectId) ?? prospects[0];
+                  const allowedClubs =
+                    currentUser.role === 'admin'
+                      ? null
+                      : currentUser.siteAssignments?.length
+                      ? currentUser.siteAssignments.map((sa) => sa.clubId)
+                      : [currentUser.clubId];
+                  const scopedProspects = prospects.filter((p) => {
+                    if (allowedClubs && !allowedClubs.includes(p.clubId)) return false;
+                    if (clubFilter !== 'all' && p.clubId !== clubFilter) return false;
+                    return true;
+                  });
+                  const targetProspect = scopedProspects.find((p) => p.id === newActProspectId) ?? scopedProspects[0];
+                  if (!targetProspect) {
+                    setPurgeLog('Aucun prospect autorisé sur ce club pour créer une activité.');
+                    return;
+                  }
                   const created: FictiveActivityRow = {
                     id: `act-${Date.now()}`,
                     type: newActType,
                     title: newActTitle.trim(),
-                    prospectId: targetProspect?.id,
-                    prospectName: targetProspect
-                      ? `${targetProspect.firstName} ${targetProspect.lastName}`
-                      : 'Prospect générique',
-                    clubId: targetProspect?.clubId ?? (clubFilter === 'beynost' ? 'beynost' : 'carre-de-soie'),
+                    prospectId: targetProspect.id,
+                    prospectName: `${targetProspect.firstName} ${targetProspect.lastName}`,
+                    clubId: targetProspect.clubId,
                     dueAt: newActDueAt,
                     status: 'todo',
                     assignedToId: newActAssigneeId,
@@ -1616,17 +1628,36 @@ export function LeadCommercialHubView({
                     </option>
                   ))}
                 </select>
-                <select
-                  value={newActProspectId || prospects[0]?.id || ''}
-                  onChange={(e) => setNewActProspectId(e.target.value)}
-                  className="px-2 py-1.5 rounded bg-slate-950 border border-slate-700"
-                >
-                  {prospects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.firstName} {p.lastName}
-                    </option>
-                  ))}
-                </select>
+                {(() => {
+                  const allowedClubs =
+                    currentUser.role === 'admin'
+                      ? null
+                      : currentUser.siteAssignments?.length
+                      ? currentUser.siteAssignments.map((sa) => sa.clubId)
+                      : [currentUser.clubId];
+                  const scopedProspects = prospects.filter((p) => {
+                    if (allowedClubs && !allowedClubs.includes(p.clubId)) return false;
+                    if (clubFilter !== 'all' && p.clubId !== clubFilter) return false;
+                    return true;
+                  });
+                  return (
+                    <select
+                      value={
+                        scopedProspects.some((p) => p.id === newActProspectId)
+                          ? newActProspectId
+                          : scopedProspects[0]?.id || ''
+                      }
+                      onChange={(e) => setNewActProspectId(e.target.value)}
+                      className="px-2 py-1.5 rounded bg-slate-950 border border-slate-700"
+                    >
+                      {scopedProspects.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.firstName} {p.lastName} ({p.clubId})
+                        </option>
+                      ))}
+                    </select>
+                  );
+                })()}
                 <div className="flex gap-1.5">
                   <input
                     type="datetime-local"
