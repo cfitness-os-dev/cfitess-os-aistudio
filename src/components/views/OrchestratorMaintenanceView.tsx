@@ -560,7 +560,74 @@ export function OrchestratorMaintenanceView() {
   const [newStockCategory, setNewStockCategory] =
     useState<StockConsumableItem['category']>('Nutrition / Bar');
   const [newStockClub, setNewStockClub] = useState<ClubId>('carre-de-soie');
+  const [suppliers, setSuppliers] = useState<string[]>(() => {
+    const defaults = [
+      'FitSupply Pro Lyon',
+      'Technogym France SAV',
+      'NutriSport France',
+      'Heitz System',
+      'Hygiène Sport Rhône',
+      'AudioVisuel & Sonorisation Pro',
+      'Sécurité & Caméras IP Rhône',
+      'ClimRhône Maintenance (CVC)',
+      'Électricité & Éclairage Pro',
+      'Prestataire Maintenance Club',
+    ];
+    try {
+      const saved = localStorage.getItem('cfos_custom_suppliers');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {
+      // ignore
+    }
+    return defaults;
+  });
+  const [showAddSupplier, setShowAddSupplier] = useState(false);
+  const [newSupplierInput, setNewSupplierInput] = useState('');
   const [newStockSupplier, setNewStockSupplier] = useState('FitSupply Pro Lyon');
+
+  const handleAddSupplier = () => {
+    const clean = newSupplierInput.trim();
+    if (!clean) return;
+    if (!suppliers.some((s) => s.toLowerCase() === clean.toLowerCase())) {
+      const next = [clean, ...suppliers];
+      setSuppliers(next);
+      try {
+        localStorage.setItem('cfos_custom_suppliers', JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+    }
+    setNewStockSupplier(clean);
+    setNewSupplierInput('');
+    setShowAddSupplier(false);
+    setScanFeedback(`Nouveau fournisseur ajouté et sélectionné : ${clean}.`);
+  };
+
+  const handleAddProductOnly = () => {
+    if (!newStockName.trim()) return;
+    const newStk: StockConsumableItem = {
+      id: `stk-${Date.now()}`,
+      clubId: newStockClub,
+      name: newStockName.trim(),
+      barcode: newStockBarcode.trim() || undefined,
+      category: newStockCategory,
+      currentQty: newStockQty,
+      minThreshold: Math.max(5, Math.round(newStockQty * 0.3)),
+      unit: 'unités',
+      supplier: newStockSupplier,
+      unitPriceht: newStockPrice,
+      autoOrderPrepared: false,
+    };
+    setStocks((prev) => [newStk, ...prev]);
+    setScanFeedback(
+      `Produit ajouté directement au stock (${formatClubName(newStockClub, true)}) : ${newStk.name} (${newStk.currentQty} ${newStk.unit}).`
+    );
+    setNewStockName('');
+    setNewStockBarcode('');
+  };
   const [newStockQty, setNewStockQty] = useState(20);
   const [newStockPrice, setNewStockPrice] = useState(12.5);
   const [newStockBarcode, setNewStockBarcode] = useState('');
@@ -1928,24 +1995,26 @@ export function OrchestratorMaintenanceView() {
 
                   <div className="grid grid-cols-3 gap-2.5">
                     <div>
-                      <label className="block font-semibold text-slate-700 mb-1">
-                        Fournisseur
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-semibold text-slate-700">Fournisseur</label>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddSupplier((prev) => !prev)}
+                          className="text-[10px] font-bold text-violet-600 hover:text-violet-800 underline cursor-pointer"
+                        >
+                          {showAddSupplier ? 'Fermer' : '+ Fournisseur'}
+                        </button>
+                      </div>
                       <select
                         value={newStockSupplier}
                         onChange={(e) => setNewStockSupplier(e.target.value)}
                         className="w-full px-2.5 py-2 rounded-xl border border-slate-300 bg-white"
                       >
-                        <option value="FitSupply Pro Lyon">FitSupply Pro Lyon</option>
-                        <option value="Technogym France SAV">Technogym France SAV</option>
-                        <option value="NutriSport France">NutriSport France</option>
-                        <option value="Heitz System">Heitz System</option>
-                        <option value="Hygiène Sport Rhône">Hygiène Sport Rhône</option>
-                        <option value="AudioVisuel & Sonorisation Pro">AudioVisuel &amp; Sonorisation Pro</option>
-                        <option value="Sécurité & Caméras IP Rhône">Sécurité &amp; Caméras IP Rhône</option>
-                        <option value="ClimRhône Maintenance (CVC)">ClimRhône Maintenance (CVC)</option>
-                        <option value="Électricité & Éclairage Pro">Électricité &amp; Éclairage Pro</option>
-                        <option value="Prestataire Maintenance Club">Prestataire Maintenance Club</option>
+                        {suppliers.map((sup) => (
+                          <option key={sup} value={sup}>
+                            {sup}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -1975,15 +2044,44 @@ export function OrchestratorMaintenanceView() {
                     </div>
                   </div>
 
-                  <button
-                    type="submit"
-                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold flex items-center justify-center gap-2 cursor-pointer shadow-xs"
-                  >
-                    <ShoppingCart className="w-4 h-4" />
-                    <span>
-                      Émettre le Bon de Commande ({(newStockQty * newStockPrice).toFixed(2)} € HT)
-                    </span>
-                  </button>
+                  {showAddSupplier && (
+                    <div className="p-2.5 rounded-xl bg-violet-50 border border-violet-200 flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={newSupplierInput}
+                        onChange={(e) => setNewSupplierInput(e.target.value)}
+                        placeholder="Nom du nouveau fournisseur (ex: Decathlon Pro, Sonos Pro...)"
+                        className="flex-1 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddSupplier}
+                        className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs cursor-pointer shrink-0"
+                      >
+                        Ajouter
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={handleAddProductOnly}
+                      className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Ajouter au stock</span>
+                    </button>
+                    <button
+                      type="submit"
+                      className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <ShoppingCart className="w-4 h-4" />
+                      <span>
+                        Commander ({(newStockQty * newStockPrice).toFixed(2)} € HT)
+                      </span>
+                    </button>
+                  </div>
                 </form>
               </div>
 
