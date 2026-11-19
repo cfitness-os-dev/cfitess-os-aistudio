@@ -534,6 +534,7 @@ export function AdminShell() {
                 (!item.technicalOnly || isTechnicalMode) &&
                 isNavItemAllowedForRole(item, currentUser.role, {
                   canAccessRecovery,
+                  canAccessFinances: currentUser.role === 'admin' || Boolean(currentUser.canAccessFinances),
                   canAccessMaintenance: currentUser.role === 'admin' || currentUser.role === 'coach',
                   isTechnicalMode,
                 })
@@ -1418,6 +1419,7 @@ export function AdminShell() {
                     (!item.technicalOnly || isTechnicalMode) &&
                     isNavItemAllowedForRole(item, currentUser.role, {
                       canAccessRecovery,
+                      canAccessFinances: currentUser.role === 'admin' || Boolean(currentUser.canAccessFinances),
                       canAccessMaintenance: currentUser.role === 'admin' || currentUser.role === 'coach',
                       isTechnicalMode,
                     })

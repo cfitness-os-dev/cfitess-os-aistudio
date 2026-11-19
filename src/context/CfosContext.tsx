@@ -15,6 +15,7 @@ import type {
   ClubId,
   CollaboratorNotification,
   CollaboratorTask,
+  ContractType,
   Employee,
   GoNoGoPhase,
   HRDocument,
@@ -30,6 +31,7 @@ import type {
   ProspectStage,
   RecoveryCase,
   RecoveryCaseStatus,
+  Role,
   ServerPowerStatus,
   ShellMode,
   Shift,
@@ -210,7 +212,25 @@ interface CfosContextValue extends PersistedState {
     contractType?: 'CDI' | 'CDD';
     weeklyContractHours?: number;
     jobTitle?: string;
+    role?: Role;
+    clubId?: ClubId;
+    contractRegime?: 'hours' | 'forfait_jours';
+    siteAssignments?: Employee['siteAssignments'];
   }) => Employee;
+  updateStaffEmployeeSiteAssignments: (
+    employeeId: string,
+    siteAssignments: NonNullable<Employee['siteAssignments']>
+  ) => void;
+  updateStaffEmployeeContract: (
+    employeeId: string,
+    patch: {
+      contractType?: ContractType;
+      weeklyContractHours?: number;
+      contractRegime?: 'hours' | 'forfait_jours';
+      monthlyGrossEur?: number;
+      contractEndDate?: string;
+    }
+  ) => void;
   updateRecoveryCaseStatus: (caseId: string, status: RecoveryCaseStatus, note?: string) => void;
   recordRecoveryRelance: (caseId: string, note: string) => void;
   shellMode: ShellMode;
@@ -2628,23 +2648,44 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     contractType = 'CDI',
     weeklyContractHours = 35,
     jobTitle = 'Collaborateur Club',
+    role = 'commercial',
+    clubId = 'carre-de-soie',
+    contractRegime = 'hours',
+    siteAssignments,
   }) => {
     const cleanFirst = firstName.trim();
     const cleanLast = lastName.trim();
+    const safeRole: Role = role === 'admin' || role === 'manager' ? 'commercial' : role;
+    const uniquePin = String(Math.floor(1000 + Math.random() * 8999));
+    const defaultAssignments: NonNullable<Employee['siteAssignments']> = siteAssignments?.length
+      ? siteAssignments
+      : [
+          {
+            clubId,
+            isPrimary: true,
+            roleInClub: safeRole,
+            teamIds: ['team-accueil'],
+            managedTeamIds: [],
+          },
+        ];
     const newEmp: Employee = {
       id: `emp-staff-${Date.now()}`,
       firstName: cleanFirst,
       lastName: cleanLast,
       email: `${cleanFirst.toLowerCase()}.${cleanLast.toLowerCase()}@cfitness.fr`.replace(/\s+/g, ''),
       phone: '06 00 00 00 00',
-      role: 'manager',
-      clubId: 'carre-de-soie',
+      role: safeRole,
+      clubId,
       contractType,
       jobTitle,
-      hourlyRate: 18,
+      hourlyRate: 12.02,
       weeklyContractHours,
-      monthlyGrossEur: Math.round(18 * weeklyContractHours * 4.333 * 100) / 100,
-      pinCode: '5050',
+      contractRegime,
+      annualForfaitDays: contractRegime === 'forfait_jours' ? 218 : undefined,
+      monthlyGrossEur: Math.round(12.02 * weeklyContractHours * 4.333 * 100) / 100,
+      canAccessFinances: false,
+      siteAssignments: defaultAssignments,
+      pinCode: uniquePin,
       failedPinAttempts: 0,
       pinLocked: false,
       totpEnabled: false,
@@ -2657,6 +2698,56 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
       employees: [...prev.employees, newEmp],
     }));
     return newEmp;
+  };
+
+  const updateStaffEmployeeSiteAssignments: CfosContextValue['updateStaffEmployeeSiteAssignments'] = (
+    employeeId,
+    siteAssignments
+  ) => {
+    if (currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
+    const primaryClub = siteAssignments.find((s) => s.isPrimary)?.clubId || siteAssignments[0]?.clubId;
+    setState((prev) => ({
+      ...prev,
+      employees: prev.employees.map((e) =>
+        e.id === employeeId
+          ? {
+              ...e,
+              clubId: primaryClub || e.clubId,
+              siteAssignments,
+            }
+          : e
+      ),
+      auditLogs: appendAudit(prev.auditLogs, {
+        clubId: primaryClub || currentUser.clubId,
+        action: 'UPDATE_RATTACHEMENTS_MULTI_CLUBS',
+        target: employeeId,
+        afterState: JSON.stringify(siteAssignments),
+      }),
+    }));
+  };
+
+  const updateStaffEmployeeContract: CfosContextValue['updateStaffEmployeeContract'] = (
+    employeeId,
+    patch
+  ) => {
+    if (currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
+    setState((prev) => ({
+      ...prev,
+      employees: prev.employees.map((e) =>
+        e.id === employeeId
+          ? {
+              ...e,
+              ...patch,
+            }
+          : e
+      ),
+      auditLogs: appendAudit(prev.auditLogs, {
+        clubId: currentUser.clubId,
+        action: 'UPDATE_CONTRAT_RH',
+        target: employeeId,
+        afterState: JSON.stringify(patch),
+      }),
+    }));
   };
 
   const toggleRecoveryAccess = (employeeId: string) => {
@@ -2720,6 +2811,8 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     canAccessRecovery,
     toggleRecoveryAccess,
     addStaffEmployee,
+    updateStaffEmployeeSiteAssignments,
+    updateStaffEmployeeContract,
     updateRecoveryCaseStatus,
     recordRecoveryRelance,
     shellMode,

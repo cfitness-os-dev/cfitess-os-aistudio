@@ -406,6 +406,11 @@ export interface PayrollSummaryRow {
   fullName: string;
   clubId: ClubId;
   contractHours: number;
+  regime: 'HORAIRE' | 'FORFAIT_JOURS';
+  unit: 'HEURES' | 'JOURS';
+  annualForfaitDays?: number;
+  monthlyBaseGrossEur: number;
+  bonusEur: number;
   normalHours: number;
   overtime25Hours: number;
   sundayHours: number;
@@ -413,14 +418,24 @@ export interface PayrollSummaryRow {
   grossVariableEstimateEur: number;
 }
 
+export interface PayrollBonusInput {
+  employeeId: string;
+  amountEur: number;
+  period: string;
+}
+
 export function computePayrollVariables(
   employees: Employee[],
-  shifts: Shift[]
+  shifts: Shift[],
+  periodMonth?: string,
+  bonuses: PayrollBonusInput[] = []
 ): PayrollSummaryRow[] {
   return employees
     .filter((e) => e.role !== 'kiosque')
-    .map((emp, idx) => {
-      const empShifts = shifts.filter((s) => s.employeeId === emp.id);
+    .map((emp) => {
+      const empShifts = shifts.filter(
+        (s) => s.employeeId === emp.id && (!periodMonth || s.date.startsWith(periodMonth))
+      );
       let totalMinutes = 0;
       let sundayMinutes = 0;
       let nightMinutes = 0;
@@ -442,26 +457,58 @@ export function computePayrollVariables(
         }
       }
 
+      const isForfaitJours =
+        emp.contractRegime === 'forfait_jours' ||
+        (emp.contractRegime === undefined && emp.role === 'admin');
+      const annualForfaitDays = isForfaitJours ? emp.annualForfaitDays ?? 218 : undefined;
       const totalHours = Number((totalMinutes / 60).toFixed(2));
-      const normalHours = Number(Math.min(totalHours, emp.weeklyContractHours).toFixed(2));
-      const overtime25Hours = Number(Math.max(0, totalHours - emp.weeklyContractHours).toFixed(2));
+      const normalHours = isForfaitJours
+        ? Number(((annualForfaitDays ?? 218) / 12).toFixed(2))
+        : Number(Math.min(totalHours, emp.weeklyContractHours).toFixed(2));
+      const overtime25Hours = isForfaitJours
+        ? 0
+        : Number(Math.max(0, totalHours - emp.weeklyContractHours).toFixed(2));
       const sundayHours = Number((sundayMinutes / 60).toFixed(2));
       const nightHours = Number((nightMinutes / 60).toFixed(2));
+
+      const bonusEur = Number(
+        bonuses
+          .filter(
+            (b) => b.employeeId === emp.id && (!periodMonth || b.period === periodMonth)
+          )
+          .reduce((acc, b) => acc + b.amountEur, 0)
+          .toFixed(2)
+      );
+
+      const monthlyBaseGrossEur = Number(
+        (
+          emp.monthlyGrossEur ??
+          Math.round(emp.hourlyRate * emp.weeklyContractHours * 4.333 * 100) / 100
+        ).toFixed(2)
+      );
 
       const grossVariableEstimateEur = Number(
         (
           overtime25Hours * emp.hourlyRate * 1.25 +
           sundayHours * emp.hourlyRate * 0.5 +
-          nightHours * emp.hourlyRate * 0.25
+          nightHours * emp.hourlyRate * 0.25 +
+          bonusEur
         ).toFixed(2)
       );
 
+      const stableMatricule = `CF-${emp.id.replace(/^emp-/, '').toUpperCase()}`;
+
       return {
         employeeId: emp.id,
-        matricule: `CF-${String(idx + 101).padStart(4, '0')}`,
+        matricule: stableMatricule,
         fullName: `${emp.firstName} ${emp.lastName}`,
         clubId: emp.clubId,
         contractHours: emp.weeklyContractHours,
+        regime: isForfaitJours ? 'FORFAIT_JOURS' : 'HORAIRE',
+        unit: isForfaitJours ? 'JOURS' : 'HEURES',
+        annualForfaitDays,
+        monthlyBaseGrossEur,
+        bonusEur,
         normalHours,
         overtime25Hours,
         sundayHours,
@@ -473,7 +520,7 @@ export function computePayrollVariables(
 
 export function generateSilaeCsv(rows: PayrollSummaryRow[], periodLabel: string): string {
   const header =
-    'MATRICULE;COLLABORATEUR;ETABLISSEMENT;PERIODE;HEURES_NORMALES;HS_25;HEURES_DIMANCHE;HEURES_NUIT;VARIABLES_BRUT_EUR';
+    'MATRICULE;COLLABORATEUR;ETABLISSEMENT;PERIODE;REGIME;UNITE;VOLUME_NORMAL;HS_25;HEURES_DIMANCHE;HEURES_NUIT;PRIMES_EUR;BASE_BRUT_EUR;VARIABLES_BRUT_EUR';
   const lines = rows.map((r) => {
     const clubCode = r.clubId === 'carre-de-soie' ? 'CDS_VAULX' : 'BEYNOST_ZAC';
     return [
@@ -481,10 +528,14 @@ export function generateSilaeCsv(rows: PayrollSummaryRow[], periodLabel: string)
       r.fullName,
       clubCode,
       periodLabel,
+      r.regime,
+      r.unit,
       r.normalHours.toFixed(2),
       r.overtime25Hours.toFixed(2),
       r.sundayHours.toFixed(2),
       r.nightHours.toFixed(2),
+      r.bonusEur.toFixed(2),
+      r.monthlyBaseGrossEur.toFixed(2),
       r.grossVariableEstimateEur.toFixed(2),
     ].join(';');
   });
@@ -754,16 +805,21 @@ export function isSectionAllowedForRole(section: AdminSection, role: Role): bool
 export function isNavItemAllowedForRole(
   item: { sectionId?: AdminSection; subTarget?: string },
   role: Role,
-  options?: { canAccessRecovery?: boolean; canAccessMaintenance?: boolean; isTechnicalMode?: boolean }
+  options?: {
+    canAccessRecovery?: boolean;
+    canAccessMaintenance?: boolean;
+    canAccessFinances?: boolean;
+    isTechnicalMode?: boolean;
+  }
 ): boolean {
   const section = item.sectionId;
   const sub = item.subTarget;
   if (!section) return true;
   if (!isSectionAllowedForRole(section, role)) return false;
 
-  // Finances : réservé exclusivement à la Direction (admin / manager)
+  // Finances : réservé exclusivement à la Direction (admin) ou capacité financière explicite
   if (section === 'devices' && sub === 'finances') {
-    return role === 'admin' || role === 'manager';
+    return role === 'admin' || Boolean(options?.canAccessFinances);
   }
   // Adhérents Heitz : Direction & Commercial uniquement (Coach/Apprenti gardent checkup/Mywellness)
   if (section === 'devices' && sub === 'adherents') {

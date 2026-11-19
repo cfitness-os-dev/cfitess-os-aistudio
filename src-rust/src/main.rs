@@ -43,6 +43,7 @@ async fn main() {
     let shared = Arc::new(SharedAppState {
         db: RwLock::new(initial_state),
         data_dir,
+        sessions: RwLock::new(std::collections::HashMap::new()),
     });
 
     let index_file = frontend_dir.join("index.html");

@@ -54,7 +54,17 @@ export interface Employee {
   jobTitle: string;
   hourlyRate: number;
   weeklyContractHours: number;
+  contractRegime?: 'hours' | 'forfait_jours';
+  annualForfaitDays?: number;
   monthlyGrossEur?: number;
+  canAccessFinances?: boolean;
+  siteAssignments?: Array<{
+    clubId: ClubId;
+    isPrimary: boolean;
+    roleInClub: Role;
+    teamIds: string[];
+    managedTeamIds?: string[];
+  }>;
   monthlySubscriptionsTarget?: number;
   monthlySubscriptionsActual?: number;
   probationMonths?: number;

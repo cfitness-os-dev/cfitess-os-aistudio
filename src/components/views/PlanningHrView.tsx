@@ -434,6 +434,7 @@ export function PlanningHrView({
       },
     ];
   });
+  const [silaePeriod, setSilaePeriod] = useState<'2026-10' | '2026-11' | '2026-12'>('2026-10');
   const [bonusEmpId, setBonusEmpId] = useState<string>('emp-maxime');
   const [bonusLabel, setBonusLabel] = useState<string>('Prime exceptionnelle');
   const [bonusAmountEur, setBonusAmountEur] = useState<number>(150);
@@ -449,7 +450,7 @@ export function PlanningHrView({
         employeeId: bonusEmpId,
         label: bonusLabel.trim(),
         amountEur: Math.round(bonusAmountEur * 100) / 100,
-        period: '2026-10',
+        period: silaePeriod,
       },
     ];
     setSilaeBonuses(next);
@@ -498,30 +499,18 @@ export function PlanningHrView({
     ? employees.filter((e) => e.clubId === forcedClubScope)
     : employees;
 
-  // Cas Forfait Jours (218 j/an) réintroduit dans la paie Silae (CFOS-055)
-  const basePayrollRows = computePayrollVariables(scopedEmployeesForPayroll, shifts).map((row) => {
-    const emp = scopedEmployeesForPayroll.find((e) => e.id === row.employeeId);
-    const empBonuses = silaeBonuses
-      .filter((b) => b.employeeId === row.employeeId)
-      .reduce((acc, b) => acc + b.amountEur, 0);
-    const isForfaitJours =
-      emp?.role === 'admin' ||
-      emp?.jobTitle.toLowerCase().includes('direct') ||
-      emp?.jobTitle.toLowerCase().includes('cadre');
-    return {
-      ...row,
-      bonusEur: empBonuses,
-      grossVariableEstimateEur: Math.round((row.grossVariableEstimateEur + empBonuses) * 100) / 100,
-      isForfaitJours,
-      forfaitDaysLabel: isForfaitJours ? '218 j/an (18,17 j/mois)' : null,
-    };
-  });
-  const payrollRows = basePayrollRows;
+  // Paie Silae unifiée sur les contrats réels, la période choisie et les primes filtrées par période (CFOS-055/033)
+  const payrollRows = computePayrollVariables(
+    scopedEmployeesForPayroll,
+    shifts,
+    silaePeriod,
+    silaeBonuses
+  );
   const silaeCsvText = canViewSalaries
-    ? generateSilaeCsv(payrollRows, '2026-10')
+    ? generateSilaeCsv(payrollRows, silaePeriod)
     : 'ACCÈS RESTREINT — Droit ORG04-10 requis pour consulter ou exporter les montants de paie.';
   const silaeApiPayload = canViewSalaries
-    ? buildSilaeApiPayload(payrollRows, '2026-10', 'API_REST_SILAE')
+    ? buildSilaeApiPayload(payrollRows, silaePeriod, 'API_REST_SILAE')
     : { status: 'REDACTED_ORG04_10', message: 'Salaires masqués pour ce profil.' };
   const allUnifiedEvents = buildUnifiedPlanningEvents(shifts, unifiedExternalEvents);
 
@@ -2414,6 +2403,16 @@ export function PlanningHrView({
                     Flux API REST
                   </button>
                 </div>
+                <select
+                  aria-label="Période de paie Silae"
+                  value={silaePeriod}
+                  onChange={(e) => setSilaePeriod(e.target.value as '2026-10' | '2026-11' | '2026-12')}
+                  className="px-2.5 py-1.5 rounded-lg bg-white text-slate-900 text-xs font-bold cursor-pointer"
+                >
+                  <option value="2026-10">Période : Octobre 2026 (2026-10)</option>
+                  <option value="2026-11">Période : Novembre 2026 (2026-11)</option>
+                  <option value="2026-12">Période : Décembre 2026 (2026-12)</option>
+                </select>
                 <button
                   onClick={handleDownloadSilae}
                   disabled={!canViewSalaries || isReadOnly}
@@ -2538,9 +2537,9 @@ export function PlanningHrView({
                               </div>
                               <div className="text-[10px] text-slate-500">
                                 {empObj ? `${empObj.contractType} · ${empObj.jobTitle}` : 'CDI'}
-                                {r.forfaitDaysLabel && (
+                                {r.regime === 'FORFAIT_JOURS' && (
                                   <span className="ml-1.5 px-1.5 py-0.5 rounded bg-violet-100 text-violet-800 font-semibold">
-                                    Forfait {r.forfaitDaysLabel}
+                                    Forfait {r.annualForfaitDays ?? 218} j/an ({r.normalHours} j/mois)
                                   </span>
                                 )}
                                 {r.bonusEur > 0 && canViewSalaries && (
@@ -2551,17 +2550,17 @@ export function PlanningHrView({
                               </div>
                             </td>
                             <td className="py-2.5 px-2 text-right text-slate-800">
-                              {r.isForfaitJours ? '218 j/an' : `${r.normalHours} h`}
+                              {r.regime === 'FORFAIT_JOURS' ? `${r.normalHours} j` : `${r.normalHours} h`}
                             </td>
                             <td className="py-2.5 px-2 text-right text-amber-700 font-bold">
-                              {r.isForfaitJours ? 'Forfait' : `+${r.overtime25Hours} h`}
+                              {r.regime === 'FORFAIT_JOURS' ? 'Forfait' : `+${r.overtime25Hours} h`}
                             </td>
                             <td className="py-2.5 px-2 text-right text-indigo-700">
                               {r.sundayHours} h
                             </td>
                             <td className="py-2.5 px-3 text-right font-bold text-emerald-800">
                               {canViewSalaries
-                                ? `${(1823.03 + r.grossVariableEstimateEur).toFixed(2)} €`
+                                ? `${(r.monthlyBaseGrossEur + r.grossVariableEstimateEur).toFixed(2)} €`
                                 : '*** € (Masqué)'}
                             </td>
                           </tr>
@@ -2574,8 +2573,8 @@ export function PlanningHrView({
                 <div className="p-3 bg-slate-900 text-slate-200 font-mono text-[11px] border-t border-slate-700">
                   <div className="text-[10px] uppercase text-teal-400 font-bold mb-1">
                     {silaeIntegrationMode === 'EXPORT_CSV'
-                      ? 'Mode 1 (Actif) — Fichier .CSV Compatible Silae (Format identique à Skello) :'
-                      : 'Mode 2 (Prêt Expert-Comptable) — Requête JSON API REST Silae (POST /v1/dossiers/081865/elements-variables) :'}
+                      ? `Maquette CSV Silae (${silaePeriod} · à valider avec votre cabinet comptable) :`
+                      : 'Maquette API REST Silae (POST /v1/dossiers/081865/elements-variables) :'}
                   </div>
                   <pre className="overflow-x-auto whitespace-pre text-[10px] leading-relaxed max-h-40">
                     {silaeIntegrationMode === 'EXPORT_CSV'
@@ -2601,7 +2600,7 @@ export function PlanningHrView({
                       </div>
                     </div>
                     <span className="px-2 py-0.5 rounded bg-slate-900 text-white text-[10px] font-bold">
-                      10 / 2026
+                      {silaePeriod}
                     </span>
                   </div>
 
@@ -2654,7 +2653,7 @@ export function PlanningHrView({
                           TOTAL BRUT MENSUEL
                         </td>
                         <td className="py-2 text-right text-emerald-700">
-                          {(1823.03 + selectedSilaeRow.grossVariableEstimateEur).toFixed(2)} €
+                          {(selectedSilaeRow.monthlyBaseGrossEur + selectedSilaeRow.grossVariableEstimateEur).toFixed(2)} €
                         </td>
                       </tr>
                       <tr>
@@ -2662,7 +2661,7 @@ export function PlanningHrView({
                           Cotisations sociales (URSSAF / APICIL / Prévoyance ~22%)
                         </td>
                         <td className="py-1.5 text-right text-slate-600">
-                          -{((1823.03 + selectedSilaeRow.grossVariableEstimateEur) * 0.22).toFixed(2)} €
+                          -{((selectedSilaeRow.monthlyBaseGrossEur + selectedSilaeRow.grossVariableEstimateEur) * 0.22).toFixed(2)} €
                         </td>
                       </tr>
                       <tr className="border-t-2 border-slate-900 font-black text-xs">
@@ -2670,7 +2669,7 @@ export function PlanningHrView({
                           NET À PAYER AVANT IMPÔT (Virement SEPA)
                         </td>
                         <td className="py-2 text-right text-slate-900">
-                          {((1823.03 + selectedSilaeRow.grossVariableEstimateEur) * 0.78).toFixed(2)} €
+                          {((selectedSilaeRow.monthlyBaseGrossEur + selectedSilaeRow.grossVariableEstimateEur) * 0.78).toFixed(2)} €
                         </td>
                       </tr>
                     </tbody>

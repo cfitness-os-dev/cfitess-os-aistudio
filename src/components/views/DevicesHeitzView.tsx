@@ -58,7 +58,8 @@ export function DevicesHeitzView() {
     isTechnicalMode,
   } = useCfos();
 
-  const canAccessFinances = currentUser.role === 'admin' || currentUser.role === 'manager';
+  const canAccessFinances =
+    currentUser.role === 'admin' || Boolean(currentUser.canAccessFinances);
 
   const [activeSoftwareTab, setActiveSoftwareTab] = useState<
     'HEITZ_DESKTOP' | 'INBODY_LB120'

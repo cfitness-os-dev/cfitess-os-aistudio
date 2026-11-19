@@ -69,6 +69,7 @@ import type {
   AmbiguityRecord,
   LeaveRequest,
   McSectionId,
+  ProfileId,
   Shift,
   SiteHrSettings,
 } from '../domain/types';
@@ -366,7 +367,14 @@ export function PlanningAndModulesView({
   ambiguities,
   onRefreshDashboard,
 }: PlanningAndModulesViewProps) {
-  const { isTechnicalMode, addStaffEmployee, employees: staffEmployees } = useCfos();
+  const {
+    isTechnicalMode,
+    addStaffEmployee,
+    employees: staffEmployees,
+    currentUser,
+    updateStaffEmployeeSiteAssignments,
+    updateStaffEmployeeContract,
+  } = useCfos();
   const can = (actionId: string) =>
     Boolean(dashboard.session.resolvedPermissions[actionId]?.allowed);
 
@@ -453,19 +461,183 @@ export function PlanningAndModulesView({
   const [newEmpLast, setNewEmpLast] = useState('');
   const [newEmpContract, setNewEmpContract] = useState<'CDI' | 'CDD'>('CDI');
   const [newEmpHours, setNewEmpHours] = useState(35);
+  const [newEmpRole, setNewEmpRole] = useState<'commercial' | 'coach' | 'apprenti'>('commercial');
+  const [newEmpClub, setNewEmpClub] = useState<'carre-de-soie' | 'beynost'>('carre-de-soie');
+  const [contractEditOpen, setContractEditOpen] = useState(false);
+  const [contractEditType, setContractEditType] = useState<'CDI' | 'CDD' | 'Alternance'>('CDI');
+  const [contractEditRegime, setContractEditRegime] = useState<'hours' | 'forfait_jours'>('hours');
+  const [contractEditHours, setContractEditHours] = useState(35);
+  const [contractEditAvenantNote, setContractEditAvenantNote] = useState('');
+  const [contractOverrides, setContractOverrides] = useState<
+    Record<
+      string,
+      {
+        contractType: 'CDI' | 'CDD' | 'Alternance';
+        regime: 'hours' | 'forfait_jours';
+        weeklyHours: number;
+        avenants: Array<{ date: string; note: string }>;
+        closed?: boolean;
+      }
+    >
+  >(() => {
+    try {
+      const raw = localStorage.getItem('cfos_mc02_contract_overrides_v1');
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [siteAccessOverrides, setSiteAccessOverrides] = useState<
+    Record<
+      string,
+      Array<{
+        siteId: string;
+        isPrimary: boolean;
+        profileId: ProfileId;
+        teamIds: string[];
+        showOnPlanning: boolean;
+        positionIds: string[];
+      }>
+    >
+  >(() => {
+    try {
+      const raw = localStorage.getItem('cfos_mc02_site_accesses_v1');
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
   const [createdEmployees, setCreatedEmployees] = useState<
     Array<{ id: string; name: string; contract: string; hours: number; site: string }>
   >([]);
   const [rttInitializedIds, setRttInitializedIds] = useState<Record<string, number>>({});
 
+  // Unification référentiel : fusion des salariés persistés dans CfosContext (staffEmployees)
+  // uniquement si l'utilisateur courant a un rôle de gestion (admin/manager), sinon uniquement soi-même (#1 / #4)
+  const canSeeGlobalRoster = currentUser.role === 'admin' || currentUser.role === 'manager';
+  const visibleNamesForMc02 = new Set(
+    dashboard.visibleEmployees.map((e) => `${e.firstName} ${e.lastName}`.trim().toLowerCase())
+  );
+  const extraStaffViewsForMc02: typeof dashboard.visibleEmployees = canSeeGlobalRoster
+    ? staffEmployees
+        .filter(
+          (se) =>
+            se.role !== 'kiosque' &&
+            (se.id.startsWith('emp-staff-') ||
+              !visibleNamesForMc02.has(`${se.firstName} ${se.lastName}`.trim().toLowerCase()))
+        )
+        .filter((se) => {
+          if (auth.siteId === 'club-carre-soie') {
+            return (
+              se.clubId === 'carre-de-soie' ||
+              Boolean(se.siteAssignments?.some((sa) => sa.clubId === 'carre-de-soie'))
+            );
+          }
+          if (auth.siteId === 'club-beynost') {
+            return (
+              se.clubId === 'beynost' ||
+              Boolean(se.siteAssignments?.some((sa) => sa.clubId === 'beynost'))
+            );
+          }
+          return true;
+        })
+        .map((se) => ({
+          id: se.id,
+          firstName: se.firstName,
+          lastName: se.lastName,
+          matricule: se.id.toUpperCase(),
+          active: true,
+          hrFileStatus: 'complete' as const,
+          siteAccesses: se.siteAssignments?.length
+            ? se.siteAssignments.map((sa) => ({
+                siteId: sa.clubId === 'beynost' ? 'club-beynost' : 'club-carre-soie',
+                isPrimary: sa.isPrimary,
+                profileId:
+                  sa.roleInClub === 'admin'
+                    ? ('admin_systeme' as const)
+                    : sa.roleInClub === 'manager'
+                    ? ('master_avance' as const)
+                    : ('employe_standard' as const),
+                teamIds: sa.teamIds,
+                showOnPlanning: true,
+                positionIds: [],
+              }))
+            : [
+                {
+                  siteId: se.clubId === 'beynost' ? 'club-beynost' : 'club-carre-soie',
+                  isPrimary: true,
+                  profileId: 'employe_standard' as const,
+                  teamIds: ['team-accueil'],
+                  showOnPlanning: true,
+                  positionIds: [],
+                },
+              ],
+          counter: {
+            annualForfaitDays: se.annualForfaitDays ?? 218,
+            workedDaysYtd: 0,
+            remainingDays: se.annualForfaitDays ?? 218,
+            cpAcquired: se.cpBalance ?? 0,
+            cpTaken: 0,
+            cpRemaining: se.cpBalance ?? 0,
+            cpNAcquired: se.cpBalance ?? 0,
+            cpNTaken: 0,
+            cpNMinus1Remaining: 0,
+            rttAcquired: se.rttBalance ?? 0,
+            rttRemaining: se.rttBalance ?? 0,
+            rttInitialized: true,
+          },
+          contact: {
+            email: se.email,
+            phone: se.phone,
+            address:
+              se.clubId === 'beynost'
+                ? 'ZAC des Baterses, 01700 Beynost'
+                : '2 Rue Jacquard, 69120 Vaulx-en-Velin',
+          },
+          contract: {
+            id: `CTR-${se.id.toUpperCase()}`,
+            siteId: se.clubId === 'beynost' ? 'club-beynost' : 'club-carre-soie',
+            contractType:
+              se.contractType === 'Apprentissage'
+                ? ('Alternance' as const)
+                : (se.contractType as 'CDI' | 'CDD' | 'Alternance'),
+            regime: se.contractRegime ?? ('hours' as const),
+            weeklyHours: se.weeklyContractHours,
+            effectiveFrom: se.hireDate,
+            hourlyRateEur: se.hourlyRate ?? 12.02,
+            monthlyGrossEur: se.monthlyGrossEur ?? 1823.03,
+            loadedCostFactor: 1.42,
+          },
+        }))
+    : [];
+
+  const unifiedMc02Employees = [...dashboard.visibleEmployees, ...extraStaffViewsForMc02].map(
+    (emp) => {
+      const cOver = contractOverrides[emp.id];
+      const sOver = siteAccessOverrides[emp.id];
+      return {
+        ...emp,
+        siteAccesses: sOver ?? emp.siteAccesses,
+        contract: emp.contract
+          ? {
+              ...emp.contract,
+              contractType: cOver?.contractType ?? emp.contract.contractType,
+              regime: cOver?.regime ?? emp.contract.regime,
+              weeklyHours: cOver?.weeklyHours ?? emp.contract.weeklyHours,
+            }
+          : emp.contract,
+      };
+    }
+  );
+
   useEffect(() => {
-    const stillVisible = dashboard.visibleEmployees.some(
+    const stillVisible = unifiedMc02Employees.some(
       (e) => e.id === selectedEmpId
     );
     if (!stillVisible) {
       setSelectedEmpId(dashboard.session.employee.id);
     }
-  }, [dashboard.visibleEmployees, dashboard.session.employee.id, selectedEmpId]);
+  }, [unifiedMc02Employees, dashboard.session.employee.id, selectedEmpId]);
 
   // MC04 Demandes & disponibilités
   const [reqMotive, setReqMotive] = useState('Congés payés');
@@ -1936,76 +2108,7 @@ export function PlanningAndModulesView({
   // MC02 — Mes informations et mon dossier (EMP01-06, CPT01-05, EXT01/02)
   // =========================================================================
   const renderMc02 = () => {
-    // Unification référentiel : fusion des salariés persistés dans CfosContext (staffEmployees)
-    // qui ne figurent pas encore dans dashboard.visibleEmployees (CFOS-009 / CFOS-027)
-    const visibleNames = new Set(
-      dashboard.visibleEmployees.map((e) => `${e.firstName} ${e.lastName}`.trim().toLowerCase())
-    );
-    const extraStaffViews: typeof dashboard.visibleEmployees = staffEmployees
-      .filter(
-        (se) =>
-          se.role !== 'kiosque' &&
-          (se.id.startsWith('emp-staff-') ||
-            !visibleNames.has(`${se.firstName} ${se.lastName}`.trim().toLowerCase()))
-      )
-      .filter((se) => {
-        if (auth.siteId === 'club-carre-soie') return se.clubId === 'carre-de-soie';
-        if (auth.siteId === 'club-beynost') return se.clubId === 'beynost';
-        return true;
-      })
-      .map((se) => ({
-        id: se.id,
-        firstName: se.firstName,
-        lastName: se.lastName,
-        matricule: se.id.toUpperCase(),
-        active: true,
-        hrFileStatus: 'complete' as const,
-        siteAccesses: [
-          {
-            siteId: se.clubId === 'beynost' ? 'club-beynost' : 'club-carre-soie',
-            isPrimary: true,
-            profileId: 'employe_standard' as const,
-            teamIds: [],
-            showOnPlanning: true,
-            positionIds: [],
-          },
-        ],
-        counter: {
-          annualForfaitDays: 218,
-          workedDaysYtd: 0,
-          remainingDays: 218,
-          cpAcquired: se.cpBalance ?? 0,
-          cpTaken: 0,
-          cpRemaining: se.cpBalance ?? 0,
-          cpNAcquired: se.cpBalance ?? 0,
-          cpNTaken: 0,
-          cpNMinus1Remaining: 0,
-          rttAcquired: se.rttBalance ?? 0,
-          rttRemaining: se.rttBalance ?? 0,
-          rttInitialized: true,
-        },
-        contact: {
-          email: se.email,
-          phone: se.phone,
-          address: se.clubId === 'beynost' ? 'ZAC des Baterses, 01700 Beynost' : '2 Rue Jacquard, 69120 Vaulx-en-Velin',
-        },
-        contract: {
-          id: `CTR-${se.id.toUpperCase()}`,
-          siteId: se.clubId === 'beynost' ? 'club-beynost' : 'club-carre-soie',
-          contractType:
-            se.contractType === 'Apprentissage'
-              ? ('Alternance' as const)
-              : (se.contractType as 'CDI' | 'CDD' | 'Alternance'),
-          regime: 'hours' as const,
-          weeklyHours: se.weeklyContractHours,
-          effectiveFrom: se.hireDate,
-          hourlyRateEur: se.hourlyRate ?? 12.02,
-          monthlyGrossEur: se.monthlyGrossEur ?? 1823.03,
-          loadedCostFactor: 1.42,
-        },
-      }));
-
-    const unifiedEmployees = [...dashboard.visibleEmployees, ...extraStaffViews];
+    const unifiedEmployees = unifiedMc02Employees;
     const selectedEmp =
       unifiedEmployees.find((e) => e.id === selectedEmpId) ??
       unifiedEmployees[0];
@@ -2089,6 +2192,25 @@ export function PlanningAndModulesView({
                 onChange={(e) => setNewEmpHours(Number(e.target.value) || 35)}
                 className="cf-input px-3 py-2 cf-mono"
               />
+              <select
+                aria-label="Rôle initial du collaborateur"
+                value={newEmpRole}
+                onChange={(e) => setNewEmpRole(e.target.value as 'commercial' | 'coach' | 'apprenti')}
+                className="cf-input px-3 py-2"
+              >
+                <option value="commercial">Collaborateur / Commercial (standard)</option>
+                <option value="coach">Coach sportif</option>
+                <option value="apprenti">Apprenti BPJEPS</option>
+              </select>
+              <select
+                aria-label="Club principal"
+                value={newEmpClub}
+                onChange={(e) => setNewEmpClub(e.target.value as 'carre-de-soie' | 'beynost')}
+                className="cf-input px-3 py-2"
+              >
+                <option value="carre-de-soie">Carré de Soie</option>
+                <option value="beynost">Beynost</option>
+              </select>
             </div>
             <div className="flex justify-end gap-2">
               <button
@@ -2109,13 +2231,18 @@ export function PlanningAndModulesView({
                     return;
                   }
                   const siteName =
-                    dashboard.sites[0]?.name ?? 'C.FITNESS Carré de Soie';
+                    newEmpClub === 'beynost'
+                      ? 'C.FITNESS Beynost'
+                      : 'C.FITNESS Carré de Soie';
                   const created = addStaffEmployee({
                     firstName: newEmpFirst.trim(),
                     lastName: newEmpLast.trim(),
                     contractType: newEmpContract,
                     weeklyContractHours: newEmpHours,
+                    role: newEmpRole,
+                    clubId: newEmpClub,
                   });
+                  setSelectedEmpId(created.id);
                   setCreatedEmployees((prev) => [
                     ...prev,
                     {
@@ -2131,7 +2258,7 @@ export function PlanningAndModulesView({
                   setShowAddEmpForm(false);
                   setModuleFeedback({
                     kind: 'ok',
-                    text: 'Collaborateur ajouté en session (parcours DPAE EXT01 initialisé).',
+                    text: `Collaborateur ${created.firstName} ${created.lastName} créé (${newEmpRole} · ${siteName}, PIN individuel attribué).`,
                   });
                 }}
                 className="cf-brand-gradient text-white px-4 py-1.5 rounded-btn font-semibold"
@@ -2233,22 +2360,147 @@ export function PlanningAndModulesView({
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <div className="font-semibold">Accès établissements (EMP03)</div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="font-semibold">
+                        Accès établissements &amp; Équipes par club (EMP03 · Multi-clubs)
+                      </div>
+                      {canSeeGlobalRoster && (
+                        <div className="flex flex-wrap gap-1.5 text-[11px]">
+                          {(
+                            [
+                              { label: 'Carré de Soie seul', clubs: ['carre-de-soie'] as const },
+                              { label: 'Beynost seul', clubs: ['beynost'] as const },
+                              { label: 'Les 2 clubs', clubs: ['carre-de-soie', 'beynost'] as const },
+                            ] as const
+                          ).map((preset) => (
+                            <button
+                              key={preset.label}
+                              type="button"
+                              onClick={() => {
+                                const nextAccesses = preset.clubs.map((cid, idx) => {
+                                  const sid = cid === 'beynost' ? 'club-beynost' : 'club-carre-soie';
+                                  const existing = selectedEmp.siteAccesses.find((a) => a.siteId === sid);
+                                  return {
+                                    siteId: sid,
+                                    isPrimary: idx === 0,
+                                    profileId: existing?.profileId ?? ('employe_standard' as ProfileId),
+                                    teamIds: existing?.teamIds?.length ? existing.teamIds : ['team-accueil'],
+                                    showOnPlanning: true,
+                                    positionIds: [],
+                                  };
+                                });
+                                const nextMap = { ...siteAccessOverrides, [selectedEmp.id]: nextAccesses };
+                                setSiteAccessOverrides(nextMap);
+                                try {
+                                  localStorage.setItem('cfos_mc02_site_accesses_v1', JSON.stringify(nextMap));
+                                } catch {
+                                  // ignore
+                                }
+                                updateStaffEmployeeSiteAssignments(
+                                  selectedEmp.id,
+                                  preset.clubs.map((cid, idx) => ({
+                                    clubId: cid,
+                                    isPrimary: idx === 0,
+                                    roleInClub: 'commercial',
+                                    teamIds: nextAccesses[idx].teamIds,
+                                  }))
+                                );
+                                setModuleFeedback({
+                                  kind: 'ok',
+                                  text: `Rattachement mis à jour pour ${selectedEmp.firstName} ${selectedEmp.lastName} : ${preset.label}.`,
+                                });
+                              }}
+                              className="cf-input px-2 py-1 hover:border-violet-500/60 cursor-pointer"
+                            >
+                              {preset.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     {selectedEmp.siteAccesses.map((acc) => (
                       <div
                         key={acc.siteId}
-                        className="cf-card-secondary p-3 flex flex-wrap items-center justify-between gap-2"
+                        className="cf-card-secondary p-3 space-y-2"
                       >
-                        <div>
-                          <span className="font-semibold">
-                            {siteMap.get(acc.siteId) ?? acc.siteId}
-                          </span>
-                          <span className="ml-2 cf-mono text-[10px] px-2 py-0.5 rounded bg-violet-500/20 text-violet-300">
-                            {acc.isPrimary ? 'Établissement principal' : 'Établissement secondaire'}
-                          </span>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <span className="font-semibold">
+                              {siteMap.get(acc.siteId) ?? acc.siteId}
+                            </span>
+                            <span className="ml-2 cf-mono text-[10px] px-2 py-0.5 rounded bg-violet-500/20 text-violet-300">
+                              {acc.isPrimary ? 'Établissement principal' : 'Établissement secondaire'}
+                            </span>
+                          </div>
+                          {canSeeGlobalRoster ? (
+                            <select
+                              aria-label={`Profil ${acc.siteId}`}
+                              value={acc.profileId}
+                              onChange={(e) => {
+                                const nextProf = e.target.value as ProfileId;
+                                const nextAccesses = selectedEmp.siteAccesses.map((item) =>
+                                  item.siteId === acc.siteId ? { ...item, profileId: nextProf } : item
+                                );
+                                const nextMap = { ...siteAccessOverrides, [selectedEmp.id]: nextAccesses };
+                                setSiteAccessOverrides(nextMap);
+                                try {
+                                  localStorage.setItem('cfos_mc02_site_accesses_v1', JSON.stringify(nextMap));
+                                } catch {
+                                  // ignore
+                                }
+                                setModuleFeedback({
+                                  kind: 'ok',
+                                  text: `Droits sur ${siteMap.get(acc.siteId) ?? acc.siteId} mis à jour (${nextProf}) sans modifier l'autre club.`,
+                                });
+                              }}
+                              className="cf-input text-[11px] px-2 py-1"
+                            >
+                              <option value="employe_standard">Employé standard</option>
+                              <option value="lecture_seule_avancee">Lecture seule avancée</option>
+                              <option value="planificateur_standard">Planif. standard (équipe)</option>
+                              <option value="planificateur_avance">Planif. avancé (club)</option>
+                              <option value="master_avance">Responsable club</option>
+                            </select>
+                          ) : (
+                            <div className="cf-mono text-[11px] cf-muted">
+                              Profil : {acc.profileId} · Planning : {acc.showOnPlanning ? 'Visible' : 'Masqué'}
+                            </div>
+                          )}
                         </div>
-                        <div className="cf-mono text-[11px] cf-muted">
-                          Profil : {acc.profileId} · Planning : {acc.showOnPlanning ? 'Visible' : 'Masqué'}
+                        <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                          <span className="cf-muted">Équipes sur ce club :</span>
+                          {['team-accueil', 'team-coaching', 'team-commercial'].map((tid) => {
+                            const activeTeam = acc.teamIds.includes(tid);
+                            return (
+                              <button
+                                key={tid}
+                                type="button"
+                                disabled={!canSeeGlobalRoster}
+                                onClick={() => {
+                                  const nextTeams = activeTeam
+                                    ? acc.teamIds.filter((t) => t !== tid)
+                                    : [...acc.teamIds, tid];
+                                  const nextAccesses = selectedEmp.siteAccesses.map((item) =>
+                                    item.siteId === acc.siteId ? { ...item, teamIds: nextTeams } : item
+                                  );
+                                  const nextMap = { ...siteAccessOverrides, [selectedEmp.id]: nextAccesses };
+                                  setSiteAccessOverrides(nextMap);
+                                  try {
+                                    localStorage.setItem('cfos_mc02_site_accesses_v1', JSON.stringify(nextMap));
+                                  } catch {
+                                    // ignore
+                                  }
+                                }}
+                                className={`px-2 py-0.5 rounded border ${
+                                  activeTeam
+                                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300 font-semibold'
+                                    : 'bg-slate-900/40 border-slate-700 text-slate-400'
+                                } ${canSeeGlobalRoster ? 'cursor-pointer' : 'cursor-default'}`}
+                              >
+                                {tid.replace('team-', '')}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     ))}
@@ -2328,33 +2580,179 @@ export function PlanningAndModulesView({
                             <div className="cf-muted text-[11px]">
                               Mesure du temps, statut/classification et historique des avenants.
                             </div>
-                            <div className="pt-2 flex flex-wrap gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setPastContractFormOpen(true);
-                                  setModuleFeedback({
-                                    kind: 'ok',
-                                    text: `Contrat ${selectedEmp.contract?.id} ouvert pour modification ou création d'avenant.`,
-                                  });
-                                }}
-                                className="cf-input px-2.5 py-1 text-[11px] font-semibold hover:border-violet-500/60 cursor-pointer"
-                              >
-                                Modifier contrat / Avenant
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setModuleFeedback({
-                                    kind: 'ok',
-                                    text: `Avenant au contrat ${selectedEmp.contract?.id} préparé et archivé dans le dossier RH de ${selectedEmp.firstName} ${selectedEmp.lastName}.`,
-                                  })
-                                }
-                                className="cf-input px-2.5 py-1 text-[11px] font-semibold hover:border-emerald-500/60 cursor-pointer"
-                              >
-                                Archiver / Clôturer
-                              </button>
-                            </div>
+                            {canSeeGlobalRoster && (
+                              <div className="pt-2 flex flex-wrap gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setContractEditType(
+                                      (selectedEmp.contract?.contractType as 'CDI' | 'CDD' | 'Alternance') ?? 'CDI'
+                                    );
+                                    setContractEditRegime(selectedEmp.contract?.regime ?? 'hours');
+                                    setContractEditHours(selectedEmp.contract?.weeklyHours ?? 35);
+                                    setContractEditAvenantNote('');
+                                    setContractEditOpen((prev) => !prev);
+                                  }}
+                                  className="cf-input px-2.5 py-1 text-[11px] font-semibold hover:border-violet-500/60 cursor-pointer"
+                                >
+                                  Modifier contrat / Avenant
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const currentOv = contractOverrides[selectedEmp.id] ?? {
+                                      contractType:
+                                        (selectedEmp.contract?.contractType as 'CDI' | 'CDD' | 'Alternance') ?? 'CDI',
+                                      regime: selectedEmp.contract?.regime ?? 'hours',
+                                      weeklyHours: selectedEmp.contract?.weeklyHours ?? 35,
+                                      avenants: [],
+                                    };
+                                    const nextMap = {
+                                      ...contractOverrides,
+                                      [selectedEmp.id]: {
+                                        ...currentOv,
+                                        closed: true,
+                                        avenants: [
+                                          ...currentOv.avenants,
+                                          {
+                                            date: new Date().toISOString().slice(0, 10),
+                                            note: 'Contrat clôturé et archivé dans l’historique',
+                                          },
+                                        ],
+                                      },
+                                    };
+                                    setContractOverrides(nextMap);
+                                    try {
+                                      localStorage.setItem('cfos_mc02_contract_overrides_v1', JSON.stringify(nextMap));
+                                    } catch {
+                                      // ignore
+                                    }
+                                    setMc02ContractSubTab('history');
+                                    setModuleFeedback({
+                                      kind: 'ok',
+                                      text: `Contrat ${selectedEmp.contract?.id} clôturé et déplacé dans l'Historique.`,
+                                    });
+                                  }}
+                                  className="cf-input px-2.5 py-1 text-[11px] font-semibold hover:border-rose-500/60 cursor-pointer"
+                                >
+                                  Clôturer / Archiver
+                                </button>
+                              </div>
+                            )}
+
+                            {contractEditOpen && (
+                              <div className="mt-3 p-3 rounded-xl bg-slate-900/70 border border-violet-500/40 space-y-2.5">
+                                <div className="font-bold text-violet-300">
+                                  Édition contrat &amp; Création d&apos;avenant ({selectedEmp.contract?.id})
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                  <select
+                                    value={contractEditType}
+                                    onChange={(e) =>
+                                      setContractEditType(e.target.value as 'CDI' | 'CDD' | 'Alternance')
+                                    }
+                                    className="cf-input px-2 py-1.5"
+                                  >
+                                    <option value="CDI">CDI</option>
+                                    <option value="CDD">CDD</option>
+                                    <option value="Alternance">Alternance</option>
+                                  </select>
+                                  <select
+                                    value={contractEditRegime}
+                                    onChange={(e) =>
+                                      setContractEditRegime(e.target.value as 'hours' | 'forfait_jours')
+                                    }
+                                    className="cf-input px-2 py-1.5"
+                                  >
+                                    <option value="hours">Régime horaire (h/sem)</option>
+                                    <option value="forfait_jours">Forfait jours (218 j/an)</option>
+                                  </select>
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    max={218}
+                                    value={contractEditHours}
+                                    onChange={(e) => setContractEditHours(Number(e.target.value) || 35)}
+                                    className="cf-input px-2 py-1.5 cf-mono"
+                                  />
+                                </div>
+                                <input
+                                  type="text"
+                                  placeholder="Objet de l'avenant (ex: Passage 35h -> 39h)"
+                                  value={contractEditAvenantNote}
+                                  onChange={(e) => setContractEditAvenantNote(e.target.value)}
+                                  className="w-full cf-input px-2.5 py-1.5"
+                                />
+                                <div className="flex justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setContractEditOpen(false)}
+                                    className="cf-card-secondary px-3 py-1"
+                                  >
+                                    Annuler
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const prevOv = contractOverrides[selectedEmp.id];
+                                      const nextAvenants = [
+                                        ...(prevOv?.avenants ?? []),
+                                        ...(contractEditAvenantNote.trim()
+                                          ? [
+                                              {
+                                                date: new Date().toISOString().slice(0, 10),
+                                                note: contractEditAvenantNote.trim(),
+                                              },
+                                            ]
+                                          : []),
+                                      ];
+                                      const nextMap = {
+                                        ...contractOverrides,
+                                        [selectedEmp.id]: {
+                                          contractType: contractEditType,
+                                          regime: contractEditRegime,
+                                          weeklyHours: contractEditHours,
+                                          avenants: nextAvenants,
+                                        },
+                                      };
+                                      setContractOverrides(nextMap);
+                                      try {
+                                        localStorage.setItem('cfos_mc02_contract_overrides_v1', JSON.stringify(nextMap));
+                                      } catch {
+                                        // ignore
+                                      }
+                                      updateStaffEmployeeContract(selectedEmp.id, {
+                                        contractType:
+                                          contractEditType === 'Alternance' ? 'Apprentissage' : contractEditType,
+                                        contractRegime: contractEditRegime,
+                                        weeklyContractHours: contractEditHours,
+                                      });
+                                      setContractEditOpen(false);
+                                      setModuleFeedback({
+                                        kind: 'ok',
+                                        text: `Contrat & avenant enregistrés pour ${selectedEmp.firstName} ${selectedEmp.lastName} (persisté après rechargement).`,
+                                      });
+                                    }}
+                                    className="cf-brand-gradient text-white px-3 py-1 rounded-btn font-semibold"
+                                  >
+                                    Enregistrer le contrat
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+
+                            {(contractOverrides[selectedEmp.id]?.avenants?.length ?? 0) > 0 && (
+                              <div className="mt-2 pt-2 border-t border-[var(--cf-border)] space-y-1">
+                                <div className="text-[10px] font-bold uppercase text-violet-300">
+                                  Avenants enregistrés :
+                                </div>
+                                {contractOverrides[selectedEmp.id].avenants.map((av, idx) => (
+                                  <div key={idx} className="text-[11px] cf-muted">
+                                    • {av.date} — {av.note}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                           <div className="cf-card-secondary p-4 space-y-1.5">
                             <div className="cf-muted">Données salariales & bancaires (ORG04-10)</div>

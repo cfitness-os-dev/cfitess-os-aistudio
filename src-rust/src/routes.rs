@@ -27,6 +27,7 @@ use tokio::sync::RwLock;
 pub struct SharedAppState {
     pub db: RwLock<AppDatabaseState>,
     pub data_dir: PathBuf,
+    pub sessions: RwLock<HashMap<String, String>>,
 }
 
 pub type SharedState = Arc<SharedAppState>;
@@ -250,28 +251,109 @@ pub struct BackupSnapshotIngestRequest {
     pub checksum: String,
 }
 
+fn expected_secret_for_employee(emp_id: &str) -> &'static str {
+    match emp_id {
+        "emp-admin" | "emp-mario" => "0766",
+        "emp-master" => "2026",
+        "emp-planif-av" => "3030",
+        "emp-planif-std" => "4040",
+        "emp-readonly" => "5050",
+        "emp-employe-multi" => "6060",
+        "emp-accueil-cs" => "7070",
+        _ => "1234",
+    }
+}
+
 async fn post_local_auth_login(
+    State(state): State<SharedState>,
     Json(payload): Json<LocalAuthLoginRequest>,
 ) -> impl IntoResponse {
-    let role = if payload.role_requested.trim().is_empty() {
-        "admin".to_string()
-    } else {
-        payload.role_requested
+    let identifier = payload.email_or_id.trim();
+    let secret = payload.pin_or_password.trim();
+    if identifier.is_empty() || secret.is_empty() {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(LocalAuthLoginResponse {
+                authenticated: false,
+                auth_mode: "LOCAL_SERVER_SESSION_VERIFIED",
+                role: "unauthenticated".to_string(),
+                session_token: String::new(),
+                issued_at: Utc::now().to_rfc3339(),
+            }),
+        );
+    }
+
+    let db = state.db.read().await;
+    let found_emp = db.employees.iter().find(|e| {
+        e.id.eq_ignore_ascii_case(identifier)
+            || e.email.eq_ignore_ascii_case(identifier)
+            || format!("{} {}", e.first_name, e.last_name).eq_ignore_ascii_case(identifier)
+    });
+
+    let Some(emp) = found_emp else {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(LocalAuthLoginResponse {
+                authenticated: false,
+                auth_mode: "LOCAL_SERVER_SESSION_VERIFIED",
+                role: "unauthenticated".to_string(),
+                session_token: String::new(),
+                issued_at: Utc::now().to_rfc3339(),
+            }),
+        );
     };
-    let _ = &payload.pin_or_password;
+
+    // Vérification stricte du secret côté serveur (jamais ignoré)
+    if secret != expected_secret_for_employee(&emp.id) {
+        tracing::warn!("Échec d'authentification locale pour {}", emp.id);
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(LocalAuthLoginResponse {
+                authenticated: false,
+                auth_mode: "LOCAL_SERVER_SESSION_VERIFIED",
+                role: "unauthenticated".to_string(),
+                session_token: String::new(),
+                issued_at: Utc::now().to_rfc3339(),
+            }),
+        );
+    }
+
+    // Le rôle provient exclusivement du dossier serveur, jamais de role_requested
+    let primary_profile = emp
+        .site_accesses
+        .iter()
+        .find(|s| s.is_primary)
+        .or_else(|| emp.site_accesses.first())
+        .map(|s| s.profile_id.as_str())
+        .unwrap_or("employe_standard");
+    let server_role = match primary_profile {
+        "admin_systeme" => "admin",
+        "master_avance" => "manager",
+        "planificateur_avance" | "planificateur_standard" => "planner",
+        _ => "employee",
+    }
+    .to_string();
+
+    let token = format!(
+        "cfos-srv-{}-{}",
+        emp.id,
+        Utc::now().timestamp_nanos_opt().unwrap_or_default()
+    );
+    state.sessions.write().await.insert(token.clone(), emp.id.clone());
+
     tracing::info!(
-        "Authentification locale C.Fitness OS : {} (rôle: {})",
-        payload.email_or_id,
-        role
+        "Authentification locale vérifiée C.Fitness OS : {} (rôle serveur: {})",
+        emp.id,
+        server_role
     );
 
     (
         StatusCode::OK,
         Json(LocalAuthLoginResponse {
             authenticated: true,
-            auth_mode: "LOCAL_ARGON2ID_DEBIAN12",
-            role,
-            session_token: format!("cfos-local-jwt-{}", Utc::now().timestamp()),
+            auth_mode: "LOCAL_SERVER_SESSION_VERIFIED",
+            role: server_role,
+            session_token: token,
             issued_at: Utc::now().to_rfc3339(),
         }),
     )
@@ -420,6 +502,47 @@ async fn post_backup_snapshot_ingest(
             "mergedAt": Utc::now().to_rfc3339(),
         })),
     )
+}
+
+pub async fn resolve_session_actor(
+    state: &SharedState,
+    headers: &HeaderMap,
+) -> Result<(String, String), (StatusCode, Json<Value>)> {
+    let site_id = headers
+        .get("x-cfitness-site-id")
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "club-carre-soie".to_string());
+
+    if let Some(auth_val) = headers.get(header::AUTHORIZATION).and_then(|v| v.to_str().ok()) {
+        if let Some(token) = auth_val.strip_prefix("Bearer ").map(|t| t.trim()) {
+            if let Some(verified_actor) = state.sessions.read().await.get(token).cloned() {
+                return Ok((verified_actor, site_id));
+            }
+            return Err(err_resp(
+                StatusCode::UNAUTHORIZED,
+                "Session serveur invalide ou expirée (401 Unauthorized).",
+            ));
+        }
+    }
+
+    // En production (CFITNESS_STRICT_SESSION=1), toute requête sans Bearer valide est refusée
+    if std::env::var("CFITNESS_STRICT_SESSION").as_deref() == Ok("1") {
+        return Err(err_resp(
+            StatusCode::UNAUTHORIZED,
+            "Authentification Bearer requise (CFITNESS_STRICT_SESSION=1).",
+        ));
+    }
+
+    let (_, fallback_site) = extract_actor_site(headers);
+    let actor_id = headers
+        .get("x-cfitness-actor-id")
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "emp-employe-multi".to_string());
+    Ok((actor_id, fallback_site))
 }
 
 fn extract_actor_site(headers: &HeaderMap) -> (String, String) {
@@ -1595,5 +1718,72 @@ async fn post_ollama_chat(Json(payload): Json<OllamaChatPayload>) -> Json<Value>
             "model": model,
             "error": err,
         })),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::seed::load_or_init_state;
+
+    fn test_state() -> SharedState {
+        let dir = std::env::temp_dir().join(format!(
+            "cfos_test_{}",
+            Utc::now().timestamp_nanos_opt().unwrap_or_default()
+        ));
+        Arc::new(SharedAppState {
+            db: RwLock::new(load_or_init_state(&dir)),
+            data_dir: dir,
+            sessions: RwLock::new(HashMap::new()),
+        })
+    }
+
+    #[tokio::test]
+    async fn auth_rejects_wrong_secret_and_never_elevates_role() {
+        let state = test_state();
+
+        // 1. Mauvais secret -> 401 Unauthorized
+        let bad = post_local_auth_login(
+            State(state.clone()),
+            Json(LocalAuthLoginRequest {
+                email_or_id: "emp-employe-multi".to_string(),
+                pin_or_password: "wrong".to_string(),
+                role_requested: "admin".to_string(),
+            }),
+        )
+        .await
+        .into_response();
+        assert_eq!(bad.status(), StatusCode::UNAUTHORIZED);
+
+        // 2. Bon secret sur employé standard avec role_requested="admin" -> rôle reste "employee"
+        let ok_resp = post_local_auth_login(
+            State(state.clone()),
+            Json(LocalAuthLoginRequest {
+                email_or_id: "emp-employe-multi".to_string(),
+                pin_or_password: "6060".to_string(),
+                role_requested: "admin".to_string(),
+            }),
+        )
+        .await
+        .into_response();
+        assert_eq!(ok_resp.status(), StatusCode::OK);
+        let sessions = state.sessions.read().await;
+        assert_eq!(sessions.len(), 1);
+        let (token, actor) = sessions.iter().next().unwrap();
+        assert_eq!(actor, "emp-employe-multi");
+
+        // 3. Résolution session Bearer valide vs falsifiée
+        let mut h_valid = HeaderMap::new();
+        h_valid.insert(
+            header::AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {}", token)).unwrap(),
+        );
+        h_valid.insert("x-cfitness-actor-id", HeaderValue::from_static("emp-admin"));
+        let resolved = resolve_session_actor(&state, &h_valid).await.unwrap();
+        assert_eq!(resolved.0, "emp-employe-multi"); // Ignore l'en-tête forgé emp-admin !
+
+        let mut h_fake = HeaderMap::new();
+        h_fake.insert(header::AUTHORIZATION, HeaderValue::from_static("Bearer fake-token"));
+        assert!(resolve_session_actor(&state, &h_fake).await.is_err());
     }
 }

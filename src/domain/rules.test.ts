@@ -681,10 +681,11 @@ test('Silae payroll calculation, formatters, and CRM guards work accurately', ()
       published: true,
     },
   ];
-  const rows = computePayrollVariables([aistudioBaseEmployee], shifts);
+  const rows = computePayrollVariables([aistudioBaseEmployee], shifts, '2026-10');
   assert.equal(rows[0].sundayHours, 8);
   const csv = generateSilaeCsv(rows, '2026-10');
-  assert.equal(csv.includes('CDS_VAULX;2026-10;8.00;0.00;8.00'), true);
+  assert.equal(csv.includes('CDS_VAULX;2026-10;HORAIRE;HEURES;8.00;0.00;8.00'), true);
+  assert.equal(csv.includes('CF-1;'), true);
   assert.equal(formatPointageType('arrivee'), 'Arrivée');
   assert.equal(formatLeaveStatus('en_attente'), 'En attente de validation');
 
