@@ -103,7 +103,8 @@ const FIELD_GUIDE_PHASES = [
     checks: [
       { id: 'fg-4-a', text: 'Option la plus simple (recommandée débutant) : installer Tailscale (VPN privé gratuit/pro en 2 min) sur le serveur de Carré de Soie ET sur les PC d’accueil / direction de Beynost (ou utiliser le VPN WireGuard entre les 2 box).' },
       { id: 'fg-4-b', text: 'Noter l’adresse IP privée Tailscale du serveur (ex. 100.x.y.z) et ouvrir http://100.x.y.z:8080 depuis un PC à Beynost.' },
-      { id: 'fg-4-c', text: 'Créer le raccourci « C.Fitness OS » sur le bureau des PC de Beynost et tester la connexion avec le compte d’un collaborateur Beynost.' },
+      { id: 'fg-4-c', text: 'Recommandation Sécurité (Actif / Secours) : poser un petit Mini-PC de secours (250–350 € sur onduleur) à Beynost pour recevoir la copie automatique de la base (sauvegarde hors-site + bascule secours en 5 min si panne à Carré de Soie, sans jamais faire de double écriture).' },
+      { id: 'fg-4-d', text: 'Créer le raccourci « C.Fitness OS » sur le bureau des PC de Beynost et tester la connexion avec le compte d’un collaborateur Beynost.' },
     ],
     verifyTip: 'En faisant comme ça, ZÉRO port n’est ouvert sur Internet, les 2 clubs partagent la même base temps réel, et si Internet coupe à Beynost, les portillons Heitz continuent d’ouvrir en local.',
   },
@@ -2274,9 +2275,9 @@ ${ONSITE_INSTALLATION_STEPS.map(
                   </p>
                 </div>
                 <div className={`p-3 rounded-xl border ${isDark ? 'bg-slate-900/60 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
-                  <div className="font-bold text-sky-400">3. Club Beynost (Client léger)</div>
+                  <div className="font-bold text-sky-400">3. Club Beynost (Actif / Secours)</div>
                   <p className="text-[11px] opacity-85 mt-1 leading-relaxed">
-                    Zéro serveur à installer à Beynost : les PC ouvrent simplement Chrome sur l&apos;IP privée du serveur. Et si Internet coupe, les portillons Heitz restent autonomes sur place.
+                    Les PC de Beynost utilisent le serveur Maître en direct (zéro conflit). Un petit Mini-PC de secours sur place reçoit la copie chiffrée automatique (sauvegarde hors-site + relais en 5 min en cas de panne).
                   </p>
                 </div>
               </div>
