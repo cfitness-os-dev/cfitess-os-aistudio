@@ -245,6 +245,28 @@ export const clientApi = {
     });
   },
 
+  updateEmployeeSiteAccesses(
+    auth: ApiAuthContext,
+    employeeId: string,
+    siteAccesses: Array<{
+      siteId: string;
+      isPrimary: boolean;
+      profileId: ProfileId;
+      teamIds: string[];
+      showOnPlanning: boolean;
+      positionIds: string[];
+    }>
+  ): Promise<{ ok: boolean; employeeId: string }> {
+    return requestJson<{ ok: boolean; employeeId: string }>(
+      `/api/admin/employees/${encodeURIComponent(employeeId)}/site-accesses`,
+      auth,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ siteAccesses }),
+      }
+    );
+  },
+
   revokeCalendarToken(auth: ApiAuthContext): Promise<UserPreferences> {
     return requestJson<UserPreferences>('/api/me/calendar-token/revoke', auth, {
       method: 'POST',

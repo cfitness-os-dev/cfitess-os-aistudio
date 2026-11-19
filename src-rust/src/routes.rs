@@ -1535,6 +1535,21 @@ async fn put_employee_site_accesses(
                 ));
             }
         }
+        for pid in &acc.position_ids {
+            let valid_pos = db
+                .positions
+                .iter()
+                .any(|p| p.id == *pid && p.site_id == acc.site_id);
+            if !valid_pos {
+                return Err(err_resp(
+                    StatusCode::BAD_REQUEST,
+                    format!(
+                        "Poste {} inexistant ou n'appartenant pas au club {}.",
+                        pid, acc.site_id
+                    ),
+                ));
+            }
+        }
     }
     if primary_count != 1 {
         return Err(err_resp(
@@ -1571,14 +1586,20 @@ async fn put_employee_site_accesses(
             }
         }
         for new_sa in &payload.site_accesses {
-            let existed = target_emp_snapshot
+            let old_opt = target_emp_snapshot
                 .site_accesses
                 .iter()
-                .any(|o| o.site_id == new_sa.site_id);
+                .find(|o| o.site_id == new_sa.site_id);
+            let existed = old_opt.is_some();
             if !existed {
                 impacted_sites.insert(new_sa.site_id.clone());
             }
-            if new_sa.profile_id == "admin_systeme" || new_sa.profile_id == "master_avance" {
+            let profile_added_or_changed = old_opt
+                .map(|o| o.profile_id != new_sa.profile_id)
+                .unwrap_or(true);
+            if profile_added_or_changed
+                && (new_sa.profile_id == "admin_systeme" || new_sa.profile_id == "master_avance")
+            {
                 return Err(err_resp(
                     StatusCode::FORBIDDEN,
                     "Non-élévation (403) : profil supérieur non attribuable hors admin_systeme.",
@@ -2250,5 +2271,71 @@ mod tests {
         assert_eq!(updated.site_accesses.len(), 2);
         assert_eq!(updated.site_accesses[1].profile_id, "lecture_seule_avancee");
         assert_eq!(updated.site_accesses[0].team_ids.len(), 2);
+
+        // 6. Modification locale sur Carré de Soie par emp-master tout en conservant master_avance inchangé sur Beynost
+        {
+            let mut db = state.db.write().await;
+            let emp = db.employees.iter_mut().find(|e| e.id == "emp-employe-multi").unwrap();
+            emp.site_accesses[0].profile_id = "employe_standard".to_string();
+            emp.site_accesses[1].profile_id = "master_avance".to_string();
+        }
+        let mut h_master_cs = HeaderMap::new();
+        h_master_cs.insert("x-cfitness-actor-id", HeaderValue::from_static("emp-master"));
+        let ok_preserve = put_employee_site_accesses(
+            State(state.clone()),
+            h_master_cs.clone(),
+            Path("emp-employe-multi".to_string()),
+            Json(PutEmployeeSiteAccessesPayload {
+                site_accesses: vec![
+                    crate::models::EmployeeSiteAccess {
+                        site_id: "club-carre-soie".to_string(),
+                        is_primary: true,
+                        profile_id: "employe_standard".to_string(),
+                        team_ids: vec!["team-cs-accueil".to_string()],
+                        show_on_planning: true,
+                        position_ids: vec![],
+                    },
+                    crate::models::EmployeeSiteAccess {
+                        site_id: "club-beynost".to_string(),
+                        is_primary: false,
+                        profile_id: "master_avance".to_string(), // inchangé -> conservé !
+                        team_ids: vec!["team-bey-coaching".to_string()],
+                        show_on_planning: true,
+                        position_ids: vec![],
+                    },
+                ],
+            }),
+        )
+        .await;
+        assert!(ok_preserve.is_ok());
+
+        // Tentative de modifier le profil sur Beynost depuis emp-master -> 403 FORBIDDEN
+        let forbidden_bey = put_employee_site_accesses(
+            State(state.clone()),
+            h_master_cs,
+            Path("emp-employe-multi".to_string()),
+            Json(PutEmployeeSiteAccessesPayload {
+                site_accesses: vec![
+                    crate::models::EmployeeSiteAccess {
+                        site_id: "club-carre-soie".to_string(),
+                        is_primary: true,
+                        profile_id: "employe_standard".to_string(),
+                        team_ids: vec!["team-cs-accueil".to_string()],
+                        show_on_planning: true,
+                        position_ids: vec![],
+                    },
+                    crate::models::EmployeeSiteAccess {
+                        site_id: "club-beynost".to_string(),
+                        is_primary: false,
+                        profile_id: "employe_standard".to_string(),
+                        team_ids: vec!["team-bey-coaching".to_string()],
+                        show_on_planning: true,
+                        position_ids: vec![],
+                    },
+                ],
+            }),
+        )
+        .await;
+        assert_eq!(forbidden_bey.unwrap_err().0, StatusCode::FORBIDDEN);
     }
 }

@@ -526,6 +526,61 @@ export function PlanningAndModulesView({
     if (currentUser.role === 'manager' && !selfSiteAccess) return false;
     return true;
   };
+
+  const persistSiteAccessesToServer = async (
+    targetEmpId: string,
+    nextAccesses: Array<{
+      siteId: string;
+      isPrimary: boolean;
+      profileId: ProfileId;
+      teamIds: string[];
+      showOnPlanning: boolean;
+      positionIds: string[];
+    }>,
+    successText: string
+  ) => {
+    try {
+      await clientApi.updateEmployeeSiteAccesses(auth, targetEmpId, nextAccesses);
+      const nextMap = { ...siteAccessOverrides, [targetEmpId]: nextAccesses };
+      setSiteAccessOverrides(nextMap);
+      try {
+        localStorage.setItem('cfos_mc02_site_accesses_v1', JSON.stringify(nextMap));
+      } catch {
+        // ignore
+      }
+      updateStaffEmployeeSiteAssignments(
+        targetEmpId,
+        nextAccesses.map((item) => ({
+          clubId: item.siteId === 'club-beynost' ? 'beynost' : 'carre-de-soie',
+          isPrimary: item.isPrimary,
+          roleInClub:
+            item.profileId === 'master_avance'
+              ? 'manager'
+              : item.profileId === 'admin_systeme'
+              ? 'admin'
+              : 'commercial',
+          profileId: item.profileId,
+          teamIds: item.teamIds,
+          showOnPlanning: item.showOnPlanning,
+          positionIds: item.positionIds,
+        }))
+      );
+      onRefreshDashboard();
+      setModuleFeedback({ kind: 'ok', text: `${successText} (persisté serveur)` });
+    } catch (err) {
+      if (err instanceof ApiClientError) {
+        setModuleFeedback({
+          kind: 'err',
+          text: `Refus / Erreur serveur (HTTP ${err.status}) : ${err.message}`,
+        });
+      } else {
+        setModuleFeedback({
+          kind: 'err',
+          text: 'Erreur réseau lors de la sauvegarde des affectations.',
+        });
+      }
+    }
+  };
   const visibleNamesForMc02 = new Set(
     dashboard.visibleEmployees.map((e) => `${e.firstName} ${e.lastName}`.trim().toLowerCase())
   );
@@ -2415,37 +2470,11 @@ export function PlanningAndModulesView({
                                     positionIds: existing?.positionIds ?? [],
                                   };
                                 });
-                                const nextMap = { ...siteAccessOverrides, [selectedEmp.id]: nextAccesses };
-                                setSiteAccessOverrides(nextMap);
-                                try {
-                                  localStorage.setItem('cfos_mc02_site_accesses_v1', JSON.stringify(nextMap));
-                                } catch {
-                                  // ignore
-                                }
-                                updateStaffEmployeeSiteAssignments(
+                                void persistSiteAccessesToServer(
                                   selectedEmp.id,
-                                  preset.clubs.map((cid, idx) => {
-                                    const acc = nextAccesses[idx];
-                                    return {
-                                      clubId: cid,
-                                      isPrimary: acc.isPrimary,
-                                      roleInClub:
-                                        acc.profileId === 'master_avance'
-                                          ? 'manager'
-                                          : acc.profileId === 'admin_systeme'
-                                          ? 'admin'
-                                          : 'commercial',
-                                      profileId: acc.profileId,
-                                      teamIds: acc.teamIds,
-                                      showOnPlanning: acc.showOnPlanning,
-                                      positionIds: acc.positionIds,
-                                    };
-                                  })
+                                  nextAccesses,
+                                  `Rattachement mis à jour pour ${selectedEmp.firstName} ${selectedEmp.lastName} : ${preset.label}`
                                 );
-                                setModuleFeedback({
-                                  kind: 'ok',
-                                  text: `Rattachement mis à jour pour ${selectedEmp.firstName} ${selectedEmp.lastName} : ${preset.label}.`,
-                                });
                               }}
                               className="cf-input px-2 py-1 hover:border-violet-500/60 cursor-pointer"
                             >
@@ -2489,34 +2518,11 @@ export function PlanningAndModulesView({
                                   const nextAccesses = selectedEmp.siteAccesses.map((item) =>
                                     item.siteId === acc.siteId ? { ...item, profileId: nextProf } : item
                                   );
-                                  const nextMap = { ...siteAccessOverrides, [selectedEmp.id]: nextAccesses };
-                                  setSiteAccessOverrides(nextMap);
-                                  try {
-                                    localStorage.setItem('cfos_mc02_site_accesses_v1', JSON.stringify(nextMap));
-                                  } catch {
-                                    // ignore
-                                  }
-                                  updateStaffEmployeeSiteAssignments(
+                                  void persistSiteAccessesToServer(
                                     selectedEmp.id,
-                                    nextAccesses.map((item) => ({
-                                      clubId: item.siteId === 'club-beynost' ? 'beynost' : 'carre-de-soie',
-                                      isPrimary: item.isPrimary,
-                                      roleInClub:
-                                        item.profileId === 'master_avance'
-                                          ? 'manager'
-                                          : item.profileId === 'admin_systeme'
-                                          ? 'admin'
-                                          : 'commercial',
-                                      profileId: item.profileId,
-                                      teamIds: item.teamIds,
-                                      showOnPlanning: item.showOnPlanning,
-                                      positionIds: item.positionIds,
-                                    }))
+                                    nextAccesses,
+                                    `Droits sur ${siteMap.get(acc.siteId) ?? acc.siteId} mis à jour (${nextProf}) sans modifier l'autre club`
                                   );
-                                  setModuleFeedback({
-                                    kind: 'ok',
-                                    text: `Droits sur ${siteMap.get(acc.siteId) ?? acc.siteId} mis à jour (${nextProf}) sans modifier l'autre club.`,
-                                  });
                                 }}
                                 className="cf-input text-[11px] px-2 py-1"
                               >
@@ -2548,29 +2554,10 @@ export function PlanningAndModulesView({
                                     const nextAccesses = selectedEmp.siteAccesses.map((item) =>
                                       item.siteId === acc.siteId ? { ...item, teamIds: nextTeams } : item
                                     );
-                                    const nextMap = { ...siteAccessOverrides, [selectedEmp.id]: nextAccesses };
-                                    setSiteAccessOverrides(nextMap);
-                                    try {
-                                      localStorage.setItem('cfos_mc02_site_accesses_v1', JSON.stringify(nextMap));
-                                    } catch {
-                                      // ignore
-                                    }
-                                    updateStaffEmployeeSiteAssignments(
+                                    void persistSiteAccessesToServer(
                                       selectedEmp.id,
-                                      nextAccesses.map((item) => ({
-                                        clubId: item.siteId === 'club-beynost' ? 'beynost' : 'carre-de-soie',
-                                        isPrimary: item.isPrimary,
-                                        roleInClub:
-                                          item.profileId === 'master_avance'
-                                            ? 'manager'
-                                            : item.profileId === 'admin_systeme'
-                                            ? 'admin'
-                                            : 'commercial',
-                                        profileId: item.profileId,
-                                        teamIds: item.teamIds,
-                                        showOnPlanning: item.showOnPlanning,
-                                        positionIds: item.positionIds,
-                                      }))
+                                      nextAccesses,
+                                      `Équipes sur ${siteMap.get(acc.siteId) ?? acc.siteId} mises à jour`
                                     );
                                   }}
                                   className={`px-2 py-0.5 rounded border ${
