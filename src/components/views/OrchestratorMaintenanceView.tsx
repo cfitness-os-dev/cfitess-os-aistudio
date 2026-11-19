@@ -102,7 +102,10 @@ interface StockConsumableItem {
     | 'Textile & Accueil'
     | 'Hygiène & Plateau'
     | 'Badges & TPV'
-    | 'Pièces Détachées & Maintenance';
+    | 'Pièces Détachées & Maintenance'
+    | 'Poids, Haltères & Matériel Muscu'
+    | 'Sonorisation, Écrans & Caméras'
+    | 'Éclairage, Vestiaires & CVC';
   currentQty: number;
   minThreshold: number;
   unit: string;
@@ -677,6 +680,9 @@ export function OrchestratorMaintenanceView() {
         'Badges & TPV',
         'Hygiène & Plateau',
         'Pièces Détachées & Maintenance',
+        'Poids, Haltères & Matériel Muscu',
+        'Sonorisation, Écrans & Caméras',
+        'Éclairage, Vestiaires & CVC',
       ];
       const addedItems: StockConsumableItem[] = [];
       let skipped = 0;
@@ -834,6 +840,34 @@ export function OrchestratorMaintenanceView() {
     setNewSupplierName('');
     setNewEstimatedCost('0');
     setNewUsedStockId('');
+  };
+
+  const handleOrderPartFromTicket = (ticket: MaintenanceTicket) => {
+    const mappedCat: StockConsumableItem['category'] =
+      ticket.category === 'Poids, Haltères & Barres'
+        ? 'Poids, Haltères & Matériel Muscu'
+        : ticket.category === 'Sonorisation, Micros & Ampli' ||
+          ticket.category === 'Écrans TV, Affichage & Bornes' ||
+          ticket.category === 'Caméras Vidéosurveillance & Alarme' ||
+          ticket.category === 'Informatique / VoIP'
+        ? 'Sonorisation, Écrans & Caméras'
+        : ticket.category === 'Éclairage, Vestiaires & Casiers' ||
+          ticket.category === 'CVC / Sauna / Douches'
+        ? 'Éclairage, Vestiaires & CVC'
+        : 'Pièces Détachées & Maintenance';
+
+    setNewStockName(`Pièce / Composant — ${ticket.equipmentName}`);
+    setNewStockCategory(mappedCat);
+    setNewStockClub(ticket.clubId);
+    setNewStockSupplier(ticket.supplierName);
+    setNewStockQty(1);
+    if (ticket.estimatedCostEur > 0) {
+      setNewStockPrice(ticket.estimatedCostEur);
+    }
+    setActiveTab('MODULE_STOCKS');
+    setScanFeedback(
+      `Bon de commande pré-rempli depuis le ticket SAV « ${ticket.equipmentName} » (${formatClubName(ticket.clubId, true)}).`
+    );
   };
 
   const handleAdvanceTicketStatus = (id: string) => {
@@ -1871,6 +1905,9 @@ export function OrchestratorMaintenanceView() {
                         <option value="Badges & TPV">Badges &amp; TPV</option>
                         <option value="Hygiène & Plateau">Hygiène &amp; Plateau</option>
                         <option value="Pièces Détachées & Maintenance">Pièces Détachées &amp; Maintenance</option>
+                        <option value="Poids, Haltères & Matériel Muscu">Poids, Haltères &amp; Matériel Muscu</option>
+                        <option value="Sonorisation, Écrans & Caméras">Sonorisation, Écrans &amp; Caméras</option>
+                        <option value="Éclairage, Vestiaires & CVC">Éclairage, Vestiaires &amp; CVC</option>
                       </select>
                     </div>
 
@@ -1900,9 +1937,15 @@ export function OrchestratorMaintenanceView() {
                         className="w-full px-2.5 py-2 rounded-xl border border-slate-300 bg-white"
                       >
                         <option value="FitSupply Pro Lyon">FitSupply Pro Lyon</option>
+                        <option value="Technogym France SAV">Technogym France SAV</option>
                         <option value="NutriSport France">NutriSport France</option>
                         <option value="Heitz System">Heitz System</option>
                         <option value="Hygiène Sport Rhône">Hygiène Sport Rhône</option>
+                        <option value="AudioVisuel & Sonorisation Pro">AudioVisuel &amp; Sonorisation Pro</option>
+                        <option value="Sécurité & Caméras IP Rhône">Sécurité &amp; Caméras IP Rhône</option>
+                        <option value="ClimRhône Maintenance (CVC)">ClimRhône Maintenance (CVC)</option>
+                        <option value="Électricité & Éclairage Pro">Électricité &amp; Éclairage Pro</option>
+                        <option value="Prestataire Maintenance Club">Prestataire Maintenance Club</option>
                       </select>
                     </div>
                     <div>
@@ -2271,7 +2314,16 @@ export function OrchestratorMaintenanceView() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleOrderPartFromTicket(t)}
+                        title="Pré-remplir un bon de commande fournisseur pour cet équipement"
+                        className="px-2.5 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 border border-orange-300 text-orange-800 font-bold text-[11px] flex items-center gap-1 cursor-pointer"
+                      >
+                        <ShoppingCart className="w-3 h-3" />
+                        <span>Commander pièce</span>
+                      </button>
                       <span
                         className={`px-2.5 py-1 rounded-lg font-bold text-[11px] ${
                           t.status === 'Résolu'
