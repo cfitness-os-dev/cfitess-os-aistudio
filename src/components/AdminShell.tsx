@@ -38,7 +38,7 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { AdminSection } from '../types/cfos';
-import { isSectionAllowedForRole } from '../domain/rules';
+import { isNavItemAllowedForRole, isSectionAllowedForRole } from '../domain/rules';
 import { DashboardView } from './views/DashboardView';
 import { OrchestratorMaintenanceView } from './views/OrchestratorMaintenanceView';
 import { MonCompteRhHubView } from './views/MonCompteRhHubView';
@@ -532,8 +532,11 @@ export function AdminShell() {
             {VISUAL_SIDEBAR_ITEMS.filter(
               (item) =>
                 (!item.technicalOnly || isTechnicalMode) &&
-                (item.sectionId === 'recovery' ? canAccessRecovery : true) &&
-                (item.sectionId ? isSectionAllowedForRole(item.sectionId, currentUser.role) : true)
+                isNavItemAllowedForRole(item, currentUser.role, {
+                  canAccessRecovery,
+                  canAccessMaintenance: currentUser.role === 'admin' || currentUser.role === 'coach',
+                  isTechnicalMode,
+                })
             ).map((item) => {
               const Icon = item.icon;
               const isSelected =
@@ -628,31 +631,32 @@ export function AdminShell() {
           )}
         </nav>
 
-        {/* Bottom Settings / Mon Espace (PIN 0766) & Session Controls */}
+        {/* Bottom Settings / Mon Espace (PIN 0766 — Direction uniquement) & Session Controls */}
         <div
           className={`p-3 border-t space-y-2 ${
             isDark ? 'border-slate-800/80' : 'border-slate-200/80'
           }`}
         >
-          <button
-            type="button"
-            onClick={handleGovernanceClick}
-            className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
-              activeSection === 'governance'
-                ? 'bg-violet-600 text-white shadow-2xs'
-                : isDark
-                ? 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-            }`}
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <Settings className="w-4 h-4 shrink-0 text-slate-400" />
-              <span className="truncate">Paramètres · Mon Espace</span>
-            </div>
-            <span
-              className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                isArchitectUnlocked
-                  ? 'bg-rose-600 text-white font-bold'
+          {currentUser.role === 'admin' && (
+            <button
+              type="button"
+              onClick={handleGovernanceClick}
+              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                activeSection === 'governance'
+                  ? 'bg-violet-600 text-white shadow-2xs'
+                  : isDark
+                  ? 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <Settings className="w-4 h-4 shrink-0 text-slate-400" />
+                <span className="truncate">Paramètres · Mon Espace</span>
+              </div>
+              <span
+                className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                  isArchitectUnlocked
+                    ? 'bg-rose-600 text-white font-bold'
                   : isDark
                   ? 'bg-slate-800 text-slate-400'
                   : 'bg-slate-100 text-slate-500'
@@ -661,6 +665,7 @@ export function AdminShell() {
               {isArchitectUnlocked ? 'VERROUILLER' : 'PIN'}
             </span>
           </button>
+          )}
 
           <div className="grid grid-cols-2 gap-1.5">
             <button
@@ -870,7 +875,12 @@ export function AdminShell() {
               </div>
 
               {/* Night Mode & Display Color Switcher (PC, Tablette & Téléphone) */}
-              <ThemeColorControl variant="full" />
+              <div className="hidden sm:flex">
+                <ThemeColorControl variant="full" />
+              </div>
+              <div className="flex sm:hidden">
+                <ThemeColorControl variant="compact" />
+              </div>
 
               {/* Quick Mobile / Tablet App Preview Button (Image 2) */}
               <button
@@ -950,40 +960,44 @@ export function AdminShell() {
                         Fermer
                       </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveSection('devices', 'finances');
-                        setNotifPopoverOpen(false);
-                      }}
-                      className={`w-full p-2.5 rounded-xl text-left flex items-center justify-between cursor-pointer ${
-                        isDark ? 'bg-rose-950/40 hover:bg-rose-950/60' : 'bg-rose-50 hover:bg-rose-100'
-                      }`}
-                    >
-                      <div>
-                        <div className="font-bold text-rose-500">5 impayés à relancer</div>
-                        <div className="text-[11px] opacity-80">Représentent 1 250 €</div>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-rose-400" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveSection('my-day', 'MC06');
-                        setNotifPopoverOpen(false);
-                      }}
-                      className={`w-full p-2.5 rounded-xl text-left flex items-center justify-between cursor-pointer ${
-                        isDark
-                          ? 'bg-amber-950/40 hover:bg-amber-950/60'
-                          : 'bg-amber-50 hover:bg-amber-100'
-                      }`}
-                    >
-                      <div>
-                        <div className="font-bold text-amber-500">2 contrats en attente</div>
-                        <div className="text-[11px] opacity-80">À valider cette semaine</div>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-amber-400" />
-                    </button>
+                    {currentUser.role === 'admin' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveSection('devices', 'finances');
+                          setNotifPopoverOpen(false);
+                        }}
+                        className={`w-full p-2.5 rounded-xl text-left flex items-center justify-between cursor-pointer ${
+                          isDark ? 'bg-rose-950/40 hover:bg-rose-950/60' : 'bg-rose-50 hover:bg-rose-100'
+                        }`}
+                      >
+                        <div>
+                          <div className="font-bold text-rose-500">5 impayés à relancer</div>
+                          <div className="text-[11px] opacity-80">Représentent 1 250 €</div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-rose-400" />
+                      </button>
+                    )}
+                    {currentUser.role === 'admin' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveSection('my-day', 'MC06');
+                          setNotifPopoverOpen(false);
+                        }}
+                        className={`w-full p-2.5 rounded-xl text-left flex items-center justify-between cursor-pointer ${
+                          isDark
+                            ? 'bg-amber-950/40 hover:bg-amber-950/60'
+                            : 'bg-amber-50 hover:bg-amber-100'
+                        }`}
+                      >
+                        <div>
+                          <div className="font-bold text-amber-500">2 contrats en attente</div>
+                          <div className="text-[11px] opacity-80">À valider cette semaine</div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-amber-400" />
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => {
@@ -1012,7 +1026,7 @@ export function AdminShell() {
                 onClick={() => setShellMode('telephone')}
                 title="Ouvrir le Softphone WebRTC & Messagerie SMS 07"
                 aria-label="Ouvrir la messagerie et le softphone"
-                className={`w-9 h-9 rounded-xl border flex items-center justify-center cursor-pointer transition-colors ${
+                className={`hidden sm:flex w-9 h-9 rounded-xl border items-center justify-center cursor-pointer transition-colors ${
                   isDark
                     ? 'bg-[#1A2033] border-slate-700 text-slate-300 hover:bg-slate-800'
                     : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
@@ -1021,7 +1035,9 @@ export function AdminShell() {
                 <MessageSquare className="w-4 h-4" />
               </button>
 
-              <MywellnessQuickConnect variant="header" />
+              <div className="hidden md:flex">
+                <MywellnessQuickConnect variant="header" />
+              </div>
 
               {/* Lock button when Architect Space is unlocked */}
               {activeSection === 'governance' && isArchitectUnlocked && (
@@ -1400,8 +1416,11 @@ export function AdminShell() {
                 {VISUAL_SIDEBAR_ITEMS.filter(
                   (item) =>
                     (!item.technicalOnly || isTechnicalMode) &&
-                    (item.sectionId === 'recovery' ? canAccessRecovery : true) &&
-                    (item.sectionId ? isSectionAllowedForRole(item.sectionId, currentUser.role) : true)
+                    isNavItemAllowedForRole(item, currentUser.role, {
+                      canAccessRecovery,
+                      canAccessMaintenance: currentUser.role === 'admin' || currentUser.role === 'coach',
+                      isTechnicalMode,
+                    })
                 ).map((item) => {
                   const Icon = item.icon;
                   return (
@@ -1453,30 +1472,34 @@ export function AdminShell() {
                 </div>
               )}
 
-              <button
-                type="button"
-                onClick={toggleTechnicalMode}
-                className="w-full px-3 py-1.5 rounded-xl text-[11px] font-medium flex items-center justify-between text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-              >
-                <span>{isTechnicalMode ? 'Vue Technique active' : 'Vue Métier épurée'}</span>
-                <span className="font-mono">{isTechnicalMode ? 'Masquer' : 'Tech.'}</span>
-              </button>
-
-              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
+              {isArchitectUnlocked && (
                 <button
                   type="button"
-                  onClick={() => {
-                    handleGovernanceClick();
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between bg-slate-100 dark:bg-slate-800 cursor-pointer"
+                  onClick={toggleTechnicalMode}
+                  className="w-full px-3 py-1.5 rounded-xl text-[11px] font-medium flex items-center justify-between text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                 >
-                  <span className="flex items-center gap-2">
-                    <Settings className="w-4 h-4 text-violet-500" />
-                    Paramètres · Mon Espace
-                  </span>
-                  <span className="text-[10px] font-mono">PIN</span>
+                  <span>{isTechnicalMode ? 'Vue Technique active' : 'Vue Métier épurée'}</span>
+                  <span className="font-mono">{isTechnicalMode ? 'Masquer' : 'Tech.'}</span>
                 </button>
+              )}
+
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
+                {currentUser.role === 'admin' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleGovernanceClick();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between bg-slate-100 dark:bg-slate-800 cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Settings className="w-4 h-4 text-violet-500" />
+                      Paramètres · Mon Espace
+                    </span>
+                    <span className="text-[10px] font-mono">PIN</span>
+                  </button>
+                )}
 
                 <div className="grid grid-cols-2 gap-1.5">
                   <button

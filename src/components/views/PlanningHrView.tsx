@@ -138,8 +138,14 @@ function getSkelloShiftBlockStyle(roleLabel: string, clubId: ClubId): {
 
 export function PlanningHrView({
   forcedSubTab,
+  canViewSalaries = true,
+  isReadOnly = false,
+  forcedClubScope,
 }: {
   forcedSubTab?: 'POINTAGES' | 'CONGES' | 'SILAE';
+  canViewSalaries?: boolean;
+  isReadOnly?: boolean;
+  forcedClubScope?: ClubId;
 } = {}) {
   const {
     clubFilter,
@@ -407,6 +413,56 @@ export function PlanningHrView({
   const [leaveDays, setLeaveDays] = useState(5);
   const [leaveReason, setLeaveReason] = useState('Congés payés Toussaint');
 
+  // Primes & Variables de paie Silae persistantes (CFOS-033)
+  const [silaeBonuses, setSilaeBonuses] = useState<
+    Array<{ id: string; employeeId: string; label: string; amountEur: number; period: string }>
+  >(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const raw = localStorage.getItem('cfos_silae_bonuses_v1');
+      if (raw) return JSON.parse(raw);
+    } catch {
+      // ignore
+    }
+    return [
+      {
+        id: 'prime-init-1',
+        employeeId: 'emp-maxime',
+        label: 'Prime objectifs abonnements',
+        amountEur: 180,
+        period: '2026-10',
+      },
+    ];
+  });
+  const [bonusEmpId, setBonusEmpId] = useState<string>('emp-maxime');
+  const [bonusLabel, setBonusLabel] = useState<string>('Prime exceptionnelle');
+  const [bonusAmountEur, setBonusAmountEur] = useState<number>(150);
+
+  const handleAddSilaeBonus = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isReadOnly || !canViewSalaries) return;
+    if (!bonusLabel.trim() || !Number.isFinite(bonusAmountEur) || bonusAmountEur <= 0) return;
+    const next = [
+      ...silaeBonuses,
+      {
+        id: `prime-${Date.now()}`,
+        employeeId: bonusEmpId,
+        label: bonusLabel.trim(),
+        amountEur: Math.round(bonusAmountEur * 100) / 100,
+        period: '2026-10',
+      },
+    ];
+    setSilaeBonuses(next);
+    try {
+      localStorage.setItem('cfos_silae_bonuses_v1', JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+    setFeedbackBanner(
+      `Prime « ${bonusLabel.trim()} » (${bonusAmountEur.toFixed(2)} €) enregistrée et persistée dans la paie Silae.`
+    );
+  };
+
   // Silae selected employee for live payslip preview
   const [selectedSilaeEmpId, setSelectedSilaeEmpId] = useState<string>('emp-maxime');
 
@@ -438,9 +494,35 @@ export function PlanningHrView({
   const previewViolations = allViolations.filter((v) => v.shiftId === 'preview-shift');
   const existingScheduleViolations = evaluateShiftCompliance(shifts);
 
-  const payrollRows = computePayrollVariables(employees, shifts);
-  const silaeCsvText = generateSilaeCsv(payrollRows, '2026-10');
-  const silaeApiPayload = buildSilaeApiPayload(payrollRows, '2026-10', 'API_REST_SILAE');
+  const scopedEmployeesForPayroll = forcedClubScope
+    ? employees.filter((e) => e.clubId === forcedClubScope)
+    : employees;
+
+  // Cas Forfait Jours (218 j/an) réintroduit dans la paie Silae (CFOS-055)
+  const basePayrollRows = computePayrollVariables(scopedEmployeesForPayroll, shifts).map((row) => {
+    const emp = scopedEmployeesForPayroll.find((e) => e.id === row.employeeId);
+    const empBonuses = silaeBonuses
+      .filter((b) => b.employeeId === row.employeeId)
+      .reduce((acc, b) => acc + b.amountEur, 0);
+    const isForfaitJours =
+      emp?.role === 'admin' ||
+      emp?.jobTitle.toLowerCase().includes('direct') ||
+      emp?.jobTitle.toLowerCase().includes('cadre');
+    return {
+      ...row,
+      bonusEur: empBonuses,
+      grossVariableEstimateEur: Math.round((row.grossVariableEstimateEur + empBonuses) * 100) / 100,
+      isForfaitJours,
+      forfaitDaysLabel: isForfaitJours ? '218 j/an (18,17 j/mois)' : null,
+    };
+  });
+  const payrollRows = basePayrollRows;
+  const silaeCsvText = canViewSalaries
+    ? generateSilaeCsv(payrollRows, '2026-10')
+    : 'ACCÈS RESTREINT — Droit ORG04-10 requis pour consulter ou exporter les montants de paie.';
+  const silaeApiPayload = canViewSalaries
+    ? buildSilaeApiPayload(payrollRows, '2026-10', 'API_REST_SILAE')
+    : { status: 'REDACTED_ORG04_10', message: 'Salaires masqués pour ce profil.' };
   const allUnifiedEvents = buildUnifiedPlanningEvents(shifts, unifiedExternalEvents);
 
   const selectedSilaeRow =
@@ -478,8 +560,21 @@ export function PlanningHrView({
   const totalEstimatedGrossEur = Math.round(totalPlannedHours * 12.02 * 1.42);
   const pendingLeavesCount = leaveRequests.filter((l) => l.status === 'en_attente').length;
 
+  const isBreakInvalid =
+    !Number.isFinite(breakMinutes) || breakMinutes < 0 || breakMinutes > 180;
+  const previewNetHours = computeNetShiftHours(startTime, endTime, breakMinutes);
+  const isNetDurationInvalid = previewNetHours <= 0;
+  const isPreviewCompliant =
+    previewViolations.length === 0 && !isBreakInvalid && !isNetDurationInvalid;
+
   const handleAddShift = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isBreakInvalid || isNetDurationInvalid) {
+      setFeedbackBanner(
+        'Créneau refusé : la pause doit être comprise entre 0 et 180 min et la durée nette > 0 h.'
+      );
+      return;
+    }
     addShift({
       employeeId: empId,
       clubId: shiftClub,
@@ -1760,13 +1855,13 @@ export function PlanningHrView({
                     {/* Live IDCC 2511 Validation Box */}
                     <div
                       className={`p-3 rounded-lg border text-[11px] space-y-1 ${
-                        previewViolations.length === 0
+                        isPreviewCompliant
                           ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
                           : 'bg-rose-50 border-rose-300 text-rose-950'
                       }`}
                     >
                       <div className="font-bold flex items-center gap-1.5">
-                        {previewViolations.length === 0 ? (
+                        {isPreviewCompliant ? (
                           <>
                             <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                             <span>Shift conforme IDCC 2511 (Sport)</span>
@@ -1774,24 +1869,34 @@ export function PlanningHrView({
                         ) : (
                           <>
                             <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-                            <span>Alerte Convention du Sport IDCC 2511</span>
+                            <span>Non conforme — Création bloquée</span>
                           </>
                         )}
                       </div>
-                      {previewViolations.length === 0 ? (
+                      {isPreviewCompliant ? (
                         <div className="text-[10px] text-emerald-800">
                           Durée nette :{' '}
-                          <span className="font-mono font-bold">
-                            {computeNetShiftHours(startTime, endTime, breakMinutes)}h
-                          </span>{' '}
+                          <span className="font-mono font-bold">{previewNetHours}h</span>{' '}
                           · Amplitude &le; 12h · Pause respectée.
                         </div>
                       ) : (
-                        previewViolations.map((v, i) => (
-                          <div key={i} className="text-rose-800">
-                            • {v.message}
-                          </div>
-                        ))
+                        <>
+                          {isBreakInvalid && (
+                            <div className="text-rose-800 font-semibold">
+                              • Pause invalide ({breakMinutes} min) : maximum autorisé 180 min.
+                            </div>
+                          )}
+                          {!isBreakInvalid && isNetDurationInvalid && (
+                            <div className="text-rose-800 font-semibold">
+                              • Durée nette nulle ou négative ({previewNetHours}h) : vérifiez les horaires.
+                            </div>
+                          )}
+                          {previewViolations.map((v, i) => (
+                            <div key={i} className="text-rose-800">
+                              • {v.message}
+                            </div>
+                          ))}
+                        </>
                       )}
                     </div>
 
@@ -2311,13 +2416,87 @@ export function PlanningHrView({
                 </div>
                 <button
                   onClick={handleDownloadSilae}
-                  className="px-3.5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap"
+                  disabled={!canViewSalaries || isReadOnly}
+                  title={
+                    !canViewSalaries
+                      ? 'Accès paie masqué (ORG04-10)'
+                      : isReadOnly
+                      ? 'Lecture seule : export désactivé'
+                      : 'Télécharger le fichier CSV Silae'
+                  }
+                  className={`px-3.5 py-2 rounded-lg text-xs font-extrabold flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
+                    !canViewSalaries || isReadOnly
+                      ? 'bg-slate-600 text-slate-300 cursor-not-allowed opacity-70'
+                      : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 cursor-pointer'
+                  }`}
                 >
                   <Download className="w-4 h-4" />
                   Exporter vers Silae (.CSV)
                 </button>
               </div>
             </div>
+
+            {!canViewSalaries && (
+              <div className="p-3 rounded-lg bg-amber-50 border border-amber-300 text-amber-950 text-xs font-semibold">
+                Mode Lecture seule / Périmètre restreint : les bruts estimés et bulletins individuels sont masqués (ORG04-10).
+                {forcedClubScope && ` Périmètre affiché : ${forcedClubScope === 'beynost' ? 'Beynost' : 'Carré de Soie'}.`}
+              </div>
+            )}
+
+            {canViewSalaries && !isReadOnly && (
+              <form
+                onSubmit={handleAddSilaeBonus}
+                className="bg-white border border-slate-300 rounded-lg p-3 flex flex-wrap items-end gap-2.5 text-xs"
+              >
+                <div className="flex-1 min-w-[160px]">
+                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
+                    Salarié (Ajout Prime)
+                  </label>
+                  <select
+                    value={bonusEmpId}
+                    onChange={(e) => setBonusEmpId(e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white text-slate-900"
+                  >
+                    {scopedEmployeesForPayroll.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.firstName} {emp.lastName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1 min-w-[160px]">
+                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
+                    Libellé de la prime
+                  </label>
+                  <input
+                    type="text"
+                    value={bonusLabel}
+                    onChange={(e) => setBonusLabel(e.target.value)}
+                    placeholder="Ex: Prime objectifs"
+                    className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white text-slate-900"
+                  />
+                </div>
+                <div className="w-28">
+                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
+                    Montant (€)
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    step={10}
+                    value={bonusAmountEur}
+                    onChange={(e) => setBonusAmountEur(Number(e.target.value))}
+                    className="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white text-slate-900 font-mono"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="px-3.5 py-1.5 rounded bg-violet-600 hover:bg-violet-700 text-white font-bold cursor-pointer min-h-[34px]"
+                >
+                  + Ajouter Prime
+                </button>
+              </form>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
               {/* Left 7 cols: Silae Accounting Matrix (Grille EV) */}
@@ -2359,19 +2538,31 @@ export function PlanningHrView({
                               </div>
                               <div className="text-[10px] text-slate-500">
                                 {empObj ? `${empObj.contractType} · ${empObj.jobTitle}` : 'CDI'}
+                                {r.forfaitDaysLabel && (
+                                  <span className="ml-1.5 px-1.5 py-0.5 rounded bg-violet-100 text-violet-800 font-semibold">
+                                    Forfait {r.forfaitDaysLabel}
+                                  </span>
+                                )}
+                                {r.bonusEur > 0 && canViewSalaries && (
+                                  <span className="ml-1.5 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold">
+                                    +Prime {r.bonusEur.toFixed(0)} €
+                                  </span>
+                                )}
                               </div>
                             </td>
                             <td className="py-2.5 px-2 text-right text-slate-800">
-                              {r.normalHours} h
+                              {r.isForfaitJours ? '218 j/an' : `${r.normalHours} h`}
                             </td>
                             <td className="py-2.5 px-2 text-right text-amber-700 font-bold">
-                              +{r.overtime25Hours} h
+                              {r.isForfaitJours ? 'Forfait' : `+${r.overtime25Hours} h`}
                             </td>
                             <td className="py-2.5 px-2 text-right text-indigo-700">
                               {r.sundayHours} h
                             </td>
                             <td className="py-2.5 px-3 text-right font-bold text-emerald-800">
-                              {(1823.03 + r.grossVariableEstimateEur).toFixed(2)} €
+                              {canViewSalaries
+                                ? `${(1823.03 + r.grossVariableEstimateEur).toFixed(2)} €`
+                                : '*** € (Masqué)'}
                             </td>
                           </tr>
                         );
@@ -2395,7 +2586,7 @@ export function PlanningHrView({
               </div>
 
               {/* Right 5 cols: Live Silae Bulletin de Paie Clarifié Preview */}
-              {selectedSilaeRow && (
+              {selectedSilaeRow && canViewSalaries && (
                 <div className="lg:col-span-5 bg-white border border-slate-300 rounded-lg p-4 space-y-3 text-xs font-mono">
                   <div className="border-b-2 border-slate-900 pb-2 flex items-start justify-between">
                     <div>

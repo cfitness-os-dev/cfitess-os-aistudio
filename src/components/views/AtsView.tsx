@@ -73,6 +73,7 @@ export function AtsView({
     candidates,
     jobOffers,
     hrDocuments,
+    employees,
     signDocumentWithInternalProof,
     moveCandidateStage,
     ingestEmailCandidate,
@@ -125,9 +126,60 @@ export function AtsView({
   const filteredOffers =
     clubFilter === 'all' ? jobOffers : jobOffers.filter((o) => o.clubId === clubFilter);
 
-  const contractDocs = hrDocuments.filter(
-    (d) => d.category === 'Contrat' || d.category === 'Avenant'
+  const [docFolderFilter, setDocFolderFilter] = useState<string>('ALL');
+  const [showCreateDocForm, setShowCreateDocForm] = useState(false);
+  const [newDocTitle, setNewDocTitle] = useState('');
+  const [newDocCategory, setNewDocCategory] = useState<
+    'Contrat' | 'Avenant' | 'Diplôme' | 'Justificatif' | 'Note RH'
+  >('Contrat');
+  const [newDocEmpId, setNewDocEmpId] = useState(employees[0]?.id || 'emp-maxime');
+  const [newDocBody, setNewDocBody] = useState(
+    'Document RH C.Fitness OS — Contenu vérifié et classé dans le dossier salarié.'
   );
+  const [extraDocs, setExtraDocs] = useState<HRDocument[]>(() => {
+    try {
+      const raw = localStorage.getItem('cfos_extra_hr_docs_v1');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const handleCreateOrImportDoc = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newDocTitle.trim()) return;
+    const item: HRDocument = {
+      id: `doc-custom-${Date.now()}`,
+      employeeId: newDocEmpId,
+      title: newDocTitle.trim(),
+      category: newDocCategory as HRDocument['category'],
+      signedStatus: 'En attente signature',
+      contractBodyText: newDocBody.trim() || newDocTitle.trim(),
+      uploadedAt: new Date().toISOString().slice(0, 10),
+      encryptedAtRest: true,
+    };
+    const next = [item, ...extraDocs];
+    setExtraDocs(next);
+    try {
+      localStorage.setItem('cfos_extra_hr_docs_v1', JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+    setNewDocTitle('');
+    setShowCreateDocForm(false);
+    setTransactionBanner({
+      type: 'ok',
+      title: 'Document RH importé et classé',
+      details: `Document « ${item.title} » (${item.category}) enregistré dans le dossier salarié.`,
+    });
+  };
+
+  const contractDocs = [...extraDocs, ...hrDocuments].filter((d) => {
+    if (docFolderFilter === 'ALL') {
+      return d.category === 'Contrat' || d.category === 'Avenant' || Boolean(d.contractBodyText);
+    }
+    return d.category.toLowerCase().includes(docFolderFilter.toLowerCase());
+  });
 
   const handleDownloadProofJson = (doc: HRDocument) => {
     if (!doc.signatureProof) return;
@@ -632,6 +684,107 @@ export function AtsView({
                 0 € / Signature · Valeur Probante
               </span>
             </div>
+
+            {/* Barre Classement Documentaire + Importer / Créer (CFOS-037 & CFOS-014) */}
+            <div className="bg-white border border-slate-300 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="font-bold text-slate-500 mr-1">Dossiers :</span>
+                {[
+                  { id: 'ALL', label: 'Tous' },
+                  { id: 'Contrat', label: 'Contrats' },
+                  { id: 'Avenant', label: 'Avenants' },
+                  { id: 'Diplôme', label: 'Diplômes BPJEPS' },
+                  { id: 'Justificatif', label: 'Justificatifs / RIB' },
+                ].map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setDocFolderFilter(f.id)}
+                    className={`px-2.5 py-1 rounded-lg font-bold cursor-pointer ${
+                      docFolderFilter === f.id
+                        ? 'bg-emerald-700 text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCreateDocForm((prev) => !prev)}
+                className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-bold cursor-pointer"
+              >
+                + Importer / Créer un document RH
+              </button>
+            </div>
+
+            {showCreateDocForm && (
+              <form
+                onSubmit={handleCreateOrImportDoc}
+                className="bg-white border-2 border-violet-300 rounded-xl p-4 space-y-3 text-xs"
+              >
+                <div className="font-bold text-slate-900">
+                  Nouveau document RH / Classement salarié
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <input
+                    type="text"
+                    required
+                    placeholder="Titre du document (ex: Avenant temps partiel)"
+                    value={newDocTitle}
+                    onChange={(e) => setNewDocTitle(e.target.value)}
+                    className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900"
+                  />
+                  <select
+                    value={newDocCategory}
+                    onChange={(e) =>
+                      setNewDocCategory(e.target.value as typeof newDocCategory)
+                    }
+                    className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900"
+                  >
+                    <option value="Contrat">Dossier : Contrats</option>
+                    <option value="Avenant">Dossier : Avenants</option>
+                    <option value="Diplôme">Dossier : Diplômes</option>
+                    <option value="Justificatif">Dossier : Justificatifs / RIB</option>
+                    <option value="Note RH">Dossier : Notes RH</option>
+                  </select>
+                  <select
+                    value={newDocEmpId}
+                    onChange={(e) => setNewDocEmpId(e.target.value)}
+                    className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900"
+                  >
+                    {employees.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.firstName} {emp.lastName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <textarea
+                  rows={2}
+                  value={newDocBody}
+                  onChange={(e) => setNewDocBody(e.target.value)}
+                  placeholder="Contenu ou résumé du document..."
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900"
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateDocForm(false)}
+                    className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 font-semibold cursor-pointer"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer"
+                  >
+                    Enregistrer &amp; Classer
+                  </button>
+                </div>
+              </form>
+            )}
 
             <div className="grid grid-cols-1 gap-4">
               {contractDocs.map((doc) => {

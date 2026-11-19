@@ -464,8 +464,41 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
       if (path.startsWith('/tracabilite')) {
         return { section: 'my-day' as AdminSection, subTarget: 'traceability' as string | null };
       }
+      if (path.startsWith('/cours-collectifs')) {
+        return { section: 'planning-hr' as AdminSection, subTarget: 'cours-collectifs' as string | null };
+      }
       if (path.startsWith('/planning')) {
         return { section: 'planning-hr' as AdminSection, subTarget: 'planning' as string | null };
+      }
+      if (path.startsWith('/crm')) {
+        return { section: 'crm' as AdminSection, subTarget: null };
+      }
+      if (path.startsWith('/marketing')) {
+        return { section: 'telephony' as AdminSection, subTarget: null };
+      }
+      if (path.startsWith('/finances')) {
+        return { section: 'devices' as AdminSection, subTarget: 'finances' as string | null };
+      }
+      if (path.startsWith('/bilans')) {
+        return { section: 'devices' as AdminSection, subTarget: 'checkup' as string | null };
+      }
+      if (path.startsWith('/adherents')) {
+        return { section: 'devices' as AdminSection, subTarget: 'adherents' as string | null };
+      }
+      if (path.startsWith('/recouvrement')) {
+        return { section: 'recovery' as AdminSection, subTarget: null };
+      }
+      if (path.startsWith('/stock')) {
+        return { section: 'orchestrator' as AdminSection, subTarget: 'stocks' as string | null };
+      }
+      if (path.startsWith('/maintenance')) {
+        return { section: 'orchestrator' as AdminSection, subTarget: 'maintenance' as string | null };
+      }
+      if (path.startsWith('/rapports')) {
+        return { section: 'academy' as AdminSection, subTarget: 'rapports' as string | null };
+      }
+      if (path.startsWith('/parametres')) {
+        return { section: 'governance' as AdminSection, subTarget: null };
       }
       if (path.startsWith('/mon-compte') || path.startsWith('/personnel')) {
         const parts = path.split('/').filter(Boolean);
@@ -569,6 +602,38 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     }
     setActiveSectionState(sec);
     setNavSubTarget(subTarget ?? null);
+    try {
+      let nextPath = '/';
+      if (sec === 'planning-hr') {
+        nextPath = subTarget === 'cours-collectifs' ? '/cours-collectifs' : '/planning';
+      } else if (sec === 'crm') {
+        nextPath = '/crm';
+      } else if (sec === 'telephony') {
+        nextPath = '/marketing';
+      } else if (sec === 'devices') {
+        nextPath =
+          subTarget === 'finances'
+            ? '/finances'
+            : subTarget === 'checkup'
+            ? '/bilans'
+            : '/adherents';
+      } else if (sec === 'recovery') {
+        nextPath = '/recouvrement';
+      } else if (sec === 'orchestrator') {
+        nextPath = subTarget === 'stocks' ? '/stock' : '/maintenance';
+      } else if (sec === 'academy') {
+        nextPath = '/rapports';
+      } else if (sec === 'governance') {
+        nextPath = '/parametres';
+      } else if (sec === 'my-day') {
+        nextPath = `/mon-compte/${subTarget || 'MC01'}`;
+      }
+      if (window.location.pathname !== nextPath) {
+        window.history.replaceState(null, '', nextPath);
+      }
+    } catch {
+      // ignore
+    }
   };
 
   const unlockArchitectSpace = () => {
@@ -1051,6 +1116,13 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
   const createProspect: CfosContextValue['createProspect'] = (input) => {
     if (!input.firstName.trim() || !input.lastName.trim() || !input.phone.trim()) {
       return { ok: false, message: 'Prénom, nom et téléphone sont obligatoires.' };
+    }
+    const rawPhone = input.phone.trim();
+    const digitsOnly = rawPhone.replace(/[\s.\-()]/g, '').replace(/^\+33/, '0');
+    if (!/^0[1-9]\d{8}$/.test(digitsOnly) && !/^\+\d{10,15}$/.test(rawPhone.replace(/[\s.\-()]/g, ''))) {
+      const errMsg = `Numéro de téléphone invalide (« ${rawPhone} ») — saisissez un numéro valide (ex: 06 12 34 56 78).`;
+      notify('warning', errMsg);
+      return { ok: false, message: errMsg };
     }
     const dup = findDuplicateProspect(state.prospects, input.phone, input.email);
     if (dup) {

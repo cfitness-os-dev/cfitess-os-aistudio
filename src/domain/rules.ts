@@ -751,6 +751,51 @@ export function isSectionAllowedForRole(section: AdminSection, role: Role): bool
   return true;
 }
 
+export function isNavItemAllowedForRole(
+  item: { sectionId?: AdminSection; subTarget?: string },
+  role: Role,
+  options?: { canAccessRecovery?: boolean; canAccessMaintenance?: boolean; isTechnicalMode?: boolean }
+): boolean {
+  const section = item.sectionId;
+  const sub = item.subTarget;
+  if (!section) return true;
+  if (!isSectionAllowedForRole(section, role)) return false;
+
+  // Finances : réservé exclusivement à la Direction (admin / manager)
+  if (section === 'devices' && sub === 'finances') {
+    return role === 'admin' || role === 'manager';
+  }
+  // Adhérents Heitz : Direction & Commercial uniquement (Coach/Apprenti gardent checkup/Mywellness)
+  if (section === 'devices' && sub === 'adherents') {
+    return role === 'admin' || role === 'manager' || role === 'commercial';
+  }
+  // Recouvrement : Direction ou habilitation explicite
+  if (section === 'recovery') {
+    return role === 'admin' || Boolean(options?.canAccessRecovery);
+  }
+  // Maintenance : habilitation explicite ou Direction
+  if (section === 'orchestrator' && sub === 'maintenance') {
+    return role === 'admin' || role === 'manager' || Boolean(options?.canAccessMaintenance);
+  }
+  // Stock & Achats : Direction & Commercial uniquement
+  if (section === 'orchestrator' && sub === 'stocks') {
+    return role === 'admin' || role === 'manager' || role === 'commercial';
+  }
+  // Agents IA : Direction + Mode technique uniquement
+  if (section === 'orchestrator' && sub === 'agents') {
+    return role === 'admin' && Boolean(options?.isTechnicalMode);
+  }
+  // CRM & Marketing : Direction & Commercial uniquement
+  if (section === 'crm' || section === 'telephony') {
+    return role === 'admin' || role === 'manager' || role === 'commercial';
+  }
+  // Paramètres / Mon Espace : Direction uniquement
+  if (section === 'governance') {
+    return role === 'admin';
+  }
+  return true;
+}
+
 export function normalizePhone(raw: string): string {
   return raw.replace(/\D/g, '');
 }

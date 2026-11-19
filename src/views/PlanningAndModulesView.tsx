@@ -366,7 +366,7 @@ export function PlanningAndModulesView({
   ambiguities,
   onRefreshDashboard,
 }: PlanningAndModulesViewProps) {
-  const { isTechnicalMode, addStaffEmployee } = useCfos();
+  const { isTechnicalMode, addStaffEmployee, employees: staffEmployees } = useCfos();
   const can = (actionId: string) =>
     Boolean(dashboard.session.resolvedPermissions[actionId]?.allowed);
 
@@ -569,7 +569,7 @@ export function PlanningAndModulesView({
   // MC08 Rapports, Pilotage & Missions
   const [pilotHorizon, setPilotHorizon] = useState<'3m' | '13m'>('3m');
   const [missions, setMissions] = useState<MissionItem[]>(INITIAL_MISSIONS);
-  const [missionStatusFilter, setMissionStatusFilter] = useState<'all' | 'active'>('all');
+  const [missionStatusFilter, setMissionStatusFilter] = useState<'all' | 'active' | 'done'>('all');
   const [newMissionTitle, setNewMissionTitle] = useState('');
   const [newMissionHours, setNewMissionHours] = useState(12);
 
@@ -590,9 +590,24 @@ export function PlanningAndModulesView({
   ]);
 
   // MC10 Paramètres RH
+  const [mc10ParamOverrides, setMc10ParamOverrides] = useState<
+    Record<string, { dailyRestHours?: number; maxWeeklyHours?: number; breakThresholdMin?: number }>
+  >(() => {
+    try {
+      const raw = localStorage.getItem('cfos_mc10_overrides_v1');
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
   const [paramSiteId, setParamSiteId] = useState<string>(
-    dashboard.sites[0]?.id ?? 'club-carre-soie'
+    auth.siteId !== 'all' ? auth.siteId : (dashboard.sites[0]?.id ?? 'club-carre-soie')
   );
+  useEffect(() => {
+    if (auth.siteId !== 'all' && dashboard.sites.some((s) => s.id === auth.siteId)) {
+      setParamSiteId(auth.siteId);
+    }
+  }, [auth.siteId, dashboard.sites]);
   const [mc10SubTab, setMc10SubTab] = useState<
     'base' | 'counters' | 'absences' | 'alerts_planner'
   >('base');
@@ -1921,8 +1936,79 @@ export function PlanningAndModulesView({
   // MC02 — Mes informations et mon dossier (EMP01-06, CPT01-05, EXT01/02)
   // =========================================================================
   const renderMc02 = () => {
+    // Unification référentiel : fusion des salariés persistés dans CfosContext (staffEmployees)
+    // qui ne figurent pas encore dans dashboard.visibleEmployees (CFOS-009 / CFOS-027)
+    const visibleNames = new Set(
+      dashboard.visibleEmployees.map((e) => `${e.firstName} ${e.lastName}`.trim().toLowerCase())
+    );
+    const extraStaffViews: typeof dashboard.visibleEmployees = staffEmployees
+      .filter(
+        (se) =>
+          se.role !== 'kiosque' &&
+          (se.id.startsWith('emp-staff-') ||
+            !visibleNames.has(`${se.firstName} ${se.lastName}`.trim().toLowerCase()))
+      )
+      .filter((se) => {
+        if (auth.siteId === 'club-carre-soie') return se.clubId === 'carre-de-soie';
+        if (auth.siteId === 'club-beynost') return se.clubId === 'beynost';
+        return true;
+      })
+      .map((se) => ({
+        id: se.id,
+        firstName: se.firstName,
+        lastName: se.lastName,
+        matricule: se.id.toUpperCase(),
+        active: true,
+        hrFileStatus: 'complete' as const,
+        siteAccesses: [
+          {
+            siteId: se.clubId === 'beynost' ? 'club-beynost' : 'club-carre-soie',
+            isPrimary: true,
+            profileId: 'employe_standard' as const,
+            teamIds: [],
+            showOnPlanning: true,
+            positionIds: [],
+          },
+        ],
+        counter: {
+          annualForfaitDays: 218,
+          workedDaysYtd: 0,
+          remainingDays: 218,
+          cpAcquired: se.cpBalance ?? 0,
+          cpTaken: 0,
+          cpRemaining: se.cpBalance ?? 0,
+          cpNAcquired: se.cpBalance ?? 0,
+          cpNTaken: 0,
+          cpNMinus1Remaining: 0,
+          rttAcquired: se.rttBalance ?? 0,
+          rttRemaining: se.rttBalance ?? 0,
+          rttInitialized: true,
+        },
+        contact: {
+          email: se.email,
+          phone: se.phone,
+          address: se.clubId === 'beynost' ? 'ZAC des Baterses, 01700 Beynost' : '2 Rue Jacquard, 69120 Vaulx-en-Velin',
+        },
+        contract: {
+          id: `CTR-${se.id.toUpperCase()}`,
+          siteId: se.clubId === 'beynost' ? 'club-beynost' : 'club-carre-soie',
+          contractType:
+            se.contractType === 'Apprentissage'
+              ? ('Alternance' as const)
+              : (se.contractType as 'CDI' | 'CDD' | 'Alternance'),
+          regime: 'hours' as const,
+          weeklyHours: se.weeklyContractHours,
+          effectiveFrom: se.hireDate,
+          hourlyRateEur: se.hourlyRate ?? 12.02,
+          monthlyGrossEur: se.monthlyGrossEur ?? 1823.03,
+          loadedCostFactor: 1.42,
+        },
+      }));
+
+    const unifiedEmployees = [...dashboard.visibleEmployees, ...extraStaffViews];
     const selectedEmp =
-      dashboard.visibleEmployees.find((e) => e.id === selectedEmpId) ??
+      unifiedEmployees.find((e) => e.id === selectedEmpId) ??
+      unifiedEmployees[0];
       dashboard.visibleEmployees[0];
     const siteMap = new Map(dashboard.sites.map((s) => [s.id, s.name]));
     const canCreateEmployee = can('ORG04-15');
@@ -2059,9 +2145,9 @@ export function PlanningAndModulesView({
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           <div className="cf-card p-3 space-y-2">
             <div className="text-xs font-semibold px-2 pt-1 cf-muted uppercase">
-              Effectif accessible
+              Effectif accessible ({unifiedEmployees.length})
             </div>
-            {dashboard.visibleEmployees.map((emp) => (
+            {unifiedEmployees.map((emp) => (
               <button
                 key={emp.id}
                 type="button"
@@ -2240,8 +2326,34 @@ export function PlanningAndModulesView({
                               Matricule : {selectedEmp.matricule}
                             </div>
                             <div className="cf-muted text-[11px]">
-                              Mesure du temps, statut/classification, visite médicale et espace
-                              avenants (auteur/date) inclus dans le modèle ADM14-01.
+                              Mesure du temps, statut/classification et historique des avenants.
+                            </div>
+                            <div className="pt-2 flex flex-wrap gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPastContractFormOpen(true);
+                                  setModuleFeedback({
+                                    kind: 'ok',
+                                    text: `Contrat ${selectedEmp.contract?.id} ouvert pour modification ou création d'avenant.`,
+                                  });
+                                }}
+                                className="cf-input px-2.5 py-1 text-[11px] font-semibold hover:border-violet-500/60 cursor-pointer"
+                              >
+                                Modifier contrat / Avenant
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setModuleFeedback({
+                                    kind: 'ok',
+                                    text: `Avenant au contrat ${selectedEmp.contract?.id} préparé et archivé dans le dossier RH de ${selectedEmp.firstName} ${selectedEmp.lastName}.`,
+                                  })
+                                }
+                                className="cf-input px-2.5 py-1 text-[11px] font-semibold hover:border-emerald-500/60 cursor-pointer"
+                              >
+                                Archiver / Clôturer
+                              </button>
                             </div>
                           </div>
                           <div className="cf-card-secondary p-4 space-y-1.5">
@@ -2458,6 +2570,17 @@ export function PlanningAndModulesView({
 
                   {mc02CounterSubTab === 'forfait' && (
                     <div className="cf-card-secondary p-4 space-y-3 overflow-x-auto">
+                      {selectedEmp.contract?.regime !== 'forfait_jours' ? (
+                        <div className="p-3 rounded-lg bg-slate-800/40 border border-[var(--cf-border)] text-xs space-y-1">
+                          <div className="font-semibold text-violet-300">
+                            Régime horaire ({selectedEmp.contract?.weeklyHours ?? 35} h / semaine)
+                          </div>
+                          <div className="cf-muted">
+                            Ce collaborateur n&apos;est pas au forfait jours annuel (218 j/an réservé aux contrats cadres en régime « days »). Consultez les onglets Congés Payés ou Historique.
+                          </div>
+                        </div>
+                      ) : (
+                        <>
                       <div className="flex items-center justify-between">
                         <div className="font-semibold">
                           Compteur de forfait jour (CPT02 / ADM14-02)
@@ -2554,6 +2677,8 @@ export function PlanningAndModulesView({
                           </tr>
                         </tbody>
                       </table>
+                        </>
+                      )}
                     </div>
                   )}
 
@@ -4268,11 +4393,14 @@ export function PlanningAndModulesView({
                 </button>
                 <button
                   type="button"
-                  disabled={CLUB_COMPARISON.missions.terminated_filter_disabled_displayed}
-                  title="CAP-ADM13-97 : filtre Terminées désactivé dans le constat Beynost"
-                  className="px-2.5 py-1 rounded-btn cf-card-secondary opacity-45 cursor-not-allowed"
+                  onClick={() => setMissionStatusFilter('done')}
+                  className={`px-2.5 py-1 rounded-btn ${
+                    missionStatusFilter === 'done'
+                      ? 'cf-brand-gradient text-white font-semibold'
+                      : 'cf-card-secondary hover:border-violet-500/50'
+                  }`}
                 >
-                  Terminées (CAP-ADM13-97)
+                  Terminées ({missions.filter((m) => m.status !== 'active').length})
                 </button>
               </div>
               {canManageMissions && (
@@ -4325,7 +4453,11 @@ export function PlanningAndModulesView({
           <div className="space-y-2">
             {missions
               .filter((m) =>
-                missionStatusFilter === 'active' ? m.status === 'active' : true
+                missionStatusFilter === 'active'
+                  ? m.status === 'active'
+                  : missionStatusFilter === 'done'
+                  ? m.status !== 'active'
+                  : true
               )
               .map((m) => (
                 <div

@@ -630,7 +630,9 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                     <span className="text-[11px] font-semibold text-slate-600">
                       {selectedHubspotProspect.smsStopOptOut
                         ? 'STOP SMS Actif'
-                        : 'Opt-in RGPD Actif'}
+                        : selectedHubspotProspect.rgpdConsent
+                        ? 'Opt-in RGPD Actif'
+                        : 'Consentement RGPD non recueilli'}
                     </span>
                     <button
                       onClick={() => toggleProspectStopSms(selectedHubspotProspect.id)}
@@ -817,8 +819,10 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                         <span className="text-rose-600 font-semibold">STOP SMS actif</span>
                       ) : prospect.bloctelListed ? (
                         <span className="text-amber-700 font-semibold">Liste Bloctel</span>
+                      ) : prospect.rgpdConsent ? (
+                        <span className="text-emerald-700 font-medium">Opt-in RGPD Actif</span>
                       ) : (
-                        <span className="text-emerald-700 font-medium">Opt-in RGPD OK</span>
+                        <span className="text-amber-700 font-medium">RGPD non consenti</span>
                       )}
                     </td>
                     <td className="py-3 px-3">

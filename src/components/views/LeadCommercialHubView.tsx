@@ -173,6 +173,71 @@ export function LeadCommercialHubView({
 }: LeadCommercialHubViewProps) {
   const { currentUser, heitzMembers, prospects, clubFilter, isTechnicalMode } = useCfos();
 
+  // États persistants pour WhatsApp conversation (CFOS-007), Constructeur Email (CFOS-006) et Profil Club (CFOS-005)
+  const [waComposerOpen, setWaComposerOpen] = useState(false);
+  const [waTargetId, setWaTargetId] = useState<string>(() => prospects[0]?.id || '');
+  const [waMessageText, setWaMessageText] = useState(
+    'Bonjour ! Votre séance découverte C.Fitness est prête. Quel créneau vous convient ?'
+  );
+  const [waThreads, setWaThreads] = useState<
+    Array<{ id: string; recipient: string; message: string; channel: string; sentAt: string }>
+  >(() => {
+    try {
+      const raw = localStorage.getItem('cfos_wa_threads_v1');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [emailDraft, setEmailDraft] = useState<{
+    subject: string;
+    heading: string;
+    bodyText: string;
+    ctaLabel: string;
+    ctaUrl: string;
+    footerText: string;
+    font: string;
+  }>(() => {
+    try {
+      const raw = localStorage.getItem('cfos_email_builder_v1');
+      if (raw) return JSON.parse(raw);
+    } catch {
+      // ignore
+    }
+    return {
+      subject: 'Votre séance découverte offerte chez C.Fitness',
+      heading: 'Bienvenue chez C.Fitness Carré de Soie & Beynost',
+      bodyText: 'Profitez d’un bilan forme Technogym Checkup complet avec nos coachs.',
+      ctaLabel: 'Réserver mon créneau',
+      ctaUrl: 'https://c.fitness/essai',
+      footerText: 'SAS C.FITNESS — SIRET 818 651 317 00018 · Désinscription RGPD',
+      font: 'Plus Jakarta Sans',
+    };
+  });
+  const [emailSavedNotice, setEmailSavedNotice] = useState<string | null>(null);
+
+  const [clubProfileForm, setClubProfileForm] = useState<{
+    name: string;
+    address: string;
+    primaryColor: string;
+    logoBadge: string;
+  }>(() => {
+    try {
+      const raw = localStorage.getItem('cfos_lead_club_profile_v1');
+      if (raw) return JSON.parse(raw);
+    } catch {
+      // ignore
+    }
+    return {
+      name: 'C.Fitness Carré de Soie & Beynost',
+      address: '2 Rue Jacquard, 69120 Vaulx-en-Velin / ZAC des Baterses, 01700 Beynost',
+      primaryColor: '#7c3aed',
+      logoBadge: 'CF',
+    };
+  });
+  const [clubProfileSavedNotice, setClubProfileSavedNotice] = useState<string | null>(null);
+
   const [activeTab, setActiveTab] = useState<LeadHubTab>(() =>
     subTarget === 'lead-traceability' ? 'traceability' : 'prospects'
   );
@@ -1191,12 +1256,88 @@ export function LeadCommercialHubView({
                   </h2>
                   <button
                     type="button"
+                    onClick={() => setWaComposerOpen((prev) => !prev)}
                     aria-label="Nouvelle conversation WhatsApp"
-                    className="p-2 rounded-lg bg-emerald-600 text-white cursor-pointer"
+                    className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1 cursor-pointer"
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Nouvelle conversation</span>
                   </button>
                 </div>
+
+                {waComposerOpen && (
+                  <div className="p-3 rounded-xl bg-slate-950 border border-emerald-500/40 space-y-2 text-xs">
+                    <div className="font-bold text-emerald-300">Nouvelle conversation / Brouillon WhatsApp</div>
+                    <select
+                      aria-label="Destinataire WhatsApp"
+                      value={waTargetId}
+                      onChange={(e) => setWaTargetId(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700"
+                    >
+                      {prospects.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.firstName} {p.lastName} ({p.phone})
+                        </option>
+                      ))}
+                    </select>
+                    <textarea
+                      rows={2}
+                      value={waMessageText}
+                      onChange={(e) => setWaMessageText(e.target.value)}
+                      placeholder="Saisissez votre message..."
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700"
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setWaComposerOpen(false)}
+                        className="px-2.5 py-1 rounded bg-slate-800 text-slate-300 cursor-pointer"
+                      >
+                        Fermer
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const target = prospects.find((p) => p.id === waTargetId) || prospects[0];
+                          const entry = {
+                            id: `wa-${Date.now()}`,
+                            recipient: target ? `${target.firstName} ${target.lastName}` : 'Prospect',
+                            message: waMessageText.trim(),
+                            channel: waDecision.deliveryChannel,
+                            sentAt: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+                          };
+                          const next = [entry, ...waThreads];
+                          setWaThreads(next);
+                          try {
+                            localStorage.setItem('cfos_wa_threads_v1', JSON.stringify(next));
+                          } catch {
+                            // ignore
+                          }
+                          setWaComposerOpen(false);
+                        }}
+                        className="px-3 py-1 rounded bg-emerald-600 text-white font-bold cursor-pointer"
+                      >
+                        Enregistrer fil (brouillon local)
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {waThreads.length > 0 && (
+                  <div className="space-y-1.5 max-h-32 overflow-y-auto text-xs">
+                    {waThreads.map((th) => (
+                      <div key={th.id} className="p-2 rounded-lg bg-slate-900/80 border border-slate-800 flex justify-between gap-2">
+                        <div className="min-w-0">
+                          <span className="font-bold text-emerald-300">{th.recipient}</span> :{' '}
+                          <span className="text-slate-300">{th.message}</span>
+                        </div>
+                        <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                          {th.sentAt} ({th.channel})
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
                   <label>
@@ -1336,34 +1477,123 @@ export function LeadCommercialHubView({
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                    <div className={`${emailEditorMobilePane === 'preview' ? 'hidden md:block' : ''} space-y-2`}>
-                      <div className="font-bold">Bibliothèque des 12 blocs email :</div>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {LEAD_EMAIL_BLOCKS_12.map((b) => (
-                          <div key={b.id} className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
-                            <div className="font-bold flex items-center justify-between">
-                              <span>{b.label}</span>
-                              <span className="text-[9px] font-mono text-emerald-400">
-                                {b.detailedInAudit ? 'Détaillé' : 'EX03'}
-                              </span>
-                            </div>
-                            <div className="text-[10px] cf-muted">{b.notes}</div>
-                          </div>
-                        ))}
+                    <div className={`${emailEditorMobilePane === 'preview' ? 'hidden md:block' : ''} space-y-2.5`}>
+                      <div className="font-bold">Éditeur de modèle email (Composition &amp; Propriétés) :</div>
+                      <div className="space-y-2 p-3 rounded-xl bg-slate-900/70 border border-slate-800">
+                        <label className="block">
+                          <span className="text-[10px] cf-muted">Objet de l&apos;email</span>
+                          <input
+                            type="text"
+                            value={emailDraft.subject}
+                            onChange={(e) => setEmailDraft((p) => ({ ...p, subject: e.target.value }))}
+                            className="w-full mt-0.5 px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="text-[10px] cf-muted">Titre (En-tête)</span>
+                          <input
+                            type="text"
+                            value={emailDraft.heading}
+                            onChange={(e) => setEmailDraft((p) => ({ ...p, heading: e.target.value }))}
+                            className="w-full mt-0.5 px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="text-[10px] cf-muted">Texte principal</span>
+                          <textarea
+                            rows={2}
+                            value={emailDraft.bodyText}
+                            onChange={(e) => setEmailDraft((p) => ({ ...p, bodyText: e.target.value }))}
+                            className="w-full mt-0.5 px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
+                          />
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <label className="block">
+                            <span className="text-[10px] cf-muted">Libellé Bouton CTA</span>
+                            <input
+                              type="text"
+                              value={emailDraft.ctaLabel}
+                              onChange={(e) => setEmailDraft((p) => ({ ...p, ctaLabel: e.target.value }))}
+                              className="w-full mt-0.5 px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
+                            />
+                          </label>
+                          <label className="block">
+                            <span className="text-[10px] cf-muted">URL Bouton CTA</span>
+                            <input
+                              type="url"
+                              value={emailDraft.ctaUrl}
+                              onChange={(e) => setEmailDraft((p) => ({ ...p, ctaUrl: e.target.value }))}
+                              className="w-full mt-0.5 px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
+                            />
+                          </label>
+                        </div>
+                        <label className="block">
+                          <span className="text-[10px] cf-muted">Pied de page</span>
+                          <input
+                            type="text"
+                            value={emailDraft.footerText}
+                            onChange={(e) => setEmailDraft((p) => ({ ...p, footerText: e.target.value }))}
+                            className="w-full mt-0.5 px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
+                          />
+                        </label>
+                        <div className="flex items-center justify-between gap-2 pt-1">
+                          <select
+                            aria-label="Police"
+                            value={emailDraft.font}
+                            onChange={(e) => setEmailDraft((p) => ({ ...p, font: e.target.value }))}
+                            className="px-2 py-1 rounded bg-slate-950 border border-slate-700 text-[11px]"
+                          >
+                            {LEAD_EMAIL_FONTS_18.map((font) => (
+                              <option key={font} value={font}>
+                                {font}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              try {
+                                localStorage.setItem('cfos_email_builder_v1', JSON.stringify(emailDraft));
+                              } catch {
+                                // ignore
+                              }
+                              setEmailSavedNotice('Modèle email enregistré avec succès.');
+                              setTimeout(() => setEmailSavedNotice(null), 3500);
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer"
+                          >
+                            Enregistrer le modèle
+                          </button>
+                        </div>
+                        {emailSavedNotice && (
+                          <div className="text-[11px] font-bold text-emerald-400">{emailSavedNotice}</div>
+                        )}
                       </div>
                     </div>
 
                     <div className={`${emailEditorMobilePane === 'edit' ? 'hidden md:block' : ''} space-y-2`}>
-                      <div className="font-bold">18 polices relevées &amp; aperçu responsive sans débordement :</div>
-                      <div className="flex flex-wrap gap-1">
-                        {LEAD_EMAIL_FONTS_18.map((font) => (
-                          <span key={font} className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-[11px]">
-                            {font}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs">
-                        <strong>En-tête email</strong> : logo JPEG/PNG ≤ 2 Mo · alignement centré · marges 16 px · iframe HTML isolé (100% contenu dans largeur 390 px).
+                      <div className="font-bold">Aperçu en direct (Police : {emailDraft.font}) :</div>
+                      <div
+                        style={{ fontFamily: emailDraft.font }}
+                        className="p-4 rounded-xl bg-white text-slate-900 border border-slate-300 space-y-3"
+                      >
+                        <div className="text-[10px] text-slate-500 border-b pb-1">
+                          Objet : <strong>{emailDraft.subject}</strong>
+                        </div>
+                        <h4 className="text-sm font-extrabold text-violet-700">{emailDraft.heading}</h4>
+                        <p className="text-xs text-slate-700">{emailDraft.bodyText}</p>
+                        <div>
+                          <a
+                            href={emailDraft.ctaUrl}
+                            onClick={(e) => e.preventDefault()}
+                            className="inline-block px-4 py-2 rounded-lg bg-violet-600 text-white font-bold text-xs"
+                          >
+                            {emailDraft.ctaLabel}
+                          </a>
+                        </div>
+                        <div className="text-[10px] text-slate-400 border-t pt-2">
+                          {emailDraft.footerText}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1669,25 +1899,55 @@ export function LeadCommercialHubView({
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {LEAD_STATISTICS_8_TABLES.map((tbl) => (
-                      <div key={tbl.id} className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <strong className="text-emerald-300">
-                            {tbl.group} · {tbl.tab}
-                          </strong>
-                          <span className="text-[10px] font-mono cf-muted">
-                            Clubs: {(multiClubCds ? 1 : 0) + (multiClubBeynost ? 1 : 0)}
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {tbl.columns.map((c) => (
-                            <span key={c} className="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-[10px]">
-                              {c}
+                    {LEAD_STATISTICS_8_TABLES.map((tbl) => {
+                      const activeProspects = prospects.filter((p) => {
+                        if (!multiClubCds && p.clubId === 'carre-de-soie') return false;
+                        if (!multiClubBeynost && p.clubId === 'beynost') return false;
+                        if (ignoreArchivedStats && p.stage === 'Perdu') return false;
+                        return true;
+                      });
+                      const cdsCount = activeProspects.filter((p) => p.clubId === 'carre-de-soie').length;
+                      const beyCount = activeProspects.filter((p) => p.clubId === 'beynost').length;
+                      const convertedCount = activeProspects.filter((p) => p.stage === 'Adhérent').length;
+                      const convPct = activeProspects.length
+                        ? Math.round((convertedCount / activeProspects.length) * 100)
+                        : 0;
+                      return (
+                        <div key={tbl.id} className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <strong className="text-emerald-300">
+                              {tbl.group} · {tbl.tab}
+                            </strong>
+                            <span className="text-[10px] font-mono cf-muted">
+                              Clubs: {(multiClubCds ? 1 : 0) + (multiClubBeynost ? 1 : 0)}
                             </span>
-                          ))}
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {tbl.columns.map((c) => (
+                              <span key={c} className="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-[10px]">
+                                {c}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="grid grid-cols-3 gap-1.5 pt-1 text-[11px] font-mono">
+                            <div className="p-1.5 rounded bg-slate-950 border border-slate-800">
+                              <div className="text-[9px] text-slate-400">Volume filtré</div>
+                              <div className="font-bold text-white">{activeProspects.length}</div>
+                            </div>
+                            <div className="p-1.5 rounded bg-slate-950 border border-slate-800">
+                              <div className="text-[9px] text-slate-400">CDS / BEY</div>
+                              <div className="font-bold text-violet-300">{cdsCount} / {beyCount}</div>
+                            </div>
+                            <div className="p-1.5 rounded bg-slate-950 border border-slate-800">
+                              <div className="text-[9px] text-slate-400">Transformation</div>
+                              <div className="font-bold text-emerald-400">
+                                {convertedCount} ({convPct}%)
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1832,6 +2092,75 @@ export function LeadCommercialHubView({
                     </div>
                   );
                 })()}
+
+                {selectedSettingsTab === 'club-profile' && (
+                  <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+                    <div className="font-bold text-emerald-300">
+                      Profil du Club (Nom, Adresse, Couleurs &amp; Logo)
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <label className="block">
+                        <span className="text-[10px] cf-muted">Nom officiel du club</span>
+                        <input
+                          type="text"
+                          value={clubProfileForm.name}
+                          onChange={(e) => setClubProfileForm((p) => ({ ...p, name: e.target.value }))}
+                          className="w-full mt-0.5 px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="text-[10px] cf-muted">Adresse</span>
+                        <input
+                          type="text"
+                          value={clubProfileForm.address}
+                          onChange={(e) => setClubProfileForm((p) => ({ ...p, address: e.target.value }))}
+                          className="w-full mt-0.5 px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="text-[10px] cf-muted">Couleur principale</span>
+                        <input
+                          type="color"
+                          value={clubProfileForm.primaryColor}
+                          onChange={(e) => setClubProfileForm((p) => ({ ...p, primaryColor: e.target.value }))}
+                          className="w-full mt-0.5 h-9 px-1 py-1 rounded bg-slate-950 border border-slate-700 cursor-pointer"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="text-[10px] cf-muted">Sigle / Logo</span>
+                        <input
+                          type="text"
+                          maxLength={6}
+                          value={clubProfileForm.logoBadge}
+                          onChange={(e) => setClubProfileForm((p) => ({ ...p, logoBadge: e.target.value }))}
+                          className="w-full mt-0.5 px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
+                        />
+                      </label>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      {clubProfileSavedNotice ? (
+                        <span className="text-[11px] font-bold text-emerald-400">{clubProfileSavedNotice}</span>
+                      ) : (
+                        <span className="text-[10px] cf-muted">Sauvegarde locale persistante après rechargement</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          try {
+                            localStorage.setItem('cfos_lead_club_profile_v1', JSON.stringify(clubProfileForm));
+                          } catch {
+                            // ignore
+                          }
+                          setClubProfileSavedNotice('Profil du club enregistré.');
+                          setTimeout(() => setClubProfileSavedNotice(null), 3500);
+                        }}
+                        className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer"
+                      >
+                        Enregistrer le profil
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {selectedSettingsTab === 'app-settings' && (
                   <label className="flex items-center gap-2 cursor-pointer">

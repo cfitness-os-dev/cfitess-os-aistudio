@@ -59,6 +59,7 @@ import {
   generateHeitzTrialPassageCode,
   generateOfficialCdiContractText,
   generateSilaeCsv,
+  isNavItemAllowedForRole,
   isSectionAllowedForRole,
   mergeFailoverSnapshot,
   parseRecruitmentEmailPayload,
@@ -720,6 +721,13 @@ test('Silae payroll calculation, formatters, and CRM guards work accurately', ()
   assert.equal(isSectionAllowedForRole('governance', 'admin'), true);
   assert.equal(isSectionAllowedForRole('governance', 'commercial'), false);
   assert.equal(isSectionAllowedForRole('crm', 'coach'), false);
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'devices', subTarget: 'finances' }, 'admin'), true);
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'devices', subTarget: 'finances' }, 'commercial'), false);
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'devices', subTarget: 'finances' }, 'coach'), false);
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'devices', subTarget: 'adherents' }, 'commercial'), true);
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'devices', subTarget: 'adherents' }, 'coach'), false);
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'orchestrator', subTarget: 'maintenance' }, 'commercial', { canAccessMaintenance: false }), false);
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'orchestrator', subTarget: 'maintenance' }, 'commercial', { canAccessMaintenance: true }), true);
 });
 
 test('Multi-device backup envelope checksum and power-outage failover merge preserve offline club activity', () => {

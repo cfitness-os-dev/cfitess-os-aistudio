@@ -75,8 +75,21 @@ function parseInitialTarget(subTarget?: string | null): {
 }
 
 export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompteRhHubViewProps) {
-  const { clubFilter, setClubFilter, isTechnicalMode, setActiveSection: setShellSection } = useCfos();
+  const {
+    currentUser,
+    clubFilter,
+    setClubFilter,
+    isTechnicalMode,
+    setActiveSection: setShellSection,
+  } = useCfos();
   const initialTarget = parseInitialTarget(subTarget);
+  const isShellAdmin = currentUser.role === 'admin' || currentUser.role === 'manager';
+
+  const defaultActorForShellUser = () => {
+    if (isShellAdmin) return 'emp-admin';
+    if (currentUser.role === 'commercial') return 'emp-accueil-cs';
+    return 'emp-employe-multi';
+  };
 
   const [hubTab, setHubTab] = useState<MonCompteHubTab>(initialTarget.tab);
 
@@ -85,11 +98,17 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
       setHubTab('mon-compte');
     }
   }, [isTechnicalMode, hubTab]);
-  const [activeActorId, setActiveActorId] = useState<string>('emp-admin');
+  const [activeActorId, setActiveActorId] = useState<string>(defaultActorForShellUser);
   const [activeSiteId, setActiveSiteId] = useState<string | 'all'>(() =>
     clubFilter === 'all' ? 'club-carre-soie' : clubFilterToSiteId(clubFilter)
   );
   const [activeSection, setActiveSection] = useState<McSectionId>(initialTarget.section);
+
+  useEffect(() => {
+    const nextActor = defaultActorForShellUser();
+    setActiveActorId(nextActor);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser.id, currentUser.role]);
 
   const [dashboard, setDashboard] = useState<DashboardPayload | null>(null);
   const [registry, setRegistry] = useState<RegistryPayload | null>(null);
@@ -359,17 +378,17 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                     <span className="text-sm font-extrabold">Planning des équipes</span>
                   </div>
                 )}
-                {!planningOnly && (
-                  <div className="flex items-center gap-2">
+                {!planningOnly && isShellAdmin && (
+                  <div className="flex items-center gap-2 min-w-0 max-w-full">
                     <Users className="w-4 h-4 text-violet-400 shrink-0" />
-                    <label htmlFor="hub-persona-select" className="text-xs cf-muted hidden sm:inline">
+                    <label htmlFor="hub-persona-select" className="text-xs cf-muted hidden sm:inline shrink-0">
                       {isTechnicalMode ? 'Compte simulé :' : 'Collaborateur :'}
                     </label>
                     <select
                       id="hub-persona-select"
                       value={activeActorId}
                       onChange={(e) => handleChangeActor(e.target.value)}
-                      className="cf-input text-xs px-2.5 py-1.5 font-medium"
+                      className="cf-input text-xs px-2.5 py-1.5 font-medium w-full max-w-[260px] sm:max-w-xs min-w-0 truncate"
                     >
                       {PERSONA_OPTIONS.map((p) => (
                         <option key={p.id} value={p.id}>
@@ -379,17 +398,25 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                     </select>
                   </div>
                 )}
+                {!planningOnly && !isShellAdmin && (
+                  <div className="flex items-center gap-2 text-xs font-semibold px-2.5 py-1.5 rounded-xl bg-slate-800/40 border border-[var(--cf-border)] min-w-0 max-w-full">
+                    <Users className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                    <span className="truncate">
+                      {currentUser.firstName} {currentUser.lastName} ({currentUser.jobTitle})
+                    </span>
+                  </div>
+                )}
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0 max-w-full">
                   <Building2 className="w-4 h-4 text-cyan-400 shrink-0" />
-                  <label htmlFor="hub-site-select" className="text-xs cf-muted hidden sm:inline">
+                  <label htmlFor="hub-site-select" className="text-xs cf-muted hidden sm:inline shrink-0">
                     Club :
                   </label>
                   <select
                     id="hub-site-select"
                     value={activeSiteId}
                     onChange={(e) => handleChangeSite(e.target.value)}
-                    className="cf-input text-xs px-2.5 py-1.5 font-medium"
+                    className="cf-input text-xs px-2.5 py-1.5 font-medium w-full max-w-[220px] sm:max-w-xs min-w-0 truncate"
                   >
                     {canSelectAllSites && (
                       <option value="all">
@@ -566,7 +593,24 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
 
               {hubTab === 'mon-compte' && activeSection === 'MC07' && (
                 <div className="space-y-4">
-                  <PlanningHrView forcedSubTab="SILAE" />
+                  <PlanningHrView
+                    forcedSubTab="SILAE"
+                    canViewSalaries={Boolean(
+                      dashboard.session.resolvedPermissions['ORG04-10']?.allowed
+                    )}
+                    isReadOnly={
+                      dashboard.session.activeProfile.name
+                        .toLowerCase()
+                        .includes('lecture seule')
+                    }
+                    forcedClubScope={
+                      activeSiteId === 'club-beynost'
+                        ? 'beynost'
+                        : activeSiteId === 'club-carre-soie'
+                        ? 'carre-de-soie'
+                        : undefined
+                    }
+                  />
                 </div>
               )}
 

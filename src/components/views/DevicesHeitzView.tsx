@@ -58,6 +58,8 @@ export function DevicesHeitzView() {
     isTechnicalMode,
   } = useCfos();
 
+  const canAccessFinances = currentUser.role === 'admin' || currentUser.role === 'manager';
+
   const [activeSoftwareTab, setActiveSoftwareTab] = useState<
     'HEITZ_DESKTOP' | 'INBODY_LB120'
   >('HEITZ_DESKTOP');
@@ -408,7 +410,29 @@ export function DevicesHeitzView() {
     setTpvCart([]);
   };
 
-  const isFinancesView = navSubTarget === 'finances' || showTpvDrawer;
+  const isFinancesView = canAccessFinances && (navSubTarget === 'finances' || showTpvDrawer);
+
+  if (navSubTarget === 'finances' && !canAccessFinances) {
+    return (
+      <div className="bg-white rounded-2xl p-6 border border-rose-200 shadow-2xs space-y-3">
+        <div className="text-sm font-extrabold text-rose-700">
+          Accès refusé — Module Finances réservé à la Direction
+        </div>
+        <p className="text-xs text-slate-600">
+          Votre profil ({currentUser.firstName} {currentUser.lastName} · {currentUser.role}) n&apos;est pas habilité à consulter le chiffre d&apos;affaires consolidé, les prélèvements SEPA ou la caisse NF525.
+        </p>
+        <button
+          type="button"
+          onClick={() =>
+            setActiveSection('devices', currentUser.role === 'coach' || currentUser.role === 'apprenti' ? 'checkup' : 'adherents')
+          }
+          className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold cursor-pointer"
+        >
+          Revenir à mon espace autorisé
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">

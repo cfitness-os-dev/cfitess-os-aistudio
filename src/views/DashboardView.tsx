@@ -328,25 +328,34 @@ export function DashboardView({
           {/* Validations équipe, Anomalies badgeuse, Alertes dossiers */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="cf-card p-4 space-y-2.5">
-              <div className="font-semibold text-sm flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-blue-400" />
-                Demandes à valider ({teamRequests.length})
-              </div>
-              {teamRequests.length === 0 ? (
-                <div className="text-xs cf-muted">Aucune demande équipe sur votre périmètre.</div>
-              ) : (
-                teamRequests.map((req) => (
-                  <div key={req.id} className="cf-card-secondary p-3 text-xs space-y-1">
-                    <div className="flex justify-between font-medium">
-                      <span>{req.motive}</span>
-                      <span className="cf-mono text-amber-300">{req.status}</span>
+              {(() => {
+                const pendingTeamRequests = teamRequests.filter(
+                  (req) => req.status === 'pending'
+                );
+                return (
+                  <>
+                    <div className="font-semibold text-sm flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-blue-400" />
+                      Demandes à valider ({pendingTeamRequests.length})
                     </div>
-                    <div className="cf-muted">
-                      {req.startDate} → {req.endDate} ({req.siteId})
-                    </div>
-                  </div>
-                ))
-              )}
+                    {pendingTeamRequests.length === 0 ? (
+                      <div className="text-xs cf-muted">Aucune demande en attente sur votre périmètre.</div>
+                    ) : (
+                      pendingTeamRequests.map((req) => (
+                        <div key={req.id} className="cf-card-secondary p-3 text-xs space-y-1">
+                          <div className="flex justify-between font-medium">
+                            <span>{req.motive}</span>
+                            <span className="cf-mono text-amber-300">{req.status}</span>
+                          </div>
+                          <div className="cf-muted">
+                            {req.startDate} → {req.endDate} ({req.siteId})
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </>
+                );
+              })()}
             </div>
 
             <div className="cf-card p-4 space-y-2.5">
