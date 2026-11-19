@@ -85,6 +85,14 @@ const VISUAL_SIDEBAR_ITEMS: VisualNavItem[] = [
     hasChevron: true,
   },
   {
+    id: 'nav-marketing',
+    label: 'Marketing & Téléphonie',
+    icon: Megaphone,
+    iconColor: 'text-pink-500',
+    sectionId: 'telephony',
+    hasChevron: true,
+  },
+  {
     id: 'nav-lead-trace',
     label: 'Traçabilité Lead (1682)',
     icon: Compass,
@@ -165,14 +173,6 @@ const VISUAL_SIDEBAR_ITEMS: VisualNavItem[] = [
     iconColor: 'text-orange-500',
     sectionId: 'orchestrator',
     subTarget: 'stocks',
-    hasChevron: true,
-  },
-  {
-    id: 'nav-marketing',
-    label: 'Marketing & Téléphonie',
-    icon: Megaphone,
-    iconColor: 'text-pink-500',
-    sectionId: 'telephony',
     hasChevron: true,
   },
   {
