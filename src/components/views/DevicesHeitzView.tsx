@@ -443,53 +443,37 @@ export function DevicesHeitzView() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
-              <button
-                onClick={() => {
-                  setActiveSoftwareTab('HEITZ_DESKTOP');
-                  setShowTpvDrawer(false);
-                  setHeitzStatusFilter('ALL');
-                }}
-                className={`px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors ${
-                  activeSoftwareTab === 'HEITZ_DESKTOP' && !showTpvDrawer
-                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-2xs'
-                    : 'text-slate-600 hover:bg-white hover:text-slate-900'
-                }`}
-              >
-                <UserCheck className="w-4 h-4" />
-                <span>1. Adhérents &amp; Portillons ({heitzMembers.length})</span>
-              </button>
-
-              {navSubTarget === 'finances' && (
+            {navSubTarget !== 'finances' && (
+              <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
                 <button
                   onClick={() => {
                     setActiveSoftwareTab('HEITZ_DESKTOP');
-                    setShowTpvDrawer(true);
-                    setHeitzStatusFilter('IMPAYE');
+                    setShowTpvDrawer(false);
+                    setHeitzStatusFilter('ALL');
                   }}
                   className={`px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors ${
-                    activeSoftwareTab === 'HEITZ_DESKTOP' && showTpvDrawer
-                      ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-2xs'
+                    activeSoftwareTab === 'HEITZ_DESKTOP' && !showTpvDrawer
+                      ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-2xs'
                       : 'text-slate-600 hover:bg-white hover:text-slate-900'
                   }`}
                 >
-                  <CreditCard className="w-4 h-4" />
-                  <span>2. Finances, SEPA &amp; Caisse NF525</span>
+                  <UserCheck className="w-4 h-4" />
+                  <span>1. Adhérents &amp; Portillons ({heitzMembers.length})</span>
                 </button>
-              )}
 
-              <button
-                onClick={() => setActiveSoftwareTab('INBODY_LB120')}
-                className={`px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors ${
-                  activeSoftwareTab === 'INBODY_LB120'
-                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-2xs'
-                    : 'text-slate-600 hover:bg-white hover:text-slate-900'
-                }`}
-              >
-                <Activity className="w-4 h-4" />
-                <span>{navSubTarget === 'finances' ? '3.' : '2.'} Bilans Technogym Checkup</span>
-              </button>
-            </div>
+                <button
+                  onClick={() => setActiveSoftwareTab('INBODY_LB120')}
+                  className={`px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors ${
+                    activeSoftwareTab === 'INBODY_LB120'
+                      ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-2xs'
+                      : 'text-slate-600 hover:bg-white hover:text-slate-900'
+                  }`}
+                >
+                  <Activity className="w-4 h-4" />
+                  <span>2. Bilans Technogym Checkup</span>
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -521,40 +505,40 @@ export function DevicesHeitzView() {
                   <Upload className="w-3.5 h-3.5" />
                   Importer / Synchroniser
                 </button>
+
+                <button
+                  onClick={() => toggleClubMode(selectedClubGate, 'degradedMode')}
+                  className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer border ${
+                    activeGateClub.degradedMode
+                      ? 'bg-amber-600 text-white border-amber-500'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  {activeGateClub.degradedMode ? (
+                    <WifiOff className="w-3.5 h-3.5" />
+                  ) : (
+                    <Wifi className="w-3.5 h-3.5 text-emerald-500" />
+                  )}
+                  {activeGateClub.degradedMode
+                    ? 'Mode Autonome Actif'
+                    : 'Réseau Club Nominal'}
+                </button>
+
+                <button
+                  onClick={() => toggleClubMode(selectedClubGate, 'fireAlarmOpen')}
+                  className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer border ${
+                    activeGateClub.fireAlarmOpen
+                      ? 'bg-rose-600 text-white border-rose-500'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  <Flame className="w-3.5 h-3.5 text-rose-500" />
+                  {activeGateClub.fireAlarmOpen
+                    ? 'Portillons en Libre Passage (SSI)'
+                    : 'Ouverture Urgence SSI'}
+                </button>
               </>
             )}
-
-            <button
-              onClick={() => toggleClubMode(selectedClubGate, 'degradedMode')}
-              className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer border ${
-                activeGateClub.degradedMode
-                  ? 'bg-amber-600 text-white border-amber-500'
-                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-              }`}
-            >
-              {activeGateClub.degradedMode ? (
-                <WifiOff className="w-3.5 h-3.5" />
-              ) : (
-                <Wifi className="w-3.5 h-3.5 text-emerald-500" />
-              )}
-              {activeGateClub.degradedMode
-                ? 'Mode Autonome Actif'
-                : 'Réseau Club Nominal'}
-            </button>
-
-            <button
-              onClick={() => toggleClubMode(selectedClubGate, 'fireAlarmOpen')}
-              className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer border ${
-                activeGateClub.fireAlarmOpen
-                  ? 'bg-rose-600 text-white border-rose-500'
-                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-              }`}
-            >
-              <Flame className="w-3.5 h-3.5 text-rose-500" />
-              {activeGateClub.fireAlarmOpen
-                ? 'Portillons en Libre Passage (SSI)'
-                : 'Ouverture Urgence SSI'}
-            </button>
           </div>
         </div>
 
@@ -900,13 +884,15 @@ export function DevicesHeitzView() {
               >
                 Fiches Adhérents ({heitzMembers.length})
               </button>
-              <button
-                type="button"
-                onClick={() => handleScanBadge(selectedMember.id)}
-                className="px-2.5 py-1 rounded-lg hover:bg-slate-200 text-slate-700 cursor-pointer"
-              >
-                Contrôle d&apos;Accès Tripodes
-              </button>
+              {navSubTarget !== 'finances' && (
+                <button
+                  type="button"
+                  onClick={() => handleScanBadge(selectedMember.id)}
+                  className="px-2.5 py-1 rounded-lg hover:bg-slate-200 text-slate-700 cursor-pointer"
+                >
+                  Contrôle d&apos;Accès Tripodes
+                </button>
+              )}
               {navSubTarget === 'finances' && (
                 <>
                   <button
@@ -968,7 +954,8 @@ export function DevicesHeitzView() {
             </div>
           </div>
 
-          {/* Heitz Hardware Function Key Shortcut Bar (F5/F6/F7 Turnstile Relays) */}
+          {/* Heitz Hardware Function Key Shortcut Bar (F5/F6/F7 Turnstile Relays — Adhérents uniquement) */}
+          {navSubTarget !== 'finances' && (
           <div className="bg-white px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 text-xs">
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -1008,6 +995,7 @@ export function DevicesHeitzView() {
               </span>
             </div>
           </div>
+          )}
 
           {/* 3-Column Heitz Desktop Workspace */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 bg-slate-50/50">
@@ -1654,7 +1642,8 @@ export function DevicesHeitzView() {
               </div>
               )}
 
-              {/* Fil d'eau des passages temps réel */}
+              {/* Fil d'eau des passages temps réel (Adhérents uniquement) */}
+              {navSubTarget !== 'finances' && (
               <div className="bg-white border border-slate-200/80 rounded-2xl flex-1 flex flex-col overflow-hidden shadow-2xs">
                 <div className="bg-slate-50 border-b border-slate-200 text-slate-900 px-3.5 py-2.5 text-xs font-bold">
                   Fil d&apos;Eau Passages Tourniquets ({accessEvents.length})
@@ -1681,6 +1670,7 @@ export function DevicesHeitzView() {
                   ))}
                 </div>
               </div>
+              )}
             </div>
           </div>
 
