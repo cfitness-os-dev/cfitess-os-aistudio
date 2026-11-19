@@ -72,6 +72,9 @@ interface MaintenanceTicket {
     | 'Cardio (Tapis, Vélos, Rameurs)'
     | 'Poids, Haltères & Barres'
     | 'Câbles, Poulies & Sellerie'
+    | 'Studio Vélo Immersif & Cycling / RPM'
+    | 'Zone Hyrox & Cross-Training'
+    | 'Piscine, Aquafitness, Sauna & Hammam'
     | 'Sonorisation, Micros & Ampli'
     | 'Écrans TV, Affichage & Bornes'
     | 'Caméras Vidéosurveillance & Alarme'
@@ -104,6 +107,7 @@ interface StockConsumableItem {
     | 'Badges & TPV'
     | 'Pièces Détachées & Maintenance'
     | 'Poids, Haltères & Matériel Muscu'
+    | 'Piscine, Sauna & Hammam'
     | 'Sonorisation, Écrans & Caméras'
     | 'Éclairage, Vestiaires & CVC';
   currentQty: number;
@@ -432,6 +436,19 @@ const INITIAL_STOCKS: StockConsumableItem[] = [
     autoOrderPrepared: false,
   },
   {
+    id: 'stk-maint-4',
+    clubId: 'beynost',
+    name: 'Traitement Piscine & Spa (Bidons Chlore Liquide / pH- / Bandes Test)',
+    barcode: '3760123450134',
+    category: 'Piscine, Sauna & Hammam',
+    currentQty: 5,
+    minThreshold: 4,
+    unit: 'bidons 20L',
+    supplier: 'Piscine & Spa Pro Rhône',
+    unitPriceht: 34.0,
+    autoOrderPrepared: false,
+  },
+  {
     id: 'stk-5',
     clubId: 'carre-de-soie',
     name: 'Isolat Whey Native Vanille & Chocolat (Pots 2kg)',
@@ -564,6 +581,8 @@ export function OrchestratorMaintenanceView() {
     const defaults = [
       'FitSupply Pro Lyon',
       'Technogym France SAV',
+      'Hoist / Hammer Strength / Matrix SAV',
+      'Piscine & Spa Pro Rhône',
       'NutriSport France',
       'Heitz System',
       'Hygiène Sport Rhône',
@@ -748,6 +767,7 @@ export function OrchestratorMaintenanceView() {
         'Hygiène & Plateau',
         'Pièces Détachées & Maintenance',
         'Poids, Haltères & Matériel Muscu',
+        'Piscine, Sauna & Hammam',
         'Sonorisation, Écrans & Caméras',
         'Éclairage, Vestiaires & CVC',
       ];
@@ -1973,6 +1993,7 @@ export function OrchestratorMaintenanceView() {
                         <option value="Hygiène & Plateau">Hygiène &amp; Plateau</option>
                         <option value="Pièces Détachées & Maintenance">Pièces Détachées &amp; Maintenance</option>
                         <option value="Poids, Haltères & Matériel Muscu">Poids, Haltères &amp; Matériel Muscu</option>
+                        <option value="Piscine, Sauna & Hammam">Piscine, Sauna &amp; Hammam</option>
                         <option value="Sonorisation, Écrans & Caméras">Sonorisation, Écrans &amp; Caméras</option>
                         <option value="Éclairage, Vestiaires & CVC">Éclairage, Vestiaires &amp; CVC</option>
                       </select>
@@ -2248,10 +2269,13 @@ export function OrchestratorMaintenanceView() {
                     }
                     className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
                   >
-                    <option value="Technogym / Checkup">Technogym / Checkup</option>
-                    <option value="Cardio (Tapis, Vélos, Rameurs)">Cardio (Tapis, Vélos, Rameurs)</option>
-                    <option value="Poids, Haltères & Barres">Poids, Haltères &amp; Barres</option>
-                    <option value="Câbles, Poulies & Sellerie">Câbles, Poulies &amp; Sellerie</option>
+                    <option value="Technogym / Checkup">Technogym (Biocircuit / Checkup)</option>
+                    <option value="Cardio (Tapis, Vélos, Rameurs)">Cardio (Tapis, Elliptiques, Rameurs)</option>
+                    <option value="Poids, Haltères & Barres">Poids, Haltères &amp; Barres (Hoist / Hammer Strength)</option>
+                    <option value="Câbles, Poulies & Sellerie">Câbles, Poulies &amp; Sellerie (Matrix / Guidées)</option>
+                    <option value="Studio Vélo Immersif & Cycling / RPM">Studio Vélo Immersif &amp; Cycling / RPM</option>
+                    <option value="Zone Hyrox & Cross-Training">Zone Hyrox &amp; Cross-Training</option>
+                    <option value="Piscine, Aquafitness, Sauna & Hammam">Piscine, Aquafitness, Sauna &amp; Hammam</option>
                     <option value="Sonorisation, Micros & Ampli">Sonorisation, Micros &amp; Ampli</option>
                     <option value="Écrans TV, Affichage & Bornes">Écrans TV, Affichage &amp; Bornes</option>
                     <option value="Caméras Vidéosurveillance & Alarme">Caméras Vidéosurveillance &amp; Alarme</option>
