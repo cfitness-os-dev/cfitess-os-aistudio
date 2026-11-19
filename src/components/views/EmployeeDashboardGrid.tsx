@@ -33,11 +33,13 @@ interface EmployeeDashboardGridProps {
   activeEmp: Employee;
   onNavigateTab: (tab: 'DASHBOARD' | 'PLANNING' | 'CONGES' | 'DOCS' | 'ACADEMIE' | 'CHECKLIST') => void;
   onOpenSignatureDrawer?: (doc: HRDocument) => void;
+  compact?: boolean;
 }
 
 export function EmployeeDashboardGrid({
   activeEmp,
   onNavigateTab,
+  compact = false,
 }: EmployeeDashboardGridProps) {
   const {
     shifts,
@@ -247,7 +249,11 @@ export function EmployeeDashboardGrid({
         </div>
 
         {/* 4-KPI Strip Skello Summary */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mt-4 pt-3.5 border-t border-white/10 text-xs">
+        <div
+          className={`grid ${
+            compact ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-4'
+          } gap-2.5 mt-4 pt-3.5 border-t border-white/10 text-xs`}
+        >
           <div className="bg-white/5 rounded-lg p-2.5">
             <div className="text-[10px] text-slate-300 uppercase">Heures Hebdo Skello</div>
             <div className="font-mono font-bold text-sm text-white mt-0.5 tabular-nums">
@@ -282,7 +288,11 @@ export function EmployeeDashboardGrid({
       </section>
 
       {/* SKELLO-STYLE RESPONSIVE WIDGET GRID (1 col mobile, 2 cols tablet, 3 cols desktop) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div
+        className={`grid grid-cols-1 ${
+          compact ? '' : 'md:grid-cols-2 lg:grid-cols-3'
+        } gap-4`}
+      >
         {/* WIDGET 1: Mon Planning & Agenda Unifié (Shifts + Mywellness + Heitz) */}
         <section className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-3 flex flex-col justify-between">
           <div className="space-y-3">
