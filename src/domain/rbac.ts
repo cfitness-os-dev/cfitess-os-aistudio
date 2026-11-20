@@ -418,6 +418,38 @@ export function filterAnomaliesForActor(
     });
 }
 
+function isManagerOnSite(actor: Employee | undefined, siteId: string | 'all'): boolean {
+  if (!actor) return false;
+  const isAdmin = actor.siteAccesses.some((a) => a.profileId === 'admin_systeme');
+  if (isAdmin) return true;
+  return actor.siteAccesses.some(
+    (a) =>
+      (siteId === 'all' || a.siteId === siteId) &&
+      (a.profileId === 'master_avance' || a.profileId === 'planificateur_avance')
+  );
+}
+
+function hasFinanceOnSite(
+  actor: (Employee & { canAccessFinances?: boolean }) | undefined,
+  siteId: string | 'all'
+): boolean {
+  if (!actor) return false;
+  const isAdmin = actor.siteAccesses.some((a) => a.profileId === 'admin_systeme');
+  if (isAdmin) return true;
+  if (!actor.canAccessFinances) return false;
+  return siteId === 'all' || actor.siteAccesses.some((a) => a.siteId === siteId);
+}
+
+function hasReportsOnSite(
+  actor: (Employee & { canAccessReports?: boolean }) | undefined,
+  siteId: string | 'all'
+): boolean {
+  if (!actor) return false;
+  if (isManagerOnSite(actor, siteId)) return true;
+  if (!actor.canAccessReports) return false;
+  return siteId === 'all' || actor.siteAccesses.some((a) => a.siteId === siteId);
+}
+
 export function filterKpisForActor(
   state: AppDatabaseState,
   actorId: string,
@@ -426,20 +458,18 @@ export function filterKpisForActor(
   const actor = state.employees.find((e) => e.id === actorId) as
     | (Employee & { canAccessFinances?: boolean; canAccessReports?: boolean })
     | undefined;
-  const primaryAccess = actor?.siteAccesses.find((a) => a.isPrimary) ?? actor?.siteAccesses[0];
-  const profileId = primaryAccess?.profileId;
-  const isAdminProfile = profileId === 'admin_systeme';
-  const isManagerProfile = profileId === 'master_avance' || profileId === 'planificateur_avance';
-  const canSeeFinances = Boolean(actor?.canAccessFinances) || isAdminProfile;
-  const canSeeReports = Boolean(actor?.canAccessReports) || isAdminProfile || isManagerProfile;
 
   const visible: SiteKpis[] = [];
   for (const kpi of state.kpis) {
     if (activeSiteId !== 'all' && kpi.siteId !== activeSiteId) continue;
-    const allowed = canSeeReports || evaluatePermission(state, actorId, kpi.siteId, 'ORG04-38', {
-      siteId: kpi.siteId,
-    }).allowed;
+    const canSeeReports = hasReportsOnSite(actor, kpi.siteId);
+    const allowed =
+      canSeeReports ||
+      evaluatePermission(state, actorId, kpi.siteId, 'ORG04-38', {
+        siteId: kpi.siteId,
+      }).allowed;
     if (!allowed) continue;
+    const canSeeFinances = hasFinanceOnSite(actor, kpi.siteId);
     visible.push(
       canSeeFinances
         ? kpi
@@ -550,20 +580,23 @@ export function getVisibleSectionsForSession(
   const actor = state.employees.find((e) => e.id === actorId) as
     | (Employee & { canAccessFinances?: boolean; canAccessReports?: boolean })
     | undefined;
-  const primaryAccess = actor?.siteAccesses.find((a) => a.isPrimary) ?? actor?.siteAccesses[0];
-  const profileId = primaryAccess?.profileId;
-  const isAdminProfile = profileId === 'admin_systeme';
-  const isManagerProfile = profileId === 'master_avance' || profileId === 'planificateur_avance';
-  const canFinance = Boolean(actor?.canAccessFinances) || isAdminProfile;
-  const canReports = Boolean(actor?.canAccessReports) || isAdminProfile || isManagerProfile;
+  const siteAccess =
+    activeSiteId === 'all'
+      ? (actor?.siteAccesses.find((a) => a.isPrimary) ?? actor?.siteAccesses[0])
+      : (actor?.siteAccesses.find((a) => a.siteId === activeSiteId) ??
+         actor?.siteAccesses.find((a) => a.isPrimary) ??
+         actor?.siteAccesses[0]);
+  const isManagerProfile = isManagerOnSite(actor, activeSiteId);
+  const canFinance = hasFinanceOnSite(actor, activeSiteId);
+  const canReports = hasReportsOnSite(actor, activeSiteId);
 
-  if (canFinance) {
-    sections.push('MC07'); // Finances / préparation de paie
+  if (canFinance || has('ORG04-23')) {
+    sections.push('MC07'); // Finances / préparation de paie (ORG04-23 pour responsable paie sans droit finances générales)
   }
   if (has('ORG04-38') || has('ORG04-40') || canReports) {
     sections.push('MC08'); // Pilotage et rapports
   }
-  if (isAdminProfile || isManagerProfile) {
+  if (isManagerProfile) {
     sections.push('MC09'); // Collaborateurs et RH
   }
   if (

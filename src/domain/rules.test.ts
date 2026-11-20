@@ -259,8 +259,13 @@ test('TST40 — KPI financiers filtrés à la source selon habilitation (#3 / #1
   assert.equal(readonlyDash.data!.kpis[0].revenueEur, null);
   assert.equal(readonlyDash.data!.kpis[0].payrollMassEur, null);
   assert.equal(readonlyDash.data!.kpis[0].productivityPerHour, null);
-  const readonlyMc7 = engine.assertSectionRouteAccess('emp-readonly', 'club-beynost', 'MC07');
-  assert.equal(readonlyMc7.status, 403);
+  // Collaborateur standard (sans droit paie ORG04-23 ni finance) : section MC07 strictement interdite (403).
+  const standardMc7 = engine.assertSectionRouteAccess('emp-employe-multi', 'club-carre-soie', 'MC07');
+  assert.equal(standardMc7.status, 403);
+
+  // Claire (lecture_seule_avancee) : accède à MC07 pour la consultation de paie (ORG04-23),
+  // mais sans habilitation financière, les KPI financiers restent nuls.
+  assert.equal(readonlyDash.data!.session.visibleSections.includes('MC07'), true);
 
   // Nadia (admin_systeme) : valeurs financières complètes et section Finances.
   const adminDash = engine.getDashboardData('emp-admin', 'all');

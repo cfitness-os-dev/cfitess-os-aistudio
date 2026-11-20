@@ -466,7 +466,7 @@ pub fn filter_kpis_for_actor(
             if active_site_id != "all" && kpi.site_id != active_site_id {
                 return None;
             }
-            let can_view_indicators = can_access_reports(state, actor_id)
+            let can_view_indicators = can_access_reports(state, actor_id, Some(&kpi.site_id))
                 || evaluate_permission(
                     state,
                     actor_id,
@@ -484,10 +484,10 @@ pub fn filter_kpis_for_actor(
                 return None;
             }
             // Le CA, la masse salariale et la productivité ne sont transmis
-            // qu'aux profils financièrement habilités (ticket #3 / #19).
+            // qu'aux profils financièrement habilités SUR CE CLUB (ticket #3 / #19).
             // Les autres reçoivent la ligne KPI sans ces champs, jamais
             // les valeurs chargées puis cachées côté navigateur.
-            if can_access_finances(state, actor_id) {
+            if can_access_finances(state, actor_id, Some(&kpi.site_id)) {
                 Some(kpi.clone())
             } else {
                 let mut redacted = kpi.clone();
@@ -599,46 +599,61 @@ pub fn is_admin_employee(state: &AppDatabaseState, actor_id: &str) -> bool {
     has_profile(state, actor_id, "admin_systeme")
 }
 
-pub fn is_manager_employee(state: &AppDatabaseState, actor_id: &str) -> bool {
-    is_admin_employee(state, actor_id) || has_profile(state, actor_id, "master_avance")
+pub fn is_manager_employee(state: &AppDatabaseState, actor_id: &str, site_id: Option<&str>) -> bool {
+    if is_admin_employee(state, actor_id) {
+        return true;
+    }
+    state.employees.iter().any(|e| {
+        e.id == actor_id
+            && e.site_accesses.iter().any(|a| {
+                (site_id.is_none() || site_id == Some("all") || a.site_id == site_id.unwrap())
+                    && (a.profile_id == "master_avance" || a.profile_id == "planificateur_avance")
+            })
+    })
 }
 
-/// Finances : Direction ou habilitation nominative explicite (ticket #3).
-pub fn can_access_finances(state: &AppDatabaseState, actor_id: &str) -> bool {
-    is_admin_employee(state, actor_id)
-        || state
-            .finance_authorized_employee_ids
-            .iter()
-            .any(|id| id == actor_id)
+/// Finances : Direction ou habilitation nominative explicite dans le périmètre du club (ticket #3 / #19).
+pub fn can_access_finances(state: &AppDatabaseState, actor_id: &str, site_id: Option<&str>) -> bool {
+    if is_admin_employee(state, actor_id) {
+        return true;
+    }
+    state
+        .finance_authorized_employee_ids
+        .iter()
+        .any(|id| id == actor_id)
+        && site_id.map_or(true, |sid| sid == "all" || can_access_site_scope(state, actor_id, sid))
 }
 
-/// Rapports : admin/manager par défaut, ou délégation nominative.
-pub fn can_access_reports(state: &AppDatabaseState, actor_id: &str) -> bool {
-    is_manager_employee(state, actor_id)
-        || state
+/// Rapports : admin/manager par défaut dans leur club, ou délégation nominative (ticket #19).
+pub fn can_access_reports(state: &AppDatabaseState, actor_id: &str, site_id: Option<&str>) -> bool {
+    is_manager_employee(state, actor_id, site_id)
+        || (state
             .reports_authorized_employee_ids
             .iter()
             .any(|id| id == actor_id)
+            && site_id.map_or(true, |sid| sid == "all" || can_access_site_scope(state, actor_id, sid)))
 }
 
-/// Recouvrement : admin/manager par défaut, ou délégation nominative.
+/// Recouvrement : admin/manager par défaut, ou délégation nominative liée aux fonctions (ticket #19).
 #[allow(dead_code)]
-pub fn can_access_recovery(state: &AppDatabaseState, actor_id: &str) -> bool {
-    is_manager_employee(state, actor_id)
-        || state
+pub fn can_access_recovery(state: &AppDatabaseState, actor_id: &str, site_id: Option<&str>) -> bool {
+    is_manager_employee(state, actor_id, site_id)
+        || (state
             .recovery_authorized_employee_ids
             .iter()
             .any(|id| id == actor_id)
+            && site_id.map_or(true, |sid| sid == "all" || can_access_site_scope(state, actor_id, sid)))
 }
 
-/// Stock & Achats : admin/manager par défaut, ou délégation nominative.
+/// Stock & Achats : admin/manager par défaut, ou délégation nominative liée aux fonctions (ticket #19).
 #[allow(dead_code)]
-pub fn can_access_stocks(state: &AppDatabaseState, actor_id: &str) -> bool {
-    is_manager_employee(state, actor_id)
-        || state
+pub fn can_access_stocks(state: &AppDatabaseState, actor_id: &str, site_id: Option<&str>) -> bool {
+    is_manager_employee(state, actor_id, site_id)
+        || (state
             .stock_authorized_employee_ids
             .iter()
             .any(|id| id == actor_id)
+            && site_id.map_or(true, |sid| sid == "all" || can_access_site_scope(state, actor_id, sid)))
 }
 
 pub fn get_visible_sections_for_session(
@@ -657,13 +672,13 @@ pub fn get_visible_sections_for_session(
 
     let has = |aid: &str| evaluate_permission(state, actor_id, active_site_id, aid, None).allowed;
 
-    if can_access_finances(state, actor_id) {
+    if can_access_finances(state, actor_id, Some(active_site_id)) || has("ORG04-23") {
         sections.push("MC07".into());
     }
-    if can_access_reports(state, actor_id) {
+    if can_access_reports(state, actor_id, Some(active_site_id)) || has("ORG04-38") || has("ORG04-40") {
         sections.push("MC08".into());
     }
-    if is_manager_employee(state, actor_id) {
+    if is_manager_employee(state, actor_id, Some(active_site_id)) {
         sections.push("MC09".into());
     }
     if has("ORG04-27")

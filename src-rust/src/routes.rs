@@ -3865,8 +3865,15 @@ mod tests {
             assert!(sarah_kpis[0].worked_hours.is_some());
             let sarah_sections =
                 crate::rbac::get_visible_sections_for_session(&db, "emp-sarah", "club-carre-soie");
-            assert!(!sarah_sections.contains(&"MC07".to_string()));
+            // Sarah (manager avec ORG04-23 préparation de paie) : accède à MC07 pour la paie
+            // et à MC08 pour le pilotage, mais AUCUN montant financier (CA / masse salariale) n'est transmis.
+            assert!(sarah_sections.contains(&"MC07".to_string()));
             assert!(sarah_sections.contains(&"MC08".to_string()));
+
+            // Chloé (collaborateur standard sans ORG04-23 ni finance) : section MC07 strictement absente
+            let chloe_sections =
+                crate::rbac::get_visible_sections_for_session(&db, "emp-chloe", "club-beynost");
+            assert!(!chloe_sections.contains(&"MC07".to_string()));
 
             // Maxime (planificateur sans habilitation KPI) : aucune ligne KPI.
             assert!(filter_kpis_for_actor(&db, "emp-maxime", "club-carre-soie").is_empty());
