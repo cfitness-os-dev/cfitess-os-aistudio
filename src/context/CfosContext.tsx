@@ -338,7 +338,7 @@ interface CfosContextValue extends PersistedState {
   sendValidatedProspectSms: (prospectId: string, text: string) => { ok: boolean; message: string };
   toggleProspectStopSms: (prospectId: string) => void;
 
-  addShift: (shift: Omit<Shift, 'id'>) => void;
+  addShift: (shift: Omit<Shift, 'id'>, id?: string) => void;
   moveShift: (shiftId: string, targetEmployeeId: string, targetDate: string) => void;
   deleteShift: (shiftId: string) => void;
   punchWithPin: (
@@ -1538,10 +1538,10 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
-  const addShift = (shiftInput: Omit<Shift, 'id'>) => {
+  const addShift = (shiftInput: Omit<Shift, 'id'>, id?: string) => {
     const newShift: Shift = {
       ...shiftInput,
-      id: `sh-${Date.now()}`,
+      id: id ?? `sh-${Date.now()}`,
     };
     setState((prev) => ({
       ...prev,

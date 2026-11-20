@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useCfos } from '../../context/CfosContext';
-import { clientApi } from '../../domain/clientApi';
+import { ApiClientError, clientApi } from '../../domain/clientApi';
+import type { DashboardPayload } from '../../domain/apiEngine';
+import type { Shift as ApiShift } from '../../domain/types';
+import { canUsePlanningAction } from '../../domain/planningAuthorization';
 import {
   FileText,
   Download,
@@ -71,8 +74,27 @@ const WEEK_DATES = [
   { date: '2026-10-25', label: 'Dim. 25 oct.', short: 'Dim 25/10' },
 ];
 
+function mapApiShiftToPlanningShift(shift: ApiShift): Shift {
+  return {
+    id: shift.id,
+    employeeId: shift.employeeId ?? 'UNASSIGNED',
+    clubId: shift.siteId === 'club-beynost' ? 'beynost' : 'carre-de-soie',
+    date: shift.date,
+    startTime: shift.startTime,
+    endTime: shift.endTime,
+    breakMinutes: shift.breakMinutes,
+    roleLabel: shift.tasks[0] ?? 'Service Club',
+    published: shift.published,
+    lockState: shift.lockState === 'red' ? 'red' : 'none',
+  };
+}
+
 const FR_DAYS_SHORT = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 const FR_MONTHS_SHORT = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+const SERVER_SITE_BY_CLUB: Record<ClubId, string> = {
+  'carre-de-soie': 'club-carre-soie',
+  beynost: 'club-beynost',
+};
 
 function buildWeekDates(weekOffset: number) {
   if (weekOffset === 0) return WEEK_DATES;
@@ -139,18 +161,8 @@ function getSkelloShiftBlockStyle(roleLabel: string, clubId: ClubId): {
 
 export function PlanningHrView({
   forcedSubTab,
-  canViewSalaries = true,
-  isReadOnly = false,
-  forcedClubScope,
-  personalScopeOnly = false,
-  scopedEmployeeId,
 }: {
   forcedSubTab?: 'POINTAGES' | 'CONGES' | 'SILAE';
-  canViewSalaries?: boolean;
-  isReadOnly?: boolean;
-  forcedClubScope?: ClubId;
-  personalScopeOnly?: boolean;
-  scopedEmployeeId?: string;
 } = {}) {
   const {
     currentUser,
@@ -220,55 +232,81 @@ export function PlanningHrView({
   // Skello Week Navigation, Publish, Lock & Copy Week -> S+1
   const [weekOffset, setWeekOffset] = useState<number>(0);
   const [serverShifts, setServerShifts] = useState<Shift[]>([]);
+  const [serverDashboards, setServerDashboards] = useState<
+    Partial<Record<ClubId, DashboardPayload>>
+  >({});
+  const [serverAccessLoading, setServerAccessLoading] = useState(true);
   const [serverSyncError, setServerSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    setServerAccessLoading(true);
+    setServerDashboards({});
+    setServerShifts([]);
     setServerSyncError(null);
-    const targetSite =
-      (forcedClubScope ?? clubFilter) === 'beynost'
-        ? 'club-beynost'
-        : (forcedClubScope ?? clubFilter) === 'carre-de-soie'
-        ? 'club-carre-soie'
-        : 'all';
-    void clientApi
-      .getDashboard({ actorId: currentUser.id, siteId: targetSite })
+    void Promise.all(
+      (Object.entries(SERVER_SITE_BY_CLUB) as Array<[ClubId, string]>).map(
+        async ([clubId, siteId]) => {
+          try {
+            const dashboard = await clientApi.getDashboard({
+              actorId: currentUser.id,
+              siteId,
+            });
+            return [clubId, dashboard] as const;
+          } catch (error) {
+            if (
+              error instanceof ApiClientError &&
+              (error.status === 403 || error.status === 404)
+            ) {
+              return null;
+            }
+            throw error;
+          }
+        }
+      )
+    )
       .then((dash) => {
         if (cancelled) return;
-        const combined = [...dash.myShifts, ...dash.teamShifts];
+        const accessibleDashboards = dash.filter(
+          (entry): entry is readonly [ClubId, DashboardPayload] => entry !== null
+        );
+        if (accessibleDashboards.length === 0) {
+          setServerSyncError(
+            'Le serveur n’a retourné aucun périmètre de planning autorisé pour cette session.'
+          );
+          return;
+        }
+        const dashboardByClub = Object.fromEntries(accessibleDashboards) as Partial<
+          Record<ClubId, DashboardPayload>
+        >;
+        setServerDashboards(dashboardByClub);
+        const combined = accessibleDashboards.flatMap(([, siteDashboard]) => [
+          ...siteDashboard.myShifts,
+          ...siteDashboard.teamShifts,
+        ]);
         const byId = new Map<string, Shift>();
         for (const s of combined) {
-          if (!s.employeeId || byId.has(s.id)) continue;
-          byId.set(s.id, {
-            id: s.id,
-            employeeId: s.employeeId,
-            clubId: s.siteId === 'club-beynost' ? 'beynost' : 'carre-de-soie',
-            date: s.date,
-            startTime: s.startTime,
-            endTime: s.endTime,
-            breakMinutes: s.breakMinutes,
-            roleLabel: s.tasks?.[0] ?? 'Service Club',
-            published: s.published,
-          });
+          if (byId.has(s.id)) continue;
+          byId.set(s.id, mapApiShiftToPlanningShift(s));
         }
         const mapped = Array.from(byId.values());
         setServerShifts(mapped);
-        if (personalScopeOnly) {
-          const ownTargetId = scopedEmployeeId ?? currentUser.id;
-          const ownServerDates = mapped
-            .filter((s) => s.employeeId === ownTargetId)
-            .map((s) => s.date)
-            .sort();
-          const firstDate = ownServerDates[0];
-          if (firstDate) {
-            const parsed = new Date(`${firstDate}T00:00:00Z`);
-            if (!Number.isNaN(parsed.getTime())) {
-              const baseMondayMs = Date.UTC(2026, 9, 19); // 2026-10-19 (S43)
-              const dow = (parsed.getUTCDay() + 6) % 7;
-              const shiftMondayMs = parsed.getTime() - dow * 86400000;
-              const computedOffset = Math.round((shiftMondayMs - baseMondayMs) / (7 * 86400000));
-              setWeekOffset(computedOffset);
-            }
+        const actorIds = new Set(
+          accessibleDashboards.map(([, siteDashboard]) => siteDashboard.session.employee.id)
+        );
+        const ownServerDates = mapped
+          .filter((s) => actorIds.has(s.employeeId))
+          .map((s) => s.date)
+          .sort();
+        const firstDate = ownServerDates[0];
+        if (firstDate) {
+          const parsed = new Date(`${firstDate}T00:00:00Z`);
+          if (!Number.isNaN(parsed.getTime())) {
+            const baseMondayMs = Date.UTC(2026, 9, 19);
+            const dow = (parsed.getUTCDay() + 6) % 7;
+            const shiftMondayMs = parsed.getTime() - dow * 86400000;
+            const computedOffset = Math.round((shiftMondayMs - baseMondayMs) / (7 * 86400000));
+            setWeekOffset(computedOffset);
           }
         }
       })
@@ -280,65 +318,372 @@ export function PlanningHrView({
               : 'Synchronisation planning serveur indisponible.'
           );
         }
+      })
+      .finally(() => {
+        if (!cancelled) setServerAccessLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [currentUser.id, forcedClubScope, clubFilter, personalScopeOnly, scopedEmployeeId]);
+  }, [currentUser.id]);
 
-  // Priorité stricte aux shifts serveur sur les copies locales en cas d'ID ou créneau identique
+  const selectedClubIds = (['carre-de-soie', 'beynost'] as const).filter(
+    (clubId) => serverDashboards[clubId] && (clubFilter === 'all' || clubFilter === clubId)
+  );
+  const siteDashboard = (clubId: ClubId) => serverDashboards[clubId];
+  const hasActionForClub = (clubId: ClubId, actionId: string): boolean =>
+    siteDashboard(clubId)?.session.resolvedPermissions[actionId]?.allowed === true;
+  const canUseForClub = (
+    clubId: ClubId,
+    actionId: string,
+    targetEmployeeId: string | null
+  ): boolean => {
+    const dashboard = siteDashboard(clubId);
+    if (!dashboard) return false;
+    const actorId = dashboard.session.employee.id;
+    const target = targetEmployeeId
+      ? dashboard.visibleEmployees.find((employee) => employee.id === targetEmployeeId)
+      : undefined;
+    const targetSiteAccess = target?.siteAccesses.find(
+      (access) => access.siteId === SERVER_SITE_BY_CLUB[clubId]
+    );
+    if (targetEmployeeId && targetEmployeeId !== actorId && !targetSiteAccess) return false;
+    return canUsePlanningAction(
+      {
+        allowed: dashboard.session.resolvedPermissions[actionId]?.allowed === true,
+        actorId,
+        scope: dashboard.session.activeProfile.scopeSelected,
+        managedTeamIds: dashboard.session.activeAccess.managedTeamIds ?? [],
+      },
+      targetEmployeeId,
+      targetSiteAccess?.teamIds ?? []
+    );
+  };
+  const canSeeEmployeeAtClub = (employeeId: string, clubId: ClubId): boolean => {
+    const dashboard = siteDashboard(clubId);
+    if (!dashboard) return false;
+    if (dashboard.session.employee.id === employeeId) return true;
+    return dashboard.visibleEmployees.some(
+      (employee) =>
+        employee.id === employeeId &&
+        employee.siteAccesses.some((access) => access.siteId === SERVER_SITE_BY_CLUB[clubId])
+    );
+  };
+  const canSeeShift = (shift: Shift): boolean => {
+    if (!selectedClubIds.includes(shift.clubId)) return false;
+    if (shift.employeeId === 'UNASSIGNED') {
+      return (
+        canUseForClub(shift.clubId, 'ORG04-01', null) ||
+        canUseForClub(shift.clubId, 'ORG04-02', null)
+      );
+    }
+    if (shift.employeeId === siteDashboard(shift.clubId)?.session.employee.id) {
+      return shift.published || canUseForClub(shift.clubId, 'ORG04-02', shift.employeeId);
+    }
+    return canUseForClub(shift.clubId, 'ORG04-07', shift.employeeId);
+  };
+  const visibleLocalShifts = shifts.filter(canSeeShift);
   const mergedShifts: Shift[] = [
-    ...serverShifts,
-    ...shifts.filter(
-      (ls) =>
+    ...serverShifts.filter(canSeeShift),
+    ...visibleLocalShifts.filter(
+      (localShift) =>
         !serverShifts.some(
-          (ss) =>
-            ss.id === ls.id ||
-            (ss.employeeId === ls.employeeId &&
-              ss.date === ls.date &&
-              ss.startTime === ls.startTime)
+          (serverShift) =>
+            serverShift.id === localShift.id ||
+            (serverShift.employeeId === localShift.employeeId &&
+              serverShift.date === localShift.date &&
+              serverShift.startTime === localShift.startTime)
         )
     ),
   ];
+  const personalScopeOnly =
+    selectedClubIds.length > 0 &&
+    selectedClubIds.every(
+      (clubId) => siteDashboard(clubId)?.session.activeProfile.scopeSelected === 'self'
+    );
+  const scopedEmployeeId =
+    selectedClubIds
+      .map((clubId) => siteDashboard(clubId)?.session.employee.id)
+      .find((employeeId): employeeId is string => Boolean(employeeId)) ?? currentUser.id;
+  const forcedClubScope =
+    selectedClubIds.length === 1 ? selectedClubIds[0] : undefined;
+  const canCreatePlanning = selectedClubIds.some((clubId) =>
+    hasActionForClub(clubId, 'ORG04-01')
+  );
+  const canEditPlanning = selectedClubIds.some((clubId) =>
+    hasActionForClub(clubId, 'ORG04-02')
+  );
+  const isReadOnly = !canCreatePlanning && !canEditPlanning;
+  const canEditShift = (shift: Shift): boolean =>
+    canUseForClub(
+      shift.clubId,
+      'ORG04-02',
+      shift.employeeId === 'UNASSIGNED' ? null : shift.employeeId
+    );
+  const createShiftOnServer = async (shift: Omit<Shift, 'id'>): Promise<void> => {
+    const targetEmployeeId = shift.employeeId === 'UNASSIGNED' ? null : shift.employeeId;
+    if (!canUseForClub(shift.clubId, 'ORG04-01', targetEmployeeId)) {
+      throw new Error('Création refusée : la permission ou le périmètre cible manque.');
+    }
+    const dashboard = siteDashboard(shift.clubId);
+    const role = shift.roleLabel.toLocaleLowerCase('fr-FR');
+    const positionKeyword = role.includes('accueil') || role.includes('relance')
+      ? 'accueil'
+      : role.includes('direction')
+        ? 'direction'
+        : role.includes('plateau') || role.includes('cours') || role.includes('bilan')
+          ? 'coach'
+          : '';
+    const position = dashboard?.positions.find(
+      (candidate) =>
+        candidate.active &&
+        positionKeyword.length > 0 &&
+        candidate.label.toLocaleLowerCase('fr-FR').includes(positionKeyword)
+    );
+    if (!dashboard || !position) {
+      throw new Error(`Aucun poste serveur actif ne correspond à « ${shift.roleLabel} ».`);
+    }
+    const created = await clientApi.createShift(
+      { actorId: currentUser.id, siteId: SERVER_SITE_BY_CLUB[shift.clubId] },
+      {
+        siteId: SERVER_SITE_BY_CLUB[shift.clubId],
+        employeeId: targetEmployeeId,
+        date: shift.date,
+        startTime: shift.startTime,
+        endTime: shift.endTime,
+        breakMinutes: shift.breakMinutes,
+        roleLabel: shift.roleLabel,
+        positionId: position.id,
+        published:
+          shift.published && canUseForClub(shift.clubId, 'ORG04-06', targetEmployeeId),
+      }
+    );
+    const mapped = mapApiShiftToPlanningShift(created);
+    addShift({ ...shift, published: mapped.published }, created.id);
+    setServerShifts((previous) => [
+      ...previous.filter((existing) => existing.id !== mapped.id),
+      mapped,
+    ]);
+  };
+  const handleDeletePlanningShift = async (shiftId: string): Promise<void> => {
+    const shift = mergedShifts.find((entry) => entry.id === shiftId);
+    if (!shift || !canEditShift(shift)) {
+      setFeedbackBanner('Suppression refusée : action ou salarié hors de vos permissions.');
+      return;
+    }
+    if (!serverShifts.some((entry) => entry.id === shiftId)) {
+      setFeedbackBanner('Suppression refusée : ce créneau local n’est pas synchronisé avec le serveur.');
+      return;
+    }
+    try {
+      await clientApi.deleteShift(
+        { actorId: currentUser.id, siteId: SERVER_SITE_BY_CLUB[shift.clubId] },
+        shiftId
+      );
+      deleteShift(shiftId);
+      setServerShifts((previous) => previous.filter((entry) => entry.id !== shiftId));
+      setFeedbackBanner('Créneau supprimé et confirmé par le serveur.');
+    } catch (error) {
+      setFeedbackBanner(
+        error instanceof Error ? `Suppression refusée : ${error.message}` : 'Suppression refusée par le serveur.'
+      );
+    }
+  };
+  const handleMovePlanningShift = async (
+    shiftId: string,
+    targetEmployeeId: string,
+    targetDate: string
+  ): Promise<void> => {
+    const shift = mergedShifts.find((entry) => entry.id === shiftId);
+    const targetId = targetEmployeeId === 'UNASSIGNED' ? null : targetEmployeeId;
+    if (
+      !shift ||
+      !canEditShift(shift) ||
+      !canUseForClub(shift.clubId, 'ORG04-02', targetId)
+    ) {
+      setFeedbackBanner('Déplacement refusé : salarié ou club hors de vos permissions.');
+      return;
+    }
+    if (!serverShifts.some((entry) => entry.id === shiftId)) {
+      setFeedbackBanner('Déplacement refusé : ce créneau local n’est pas synchronisé avec le serveur.');
+      return;
+    }
+    try {
+      const updated = await clientApi.updateShift(
+        { actorId: currentUser.id, siteId: SERVER_SITE_BY_CLUB[shift.clubId] },
+        shiftId,
+        { employeeId: targetId ?? 'UNASSIGNED', date: targetDate }
+      );
+      moveShift(shiftId, targetEmployeeId, targetDate);
+      const mapped = mapApiShiftToPlanningShift(updated);
+      setServerShifts((previous) =>
+        previous.map((entry) => (entry.id === shiftId ? mapped : entry))
+      );
+      setFeedbackBanner('Déplacement confirmé par le serveur.');
+    } catch (error) {
+      setFeedbackBanner(
+        error instanceof Error ? `Déplacement refusé : ${error.message}` : 'Déplacement refusé par le serveur.'
+      );
+    }
+  };
+  const canCreateUnassigned =
+    clubFilter !== 'all' &&
+    selectedClubIds.some(
+      (clubId) =>
+        clubId === clubFilter &&
+        canUseForClub(clubId, 'ORG04-01', null) &&
+        canUseForClub(clubId, 'ORG04-02', null)
+    );
+  const canPublishPlanning =
+    selectedClubIds.length > 0 &&
+    selectedClubIds.every((clubId) => canUseForClub(clubId, 'ORG04-06', null));
+  const canLockPlanning =
+    selectedClubIds.length > 0 &&
+    selectedClubIds.every((clubId) => canUseForClub(clubId, 'ORG04-05', null));
 
-  const [publishedWeeks, setPublishedWeeks] = useState<Record<number, boolean>>({ 0: true, 4: true });
-  const [lockedWeeks, setLockedWeeks] = useState<Record<number, boolean>>({});
+  // Priorité stricte aux shifts serveur sur les copies locales en cas d'ID ou créneau identique
   const activeWeekDates = buildWeekDates(weekOffset);
   const activeWeekDateSet = new Set(activeWeekDates.map((d) => d.date));
   const currentWeekNumber = 43 + weekOffset;
-  const isCurrentWeekPublished = Boolean(publishedWeeks[weekOffset]);
-  const isCurrentWeekLocked = Boolean(lockedWeeks[weekOffset]);
+  const weekServerShifts = serverShifts.filter(
+    (shift) => activeWeekDateSet.has(shift.date) && selectedClubIds.includes(shift.clubId)
+  );
+  const isCurrentWeekPublished =
+    weekServerShifts.length > 0 && weekServerShifts.every((shift) => shift.published);
+  const isCurrentWeekLocked = weekServerShifts.some((shift) => shift.lockState === 'red');
 
-  const handleCopyWeekToNext = () => {
+  const handleToggleWeekPublication = async () => {
+    if (!canPublishPlanning || weekServerShifts.length === 0) {
+      setFeedbackBanner('Publication refusée : aucun shift serveur ou permission de publication manquante.');
+      return;
+    }
+    const published = !isCurrentWeekPublished;
+    const updatedShifts: Shift[] = [];
+    try {
+      for (const shift of weekServerShifts) {
+        const targetEmployeeId = shift.employeeId === 'UNASSIGNED' ? null : shift.employeeId;
+        if (!canUseForClub(shift.clubId, 'ORG04-06', targetEmployeeId)) {
+          throw new Error('un ou plusieurs shifts sortent du périmètre autorisé.');
+        }
+      }
+      for (const shift of weekServerShifts) {
+        const updated = await clientApi.updateShift(
+          { actorId: currentUser.id, siteId: SERVER_SITE_BY_CLUB[shift.clubId] },
+          shift.id,
+          { published }
+        );
+        updatedShifts.push(mapApiShiftToPlanningShift(updated));
+      }
+      const byId = new Map(updatedShifts.map((shift) => [shift.id, shift]));
+      setServerShifts((previous) =>
+        previous.map((shift) => byId.get(shift.id) ?? shift)
+      );
+      setFeedbackBanner(
+        `Planning Semaine ${currentWeekNumber} ${published ? 'publié' : 'repassé en brouillon'} et confirmé par le serveur.`
+      );
+    } catch (error) {
+      const byId = new Map(updatedShifts.map((shift) => [shift.id, shift]));
+      setServerShifts((previous) =>
+        previous.map((shift) => byId.get(shift.id) ?? shift)
+      );
+      setFeedbackBanner(
+        error instanceof Error
+          ? `Publication interrompue : ${error.message}`
+          : 'Publication refusée par le serveur.'
+      );
+    }
+  };
+
+  const handleToggleWeekLock = async () => {
+    if (!canLockPlanning || weekServerShifts.length === 0) {
+      setFeedbackBanner('Verrouillage refusé : aucun shift serveur ou permission ORG04-05 manquante.');
+      return;
+    }
+    const lockState = isCurrentWeekLocked ? 'none' : 'red';
+    const updatedShifts: Shift[] = [];
+    try {
+      for (const shift of weekServerShifts) {
+        const targetEmployeeId = shift.employeeId === 'UNASSIGNED' ? null : shift.employeeId;
+        if (!canUseForClub(shift.clubId, 'ORG04-05', targetEmployeeId)) {
+          throw new Error('un ou plusieurs shifts sortent du périmètre autorisé.');
+        }
+      }
+      for (const shift of weekServerShifts) {
+        const updated = await clientApi.updateShift(
+          { actorId: currentUser.id, siteId: SERVER_SITE_BY_CLUB[shift.clubId] },
+          shift.id,
+          { lockState }
+        );
+        updatedShifts.push(mapApiShiftToPlanningShift(updated));
+      }
+      const byId = new Map(updatedShifts.map((shift) => [shift.id, shift]));
+      setServerShifts((previous) =>
+        previous.map((shift) => byId.get(shift.id) ?? shift)
+      );
+      if (lockState === 'red') setShowShiftCreator(false);
+      setFeedbackBanner(
+        lockState === 'red'
+          ? `Verrou rouge activé sur la Semaine ${currentWeekNumber} et confirmé par le serveur.`
+          : `Semaine ${currentWeekNumber} déverrouillée et confirmée par le serveur.`
+      );
+    } catch (error) {
+      const byId = new Map(updatedShifts.map((shift) => [shift.id, shift]));
+      setServerShifts((previous) =>
+        previous.map((shift) => byId.get(shift.id) ?? shift)
+      );
+      setFeedbackBanner(
+        error instanceof Error
+          ? `Verrouillage interrompu : ${error.message}`
+          : 'Verrouillage refusé par le serveur.'
+      );
+    }
+  };
+
+  const handleCopyWeekToNext = async () => {
+    if (!canCreatePlanning) {
+      setFeedbackBanner('Copie refusée : aucune permission d’ajout de shift sur les clubs affichés.');
+      return;
+    }
     const currentDateSet = new Set(activeWeekDates.map((d) => d.date));
     const nextWeekDates = buildWeekDates(weekOffset + 1);
-    const sourceShifts = shifts.filter((s) => currentDateSet.has(s.date));
+    const sourceShifts = mergedShifts.filter((s) => currentDateSet.has(s.date));
     let copied = 0;
-    sourceShifts.forEach((s) => {
-      const idx = activeWeekDates.findIndex((d) => d.date === s.date);
-      if (idx < 0) return;
-      const targetDate = nextWeekDates[idx].date;
-      const alreadyExists = shifts.some(
-        (ex) =>
-          ex.employeeId === s.employeeId &&
-          ex.date === targetDate &&
-          ex.startTime === s.startTime &&
-          ex.endTime === s.endTime
-      );
-      if (!alreadyExists) {
-        addShift({
-          employeeId: s.employeeId,
-          clubId: s.clubId,
-          date: targetDate,
-          startTime: s.startTime,
-          endTime: s.endTime,
-          breakMinutes: s.breakMinutes,
-          roleLabel: s.roleLabel,
-          published: false,
-        });
-        copied += 1;
+    try {
+      for (const s of sourceShifts) {
+        const idx = activeWeekDates.findIndex((d) => d.date === s.date);
+        if (idx < 0) continue;
+        const targetDate = nextWeekDates[idx].date;
+        const targetEmployeeId = s.employeeId === 'UNASSIGNED' ? null : s.employeeId;
+        if (!canUseForClub(s.clubId, 'ORG04-01', targetEmployeeId)) {
+          throw new Error('un ou plusieurs créneaux sortent du périmètre autorisé.');
+        }
+        const alreadyExists = mergedShifts.some(
+          (ex) =>
+            ex.employeeId === s.employeeId &&
+            ex.date === targetDate &&
+            ex.startTime === s.startTime &&
+            ex.endTime === s.endTime
+        );
+        if (!alreadyExists) {
+          await createShiftOnServer({
+            employeeId: s.employeeId,
+            clubId: s.clubId,
+            date: targetDate,
+            startTime: s.startTime,
+            endTime: s.endTime,
+            breakMinutes: s.breakMinutes,
+            roleLabel: s.roleLabel,
+            published: false,
+          });
+          copied += 1;
+        }
       }
-    });
+    } catch (error) {
+      setFeedbackBanner(
+        error instanceof Error ? `Copie interrompue : ${error.message}` : 'Copie refusée par le serveur.'
+      );
+      return;
+    }
     setWeekOffset((prev) => prev + 1);
     setDate(nextWeekDates[0].date);
     setFeedbackBanner(
@@ -351,7 +696,8 @@ export function PlanningHrView({
   const [alertBannerDismissed, setAlertBannerDismissed] = useState(false);
 
   const handleShiftDragStart = (e: React.DragEvent, shiftId: string) => {
-    if (!canEditPlanning) {
+    const shift = mergedShifts.find((entry) => entry.id === shiftId);
+    if (!shift || !canEditShift(shift)) {
       e.preventDefault();
       return;
     }
@@ -381,7 +727,17 @@ export function PlanningHrView({
     }
     const shiftId = e.dataTransfer.getData('text/plain');
     if (!shiftId) return;
-    moveShift(shiftId, targetEmpId, targetDate);
+    const sourceShift = mergedShifts.find((shift) => shift.id === shiftId);
+    const targetEmployeeId = targetEmpId === 'UNASSIGNED' ? null : targetEmpId;
+    if (
+      !sourceShift ||
+      !canEditShift(sourceShift) ||
+      !canUseForClub(sourceShift.clubId, 'ORG04-02', targetEmployeeId)
+    ) {
+      setFeedbackBanner('Déplacement refusé : le salarié ou le club est hors de vos permissions.');
+      return;
+    }
+    void handleMovePlanningShift(shiftId, targetEmpId, targetDate);
   };
 
   // Skello Week Templates (Modèles de semaine type)
@@ -419,9 +775,13 @@ export function PlanningHrView({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('tpl-std');
 
   const handleSaveCurrentWeekAsTemplate = () => {
+    if (!canCreatePlanning) {
+      setFeedbackBanner('Modèle refusé : aucune permission d’ajout de shift sur les clubs affichés.');
+      return;
+    }
     const items: WeekTemplateShift[] = [];
     activeWeekDates.forEach((d, dayIndex) => {
-      shifts
+      mergedShifts
         .filter((s) => s.date === d.date)
         .forEach((s) => {
           items.push({
@@ -446,7 +806,11 @@ export function PlanningHrView({
     setFeedbackBanner(`Modèle « ${name} » enregistré dans vos semaines types Skello.`);
   };
 
-  const handleApplySelectedTemplate = () => {
+  const handleApplySelectedTemplate = async () => {
+    if (!canCreatePlanning) {
+      setFeedbackBanner('Application refusée : aucune permission d’ajout de shift sur les clubs affichés.');
+      return;
+    }
     if (isCurrentWeekLocked) {
       setFeedbackBanner(
         `Semaine ${currentWeekNumber} verrouillée (verrou rouge paie). Déverrouillez pour appliquer un modèle.`
@@ -456,30 +820,41 @@ export function PlanningHrView({
     const tpl = weekTemplates.find((t) => t.id === selectedTemplateId);
     if (!tpl) return;
     let added = 0;
-    tpl.items.forEach((item) => {
-      const targetDate = activeWeekDates[item.dayIndex]?.date;
-      if (!targetDate) return;
-      const exists = shifts.some(
-        (ex) =>
-          ex.employeeId === item.employeeId &&
-          ex.date === targetDate &&
-          ex.startTime === item.startTime &&
-          ex.endTime === item.endTime
-      );
-      if (!exists) {
-        addShift({
-          employeeId: item.employeeId,
-          clubId: item.clubId,
-          date: targetDate,
-          startTime: item.startTime,
-          endTime: item.endTime,
-          breakMinutes: item.breakMinutes,
-          roleLabel: item.roleLabel,
-          published: false,
-        });
-        added += 1;
+    try {
+      for (const item of tpl.items) {
+        const targetDate = activeWeekDates[item.dayIndex]?.date;
+        if (!targetDate) continue;
+        const targetEmployeeId = item.employeeId === 'UNASSIGNED' ? null : item.employeeId;
+        if (!canUseForClub(item.clubId, 'ORG04-01', targetEmployeeId)) {
+          throw new Error('un ou plusieurs créneaux sortent du périmètre autorisé.');
+        }
+        const exists = mergedShifts.some(
+          (ex) =>
+            ex.employeeId === item.employeeId &&
+            ex.date === targetDate &&
+            ex.startTime === item.startTime &&
+            ex.endTime === item.endTime
+        );
+        if (!exists) {
+          await createShiftOnServer({
+            employeeId: item.employeeId,
+            clubId: item.clubId,
+            date: targetDate,
+            startTime: item.startTime,
+            endTime: item.endTime,
+            breakMinutes: item.breakMinutes,
+            roleLabel: item.roleLabel,
+            published: false,
+          });
+          added += 1;
+        }
       }
-    });
+    } catch (error) {
+      setFeedbackBanner(
+        error instanceof Error ? `Application interrompue : ${error.message}` : 'Application refusée par le serveur.'
+      );
+      return;
+    }
     setFeedbackBanner(
       `Modèle « ${tpl.name} » appliqué sur la Semaine ${currentWeekNumber} (${added} créneau(x) ajouté(s)).`
     );
@@ -498,12 +873,12 @@ export function PlanningHrView({
   }, [navSubTarget]);
 
   // Skello Badgeuse Simulator state
-  const [kioskEmpId, setKioskEmpId] = useState<string>(scopedEmployeeId ?? 'emp-maxime');
-  const [kioskPin, setKioskPin] = useState<string>(personalScopeOnly ? '' : '3310');
-  const [kioskClub, setKioskClub] = useState<ClubId>(forcedClubScope ?? 'carre-de-soie');
+  const [kioskEmpId, setKioskEmpId] = useState<string>(currentUser.id);
+  const [kioskPin, setKioskPin] = useState<string>('');
+  const [kioskClub, setKioskClub] = useState<ClubId>(currentUser.clubId);
 
   // Leave request creation state (Skello / Lucca style)
-  const [leaveEmpId, setLeaveEmpId] = useState(scopedEmployeeId ?? 'emp-maxime');
+  const [leaveEmpId, setLeaveEmpId] = useState(currentUser.id);
   const [leaveType, setLeaveType] = useState<LeaveRequest['type']>('CP');
   const [leaveStart, setLeaveStart] = useState('2026-11-02');
   const [leaveEnd, setLeaveEnd] = useState('2026-11-06');
@@ -571,26 +946,26 @@ export function PlanningHrView({
 
   const filteredEmployees = employees.filter((e) => {
     if (e.role === 'kiosque') return false;
-    if (personalScopeOnly && scopedEmployeeId && e.id !== scopedEmployeeId) return false;
-    const matchesClub = (cid: ClubId) =>
-      e.clubId === cid || Boolean(e.siteAssignments?.some((sa) => sa.clubId === cid));
-    if (forcedClubScope && !matchesClub(forcedClubScope)) return false;
-    if (!forcedClubScope && clubFilter !== 'all' && !matchesClub(clubFilter)) return false;
+    if (!selectedClubIds.some((clubId) => canSeeEmployeeAtClub(e.id, clubId))) return false;
     if (roleFilter !== 'ALL' && e.role !== roleFilter) return false;
     return true;
   });
 
-  const canEditPlanning = !isReadOnly && !personalScopeOnly;
+  const visibleTimeEntries = timeEntries.filter((entry) => {
+    const clubId = entry.clubId;
+    return (
+      selectedClubIds.includes(clubId) &&
+      canSeeEmployeeAtClub(entry.employeeId, clubId)
+    );
+  });
 
-  const visibleTimeEntries =
-    personalScopeOnly && scopedEmployeeId
-      ? timeEntries.filter((t) => t.employeeId === scopedEmployeeId)
-      : timeEntries;
-
-  const visibleLeaveRequests =
-    personalScopeOnly && scopedEmployeeId
-      ? leaveRequests.filter((l) => l.employeeId === scopedEmployeeId)
-      : leaveRequests;
+  const visibleLeaveRequests = leaveRequests.filter((request) => {
+    const clubId = request.clubId;
+    return (
+      selectedClubIds.includes(clubId) &&
+      canSeeEmployeeAtClub(request.employeeId, clubId)
+    );
+  });
 
   const previewShift: Shift = {
     id: 'preview-shift',
@@ -604,18 +979,23 @@ export function PlanningHrView({
     published: true,
   };
 
-  const allViolations = evaluateShiftCompliance([...shifts, previewShift]);
+  const allViolations = evaluateShiftCompliance([...mergedShifts, previewShift]);
   const previewViolations = allViolations.filter((v) => v.shiftId === 'preview-shift');
-  const existingScheduleViolations = evaluateShiftCompliance(shifts);
+  const existingScheduleViolations = evaluateShiftCompliance(mergedShifts);
 
-  const scopedEmployeesForPayroll = forcedClubScope
-    ? employees.filter((e) => e.clubId === forcedClubScope)
-    : employees;
+  const scopedEmployeesForPayroll = employees.filter((employee) =>
+    selectedClubIds.some(
+      (clubId) =>
+        canSeeEmployeeAtClub(employee.id, clubId) &&
+        canUseForClub(clubId, 'ORG04-10', employee.id)
+    )
+  );
+  const canViewSalaries = scopedEmployeesForPayroll.length > 0;
 
   // Paie Silae unifiée sur les contrats réels, la période choisie et les primes filtrées par période (CFOS-055/033)
   const payrollRows = computePayrollVariables(
     scopedEmployeesForPayroll,
-    shifts,
+    mergedShifts,
     silaePeriod,
     silaeBonuses
   );
@@ -625,15 +1005,22 @@ export function PlanningHrView({
   const silaeApiPayload = canViewSalaries
     ? buildSilaeApiPayload(payrollRows, silaePeriod, 'API_REST_SILAE')
     : { status: 'REDACTED_ORG04_10', message: 'Salaires masqués pour ce profil.' };
-  const allUnifiedEvents = buildUnifiedPlanningEvents(mergedShifts, unifiedExternalEvents);
+  const visibleExternalEvents = unifiedExternalEvents.filter(
+    (event) =>
+      selectedClubIds.includes(event.clubId) &&
+      (!event.employeeId || canSeeEmployeeAtClub(event.employeeId, event.clubId))
+  );
+  const allUnifiedEvents = buildUnifiedPlanningEvents(mergedShifts, visibleExternalEvents);
 
   const selectedSilaeRow =
     payrollRows.find((r) => r.employeeId === selectedSilaeEmpId) || payrollRows[0];
   const selectedSilaeEmp =
-    employees.find((e) => e.id === selectedSilaeRow?.employeeId) || employees[0];
+    scopedEmployeesForPayroll.find((e) => e.id === selectedSilaeRow?.employeeId);
 
   const selectedContractEmployee =
-    employees.find((e) => e.id === selectedContractEmpId) || employees[2] || employees[0];
+    filteredEmployees.find((e) => e.id === selectedContractEmpId) ||
+    filteredEmployees[0] ||
+    currentUser;
 
   const liveContractText = generateOfficialCdiContractText({
     firstName: selectedContractEmployee.firstName,
@@ -648,7 +1035,7 @@ export function PlanningHrView({
   });
 
   // Total KPIs for Skello bottom bar (calculés strictement sur la semaine affichée et le club)
-  const effectiveClubScopeForTotals = forcedClubScope ?? (clubFilter !== 'all' ? clubFilter : null);
+  const effectiveClubScopeForTotals = clubFilter !== 'all' ? clubFilter : null;
   const totalPlannedHours = filteredEmployees.reduce((sum, emp) => {
     const empShifts = mergedShifts.filter(
       (s) =>
@@ -666,7 +1053,7 @@ export function PlanningHrView({
   }, 0);
 
   const totalEstimatedGrossEur = Math.round(totalPlannedHours * 12.02 * 1.42);
-  const pendingLeavesCount = leaveRequests.filter((l) => l.status === 'en_attente').length;
+  const pendingLeavesCount = visibleLeaveRequests.filter((l) => l.status === 'en_attente').length;
 
   const isBreakInvalid =
     !Number.isFinite(breakMinutes) || breakMinutes < 0 || breakMinutes > 180;
@@ -675,10 +1062,11 @@ export function PlanningHrView({
   const isPreviewCompliant =
     previewViolations.length === 0 && !isBreakInvalid && !isNetDurationInvalid;
 
-  const handleAddShift = (e: React.FormEvent) => {
+  const handleAddShift = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canEditPlanning) {
-      setFeedbackBanner('Création refusée : droits insuffisants (lecture seule).');
+    const targetEmployeeId = empId === 'UNASSIGNED' ? null : empId;
+    if (!canUseForClub(shiftClub, 'ORG04-01', targetEmployeeId)) {
+      setFeedbackBanner('Création refusée : la permission ORG04-01 ou le périmètre cible manque.');
       return;
     }
     if (isBreakInvalid || isNetDurationInvalid) {
@@ -687,23 +1075,34 @@ export function PlanningHrView({
       );
       return;
     }
-    addShift({
-      employeeId: empId,
-      clubId: shiftClub,
-      date,
-      startTime,
-      endTime,
-      breakMinutes,
-      roleLabel,
-      published: true,
-    });
-    setFeedbackBanner(
-      `Shift ${startTime}–${endTime} (${roleLabel}) publié sur le planning Skello C.Fitness.`
-    );
+    const published = canUseForClub(shiftClub, 'ORG04-06', targetEmployeeId);
+    try {
+      await createShiftOnServer({
+        employeeId: empId,
+        clubId: shiftClub,
+        date,
+        startTime,
+        endTime,
+        breakMinutes,
+        roleLabel,
+        published,
+      });
+      setFeedbackBanner(
+        `Shift ${startTime}–${endTime} (${roleLabel}) ${published ? 'publié' : 'créé en brouillon'} et confirmé par le serveur.`
+      );
+    } catch (error) {
+      setFeedbackBanner(
+        error instanceof Error ? error.message : 'Création refusée par le serveur.'
+      );
+    }
   };
 
   const handleQuickCellClick = (targetEmpId: string, targetDate: string, defaultClub: ClubId) => {
-    if (!canEditPlanning) return;
+    const targetEmployeeId = targetEmpId === 'UNASSIGNED' ? null : targetEmpId;
+    if (!canUseForClub(defaultClub, 'ORG04-01', targetEmployeeId)) {
+      setFeedbackBanner('Création refusée : cette action ou ce salarié n’est pas dans votre périmètre.');
+      return;
+    }
     setEmpId(targetEmpId);
     setDate(targetDate);
     setShiftClub(defaultClub);
@@ -755,6 +1154,11 @@ export function PlanningHrView({
 
   return (
     <div className="space-y-4">
+      {serverAccessLoading && (
+        <div className="p-3 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-xs">
+          Chargement des permissions de planning par établissement…
+        </div>
+      )}
       {serverSyncError && (
         <div className="p-3 rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-xs flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
@@ -1035,7 +1439,7 @@ export function PlanningHrView({
               </div>
             )}
 
-            {subTab === 'PLANNING' && !isCoursCollectifsView && canEditPlanning && (
+            {subTab === 'PLANNING' && !isCoursCollectifsView && canCreatePlanning && (
               <>
                 <button
                   type="button"
@@ -1075,17 +1479,10 @@ export function PlanningHrView({
                     + Modèle
                   </button>
                 </div>
-                <button
+                {canPublishPlanning && <button
                   type="button"
-                  onClick={() => {
-                    const nextPub = !isCurrentWeekPublished;
-                    setPublishedWeeks((prev) => ({ ...prev, [weekOffset]: nextPub }));
-                    setFeedbackBanner(
-                      nextPub
-                        ? `Planning Semaine ${currentWeekNumber} publié et notifié aux équipes.`
-                        : `Planning Semaine ${currentWeekNumber} repassé en brouillon.`
-                    );
-                  }}
+                  disabled={weekServerShifts.length === 0}
+                  onClick={() => void handleToggleWeekPublication()}
                   className={`px-2.5 py-1.5 rounded-xl border font-bold text-xs flex items-center gap-1 cursor-pointer whitespace-nowrap ${
                     isCurrentWeekPublished
                       ? 'bg-emerald-600 text-white border-emerald-600'
@@ -1094,19 +1491,11 @@ export function PlanningHrView({
                 >
                   <Send className="w-3.5 h-3.5" />
                   {isCurrentWeekPublished ? 'Publié ✓' : 'Publier'}
-                </button>
-                <button
+                </button>}
+                {canLockPlanning && <button
                   type="button"
-                  onClick={() => {
-                    const nextLock = !isCurrentWeekLocked;
-                    setLockedWeeks((prev) => ({ ...prev, [weekOffset]: nextLock }));
-                    if (nextLock) setShowShiftCreator(false);
-                    setFeedbackBanner(
-                      nextLock
-                        ? `Verrou rouge activé sur la Semaine ${currentWeekNumber} (prêt pour export paie).`
-                        : `Semaine ${currentWeekNumber} déverrouillée pour modification.`
-                    );
-                  }}
+                  disabled={weekServerShifts.length === 0}
+                  onClick={() => void handleToggleWeekLock()}
                   className={`px-2.5 py-1.5 rounded-xl border font-bold text-xs flex items-center gap-1 cursor-pointer whitespace-nowrap ${
                     isCurrentWeekLocked
                       ? 'bg-rose-600 text-white border-rose-600'
@@ -1115,7 +1504,7 @@ export function PlanningHrView({
                 >
                   {isCurrentWeekLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
                   {isCurrentWeekLocked ? 'Verrouillé' : 'Verrouiller'}
-                </button>
+                </button>}
                 <button
                   type="button"
                   onClick={() => window.print()}
@@ -1157,20 +1546,12 @@ export function PlanningHrView({
                   : 'Calques Planning Centralisé (Sans Duplication) :'}
               </span>
               {(() => {
-                const visibleEmpSet = new Set(filteredEmployees.map((e) => e.id));
                 const scopedShiftsCount = mergedShifts.filter((s) => {
                   if (!activeWeekDateSet.has(s.date)) return false;
-                  if (forcedClubScope && s.clubId !== forcedClubScope) return false;
-                  if (!forcedClubScope && clubFilter !== 'all' && s.clubId !== clubFilter) return false;
-                  if (personalScopeOnly && !visibleEmpSet.has(s.employeeId)) return false;
-                  return true;
+                  return selectedClubIds.includes(s.clubId);
                 }).length;
-                const scopedExternal = unifiedExternalEvents.filter((e) => {
-                  if (!activeWeekDateSet.has(e.date)) return false;
-                  if (forcedClubScope && e.clubId !== forcedClubScope) return false;
-                  if (!forcedClubScope && clubFilter !== 'all' && e.clubId !== clubFilter) return false;
-                  if (personalScopeOnly && e.employeeId && !visibleEmpSet.has(e.employeeId)) return false;
-                  return true;
+                const scopedExternal = visibleExternalEvents.filter((event) => {
+                  return activeWeekDateSet.has(event.date);
                 });
                 const scopedAllCount = scopedShiftsCount + scopedExternal.length;
                 return [
@@ -1395,14 +1776,13 @@ export function PlanningHrView({
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     const offendingIds = Array.from(
                       new Set(existingScheduleViolations.map((v) => v.shiftId).filter(Boolean))
                     );
-                    offendingIds.forEach((id) => deleteShift(id));
-                    setFeedbackBanner(
-                      `${offendingIds.length} créneau(x) non conforme(s) supprimé(s) — planning 100 % conforme IDCC 2511.`
-                    );
+                    for (const id of offendingIds) {
+                      await handleDeletePlanningShift(id);
+                    }
                   }}
                   className="px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-[11px] cursor-pointer"
                 >
@@ -1424,7 +1804,7 @@ export function PlanningHrView({
                   {v.shiftId && (
                     <button
                       type="button"
-                      onClick={() => deleteShift(v.shiftId)}
+                      onClick={() => void handleDeletePlanningShift(v.shiftId)}
                       className="text-[10px] font-bold underline text-rose-500 hover:text-rose-400 shrink-0 cursor-pointer"
                     >
                       Supprimer ce créneau
@@ -1489,7 +1869,7 @@ export function PlanningHrView({
 
                   <tbody className="divide-y divide-slate-200 text-xs">
                     {/* Skello Top Row: Shifts non assignés / À remplacer (masqué en lecture seule / périmètre personnel — #18) */}
-                    {!isCoursCollectifsView && canEditPlanning && (
+                    {!isCoursCollectifsView && canCreateUnassigned && (
                       <tr className="bg-amber-50/50 dark:bg-amber-950/20 border-b-2 border-amber-200/80">
                         <td className="p-3 align-top border-r border-slate-200">
                           <div className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
@@ -1502,8 +1882,11 @@ export function PlanningHrView({
                         </td>
                         {activeWeekDates.map((d) => {
                           const cellKey = `UNASSIGNED|${d.date}`;
-                          const unassignedDayShifts = shifts.filter(
-                            (s) => s.employeeId === 'UNASSIGNED' && s.date === d.date
+                          const unassignedDayShifts = mergedShifts.filter(
+                            (s) =>
+                              s.employeeId === 'UNASSIGNED' &&
+                              s.date === d.date &&
+                              s.clubId === clubFilter
                           );
                           return (
                             <td
@@ -1531,7 +1914,7 @@ export function PlanningHrView({
                                   {unassignedDayShifts.map((s) => (
                                     <div
                                       key={s.id}
-                                      draggable={!isCurrentWeekLocked}
+                                      draggable={canEditShift(s) && !isCurrentWeekLocked}
                                       onDragStart={(e) => handleShiftDragStart(e, s.id)}
                                       className="p-2 rounded-md bg-amber-100 border border-amber-400 text-amber-950 text-[11px] shadow-2xs cursor-grab active:cursor-grabbing space-y-1"
                                     >
@@ -1542,8 +1925,8 @@ export function PlanningHrView({
                                         <button
                                           type="button"
                                           onClick={() => {
-                                            if (isCurrentWeekLocked) return;
-                                            deleteShift(s.id);
+                                            if (isCurrentWeekLocked || !canEditShift(s)) return;
+                                            void handleDeletePlanningShift(s.id);
                                           }}
                                           className="text-amber-700 hover:text-rose-600 cursor-pointer"
                                         >
@@ -1555,14 +1938,18 @@ export function PlanningHrView({
                                         defaultValue=""
                                         onChange={(e) => {
                                           if (!e.target.value || isCurrentWeekLocked) return;
-                                          moveShift(s.id, e.target.value, s.date);
+                                          void handleMovePlanningShift(s.id, e.target.value, s.date);
                                         }}
                                         className="w-full text-[10px] px-1 py-0.5 rounded bg-white border border-amber-300 text-slate-800 font-semibold"
                                       >
                                         <option value="" disabled>
                                           Affecter à...
                                         </option>
-                                        {filteredEmployees.map((empOpt) => (
+                                        {filteredEmployees
+                                          .filter((empOpt) =>
+                                            canUseForClub(s.clubId, 'ORG04-02', empOpt.id)
+                                          )
+                                          .map((empOpt) => (
                                           <option key={empOpt.id} value={empOpt.id}>
                                             {empOpt.firstName} {empOpt.lastName}
                                           </option>
@@ -1649,13 +2036,13 @@ export function PlanningHrView({
                             const dayShifts = showRhShifts
                               ? empShifts.filter((s) => s.date === d.date)
                               : [];
-                            const dayExternalEvents = unifiedExternalEvents.filter(
+                            const dayExternalEvents = visibleExternalEvents.filter(
                               (ev) =>
                                 ev.employeeId === emp.id &&
                                 ev.date === d.date &&
                                 (sourceFilter === 'ALL' || ev.originSystem === sourceFilter)
                             );
-                            const empLeave = leaveRequests.find(
+                            const empLeave = visibleLeaveRequests.find(
                               (lv) =>
                                 lv.employeeId === emp.id &&
                                 lv.status === 'valide' &&
@@ -1686,10 +2073,20 @@ export function PlanningHrView({
                                     </div>
                                   </div>
                                 ) : dayShifts.length === 0 && dayExternalEvents.length === 0 ? (
-                                  canEditPlanning ? (
+                                  canUseForClub(
+                                    clubFilter === 'all' ? emp.clubId : clubFilter,
+                                    'ORG04-01',
+                                    emp.id
+                                  ) ? (
                                     <button
                                       type="button"
-                                      onClick={() => handleQuickCellClick(emp.id, d.date, emp.clubId)}
+                                      onClick={() =>
+                                        handleQuickCellClick(
+                                          emp.id,
+                                          d.date,
+                                          clubFilter === 'all' ? emp.clubId : clubFilter
+                                        )
+                                      }
                                       className="w-full h-16 rounded-md border border-dashed border-transparent hover:border-slate-300 hover:bg-white text-slate-300 hover:text-slate-600 flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer group"
                                       title="Cliquer pour planifier un créneau sur ce jour"
                                     >
@@ -1717,27 +2114,26 @@ export function PlanningHrView({
                                       return (
                                         <div
                                           key={s.id}
-                                          draggable={canEditPlanning && !isCurrentWeekLocked}
+                                          draggable={canEditShift(s) && !isCurrentWeekLocked}
                                           onDragStart={(e) => {
-                                            if (!canEditPlanning) return;
                                             handleShiftDragStart(e, s.id);
                                           }}
                                           title={
-                                            !canEditPlanning
+                                            !canEditShift(s)
                                               ? 'Consultation uniquement (lecture seule)'
                                               : isCurrentWeekLocked
                                               ? 'Semaine verrouillée'
                                               : 'Glisser-déposer vers un autre jour, un autre salarié ou la ligne Non assignés'
                                           }
                                           className={`p-2 rounded-md text-[11px] shadow-2xs transition-transform ${
-                                            !canEditPlanning || isCurrentWeekLocked ? '' : 'cursor-grab active:cursor-grabbing'
+                                            !canEditShift(s) || isCurrentWeekLocked ? '' : 'cursor-grab active:cursor-grabbing'
                                           } ${st.card}`}
                                         >
                                           <div className="flex items-center justify-between gap-1">
                                             <span className="font-mono font-extrabold text-xs tabular-nums">
                                               {s.startTime} - {s.endTime}
                                             </span>
-                                            {canEditPlanning && (
+                                            {canEditShift(s) && (
                                               <button
                                                 type="button"
                                                 onClick={() => {
@@ -1747,7 +2143,7 @@ export function PlanningHrView({
                                                     );
                                                     return;
                                                   }
-                                                  deleteShift(s.id);
+                                                  if (canEditShift(s)) void handleDeletePlanningShift(s.id);
                                                 }}
                                                 title="Supprimer ce shift RH"
                                                 className="text-slate-400 hover:text-rose-600 cursor-pointer p-0.5"
@@ -1799,7 +2195,11 @@ export function PlanningHrView({
                                             <span className="font-mono font-bold text-white">
                                               {ev.startTime} - {ev.endTime}
                                             </span>
-                                            {canEditPlanning && (
+                                            {canUseForClub(
+                                              ev.clubId,
+                                              'ORG04-02',
+                                              ev.employeeId ?? null
+                                            ) && (
                                               <button
                                                 type="button"
                                                 onClick={() => deleteExternalPlanningEvent(ev.id)}

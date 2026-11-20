@@ -1149,21 +1149,7 @@ export function AdminShell() {
                     </button>
                   </div>
                 )}
-                <PlanningHrView
-                  personalScopeOnly={currentUser.role !== 'admin' && currentUser.role !== 'manager'}
-                  scopedEmployeeId={
-                    currentUser.role !== 'admin' && currentUser.role !== 'manager'
-                      ? currentUser.id
-                      : undefined
-                  }
-                  forcedClubScope={
-                    currentUser.role === 'manager' ? currentUser.clubId : undefined
-                  }
-                  canViewSalaries={
-                    currentUser.role === 'admin' || Boolean(currentUser.canAccessFinances)
-                  }
-                  isReadOnly={currentUser.role !== 'admin' && currentUser.role !== 'manager'}
-                />
+                <PlanningHrView />
               </div>
             )
           )}

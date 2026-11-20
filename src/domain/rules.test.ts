@@ -11,6 +11,7 @@ import {
   parseCsvRowsWithQuotes,
 } from './leadHubHelpers';
 import { INITIAL_ROLE_PROFILES } from './permissionsMatrixSeed';
+import { canUsePlanningAction } from './planningAuthorization';
 import { computeShiftNetMinutes, formatMinutesAsHours, getControlState } from './rbac';
 import {
   CANDIDATE_ACTIONS,
@@ -133,6 +134,35 @@ test('TST02 & TST03 & TST04 — Multi-sites employé et masquage brouillon non a
   const adminAll = engine.getDashboardData('emp-admin', 'all');
   assert.equal(adminAll.status, 200);
   assert.ok(adminAll.data!.teamShifts.some((s) => s.id === 'sh-unassigned-1'));
+});
+
+test('API locale — identités et périmètres planning des comptes de l’application', () => {
+  const engine = new CFitnessApiEngine();
+  const accounts = [
+    ['emp-mario', 'club-carre-soie'],
+    ['emp-daniel', 'club-beynost'],
+    ['emp-greg', 'club-carre-soie'],
+    ['emp-sarah', 'club-carre-soie'],
+    ['emp-maxime', 'club-carre-soie'],
+    ['emp-chloe', 'club-beynost'],
+    ['emp-karim', 'club-carre-soie'],
+    ['emp-lea', 'club-beynost'],
+  ] as const;
+
+  for (const [actorId, siteId] of accounts) {
+    const dashboard = engine.getDashboardData(actorId, siteId);
+    assert.equal(dashboard.status, 200, `${actorId} doit exister dans l’API locale`);
+    assert.equal(dashboard.data!.session.employee.id, actorId);
+  }
+
+  const chloeDashboard = engine.getDashboardData('emp-chloe', 'club-beynost');
+  assert.ok(chloeDashboard.data!.myShifts.some((shift) => shift.id === 'sh-chloe-1'));
+
+  const maximeDashboard = engine.getDashboardData('emp-maxime', 'club-carre-soie');
+  const maximeAccess = maximeDashboard.data!.session.employee.siteAccesses.find(
+    (access) => access.siteId === 'club-carre-soie'
+  );
+  assert.deepEqual(maximeAccess?.managedTeamIds, ['team-cs-accueil']);
 });
 
 test('TST06 — Lecture seule avancée bloque toute écriture et MC11', () => {
@@ -784,6 +814,23 @@ test('Silae payroll calculation, formatters, and CRM guards work accurately', ()
   assert.equal(isNavItemAllowedForRole({ sectionId: 'academy', subTarget: 'rapports' }, 'manager'), true);
   assert.equal(isNavItemAllowedForRole({ sectionId: 'academy', subTarget: 'rapports' }, 'commercial', { canAccessReports: false }), false);
   assert.equal(isNavItemAllowedForRole({ sectionId: 'academy', subTarget: 'rapports' }, 'commercial', { canAccessReports: true }), true);
+});
+
+test('Planning actions use the selected site permission and managed-team scope', () => {
+  const capability = {
+    allowed: true,
+    actorId: 'employee-a',
+    scope: 'teams' as const,
+    managedTeamIds: ['team-managed'],
+  };
+
+  assert.equal(canUsePlanningAction(capability, 'employee-a'), true);
+  assert.equal(canUsePlanningAction(capability, 'employee-b', ['team-managed']), true);
+  assert.equal(canUsePlanningAction(capability, 'employee-c', ['team-member-only']), false);
+  assert.equal(canUsePlanningAction(capability, null), false);
+  assert.equal(canUsePlanningAction({ ...capability, allowed: false }, 'employee-b', ['team-managed']), false);
+  assert.equal(canUsePlanningAction({ ...capability, scope: 'sites' }, 'employee-c'), true);
+  assert.equal(canUsePlanningAction({ ...capability, scope: 'self' }, 'employee-b', ['team-managed']), false);
 });
 
 test('Multi-device backup envelope checksum and power-outage failover merge preserve offline club activity', () => {

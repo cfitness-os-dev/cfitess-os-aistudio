@@ -108,6 +108,24 @@ pub struct UpdateShiftPayload {
     pub start_time: Option<String>,
     pub end_time: Option<String>,
     pub break_minutes: Option<u32>,
+    pub employee_id: Option<String>,
+    pub date: Option<String>,
+    pub published: Option<bool>,
+    pub lock_state: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateShiftPayload {
+    pub site_id: String,
+    pub employee_id: Option<String>,
+    pub date: String,
+    pub start_time: String,
+    pub end_time: String,
+    pub break_minutes: u32,
+    pub role_label: String,
+    pub position_id: String,
+    pub published: bool,
 }
 
 #[derive(Deserialize)]
@@ -176,7 +194,11 @@ pub fn api_router(state: SharedState) -> Router {
         .route("/api/session", get(get_session))
         .route("/api/section-access/:section_id", get(get_section_access))
         .route("/api/dashboard", get(get_dashboard))
-        .route("/api/shifts/:shift_id", patch(patch_shift))
+        .route("/api/shifts", post(post_shift))
+        .route(
+            "/api/shifts/:shift_id",
+            patch(patch_shift).delete(delete_shift),
+        )
         .route("/api/admin/profiles", get(get_admin_profiles))
         .route("/api/admin/profiles/:profile_id", put(put_admin_profile))
         .route("/api/admin/employees", post(post_admin_employee))
@@ -1018,13 +1040,190 @@ async fn get_dashboard(
     }))
 }
 
+async fn post_shift(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Json(payload): Json<CreateShiftPayload>,
+) -> Result<(StatusCode, Json<Shift>), (StatusCode, Json<Value>)> {
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let mut db = state.db.write().await;
+    let site_id = payload.site_id.trim();
+    if !db.sites.iter().any(|site| site.id == site_id) {
+        return Err(err_resp(
+            StatusCode::NOT_FOUND,
+            "Établissement introuvable.",
+        ));
+    }
+
+    let start_minutes = parse_hhmm_minutes(&payload.start_time)
+        .ok_or_else(|| err_resp(StatusCode::BAD_REQUEST, "Heure de début invalide."))?;
+    let end_minutes = parse_hhmm_minutes(&payload.end_time)
+        .ok_or_else(|| err_resp(StatusCode::BAD_REQUEST, "Heure de fin invalide."))?;
+    let duration = if end_minutes < start_minutes {
+        end_minutes + 24 * 60 - start_minutes
+    } else {
+        end_minutes - start_minutes
+    };
+    if payload.break_minutes > 180 || duration <= payload.break_minutes {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            "Durée ou pause de shift invalide.",
+        ));
+    }
+    if chrono::NaiveDate::parse_from_str(&payload.date, "%Y-%m-%d").is_err() {
+        return Err(err_resp(StatusCode::BAD_REQUEST, "Date de shift invalide."));
+    }
+
+    let target_employee = match payload.employee_id.as_deref() {
+        Some(employee_id) => {
+            let employee = db
+                .employees
+                .iter()
+                .find(|employee| employee.id == employee_id)
+                .cloned()
+                .ok_or_else(|| err_resp(StatusCode::FORBIDDEN, "Salarié hors périmètre."))?;
+            if !employee
+                .site_accesses
+                .iter()
+                .any(|access| access.site_id == site_id)
+            {
+                return Err(err_resp(
+                    StatusCode::FORBIDDEN,
+                    "Salarié hors périmètre du club.",
+                ));
+            }
+            Some(employee)
+        }
+        None => None,
+    };
+    let target_employee_id = target_employee
+        .as_ref()
+        .map(|employee| employee.id.as_str());
+    let target_team_ids = target_employee
+        .as_ref()
+        .and_then(|employee| {
+            employee
+                .site_accesses
+                .iter()
+                .find(|access| access.site_id == site_id)
+        })
+        .map(|access| access.team_ids.clone())
+        .unwrap_or_default();
+    let check = evaluate_permission(
+        &db,
+        &actor_id,
+        site_id,
+        "ORG04-01",
+        Some(PermissionTarget {
+            site_id: Some(site_id),
+            target_employee_id,
+            target_team_ids: &target_team_ids,
+            lock_state: None,
+        }),
+    );
+    if !check.allowed || (target_employee.is_none() && check.effective_scope != Scope::Sites) {
+        return Err(err_resp(StatusCode::FORBIDDEN, check.reason));
+    }
+
+    if payload.published {
+        let publish_check = evaluate_permission(
+            &db,
+            &actor_id,
+            site_id,
+            "ORG04-06",
+            Some(PermissionTarget {
+                site_id: Some(site_id),
+                target_employee_id,
+                target_team_ids: &target_team_ids,
+                lock_state: None,
+            }),
+        );
+        if !publish_check.allowed
+            || (target_employee.is_none() && publish_check.effective_scope != Scope::Sites)
+        {
+            return Err(err_resp(StatusCode::FORBIDDEN, publish_check.reason));
+        }
+    }
+
+    let position = db
+        .positions
+        .iter()
+        .find(|position| {
+            position.id == payload.position_id && position.site_id == site_id && position.active
+        })
+        .cloned()
+        .ok_or_else(|| {
+            err_resp(
+                StatusCode::BAD_REQUEST,
+                "Poste actif introuvable pour ce club.",
+            )
+        })?;
+    if let Some(employee) = target_employee.as_ref() {
+        let access = employee
+            .site_accesses
+            .iter()
+            .find(|access| access.site_id == site_id)
+            .ok_or_else(|| err_resp(StatusCode::FORBIDDEN, "Salarié hors périmètre du club."))?;
+        if !access.position_ids.is_empty() && !access.position_ids.contains(&position.id) {
+            return Err(err_resp(
+                StatusCode::FORBIDDEN,
+                "Poste hors habilitation du salarié.",
+            ));
+        }
+    }
+    let shift = Shift {
+        id: format!(
+            "sh-srv-{}-{}",
+            Utc::now().timestamp_micros(),
+            db.shifts.len()
+        ),
+        site_id: site_id.to_string(),
+        date: payload.date,
+        start_time: payload.start_time,
+        end_time: payload.end_time,
+        break_minutes: payload.break_minutes,
+        employee_id: target_employee_id.map(str::to_string),
+        position_id: position.id,
+        mission_label: None,
+        tasks: vec![payload.role_label],
+        lock_state: "none".into(),
+        published: payload.published,
+    };
+    let target_label = target_employee
+        .as_ref()
+        .map(|employee| format!("{} {}", employee.first_name, employee.last_name))
+        .unwrap_or_else(|| "Non assigné".into());
+    let before_shifts = db.shifts.clone();
+    let before_audit = db.audit_log.clone();
+    db.shifts.push(shift.clone());
+    append_audit(
+        &mut db,
+        &actor_id,
+        "Création de shift",
+        format!("Ajout créneau {}", shift.id),
+        site_id,
+        &target_label,
+        None,
+        Some(format!("{}-{}", shift.start_time, shift.end_time)),
+    );
+    if let Err(error) = persist_state(&state.data_dir, &db) {
+        db.shifts = before_shifts;
+        db.audit_log = before_audit;
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Impossible de persister le shift : {error}"),
+        ));
+    }
+    Ok((StatusCode::CREATED, Json(shift)))
+}
+
 async fn patch_shift(
     State(state): State<SharedState>,
     headers: HeaderMap,
     Path(shift_id): Path<String>,
     Json(patch): Json<UpdateShiftPayload>,
 ) -> Result<Json<Shift>, (StatusCode, Json<Value>)> {
-    let (actor_id, site_id) = extract_actor_site(&headers);
+    let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
     let mut db = state.db.write().await;
 
     let shift_idx = db
@@ -1049,6 +1248,18 @@ async fn patch_shift(
         .map(|a| a.team_ids.clone())
         .unwrap_or_default();
 
+    let changes_schedule = patch.start_time.is_some()
+        || patch.end_time.is_some()
+        || patch.break_minutes.is_some()
+        || patch.employee_id.is_some()
+        || patch.date.is_some();
+    if !changes_schedule && patch.published.is_none() && patch.lock_state.is_none() {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            "Aucune modification de shift fournie.",
+        ));
+    }
+
     let check = evaluate_permission(
         &db,
         &actor_id,
@@ -1061,15 +1272,160 @@ async fn patch_shift(
             lock_state: Some(&shift_snapshot.lock_state),
         }),
     );
-
-    if !check.allowed {
+    if changes_schedule
+        && (!check.allowed
+            || (shift_snapshot.employee_id.is_none() && check.effective_scope != Scope::Sites))
+    {
         return Err(err_resp(StatusCode::FORBIDDEN, check.reason));
     }
 
+    let requested_employee_id = patch.employee_id.as_ref().map(|employee_id| {
+        if employee_id == "UNASSIGNED" {
+            None
+        } else {
+            Some(employee_id.clone())
+        }
+    });
+    if changes_schedule {
+        if let Some(target_employee_id) = requested_employee_id.as_ref().and_then(Option::as_ref) {
+            let target_employee = db
+                .employees
+                .iter()
+                .find(|employee| employee.id == *target_employee_id)
+                .ok_or_else(|| err_resp(StatusCode::FORBIDDEN, "Salarié hors périmètre."))?;
+            let target_access = target_employee
+                .site_accesses
+                .iter()
+                .find(|access| access.site_id == shift_snapshot.site_id)
+                .ok_or_else(|| {
+                    err_resp(StatusCode::FORBIDDEN, "Salarié hors périmètre du club.")
+                })?;
+            if !target_access.position_ids.is_empty()
+                && !target_access
+                    .position_ids
+                    .contains(&shift_snapshot.position_id)
+            {
+                return Err(err_resp(
+                    StatusCode::FORBIDDEN,
+                    "Poste hors habilitation du salarié.",
+                ));
+            }
+            let destination_check = evaluate_permission(
+                &db,
+                &actor_id,
+                &shift_snapshot.site_id,
+                "ORG04-02",
+                Some(PermissionTarget {
+                    site_id: Some(&shift_snapshot.site_id),
+                    target_employee_id: Some(&target_employee.id),
+                    target_team_ids: &target_access.team_ids,
+                    lock_state: Some(&shift_snapshot.lock_state),
+                }),
+            );
+            if !destination_check.allowed {
+                return Err(err_resp(StatusCode::FORBIDDEN, destination_check.reason));
+            }
+        } else if requested_employee_id.is_some() && check.effective_scope != Scope::Sites {
+            return Err(err_resp(
+                StatusCode::FORBIDDEN,
+                "La désaffectation d’un shift exige une portée établissement.",
+            ));
+        }
+    }
+
+    if patch.published.is_some() {
+        let publish_check = evaluate_permission(
+            &db,
+            &actor_id,
+            &shift_snapshot.site_id,
+            "ORG04-06",
+            Some(PermissionTarget {
+                site_id: Some(&shift_snapshot.site_id),
+                target_employee_id: shift_snapshot.employee_id.as_deref(),
+                target_team_ids: &target_teams,
+                lock_state: Some(&shift_snapshot.lock_state),
+            }),
+        );
+        if !publish_check.allowed
+            || (shift_snapshot.employee_id.is_none()
+                && publish_check.effective_scope != Scope::Sites)
+        {
+            return Err(err_resp(StatusCode::FORBIDDEN, publish_check.reason));
+        }
+    }
+
+    if let Some(lock_state) = patch.lock_state.as_deref() {
+        if lock_state != "none" && lock_state != "red" {
+            return Err(err_resp(StatusCode::BAD_REQUEST, "État de verrouillage invalide."));
+        }
+        let lock_action = if lock_state == "red" || shift_snapshot.lock_state == "red" {
+            "ORG04-05"
+        } else {
+            "ORG04-04"
+        };
+        let lock_check = evaluate_permission(
+            &db,
+            &actor_id,
+            &shift_snapshot.site_id,
+            lock_action,
+            Some(PermissionTarget {
+                site_id: Some(&shift_snapshot.site_id),
+                target_employee_id: shift_snapshot.employee_id.as_deref(),
+                target_team_ids: &target_teams,
+                lock_state: Some(&shift_snapshot.lock_state),
+            }),
+        );
+        if !lock_check.allowed
+            || (shift_snapshot.employee_id.is_none()
+                && lock_check.effective_scope != Scope::Sites)
+        {
+            return Err(err_resp(StatusCode::FORBIDDEN, lock_check.reason));
+        }
+    }
+
+    if changes_schedule {
+        let updated_date = patch.date.as_deref().unwrap_or(&shift_snapshot.date);
+        if chrono::NaiveDate::parse_from_str(updated_date, "%Y-%m-%d").is_err() {
+            return Err(err_resp(StatusCode::BAD_REQUEST, "Date de shift invalide."));
+        }
+        let updated_start = patch
+            .start_time
+            .as_deref()
+            .unwrap_or(&shift_snapshot.start_time);
+        let updated_end = patch
+            .end_time
+            .as_deref()
+            .unwrap_or(&shift_snapshot.end_time);
+        let updated_break = patch.break_minutes.unwrap_or(shift_snapshot.break_minutes);
+        let start_minutes = parse_hhmm_minutes(updated_start)
+            .ok_or_else(|| err_resp(StatusCode::BAD_REQUEST, "Heure de début invalide."))?;
+        let end_minutes = parse_hhmm_minutes(updated_end)
+            .ok_or_else(|| err_resp(StatusCode::BAD_REQUEST, "Heure de fin invalide."))?;
+        let duration = if end_minutes < start_minutes {
+            end_minutes + 24 * 60 - start_minutes
+        } else {
+            end_minutes - start_minutes
+        };
+        if updated_break > 180 || duration <= updated_break {
+            return Err(err_resp(
+                StatusCode::BAD_REQUEST,
+                "Durée ou pause de shift invalide.",
+            ));
+        }
+    }
+
     let before = format!(
-        "{}-{} (pause {}m)",
-        shift_snapshot.start_time, shift_snapshot.end_time, shift_snapshot.break_minutes
+        "{} {}-{} (pause {}m; salarié {}; publié {}; verrou {})",
+        shift_snapshot.date,
+        shift_snapshot.start_time,
+        shift_snapshot.end_time,
+        shift_snapshot.break_minutes,
+        shift_snapshot.employee_id.as_deref().unwrap_or("UNASSIGNED"),
+        shift_snapshot.published,
+        shift_snapshot.lock_state
     );
+    let before_shifts = db.shifts.clone();
+    let before_audit = db.audit_log.clone();
     {
         let shift = &mut db.shifts[shift_idx];
         if let Some(st) = patch.start_time {
@@ -1081,15 +1437,35 @@ async fn patch_shift(
         if let Some(bm) = patch.break_minutes {
             shift.break_minutes = bm;
         }
+        if let Some(employee_id) = requested_employee_id {
+            shift.employee_id = employee_id;
+        }
+        if let Some(date) = patch.date {
+            shift.date = date;
+        }
+        if let Some(published) = patch.published {
+            shift.published = published;
+        }
+        if let Some(lock_state) = patch.lock_state {
+            shift.lock_state = lock_state;
+        }
     }
     let updated = db.shifts[shift_idx].clone();
     let after = format!(
-        "{}-{} (pause {}m)",
-        updated.start_time, updated.end_time, updated.break_minutes
+        "{} {}-{} (pause {}m; salarié {}; publié {}; verrou {})",
+        updated.date,
+        updated.start_time,
+        updated.end_time,
+        updated.break_minutes,
+        updated.employee_id.as_deref().unwrap_or("UNASSIGNED"),
+        updated.published,
+        updated.lock_state
     );
-    let target_label = target_emp
+    let target_label = updated
+        .employee_id
         .as_ref()
-        .map(|e| format!("{} {}", e.first_name, e.last_name))
+        .and_then(|employee_id| db.employees.iter().find(|employee| &employee.id == employee_id))
+        .map(|employee| format!("{} {}", employee.first_name, employee.last_name))
         .unwrap_or_else(|| "Non assigné".to_string());
 
     append_audit(
@@ -1102,9 +1478,89 @@ async fn patch_shift(
         Some(before),
         Some(after),
     );
-    let _ = persist_state(&state.data_dir, &db);
+    if let Err(error) = persist_state(&state.data_dir, &db) {
+        db.shifts = before_shifts;
+        db.audit_log = before_audit;
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Impossible de persister le shift : {error}"),
+        ));
+    }
 
     Ok(Json(updated))
+}
+
+async fn delete_shift(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Path(shift_id): Path<String>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
+    let mut db = state.db.write().await;
+    let shift_idx = db
+        .shifts
+        .iter()
+        .position(|shift| shift.id == shift_id)
+        .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Shift introuvable."))?;
+    let shift = db.shifts[shift_idx].clone();
+    let target_employee = shift.employee_id.as_ref().and_then(|employee_id| {
+        db.employees
+            .iter()
+            .find(|employee| &employee.id == employee_id)
+            .cloned()
+    });
+    let target_team_ids = target_employee
+        .as_ref()
+        .and_then(|employee| {
+            employee
+                .site_accesses
+                .iter()
+                .find(|access| access.site_id == shift.site_id)
+        })
+        .map(|access| access.team_ids.clone())
+        .unwrap_or_default();
+    let check = evaluate_permission(
+        &db,
+        &actor_id,
+        &site_id,
+        "ORG04-02",
+        Some(PermissionTarget {
+            site_id: Some(&shift.site_id),
+            target_employee_id: shift.employee_id.as_deref(),
+            target_team_ids: &target_team_ids,
+            lock_state: Some(&shift.lock_state),
+        }),
+    );
+    if !check.allowed || (shift.employee_id.is_none() && check.effective_scope != Scope::Sites) {
+        return Err(err_resp(StatusCode::FORBIDDEN, check.reason));
+    }
+
+    let target_label = target_employee
+        .as_ref()
+        .map(|employee| format!("{} {}", employee.first_name, employee.last_name))
+        .unwrap_or_else(|| "Non assigné".into());
+    let before_shifts = db.shifts.clone();
+    let before_audit = db.audit_log.clone();
+    db.shifts.remove(shift_idx);
+    append_audit(
+        &mut db,
+        &actor_id,
+        "Suppression de shift",
+        format!("Suppression créneau {}", shift.id),
+        &shift.site_id,
+        &target_label,
+        Some(format!("{}-{}", shift.start_time, shift.end_time)),
+        None,
+    );
+    if let Err(error) = persist_state(&state.data_dir, &db) {
+        db.shifts = before_shifts;
+        db.audit_log = before_audit;
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Impossible de persister la suppression du shift : {error}"),
+        ));
+    }
+    Ok(Json(json!({ "ok": true, "shiftId": shift.id })))
 }
 
 async fn get_admin_profiles(
@@ -3018,6 +3474,289 @@ mod tests {
             sessions: RwLock::new(HashMap::new()),
             login_attempts: RwLock::new(HashMap::new()),
         })
+    }
+
+    async fn session_headers(state: &SharedState, actor_id: &str, site_id: &str) -> HeaderMap {
+        let token = format!(
+            "test-session-{}-{}",
+            actor_id,
+            Utc::now().timestamp_nanos_opt().unwrap_or_default()
+        );
+        state.sessions.write().await.insert(
+            token.clone(),
+            (actor_id.to_string(), Utc::now().timestamp() + 3600),
+        );
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {token}")).unwrap(),
+        );
+        headers.insert(
+            "x-cfitness-site-id",
+            HeaderValue::from_str(site_id).unwrap(),
+        );
+        headers
+    }
+
+    #[tokio::test]
+    async fn shift_write_routes_enforce_action_site_and_managed_team_scope() {
+        let state = test_state();
+        let headers = session_headers(&state, "emp-planif-av", "club-carre-soie").await;
+        let (coach_target_id, accueil_target_id) = {
+            let mut db = state.db.write().await;
+            let planner = db
+                .employees
+                .iter()
+                .find(|employee| employee.id == "emp-planif-av")
+                .unwrap();
+            let planner_access = planner
+                .site_accesses
+                .iter()
+                .find(|access| access.site_id == "club-carre-soie")
+                .unwrap();
+            assert!(planner_access
+                .managed_team_ids
+                .contains(&"team-cs-coaching".into()));
+
+            let profile = db
+                .profiles
+                .iter_mut()
+                .find(|profile| profile.id == "planificateur_avance")
+                .unwrap();
+            profile.scope_selected = "teams".into();
+            for row in &mut profile.rows {
+                if row.action_id == "ORG04-01" || row.action_id == "ORG04-02" {
+                    row.checked = Some(true);
+                } else if row.action_id == "ORG04-05" || row.action_id == "ORG04-06" {
+                    row.checked = Some(false);
+                }
+            }
+
+            let coach_target = db
+                .employees
+                .iter()
+                .find(|employee| {
+                    employee.id != "emp-planif-av"
+                        && employee.site_accesses.iter().any(|access| {
+                            access.site_id == "club-carre-soie"
+                                && access.team_ids.contains(&"team-cs-coaching".into())
+                                && access.position_ids.contains(&"pos-cs-coach".into())
+                        })
+                })
+                .unwrap()
+                .id
+                .clone();
+            let accueil_target = db
+                .employees
+                .iter()
+                .find(|employee| {
+                    employee.id != "emp-planif-av"
+                        && employee.site_accesses.iter().any(|access| {
+                            access.site_id == "club-carre-soie"
+                                && access.team_ids.contains(&"team-cs-accueil".into())
+                                && !access.team_ids.contains(&"team-cs-coaching".into())
+                                && access.position_ids.contains(&"pos-cs-accueil".into())
+                        })
+                })
+                .unwrap()
+                .id
+                .clone();
+            (coach_target, accueil_target)
+        };
+
+        let created = post_shift(
+            State(state.clone()),
+            headers.clone(),
+            Json(CreateShiftPayload {
+                site_id: "club-carre-soie".into(),
+                employee_id: Some(coach_target_id.clone()),
+                date: "2026-11-23".into(),
+                start_time: "09:00".into(),
+                end_time: "17:00".into(),
+                break_minutes: 60,
+                role_label: "Coaching Plateau & Cours".into(),
+                position_id: "pos-cs-coach".into(),
+                published: false,
+            }),
+        )
+        .await
+        .unwrap();
+        assert_eq!(created.0, StatusCode::CREATED);
+
+        let forbidden_team = post_shift(
+            State(state.clone()),
+            headers.clone(),
+            Json(CreateShiftPayload {
+                site_id: "club-carre-soie".into(),
+                employee_id: Some(accueil_target_id.clone()),
+                date: "2026-11-23".into(),
+                start_time: "09:00".into(),
+                end_time: "17:00".into(),
+                break_minutes: 60,
+                role_label: "Accueil & Vente".into(),
+                position_id: "pos-cs-accueil".into(),
+                published: false,
+            }),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(forbidden_team.0, StatusCode::FORBIDDEN);
+
+        let forbidden_site = post_shift(
+            State(state.clone()),
+            headers.clone(),
+            Json(CreateShiftPayload {
+                site_id: "club-beynost".into(),
+                employee_id: Some(coach_target_id.clone()),
+                date: "2026-11-23".into(),
+                start_time: "09:00".into(),
+                end_time: "17:00".into(),
+                break_minutes: 60,
+                role_label: "Coaching Plateau & Cours".into(),
+                position_id: "pos-cs-coach".into(),
+                published: false,
+            }),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(forbidden_site.0, StatusCode::FORBIDDEN);
+
+        let forbidden_publish = post_shift(
+            State(state.clone()),
+            headers.clone(),
+            Json(CreateShiftPayload {
+                site_id: "club-carre-soie".into(),
+                employee_id: Some(coach_target_id.clone()),
+                date: "2026-11-23".into(),
+                start_time: "09:00".into(),
+                end_time: "17:00".into(),
+                break_minutes: 60,
+                role_label: "Coaching Plateau & Cours".into(),
+                position_id: "pos-cs-coach".into(),
+                published: true,
+            }),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(forbidden_publish.0, StatusCode::FORBIDDEN);
+
+        let shift_id = created.1.id.clone();
+        let forbidden_publish_update = patch_shift(
+            State(state.clone()),
+            headers.clone(),
+            Path(shift_id.clone()),
+            Json(UpdateShiftPayload {
+                start_time: None,
+                end_time: None,
+                break_minutes: None,
+                employee_id: None,
+                date: None,
+                published: Some(true),
+                lock_state: None,
+            }),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(forbidden_publish_update.0, StatusCode::FORBIDDEN);
+
+        let forbidden_lock_update = patch_shift(
+            State(state.clone()),
+            headers.clone(),
+            Path(shift_id.clone()),
+            Json(UpdateShiftPayload {
+                start_time: None,
+                end_time: None,
+                break_minutes: None,
+                employee_id: None,
+                date: None,
+                published: None,
+                lock_state: Some("red".into()),
+            }),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(forbidden_lock_update.0, StatusCode::FORBIDDEN);
+
+        let forbidden_move = patch_shift(
+            State(state.clone()),
+            headers.clone(),
+            Path(shift_id.clone()),
+            Json(UpdateShiftPayload {
+                start_time: None,
+                end_time: None,
+                break_minutes: None,
+                employee_id: Some(accueil_target_id),
+                date: Some("2026-11-24".into()),
+                published: None,
+                lock_state: None,
+            }),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(forbidden_move.0, StatusCode::FORBIDDEN);
+        {
+            let db = state.db.read().await;
+            let persisted = db.shifts.iter().find(|shift| shift.id == shift_id).unwrap();
+            assert_eq!(persisted.date, "2026-11-23");
+            assert_eq!(
+                persisted.employee_id.as_deref(),
+                Some(coach_target_id.as_str())
+            );
+        }
+
+        {
+            let mut db = state.db.write().await;
+            let profile = db
+                .profiles
+                .iter_mut()
+                .find(|profile| profile.id == "planificateur_avance")
+                .unwrap();
+            for row in &mut profile.rows {
+                if row.action_id == "ORG04-05" || row.action_id == "ORG04-06" {
+                    row.checked = Some(true);
+                }
+            }
+        }
+        let published = patch_shift(
+            State(state.clone()),
+            headers.clone(),
+            Path(shift_id.clone()),
+            Json(UpdateShiftPayload {
+                start_time: None,
+                end_time: None,
+                break_minutes: None,
+                employee_id: None,
+                date: None,
+                published: Some(true),
+                lock_state: None,
+            }),
+        )
+        .await
+        .unwrap();
+        assert!(published.0.published);
+
+        let locked = patch_shift(
+            State(state.clone()),
+            headers.clone(),
+            Path(shift_id.clone()),
+            Json(UpdateShiftPayload {
+                start_time: None,
+                end_time: None,
+                break_minutes: None,
+                employee_id: None,
+                date: None,
+                published: None,
+                lock_state: Some("red".into()),
+            }),
+        )
+        .await
+        .unwrap();
+        assert_eq!(locked.0.lock_state, "red");
+
+        let deleted = delete_shift(State(state), headers, Path(shift_id))
+            .await
+            .unwrap();
+        assert_eq!(deleted.0["ok"], true);
     }
 
     #[tokio::test]

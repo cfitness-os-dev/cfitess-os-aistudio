@@ -98,6 +98,7 @@ export interface Shift {
   breakMinutes: number;
   roleLabel: string;
   published: boolean;
+  lockState?: 'none' | 'red';
 }
 
 export type PointageType = 'arrivee' | 'debut_pause' | 'fin_pause' | 'depart';

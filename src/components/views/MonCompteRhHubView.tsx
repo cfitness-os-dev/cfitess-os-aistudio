@@ -620,8 +620,6 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                 <div className="space-y-4">
                   <PlanningHrView
                     forcedSubTab="CONGES"
-                    personalScopeOnly={!isShellAdmin}
-                    scopedEmployeeId={!isShellAdmin ? currentUser.id : undefined}
                   />
                 </div>
               )}
@@ -630,8 +628,6 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                 <div className="space-y-4">
                   <PlanningHrView
                     forcedSubTab="POINTAGES"
-                    personalScopeOnly={!isShellAdmin}
-                    scopedEmployeeId={!isShellAdmin ? currentUser.id : undefined}
                   />
                 </div>
               )}
@@ -651,21 +647,6 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                 <div className="space-y-4">
                   <PlanningHrView
                     forcedSubTab="SILAE"
-                    canViewSalaries={Boolean(
-                      dashboard.session.resolvedPermissions['ORG04-10']?.allowed
-                    )}
-                    isReadOnly={
-                      dashboard.session.activeProfile.name
-                        .toLowerCase()
-                        .includes('lecture seule')
-                    }
-                    forcedClubScope={
-                      activeSiteId === 'club-beynost'
-                        ? 'beynost'
-                        : activeSiteId === 'club-carre-soie'
-                        ? 'carre-de-soie'
-                        : undefined
-                    }
                   />
                 </div>
               )}

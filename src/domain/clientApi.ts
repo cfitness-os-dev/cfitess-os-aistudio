@@ -128,6 +128,26 @@ export const clientApi = {
     return requestJson<DashboardPayload>('/api/dashboard', auth);
   },
 
+  createShift(
+    auth: ApiAuthContext,
+    shift: {
+      siteId: string;
+      employeeId: string | null;
+      date: string;
+      startTime: string;
+      endTime: string;
+      breakMinutes: number;
+      roleLabel: string;
+      positionId: string;
+      published: boolean;
+    }
+  ): Promise<Shift> {
+    return requestJson<Shift>('/api/shifts', auth, {
+      method: 'POST',
+      body: JSON.stringify(shift),
+    });
+  },
+
   assertSectionAccess(
     auth: ApiAuthContext,
     sectionId: McSectionId
@@ -141,7 +161,15 @@ export const clientApi = {
   updateShift(
     auth: ApiAuthContext,
     shiftId: string,
-    patch: { startTime?: string; endTime?: string; breakMinutes?: number }
+    patch: {
+      startTime?: string;
+      endTime?: string;
+      breakMinutes?: number;
+      employeeId?: string | null;
+      date?: string;
+      published?: boolean;
+      lockState?: 'none' | 'red';
+    }
   ): Promise<Shift> {
     return requestJson<Shift>(
       `/api/shifts/${encodeURIComponent(shiftId)}`,
@@ -150,6 +178,14 @@ export const clientApi = {
         method: 'PATCH',
         body: JSON.stringify(patch),
       }
+    );
+  },
+
+  deleteShift(auth: ApiAuthContext, shiftId: string): Promise<{ ok: boolean; shiftId: string }> {
+    return requestJson<{ ok: boolean; shiftId: string }>(
+      `/api/shifts/${encodeURIComponent(shiftId)}`,
+      auth,
+      { method: 'DELETE' }
     );
   },
 
