@@ -1798,7 +1798,19 @@ export function EmployeeMobileShell() {
                 {/* Contenu du module complet intégré dans le Téléphone */}
                 <div className="flex-1 p-3 sm:p-4 overflow-y-auto max-h-[680px]">
                   {activeSection === 'my-day' && <MyDayCollaboratorView />}
-                  {activeSection === 'planning-hr' && <PlanningHrView />}
+                  {activeSection === 'planning-hr' && (
+                    <PlanningHrView
+                      personalScopeOnly={currentUser.role !== 'admin' && currentUser.role !== 'manager'}
+                      scopedEmployeeId={
+                        currentUser.role !== 'admin' && currentUser.role !== 'manager'
+                          ? currentUser.id
+                          : undefined
+                      }
+                      forcedClubScope={currentUser.role === 'manager' ? currentUser.clubId : undefined}
+                      canViewSalaries={currentUser.role === 'admin' || Boolean(currentUser.canAccessFinances)}
+                      isReadOnly={currentUser.role !== 'admin' && currentUser.role !== 'manager'}
+                    />
+                  )}
                   {activeSection === 'recovery' && <RecoveryView />}
                   {activeSection === 'telephony' && <TelephonyView />}
                   {activeSection === 'crm' && <CrmView />}
@@ -2100,7 +2112,19 @@ export function EmployeeMobileShell() {
             {/* Tablet Main Active Module Content */}
             <main className="flex-1 min-w-0 p-3 sm:p-4 overflow-y-auto overflow-x-clip max-h-[760px]">
               {activeSection === 'my-day' && <MyDayCollaboratorView />}
-              {activeSection === 'planning-hr' && <PlanningHrView />}
+              {activeSection === 'planning-hr' && (
+                <PlanningHrView
+                  personalScopeOnly={currentUser.role !== 'admin' && currentUser.role !== 'manager'}
+                  scopedEmployeeId={
+                    currentUser.role !== 'admin' && currentUser.role !== 'manager'
+                      ? currentUser.id
+                      : undefined
+                  }
+                  forcedClubScope={currentUser.role === 'manager' ? currentUser.clubId : undefined}
+                  canViewSalaries={currentUser.role === 'admin' || Boolean(currentUser.canAccessFinances)}
+                  isReadOnly={currentUser.role !== 'admin' && currentUser.role !== 'manager'}
+                />
+              )}
               {activeSection === 'recovery' && <RecoveryView />}
               {activeSection === 'telephony' && <TelephonyView />}
               {activeSection === 'crm' && <CrmView />}

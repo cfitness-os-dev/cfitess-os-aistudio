@@ -1112,7 +1112,7 @@ export function AdminShell() {
         )}
 
         {/* Active View Content */}
-        <main className="flex-1 p-3 sm:p-6 pb-24 lg:pb-6 max-w-[1440px] w-full mx-auto min-w-0 overflow-x-clip">
+        <main className="flex-1 p-3 sm:px-6 sm:pt-6 sm:pb-24 lg:p-6 max-w-[1440px] w-full mx-auto min-w-0 overflow-x-clip">
           {activeSection === 'my-day' && (
             <MonCompteRhHubView subTarget={navSubTarget} />
           )}
