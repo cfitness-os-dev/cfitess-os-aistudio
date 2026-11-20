@@ -65,9 +65,9 @@ function getJobBoardBadgeStyle(channel: string): string {
 
 export function AtsView({
   initialTab,
-  personalScopeOnly = false,
+  personalScopeOnly: propPersonalScopeOnly,
   scopedEmployeeId,
-  canManageRecruitment = true,
+  canManageRecruitment: propCanManageRecruitment,
 }: {
   initialTab?: 'FLATCHR_KANBAN' | 'YOUSIGN_PARAPHEUR';
   personalScopeOnly?: boolean;
@@ -88,6 +88,15 @@ export function AtsView({
     runCandidateOnboarding,
     navSubTarget,
   } = useCfos();
+
+  const isManagerOrAdmin = currentUser.role === 'admin' || currentUser.role === 'manager';
+  const personalScopeOnly =
+    propPersonalScopeOnly !== undefined ? propPersonalScopeOnly : !isManagerOrAdmin;
+  const canManageRecruitment =
+    propCanManageRecruitment !== undefined
+      ? propCanManageRecruitment
+      : isManagerOrAdmin && !personalScopeOnly;
+  const effectiveSelfId: string = scopedEmployeeId ?? currentUser.id;
 
   const [atsMode, setAtsMode] = useState<'FLATCHR_KANBAN' | 'YOUSIGN_PARAPHEUR'>(
     !canManageRecruitment
@@ -187,7 +196,7 @@ export function AtsView({
     });
   };
 
-  const effectiveSelfId = scopedEmployeeId ?? currentUser.id;
+  // effectiveSelfId est déclaré plus haut (ligne 99)
   const contractDocs = [...extraDocs, ...hrDocuments].filter((d) => {
     if (personalScopeOnly && d.employeeId !== effectiveSelfId) {
       return false;
@@ -879,7 +888,7 @@ export function AtsView({
                             )}
                           </div>
 
-                          {!isSigned && (!personalScopeOnly || doc.employeeId === effectiveSelfId) && (
+                          {!isSigned && (doc.employeeId === currentUser.id || currentUser.role === 'admin') && (
                             <div className="space-y-2 pt-1">
                               <div className="flex items-center gap-2">
                                 <input

@@ -161,8 +161,17 @@ function getSkelloShiftBlockStyle(roleLabel: string, clubId: ClubId): {
 
 export function PlanningHrView({
   forcedSubTab,
+  personalScopeOnly: propPersonalScopeOnly,
+  scopedEmployeeId: propScopedEmployeeId,
+  forcedClubScope: propForcedClubScope,
 }: {
   forcedSubTab?: 'POINTAGES' | 'CONGES' | 'SILAE';
+  /** Forcer le périmètre personnel (MC04/MC05 espace employé) */
+  personalScopeOnly?: boolean;
+  /** ID de l'employé dont afficher uniquement les données */
+  scopedEmployeeId?: string;
+  /** Restreindre à un seul club (ex: club principal de l'employé) */
+  forcedClubScope?: ClubId;
 } = {}) {
   const {
     currentUser,
@@ -397,16 +406,19 @@ export function PlanningHrView({
     ),
   ];
   const personalScopeOnly =
-    selectedClubIds.length > 0 &&
-    selectedClubIds.every(
-      (clubId) => siteDashboard(clubId)?.session.activeProfile.scopeSelected === 'self'
-    );
+    propPersonalScopeOnly !== undefined
+      ? propPersonalScopeOnly
+      : selectedClubIds.length > 0 &&
+        selectedClubIds.every(
+          (clubId) => siteDashboard(clubId)?.session.activeProfile.scopeSelected === 'self'
+        );
   const scopedEmployeeId =
-    selectedClubIds
+    propScopedEmployeeId ??
+    (selectedClubIds
       .map((clubId) => siteDashboard(clubId)?.session.employee.id)
-      .find((employeeId): employeeId is string => Boolean(employeeId)) ?? currentUser.id;
+      .find((employeeId): employeeId is string => Boolean(employeeId)) ?? currentUser.id);
   const forcedClubScope =
-    selectedClubIds.length === 1 ? selectedClubIds[0] : undefined;
+    propForcedClubScope ?? (selectedClubIds.length === 1 ? selectedClubIds[0] : undefined);
   const canCreatePlanning = selectedClubIds.some((clubId) =>
     hasActionForClub(clubId, 'ORG04-01')
   );

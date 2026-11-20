@@ -1640,6 +1640,10 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
   };
 
   const unlockEmployeePin = (employeeId: string) => {
+    if (currentUser.role !== 'admin' && currentUser.role !== 'manager') {
+      notify('error', 'Habilitation requise : seul un responsable ou administrateur peut réinitialiser un code PIN.');
+      return;
+    }
     setState((prev) => {
       const target = prev.employees.find((e) => e.id === employeeId);
       return {
@@ -1839,6 +1843,11 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     weeklyHours,
     simulateMidWayFailure,
   }) => {
+    if (currentUser.role !== 'admin' && currentUser.role !== 'manager') {
+      const errorMsg = 'Accès refusé : le recrutement et l’embauche sont réservés aux managers et administrateurs RH.';
+      notify('error', errorMsg);
+      return { ok: false, error: errorMsg };
+    }
     const candidate = state.candidates.find((c) => c.id === candidateId);
     if (!candidate) {
       return { ok: false, error: 'Candidat introuvable.' };
@@ -1956,6 +1965,10 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
   };
 
   const createJobOffer: CfosContextValue['createJobOffer'] = (input) => {
+    if (currentUser.role !== 'admin' && currentUser.role !== 'manager') {
+      notify('error', 'Accès refusé : la publication d’offres est réservée aux responsables RH.');
+      return;
+    }
     const newOffer: JobOffer = {
       id: `off-${Date.now()}`,
       ...input,
@@ -2731,6 +2744,11 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     const doc = state.hrDocuments.find((d) => d.id === docId);
     if (!doc) {
       return { ok: false, message: 'Document RH introuvable.' };
+    }
+    if (doc.employeeId !== currentUser.id && currentUser.role !== 'admin') {
+      const msg = 'Interdiction de signer le document contractuel d’un tiers.';
+      notify('error', msg);
+      return { ok: false, message: msg };
     }
     const emp = state.employees.find((e) => e.id === doc.employeeId) || currentUser;
     const res = createInternalElectronicSignatureProof({

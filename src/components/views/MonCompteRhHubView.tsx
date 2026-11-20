@@ -620,6 +620,9 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                 <div className="space-y-4">
                   <PlanningHrView
                     forcedSubTab="CONGES"
+                    personalScopeOnly={!isShellAdmin}
+                    scopedEmployeeId={!isShellAdmin ? currentUser.id : undefined}
+                    forcedClubScope={currentUser.clubId}
                   />
                 </div>
               )}
@@ -628,6 +631,9 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                 <div className="space-y-4">
                   <PlanningHrView
                     forcedSubTab="POINTAGES"
+                    personalScopeOnly={!isShellAdmin}
+                    scopedEmployeeId={!isShellAdmin ? currentUser.id : undefined}
+                    forcedClubScope={currentUser.clubId}
                   />
                 </div>
               )}

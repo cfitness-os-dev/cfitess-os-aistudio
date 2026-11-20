@@ -2340,8 +2340,9 @@ export function PlanningAndModulesView({
                       managedTeamIds: [],
                     });
                     addStaffEmployee({
-                      firstName: newEmpFirst.trim(),
-                      lastName: newEmpLast.trim(),
+                      id: serverRes.employee.id,
+                      firstName: serverRes.employee.firstName,
+                      lastName: serverRes.employee.lastName,
                       contractType: newEmpContract,
                       weeklyContractHours: newEmpHours,
                       role: newEmpRole,
