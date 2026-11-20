@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import {
   Activity,
-  CheckCircle2,
-  Copy,
   Dumbbell,
   ExternalLink,
   RefreshCw,
@@ -10,7 +8,7 @@ import {
   WifiOff,
 } from 'lucide-react';
 import { useCfos } from '../context/CfosContext';
-import { buildMywellnessContextualUrl, formatClubName } from '../domain/rules';
+import { formatClubName } from '../domain/rules';
 import type { ClubId } from '../types/cfos';
 
 export interface MywellnessQuickConnectProps {
@@ -31,8 +29,6 @@ export function MywellnessQuickConnect({
     heitzMembers,
     inBodyScans,
     serverPowerStatus,
-    openMywellnessLink,
-    setActiveSection,
     themeMode,
   } = useCfos();
 
@@ -47,12 +43,6 @@ export function MywellnessQuickConnect({
     selectedMemberId || ''
   );
   const [simulatedOffline, setSimulatedOffline] = useState<boolean>(false);
-  const [lastLaunchedPortal, setLastLaunchedPortal] = useState<{
-    url: string;
-    label: string;
-    timestamp: string;
-  } | null>(null);
-  const [copiedUrl, setCopiedUrl] = useState(false);
   const [syncPulse, setSyncPulse] = useState(false);
   const [checkupLatencyMs, setCheckupLatencyMs] = useState<{
     cds: number;
@@ -70,43 +60,6 @@ export function MywellnessQuickConnect({
   );
 
   const latestScan = inBodyScans[0];
-
-  const previewLink = buildMywellnessContextualUrl({
-    mywellnessMemberId: selectedMember?.mywellnessMemberId,
-    personName: selectedMember
-      ? `${selectedMember.firstName} ${selectedMember.lastName}`
-      : undefined,
-    clubId: selectedMember?.homeClubId || effectiveClub,
-  });
-
-  const handleSingleClickLaunch = () => {
-    const res = openMywellnessLink({
-      mywellnessMemberId: selectedMember?.mywellnessMemberId,
-      personName: selectedMember
-        ? `${selectedMember.firstName} ${selectedMember.lastName}`
-        : undefined,
-      clubId: selectedMember?.homeClubId || effectiveClub,
-    });
-    setLastLaunchedPortal({
-      url: res.url,
-      label: res.label,
-      timestamp: new Date().toLocaleTimeString('fr-FR'),
-    });
-    setCopiedUrl(false);
-    setActiveSection('devices', 'checkup');
-  };
-
-  const handleCopyUrl = async (url: string) => {
-    try {
-      if (navigator?.clipboard?.writeText) {
-        await navigator.clipboard.writeText(url);
-        setCopiedUrl(true);
-        setTimeout(() => setCopiedUrl(false), 2500);
-      }
-    } catch {
-      // ignore clipboard errors in restricted contexts
-    }
-  };
 
   const handleRefreshCheckupStatus = () => {
     setSyncPulse(true);
@@ -171,16 +124,18 @@ export function MywellnessQuickConnect({
           </span>
         </div>
 
-        <button
-          type="button"
-          onClick={handleSingleClickLaunch}
+        <a
+          href="https://pronext.mywellness.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Ouvrir le portail professionnel Mywellness (connexion personnelle dans un nouvel onglet)"
           data-testid="mywellness-sidebar-launch-link"
           className="w-full min-h-[38px] py-2 px-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs whitespace-nowrap"
         >
           <Dumbbell className="w-3.5 h-3.5 shrink-0" />
           <span>Mywellness Cloud</span>
           <ExternalLink className="w-3 h-3 shrink-0" />
-        </button>
+        </a>
       </div>
     );
   }
@@ -225,11 +180,12 @@ export function MywellnessQuickConnect({
           </span>
         </button>
 
-        <button
-          type="button"
-          onClick={handleSingleClickLaunch}
+        <a
+          href="https://pronext.mywellness.com/"
+          target="_blank"
+          rel="noopener noreferrer"
           data-testid="mywellness-header-launch-link"
-          title="Ouvrir le module intégré Technogym Checkup & Mywellness dans C.Fitness OS"
+          title="Ouvrir le portail professionnel Mywellness (connexion personnelle dans un nouvel onglet)"
           className={`min-h-[38px] px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all whitespace-nowrap shrink-0 ${
             isDark
               ? 'bg-violet-500/15 hover:bg-violet-500/25 text-violet-300 border-violet-500/30'
@@ -238,7 +194,7 @@ export function MywellnessQuickConnect({
         >
           <Dumbbell className="w-3.5 h-3.5 shrink-0" />
           <span>Mywellness</span>
-        </button>
+        </a>
       </div>
     );
   }
@@ -287,7 +243,7 @@ export function MywellnessQuickConnect({
           </div>
 
           <p className="text-xs text-slate-600 leading-relaxed">
-            Stations <strong>Technogym Checkup</strong> (C.Fitness Carré de Soie &amp; Beynost) synchronisées avec Mywellness Cloud.
+            Portail externe <strong>Mywellness</strong> : connexion personnelle directe dans un nouvel onglet (intégration API à étudier ultérieurement).
           </p>
 
           <div className="divide-y divide-slate-100 text-xs font-mono tabular-nums">
@@ -307,14 +263,18 @@ export function MywellnessQuickConnect({
         </div>
 
         <div className="pt-2 border-t border-slate-100">
-          <button
-            type="button"
-            onClick={handleSingleClickLaunch}
+          <a
+            href="https://pronext.mywellness.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Ouvrir le portail professionnel Mywellness (connexion personnelle dans un nouvel onglet)"
+            data-testid="mywellness-compact-launch-link"
             className="w-full min-h-[42px] py-2.5 px-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-semibold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all shadow-2xs whitespace-nowrap"
           >
             <Dumbbell className="w-4 h-4 shrink-0" />
-            <span>Ouvrir Bilans Mywellness &amp; Checkup</span>
-          </button>
+            <span>Ouvrir Mywellness Cloud</span>
+            <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+          </a>
         </div>
       </section>
     );
@@ -395,15 +355,18 @@ export function MywellnessQuickConnect({
             </button>
           </div>
 
-          <button
-            type="button"
+          <a
+            href="https://pronext.mywellness.com/"
+            target="_blank"
+            rel="noopener noreferrer"
             data-testid="mywellness-launch-btn"
-            onClick={handleSingleClickLaunch}
+            title="Ouvrir le portail professionnel Mywellness (connexion personnelle dans un nouvel onglet)"
             className="min-h-[40px] px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-semibold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-xs transition-all"
           >
             <Dumbbell className="w-4 h-4 shrink-0" />
-            <span>Ouvrir Bilans Mywellness &amp; Checkup</span>
-          </button>
+            <span>Ouvrir Mywellness Cloud</span>
+            <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+          </a>
         </div>
       </div>
 
@@ -550,48 +513,6 @@ export function MywellnessQuickConnect({
           </div>
         </div>
 
-        {/* Active Portal Launch Confirmation Banner */}
-        {lastLaunchedPortal && (
-          <div
-            data-testid="mywellness-portal-launched-banner"
-            className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-          >
-            <div className="flex items-start sm:items-center gap-2.5 min-w-0">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5 sm:mt-0" />
-              <div className="min-w-0">
-                <div className="font-bold text-slate-900 flex flex-wrap items-center gap-2">
-                  <span>{lastLaunchedPortal.label}</span>
-                  <span aria-hidden="true" className="text-slate-400">·</span>
-                  <span className="font-mono tabular-nums text-[11px] text-violet-600 shrink-0">
-                    {lastLaunchedPortal.timestamp}
-                  </span>
-                </div>
-                <div className="font-mono text-[11px] text-slate-500 break-all">
-                  {lastLaunchedPortal.url}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={() => handleCopyUrl(lastLaunchedPortal.url)}
-                className="min-h-[36px] px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 font-semibold text-xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
-              >
-                <Copy className="w-3.5 h-3.5 text-violet-600" />
-                <span>{copiedUrl ? 'Lien copié' : 'Copier l’URL'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveSection('devices')}
-                className="min-h-[36px] px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-semibold text-xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
-              >
-                <Activity className="w-3.5 h-3.5" />
-                <span>Détails Checkup</span>
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </section>
   );

@@ -217,6 +217,28 @@ test('TST24 — KPI manquant (null) distingué de zéro € sur Beynost', () => 
   assert.equal(beynost.payrollMassEur, 10940);
 });
 
+test('TST40 — KPI financiers filtrés à la source selon habilitation (#3 / #19)', () => {
+  const engine = new CFitnessApiEngine();
+
+  // Claire (profil lecture_seule_avancee) : le pilotage reste visible (ORG04-38)
+  // mais le CA / la masse salariale / la productivité ne sont jamais fournis
+  // lorsqu'aucune habilitation financière n'est acquise.
+  const readonlyDash = engine.getDashboardData('emp-readonly', 'club-beynost');
+  assert.equal(readonlyDash.status, 200);
+  assert.ok(readonlyDash.data!.kpis.length >= 1, 'La lecture seule peut consulter le pilotage');
+  assert.equal(readonlyDash.data!.kpis[0].revenueEur, null);
+  assert.equal(readonlyDash.data!.kpis[0].payrollMassEur, null);
+  assert.equal(readonlyDash.data!.kpis[0].productivityPerHour, null);
+  const readonlyMc7 = engine.assertSectionRouteAccess('emp-readonly', 'club-beynost', 'MC07');
+  assert.equal(readonlyMc7.status, 403);
+
+  // Nadia (admin_systeme) : valeurs financières complètes et section Finances.
+  const adminDash = engine.getDashboardData('emp-admin', 'all');
+  assert.equal(adminDash.status, 200);
+  assert.equal(adminDash.data!.kpis[0].revenueEur, 48200);
+  assert.equal(adminDash.data!.session.visibleSections.includes('MC07'), true);
+});
+
 test('TST28 — Export & Restauration sauvegarde JSON contrôlés par ORG04-31', () => {
   const engine = new CFitnessApiEngine();
   assert.equal(
@@ -739,6 +761,29 @@ test('Silae payroll calculation, formatters, and CRM guards work accurately', ()
   assert.equal(isNavItemAllowedForRole({ sectionId: 'devices', subTarget: 'adherents' }, 'coach'), false);
   assert.equal(isNavItemAllowedForRole({ sectionId: 'orchestrator', subTarget: 'maintenance' }, 'commercial', { canAccessMaintenance: false }), false);
   assert.equal(isNavItemAllowedForRole({ sectionId: 'orchestrator', subTarget: 'maintenance' }, 'commercial', { canAccessMaintenance: true }), true);
+
+  // #3 / #19 — Collaborateurs et RH réservés à la Direction et aux managers
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'my-day', subTarget: 'MC01' }, 'admin'), true);
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'my-day', subTarget: 'MC01' }, 'manager'), true);
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'my-day', subTarget: 'MC01' }, 'commercial'), false);
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'my-day', subTarget: 'MC01' }, 'coach'), false);
+  // Le compte personnel reste accessible via la section my-day sans passer par cet item
+  assert.equal(isSectionAllowedForRole('my-day', 'commercial'), true);
+
+  // #3 / #19 — Finances réservées aux admins ou managers explicitement habilités
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'devices', subTarget: 'finances' }, 'manager', { canAccessFinances: false }), false);
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'devices', subTarget: 'finances' }, 'manager', { canAccessFinances: true }), true);
+
+  // #3 / #19 — Recouvrement, Stock et Rapports : admin/manager par défaut, délégation explicite possible
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'recovery' }, 'manager'), true);
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'recovery' }, 'commercial', { canAccessRecovery: false }), false);
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'recovery' }, 'commercial', { canAccessRecovery: true }), true);
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'orchestrator', subTarget: 'stocks' }, 'manager'), true);
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'orchestrator', subTarget: 'stocks' }, 'commercial', { canAccessStocks: false }), false);
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'orchestrator', subTarget: 'stocks' }, 'commercial', { canAccessStocks: true }), true);
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'academy', subTarget: 'rapports' }, 'manager'), true);
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'academy', subTarget: 'rapports' }, 'commercial', { canAccessReports: false }), false);
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'academy', subTarget: 'rapports' }, 'commercial', { canAccessReports: true }), true);
 });
 
 test('Multi-device backup envelope checksum and power-outage failover merge preserve offline club activity', () => {

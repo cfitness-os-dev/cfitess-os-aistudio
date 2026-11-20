@@ -423,7 +423,7 @@ export function DashboardView() {
   const isAdmin = currentUser.role === 'admin';
   const isCommercial = currentUser.role === 'commercial';
   const isCoachOrApprenti = currentUser.role === 'coach' || currentUser.role === 'apprenti';
-  const canSeeFinances = isAdmin;
+  const canSeeFinances = isAdmin || Boolean(currentUser.canAccessFinances);
   const canSeeCameras = isAdmin || isCommercial;
   const canSeeRecovery = isAdmin || canAccessRecovery;
   const canSeeCrm = isAdmin || isCommercial;
@@ -683,12 +683,14 @@ export function DashboardView() {
 
             {/* ROW 1: 4 SIGNATURE KPI CARDS (ADAPTÉS AU RÔLE) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* KPI 1: Adhérents actifs (Admin/Commercial) ou Cours du jour (Coach/Apprenti) */}
+              {/* KPI 1: Adhérents actifs (habilités KPI sensibles) | Cours du jour (Coach/Apprenti) | Satisfaction (Collaborateur) */}
               <div
                 onClick={() =>
                   isCoachOrApprenti
                     ? setActiveSection('planning-hr', 'cours-collectifs')
-                    : setActiveSection('devices', 'adherents')
+                    : canSeeFinances
+                    ? setActiveSection('devices', 'adherents')
+                    : setActiveSection('crm')
                 }
                 className={`rounded-2xl border p-4 cursor-pointer transition-all hover:scale-[1.01] ${
                   isDark
@@ -703,7 +705,11 @@ export function DashboardView() {
                     </div>
                     <div className="min-w-0">
                       <div className={`text-xs font-medium truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                        {isCoachOrApprenti ? 'Cours collectifs (jour)' : 'Adhérents actifs'}
+                        {isCoachOrApprenti
+                          ? 'Cours collectifs (jour)'
+                          : canSeeFinances
+                          ? 'Adhérents actifs'
+                          : 'Satisfaction adhérents'}
                       </div>
                       <div className="flex items-baseline gap-1.5 mt-0.5 whitespace-nowrap">
                         <span
@@ -711,14 +717,22 @@ export function DashboardView() {
                             isDark ? 'text-white' : 'text-slate-900'
                           }`}
                         >
-                          {isCoachOrApprenti ? '7 cours' : totalActiveMembers.toLocaleString('fr-FR')}
+                          {isCoachOrApprenti
+                            ? '7 cours'
+                            : canSeeFinances
+                            ? totalActiveMembers.toLocaleString('fr-FR')
+                            : '4,8 / 5'}
                         </span>
                         <span className="text-[11px] font-bold text-emerald-500">
-                          {isCoachOrApprenti ? '86% remplis' : '↑ +12%'}
+                          {isCoachOrApprenti ? '86% remplis' : canSeeFinances ? '↑ +12%' : 'Fidélisation'}
                         </span>
                       </div>
                       <div className="text-[10px] text-slate-400">
-                        {isCoachOrApprenti ? 'Carré de Soie & Beynost' : 'vs mois dernier'}
+                        {isCoachOrApprenti
+                          ? 'Carré de Soie & Beynost'
+                          : canSeeFinances
+                          ? 'vs mois dernier'
+                          : 'Avis vérifiés clubs'}
                       </div>
                     </div>
                   </div>
@@ -976,11 +990,15 @@ export function DashboardView() {
                     <div className="min-w-0">
                       <div className="flex items-baseline gap-1 whitespace-nowrap">
                         <span className={`text-xs font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                          682
+                          {canSeeFinances ? '682' : '4,8 / 5'}
                         </span>
-                        <span className="text-[10px] font-bold text-emerald-500">↑ +10%</span>
+                        <span className="text-[10px] font-bold text-emerald-500">
+                          {canSeeFinances ? '↑ +10%' : 'avis'}
+                        </span>
                       </div>
-                      <div className="text-[10px] text-slate-400 truncate">adhérents actifs</div>
+                      <div className="text-[10px] text-slate-400 truncate">
+                        {canSeeFinances ? 'adhérents actifs' : 'satisfaction'}
+                      </div>
                     </div>
                   </div>
 
@@ -1098,11 +1116,15 @@ export function DashboardView() {
                     <div className="min-w-0">
                       <div className="flex items-baseline gap-1 whitespace-nowrap">
                         <span className={`text-xs font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                          566
+                          {canSeeFinances ? '566' : '4,9 / 5'}
                         </span>
-                        <span className="text-[10px] font-bold text-emerald-500">↑ +14%</span>
+                        <span className="text-[10px] font-bold text-emerald-500">
+                          {canSeeFinances ? '↑ +14%' : 'avis'}
+                        </span>
                       </div>
-                      <div className="text-[10px] text-slate-400 truncate">adhérents actifs</div>
+                      <div className="text-[10px] text-slate-400 truncate">
+                        {canSeeFinances ? 'adhérents actifs' : 'satisfaction'}
+                      </div>
                     </div>
                   </div>
 
@@ -1172,8 +1194,8 @@ export function DashboardView() {
                   </div>
                   <div className="text-sm font-extrabold">
                     {clubFilter === 'carre-de-soie'
-                      ? `C.Fitness Carré de Soie (2 rue Jacquard · Vaulx-en-Velin) — 682 adhérents${canSeeFinances ? ' · 54 230 € CA' : ''} · 28 cours/sem`
-                      : `C.Fitness Beynost (ZAC des Baterses · 01700 Beynost) — 566 adhérents${canSeeFinances ? ' · 48 220 € CA' : ''} · 32 cours/sem`}
+                      ? `C.Fitness Carré de Soie (2 rue Jacquard · Vaulx-en-Velin) — ${canSeeFinances ? '682 adhérents · 54 230 € CA · ' : ''}28 cours/sem`
+                      : `C.Fitness Beynost (ZAC des Baterses · 01700 Beynost) — ${canSeeFinances ? '566 adhérents · 48 220 € CA · ' : ''}32 cours/sem`}
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 shrink-0 text-xs">
@@ -1462,42 +1484,54 @@ export function DashboardView() {
                           isDark ? 'text-white' : 'text-slate-900'
                         }`}
                       >
-                        {subClubFilter === 'center'
-                          ? '682'
-                          : subClubFilter === 'place'
-                          ? '566'
-                          : '1 248'}
+                        {canSeeFinances
+                          ? subClubFilter === 'center'
+                            ? '682'
+                            : subClubFilter === 'place'
+                            ? '566'
+                            : '1 248'
+                          : '4,8 / 5'}
                       </span>
-                      <span className="text-[9px] text-slate-400 mt-0.5">adhérents actifs</span>
+                      <span className="text-[9px] text-slate-400 mt-0.5">
+                        {canSeeFinances ? 'adhérents actifs' : 'satisfaction'}
+                      </span>
                     </div>
                   </div>
 
-                  <div className="w-full space-y-1.5 text-[11px]">
-                    {[
-                      { label: 'Mensuel', pct: '32%', count: 399, dot: 'bg-violet-500' },
-                      { label: 'Annuel', pct: '41%', count: 512, dot: 'bg-blue-500' },
-                      { label: 'Étudiant', pct: '12%', count: 150, dot: 'bg-emerald-500' },
-                      { label: 'Corporate', pct: '8%', count: 100, dot: 'bg-amber-500' },
-                      { label: 'Autres', pct: '7%', count: 87, dot: 'bg-pink-500' },
-                    ].map((row) => (
-                      <div
-                        key={row.label}
-                        onClick={() => setActiveSection('devices', 'adherents')}
-                        className="flex items-center justify-between gap-1 cursor-pointer hover:opacity-80"
-                      >
-                        <span className="flex items-center gap-1.5 truncate text-slate-400">
-                          <span className={`w-2 h-2 rounded-full ${row.dot} shrink-0`} />
-                          <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>
-                            {row.label}
+                  {canSeeFinances ? (
+                    <div className="w-full space-y-1.5 text-[11px]">
+                      {[
+                        { label: 'Mensuel', pct: '32%', count: 399, dot: 'bg-violet-500' },
+                        { label: 'Annuel', pct: '41%', count: 512, dot: 'bg-blue-500' },
+                        { label: 'Étudiant', pct: '12%', count: 150, dot: 'bg-emerald-500' },
+                        { label: 'Corporate', pct: '8%', count: 100, dot: 'bg-amber-500' },
+                        { label: 'Autres', pct: '7%', count: 87, dot: 'bg-pink-500' },
+                      ].map((row) => (
+                        <div
+                          key={row.label}
+                          onClick={() => setActiveSection('devices', 'adherents')}
+                          className="flex items-center justify-between gap-1 cursor-pointer hover:opacity-80"
+                        >
+                          <span className="flex items-center gap-1.5 truncate text-slate-400">
+                            <span className={`w-2 h-2 rounded-full ${row.dot} shrink-0`} />
+                            <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>
+                              {row.label}
+                            </span>
                           </span>
-                        </span>
-                        <div className="flex items-center gap-2 shrink-0 tabular-nums">
-                          <span className="font-bold">{row.pct}</span>
-                          <span className="text-slate-400 w-7 text-right">{row.count}</span>
+                          <div className="flex items-center gap-2 shrink-0 tabular-nums">
+                            <span className="font-bold">{row.pct}</span>
+                            <span className="text-slate-400 w-7 text-right">{row.count}</span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="w-full text-[11px] leading-relaxed text-slate-400">
+                      Vue collaborateur : fréquentation et satisfaction adhérents.
+                      Les totaux d’adhérents et le chiffre d’affaires sont réservés
+                      aux profils habilités.
+                    </div>
+                  )}
                 </div>
               </div>
 

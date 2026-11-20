@@ -809,6 +809,8 @@ export function isNavItemAllowedForRole(
     canAccessRecovery?: boolean;
     canAccessMaintenance?: boolean;
     canAccessFinances?: boolean;
+    canAccessStocks?: boolean;
+    canAccessReports?: boolean;
     isTechnicalMode?: boolean;
   }
 ): boolean {
@@ -817,7 +819,12 @@ export function isNavItemAllowedForRole(
   if (!section) return true;
   if (!isSectionAllowedForRole(section, role)) return false;
 
-  // Finances : réservé exclusivement à la Direction (admin) ou capacité financière explicite
+  // Collaborateurs et RH : Direction et managers dans leur périmètre.
+  // Le compte personnel reste accessible séparément via « Mon compte ».
+  if (section === 'my-day' && sub === 'MC01') {
+    return role === 'admin' || role === 'manager';
+  }
+  // Finances : administrateurs ou managers/collaborateurs explicitement habilités dans leur périmètre
   if (section === 'devices' && sub === 'finances') {
     return role === 'admin' || Boolean(options?.canAccessFinances);
   }
@@ -825,17 +832,21 @@ export function isNavItemAllowedForRole(
   if (section === 'devices' && sub === 'adherents') {
     return role === 'admin' || role === 'manager' || role === 'commercial';
   }
-  // Recouvrement : Direction ou habilitation explicite
+  // Recouvrement : Admin/Manager par défaut ou délégation explicite à un collaborateur habilité
   if (section === 'recovery') {
-    return role === 'admin' || Boolean(options?.canAccessRecovery);
+    return role === 'admin' || role === 'manager' || Boolean(options?.canAccessRecovery);
   }
   // Maintenance : habilitation explicite ou Direction
   if (section === 'orchestrator' && sub === 'maintenance') {
     return role === 'admin' || role === 'manager' || Boolean(options?.canAccessMaintenance);
   }
-  // Stock & Achats : Direction & Commercial uniquement
+  // Stock & Achats : Admin/Manager par défaut ou délégation explicite à un collaborateur habilité
   if (section === 'orchestrator' && sub === 'stocks') {
-    return role === 'admin' || role === 'manager' || role === 'commercial';
+    return role === 'admin' || role === 'manager' || Boolean(options?.canAccessStocks);
+  }
+  // Rapports : Admin/Manager par défaut ou habilitation explicite
+  if (section === 'academy' && sub === 'rapports') {
+    return role === 'admin' || role === 'manager' || Boolean(options?.canAccessReports);
   }
   // Agents IA : Direction + Mode technique uniquement
   if (section === 'orchestrator' && sub === 'agents') {

@@ -488,6 +488,17 @@ pub struct AppDatabaseState {
     pub lead_appointments: Vec<LeadAppointmentRecord>,
     #[serde(default)]
     pub lead_activities: Vec<LeadActivityRecord>,
+    // Habilitations nominatives explicites (délégation module par module).
+    // Les profils admin/manager conservent leurs accès par défaut ; ces listes
+    // permettent d'ouvrir un module à un collaborateur précis sans changer son rôle.
+    #[serde(default)]
+    pub finance_authorized_employee_ids: Vec<String>,
+    #[serde(default)]
+    pub recovery_authorized_employee_ids: Vec<String>,
+    #[serde(default)]
+    pub stock_authorized_employee_ids: Vec<String>,
+    #[serde(default)]
+    pub reports_authorized_employee_ids: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]

@@ -123,7 +123,7 @@ const VISUAL_SIDEBAR_ITEMS: VisualNavItem[] = [
   },
   {
     id: 'nav-personnel',
-    label: 'Personnel & RH',
+    label: 'Collaborateurs et RH',
     icon: Users,
     iconColor: 'text-blue-500',
     sectionId: 'my-day',
@@ -535,6 +535,8 @@ export function AdminShell() {
                 isNavItemAllowedForRole(item, currentUser.role, {
                   canAccessRecovery,
                   canAccessFinances: currentUser.role === 'admin' || Boolean(currentUser.canAccessFinances),
+                  canAccessStocks: Boolean(currentUser.canAccessStocks),
+                  canAccessReports: Boolean(currentUser.canAccessReports),
                   canAccessMaintenance: currentUser.role === 'admin' || currentUser.role === 'coach',
                   isTechnicalMode,
                 })
@@ -1307,7 +1309,9 @@ export function AdminShell() {
             }`}
           >
             <UserCheck className="w-4 h-4" />
-            <span className="truncate">RH</span>
+            <span className="truncate">
+              {currentUser.role === 'admin' || currentUser.role === 'manager' ? 'Collaborateurs' : 'Mon compte'}
+            </span>
           </button>
 
           <button
@@ -1432,6 +1436,8 @@ export function AdminShell() {
                     isNavItemAllowedForRole(item, currentUser.role, {
                       canAccessRecovery,
                       canAccessFinances: currentUser.role === 'admin' || Boolean(currentUser.canAccessFinances),
+                      canAccessStocks: Boolean(currentUser.canAccessStocks),
+                      canAccessReports: Boolean(currentUser.canAccessReports),
                       canAccessMaintenance: currentUser.role === 'admin' || currentUser.role === 'coach',
                       isTechnicalMode,
                     })

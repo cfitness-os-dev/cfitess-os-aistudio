@@ -2848,6 +2848,8 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
       annualForfaitDays: contractRegime === 'forfait_jours' ? 218 : undefined,
       monthlyGrossEur: Math.round(12.02 * weeklyContractHours * 4.333 * 100) / 100,
       canAccessFinances: false,
+      canAccessStocks: false,
+      canAccessReports: false,
       siteAssignments: defaultAssignments,
       pinCode: uniquePin,
       failedPinAttempts: 0,

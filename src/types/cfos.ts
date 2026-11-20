@@ -58,6 +58,8 @@ export interface Employee {
   annualForfaitDays?: number;
   monthlyGrossEur?: number;
   canAccessFinances?: boolean;
+  canAccessStocks?: boolean;
+  canAccessReports?: boolean;
   siteAssignments?: Array<{
     clubId: ClubId;
     isPrimary: boolean;

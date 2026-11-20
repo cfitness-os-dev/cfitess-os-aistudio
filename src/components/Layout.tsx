@@ -94,7 +94,7 @@ const SIDEBAR_MODULES: Array<{
 }> = [
   {
     id: 'mon-compte',
-    label: 'Personnel (Mon compte)',
+    label: 'Mon compte',
     icon: Users,
     oklchColor: 'oklch(0.623 0.214 259.815)',
     badge: 'MC01',

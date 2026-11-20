@@ -423,12 +423,35 @@ export function filterKpisForActor(
   actorId: string,
   activeSiteId: string | 'all'
 ): SiteKpis[] {
-  return state.kpis.filter((kpi) => {
-    if (activeSiteId !== 'all' && kpi.siteId !== activeSiteId) return false;
-    return evaluatePermission(state, actorId, kpi.siteId, 'ORG04-38', {
+  const actor = state.employees.find((e) => e.id === actorId) as
+    | (Employee & { canAccessFinances?: boolean; canAccessReports?: boolean })
+    | undefined;
+  const primaryAccess = actor?.siteAccesses.find((a) => a.isPrimary) ?? actor?.siteAccesses[0];
+  const profileId = primaryAccess?.profileId;
+  const isAdminProfile = profileId === 'admin_systeme';
+  const isManagerProfile = profileId === 'master_avance' || profileId === 'planificateur_avance';
+  const canSeeFinances = Boolean(actor?.canAccessFinances) || isAdminProfile;
+  const canSeeReports = Boolean(actor?.canAccessReports) || isAdminProfile || isManagerProfile;
+
+  const visible: SiteKpis[] = [];
+  for (const kpi of state.kpis) {
+    if (activeSiteId !== 'all' && kpi.siteId !== activeSiteId) continue;
+    const allowed = canSeeReports || evaluatePermission(state, actorId, kpi.siteId, 'ORG04-38', {
       siteId: kpi.siteId,
     }).allowed;
-  });
+    if (!allowed) continue;
+    visible.push(
+      canSeeFinances
+        ? kpi
+        : {
+            ...kpi,
+            revenueEur: null,
+            productivityPerHour: null,
+            payrollMassEur: null,
+          }
+    );
+  }
+  return visible;
 }
 
 export function validateDelegationUpdate(
@@ -524,14 +547,24 @@ export function getVisibleSectionsForSession(
   const has = (actionId: string) =>
     evaluatePermission(state, actorId, activeSiteId, actionId).allowed;
 
-  if (has('ORG04-23')) {
-    sections.push('MC07'); // Préparation de paie
+  const actor = state.employees.find((e) => e.id === actorId) as
+    | (Employee & { canAccessFinances?: boolean; canAccessReports?: boolean })
+    | undefined;
+  const primaryAccess = actor?.siteAccesses.find((a) => a.isPrimary) ?? actor?.siteAccesses[0];
+  const profileId = primaryAccess?.profileId;
+  const isAdminProfile = profileId === 'admin_systeme';
+  const isManagerProfile = profileId === 'master_avance' || profileId === 'planificateur_avance';
+  const canFinance = Boolean(actor?.canAccessFinances) || isAdminProfile;
+  const canReports = Boolean(actor?.canAccessReports) || isAdminProfile || isManagerProfile;
+
+  if (canFinance) {
+    sections.push('MC07'); // Finances / préparation de paie
   }
-  if (has('ORG04-38') || has('ORG04-40')) {
-    sections.push('MC08'); // Pilotage et missions
+  if (has('ORG04-38') || has('ORG04-40') || canReports) {
+    sections.push('MC08'); // Pilotage et rapports
   }
-  if (has('ORG04-07') || has('ORG04-08')) {
-    sections.push('MC09'); // Communication RH
+  if (isAdminProfile || isManagerProfile) {
+    sections.push('MC09'); // Collaborateurs et RH
   }
   if (
     has('ORG04-27') ||

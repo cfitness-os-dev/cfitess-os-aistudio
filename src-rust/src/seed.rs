@@ -1083,6 +1083,50 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
                 lock_state: "none".into(),
                 published: true,
             },
+            // Cas positifs par identité (ticket #1) : chaque collaborateur voit
+            // son propre planning publié, distinct de celui des autres.
+            Shift {
+                id: "sh-maxime-1".into(),
+                site_id: "club-carre-soie".into(),
+                date: "2026-11-19".into(),
+                start_time: "09:00".into(),
+                end_time: "17:00".into(),
+                break_minutes: 30,
+                employee_id: Some("emp-maxime".into()),
+                position_id: "pos-cs-accueil".into(),
+                mission_label: Some("Accueil et suivi adhérents Carré de Soie".into()),
+                tasks: vec!["Ouverture accueil".into(), "Relances adhérents".into()],
+                lock_state: "none".into(),
+                published: true,
+            },
+            Shift {
+                id: "sh-chloe-1".into(),
+                site_id: "club-beynost".into(),
+                date: "2026-11-19".into(),
+                start_time: "10:00".into(),
+                end_time: "18:00".into(),
+                break_minutes: 30,
+                employee_id: Some("emp-chloe".into()),
+                position_id: "pos-bey-accueil".into(),
+                mission_label: Some("Accueil Beynost".into()),
+                tasks: vec!["Accueil adhérents".into(), "Gestion des abonnements".into()],
+                lock_state: "none".into(),
+                published: true,
+            },
+            Shift {
+                id: "sh-sarah-1".into(),
+                site_id: "club-carre-soie".into(),
+                date: "2026-11-20".into(),
+                start_time: "08:00".into(),
+                end_time: "16:00".into(),
+                break_minutes: 30,
+                employee_id: Some("emp-sarah".into()),
+                position_id: "pos-cs-accueil".into(),
+                mission_label: Some("Pilotage accueil et coaching Carré de Soie".into()),
+                tasks: vec!["Brief équipe accueil".into(), "Suivi coaching".into()],
+                lock_state: "none".into(),
+                published: true,
+            },
         ],
         leave_requests: vec![
             LeaveRequest {
@@ -1114,6 +1158,37 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
                 end_date: "2026-12-04".into(),
                 status: "accepted".into(),
                 comment: "Recyclage secourisme fictif".into(),
+            },
+            // Cas positifs par identité (ticket #1) : demandes propres à chaque collaborateur.
+            LeaveRequest {
+                id: "req-maxime-1".into(),
+                employee_id: "emp-maxime".into(),
+                site_id: "club-carre-soie".into(),
+                motive: "Congé payé".into(),
+                start_date: "2026-12-07".into(),
+                end_date: "2026-12-08".into(),
+                status: "pending".into(),
+                comment: "Congés personnels (donnée fictive)".into(),
+            },
+            LeaveRequest {
+                id: "req-chloe-1".into(),
+                employee_id: "emp-chloe".into(),
+                site_id: "club-beynost".into(),
+                motive: "Récupération".into(),
+                start_date: "2026-11-26".into(),
+                end_date: "2026-11-26".into(),
+                status: "pending".into(),
+                comment: "Récupération heures accueil (donnée fictive)".into(),
+            },
+            LeaveRequest {
+                id: "req-sarah-1".into(),
+                employee_id: "emp-sarah".into(),
+                site_id: "club-carre-soie".into(),
+                motive: "Formation".into(),
+                start_date: "2026-12-10".into(),
+                end_date: "2026-12-11".into(),
+                status: "accepted".into(),
+                comment: "Formation management (donnée fictive)".into(),
             },
         ],
         anomalies: vec![
@@ -1352,6 +1427,17 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
                 status_label: "Confirmé".into(),
             },
         ],
+        // Direction : Finances par défaut. Aucune habilitation nominative
+        // n'est accordée à Sarah (responsable de club) tant qu'elle n'est pas
+        // explicitement ajoutée ici (ticket #3).
+        finance_authorized_employee_ids: vec![
+            "emp-admin".into(),
+            "emp-mario".into(),
+            "emp-daniel".into(),
+        ],
+        recovery_authorized_employee_ids: vec!["emp-greg".into()],
+        stock_authorized_employee_ids: vec![],
+        reports_authorized_employee_ids: vec![],
     }
 }
 

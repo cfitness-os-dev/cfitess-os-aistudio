@@ -3110,6 +3110,51 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn finance_kpis_and_section_require_explicit_habilitation() {
+        let state = test_state();
+
+        {
+            let db = state.db.read().await;
+
+            // Sarah (manager, responsable de club) : indicateurs de pilotage
+            // visibles mais AUCUN montant financier transmis par l'API.
+            let sarah_kpis = filter_kpis_for_actor(&db, "emp-sarah", "club-carre-soie");
+            assert_eq!(sarah_kpis.len(), 1);
+            assert!(sarah_kpis[0].revenue_eur.is_none());
+            assert!(sarah_kpis[0].payroll_mass_eur.is_none());
+            assert!(sarah_kpis[0].productivity_per_hour.is_none());
+            assert!(sarah_kpis[0].worked_hours.is_some());
+            let sarah_sections =
+                crate::rbac::get_visible_sections_for_session(&db, "emp-sarah", "club-carre-soie");
+            assert!(!sarah_sections.contains(&"MC07".to_string()));
+            assert!(sarah_sections.contains(&"MC08".to_string()));
+
+            // Maxime (planificateur sans habilitation KPI) : aucune ligne KPI.
+            assert!(filter_kpis_for_actor(&db, "emp-maxime", "club-carre-soie").is_empty());
+
+            // Mario (admin) : valeurs financières complètes + section Finances.
+            let mario_kpis = filter_kpis_for_actor(&db, "emp-mario", "club-carre-soie");
+            assert_eq!(mario_kpis.len(), 1);
+            assert_eq!(mario_kpis[0].revenue_eur, Some(48200.0));
+            let mario_sections =
+                crate::rbac::get_visible_sections_for_session(&db, "emp-mario", "club-carre-soie");
+            assert!(mario_sections.contains(&"MC07".to_string()));
+        }
+
+        // Cas positif de délégation explicite : Sarah ajoutée nominativement
+        // retrouve le CA et la section Finances, sans changer de rôle.
+        {
+            let mut db = state.db.write().await;
+            db.finance_authorized_employee_ids.push("emp-sarah".into());
+            let sarah_kpis = filter_kpis_for_actor(&db, "emp-sarah", "club-carre-soie");
+            assert_eq!(sarah_kpis[0].revenue_eur, Some(48200.0));
+            let sections =
+                crate::rbac::get_visible_sections_for_session(&db, "emp-sarah", "club-carre-soie");
+            assert!(sections.contains(&"MC07".to_string()));
+        }
+    }
+
+    #[tokio::test]
     async fn site_accesses_update_persists_and_blocks_unauthorized_club_or_elevation() {
         let state = test_state();
 
