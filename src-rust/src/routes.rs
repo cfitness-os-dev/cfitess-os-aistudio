@@ -247,6 +247,10 @@ pub fn api_router(state: SharedState) -> Router {
             "/api/admin/employees/:emp_id/site-accesses",
             put(put_employee_site_accesses),
         )
+        .route(
+            "/api/admin/employees/:emp_id/password",
+            put(put_admin_employee_password),
+        )
         .route("/api/admin/audit-log", get(get_audit_log))
         .route("/api/admin/audit-log/csv", get(get_audit_log_csv))
         .route("/api/admin/organization", put(put_organization))
@@ -372,6 +376,17 @@ fn is_valid_secret_for_employee(emp_id: &str, secret: &str) -> bool {
     }
 }
 
+pub(crate) fn verify_employee_secret(
+    db: &AppDatabaseState,
+    emp_id: &str,
+    secret: &str,
+) -> bool {
+    if let Some(stored_hash) = db.password_hashes_by_employee.get(emp_id) {
+        return crate::auth_passwords::verify_password_hash(secret, stored_hash);
+    }
+    is_valid_secret_for_employee(emp_id, secret)
+}
+
 async fn post_local_auth_login(
     State(state): State<SharedState>,
     Json(payload): Json<LocalAuthLoginRequest>,
@@ -418,9 +433,10 @@ async fn post_local_auth_login(
 
     let db = state.db.read().await;
     let found_emp = db.employees.iter().find(|e| {
-        e.id.eq_ignore_ascii_case(identifier)
-            || e.email.eq_ignore_ascii_case(identifier)
-            || format!("{} {}", e.first_name, e.last_name).eq_ignore_ascii_case(identifier)
+        e.active
+            && (e.id.eq_ignore_ascii_case(identifier)
+                || e.email.eq_ignore_ascii_case(identifier)
+                || format!("{} {}", e.first_name, e.last_name).eq_ignore_ascii_case(identifier))
     });
 
     let Some(emp) = found_emp else {
@@ -437,7 +453,7 @@ async fn post_local_auth_login(
     };
 
     // Vérification stricte du secret côté serveur (jamais ignoré)
-    if !is_valid_secret_for_employee(&emp.id, secret) {
+    if !verify_employee_secret(&db, &emp.id, secret) {
         let mut attempts = state.login_attempts.write().await;
         let entry = attempts
             .entry(rate_key.clone())
@@ -2270,6 +2286,8 @@ pub struct CreateAdminEmployeePayload {
     pub profile_id: Option<String>,
     pub team_ids: Option<Vec<String>>,
     pub managed_team_ids: Option<Vec<String>>,
+    #[serde(default)]
+    pub initial_password: Option<String>,
 }
 
 async fn post_admin_employee(
@@ -2408,7 +2426,25 @@ async fn post_admin_employee(
         },
     };
 
+    let initial_password_hash = if let Some(ref raw_pwd) = payload.initial_password {
+        let clean = raw_pwd.trim();
+        if clean.chars().count() < 12 {
+            return Err(err_resp(
+                StatusCode::BAD_REQUEST,
+                "Le mot de passe initial doit comporter au moins 12 caractères.",
+            ));
+        }
+        Some(crate::auth_passwords::hash_password(clean))
+    } else {
+        None
+    };
+
+    let snapshot = db.clone();
     db.employees.push(new_emp.clone());
+    if let Some(pwd_hash) = initial_password_hash {
+        db.password_hashes_by_employee
+            .insert(new_id.clone(), pwd_hash);
+    }
     db.preferences_by_employee.insert(
         new_id.clone(),
         crate::models::UserPreferences {
@@ -2440,7 +2476,7 @@ async fn post_admin_employee(
         None,
     );
     if let Err(err_msg) = persist_state(&state.data_dir, &db) {
-        db.employees.retain(|e| e.id != new_id);
+        *db = snapshot;
         return Err(err_resp(
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Échec persistance serveur : {}", err_msg),
@@ -2900,23 +2936,36 @@ async fn post_change_password(
     let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
     let mut db = state.db.write().await;
 
-    if !db.employees.iter().any(|e| e.id == actor_id) {
+    if !db.employees.iter().any(|e| e.id == actor_id && e.active) {
         return Err(err_resp(StatusCode::NOT_FOUND, "Collaborateur introuvable."));
     }
 
-    if payload.current_secret.is_empty() || payload.new_secret.chars().count() < 12 {
+    let current_secret = payload.current_secret.trim();
+    let new_secret = payload.new_secret.trim();
+
+    if current_secret.is_empty() || !verify_employee_secret(&db, &actor_id, current_secret) {
         return Err(err_resp(
-            StatusCode::BAD_REQUEST,
-            "Le nouveau mot de passe doit comporter au moins 12 caractères et confirmer le secret actuel.",
+            StatusCode::UNAUTHORIZED,
+            "Mot de passe ou code PIN actuel incorrect.",
         ));
     }
 
+    if new_secret.chars().count() < 12 {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            "Le nouveau mot de passe doit comporter au moins 12 caractères.",
+        ));
+    }
+
+    let pwd_hash = crate::auth_passwords::hash_password(new_secret);
     let snapshot = db.clone();
+    db.password_hashes_by_employee
+        .insert(actor_id.clone(), pwd_hash);
     append_audit(
         &mut db,
         &actor_id,
         "Sécurité compte",
-        "Changement de mot de passe utilisateur validé (UTI05 / OS185)".into(),
+        "Changement de mot de passe utilisateur validé et haché (UTI05 / OS185)".into(),
         "org",
         "UTI05",
         None,
@@ -2931,6 +2980,74 @@ async fn post_change_password(
     }
 
     Ok(Json(json!({ "changed": true })))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdminSetPasswordPayload {
+    pub new_secret: String,
+}
+
+async fn put_admin_employee_password(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Path(emp_id): Path<String>,
+    Json(payload): Json<AdminSetPasswordPayload>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let mut db = state.db.write().await;
+
+    if !crate::rbac::is_admin_employee(&db, &actor_id) {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Accès refusé (403) : réinitialisation de mot de passe réservée à l'administrateur.",
+        ));
+    }
+
+    let target_id = emp_id.trim().to_string();
+    if !db.employees.iter().any(|e| e.id == target_id) {
+        return Err(err_resp(StatusCode::NOT_FOUND, "Collaborateur cible introuvable."));
+    }
+
+    let new_secret = payload.new_secret.trim();
+    if new_secret.chars().count() < 12 {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            "Le nouveau mot de passe doit comporter au moins 12 caractères.",
+        ));
+    }
+
+    let pwd_hash = crate::auth_passwords::hash_password(new_secret);
+    let snapshot = db.clone();
+    db.password_hashes_by_employee
+        .insert(target_id.clone(), pwd_hash);
+    append_audit(
+        &mut db,
+        &actor_id,
+        "Sécurité compte (Admin)",
+        format!("Réinitialisation serveur du mot de passe pour {}", target_id),
+        "emp",
+        &target_id,
+        None,
+        None,
+    );
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        *db = snapshot;
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec persistance réinitialisation mot de passe : {}", err_msg),
+        ));
+    }
+    drop(db);
+
+    // Révoquer toutes les sessions Bearer actives du collaborateur ciblé
+    state
+        .sessions
+        .write()
+        .await
+        .retain(|_, (sid, _)| sid != &target_id);
+
+    Ok(Json(json!({ "ok": true, "employeeId": target_id })))
 }
 
 #[derive(Deserialize, Default)]
@@ -5016,6 +5133,7 @@ mod tests {
                 profile_id: Some("employe_standard".to_string()),
                 team_ids: Some(vec!["team-cs-accueil".to_string()]),
                 managed_team_ids: Some(vec![]),
+                initial_password: None,
             }),
         )
         .await
@@ -5650,6 +5768,129 @@ mod tests {
         assert_eq!(mario_after_fail.accent_color, "emerald");
         assert_ne!(mario_after_fail.language, "English");
         let _ = std::fs::remove_file(&blocker_file);
+    }
+
+    #[tokio::test]
+    async fn server_password_change_admin_reset_and_login_enforce_hashed_credentials() {
+        let state = test_state();
+        let sarah_headers = session_headers(&state, "emp-sarah", "club-carre-soie").await;
+        let mario_headers = session_headers(&state, "emp-mario", "club-carre-soie").await;
+
+        // 1. Changement personnel refusé si secret actuel invalide (401) ou nouveau trop court (400)
+        let bad_current = post_change_password(
+            State(state.clone()),
+            sarah_headers.clone(),
+            Json(ChangePasswordPayload {
+                current_secret: "0000".into(),
+                new_secret: "NouveauMotDePasseFort!2026".into(),
+            }),
+        )
+        .await;
+        assert!(matches!(bad_current, Err((StatusCode::UNAUTHORIZED, _))));
+
+        let too_short = post_change_password(
+            State(state.clone()),
+            sarah_headers.clone(),
+            Json(ChangePasswordPayload {
+                current_secret: "3141".into(),
+                new_secret: "tropcourt".into(),
+            }),
+        )
+        .await;
+        assert!(matches!(too_short, Err((StatusCode::BAD_REQUEST, _))));
+
+        // 2. Changement valide de Sarah -> haché PBKDF2 en base, persistant et remplaçant le PIN démo
+        let ok_res = post_change_password(
+            State(state.clone()),
+            sarah_headers.clone(),
+            Json(ChangePasswordPayload {
+                current_secret: "3141".into(),
+                new_secret: "SarahProdSecure#2026".into(),
+            }),
+        )
+        .await
+        .expect("Changement mot de passe Sarah OK")
+        .0;
+        assert_eq!(ok_res["changed"], json!(true));
+
+        {
+            let reloaded = load_or_init_state(&state.data_dir);
+            let sarah_hash = reloaded.password_hashes_by_employee.get("emp-sarah").unwrap();
+            assert!(sarah_hash.starts_with("pbkdf2_sha256$100000$"));
+            assert!(!verify_employee_secret(&reloaded, "emp-sarah", "3141"));
+            assert!(verify_employee_secret(
+                &reloaded,
+                "emp-sarah",
+                "SarahProdSecure#2026"
+            ));
+        }
+
+        // Vérifier le login HTTP avec ancien PIN (401) puis nouveau mot de passe (200)
+        let old_login = post_local_auth_login(
+            State(state.clone()),
+            Json(LocalAuthLoginRequest {
+                email_or_id: "emp-sarah".into(),
+                pin_or_password: "3141".into(),
+                role_requested: String::new(),
+            }),
+        )
+        .await
+        .into_response();
+        assert_eq!(old_login.status(), StatusCode::UNAUTHORIZED);
+
+        let new_login = post_local_auth_login(
+            State(state.clone()),
+            Json(LocalAuthLoginRequest {
+                email_or_id: "emp-sarah".into(),
+                pin_or_password: "SarahProdSecure#2026".into(),
+                role_requested: String::new(),
+            }),
+        )
+        .await
+        .into_response();
+        assert_eq!(new_login.status(), StatusCode::OK);
+
+        // 3. Réinitialisation admin : refus 403 si non-admin, succès admin + révocation session cible
+        let non_admin_reset = put_admin_employee_password(
+            State(state.clone()),
+            sarah_headers.clone(),
+            Path("emp-chloe".into()),
+            Json(AdminSetPasswordPayload {
+                new_secret: "TentativeNonAdmin#2026".into(),
+            }),
+        )
+        .await;
+        assert!(matches!(non_admin_reset, Err((StatusCode::FORBIDDEN, _))));
+
+        let chloe_headers = session_headers(&state, "emp-chloe", "club-beynost").await;
+        let admin_reset = put_admin_employee_password(
+            State(state.clone()),
+            mario_headers,
+            Path("emp-chloe".into()),
+            Json(AdminSetPasswordPayload {
+                new_secret: "ChloeAdminReset!2026".into(),
+            }),
+        )
+        .await
+        .expect("Admin reset mot de passe Chloé OK")
+        .0;
+        assert_eq!(admin_reset["ok"], json!(true));
+
+        // L'ancien Bearer token de Chloé doit être révoqué immédiatement
+        let revoked_session = resolve_session_actor(&state, &chloe_headers).await;
+        assert!(matches!(revoked_session, Err((StatusCode::UNAUTHORIZED, _))));
+
+        let chloe_login = post_local_auth_login(
+            State(state.clone()),
+            Json(LocalAuthLoginRequest {
+                email_or_id: "emp-chloe".into(),
+                pin_or_password: "ChloeAdminReset!2026".into(),
+                role_requested: String::new(),
+            }),
+        )
+        .await
+        .into_response();
+        assert_eq!(chloe_login.status(), StatusCode::OK);
     }
 
 }

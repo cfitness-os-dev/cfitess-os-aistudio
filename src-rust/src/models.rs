@@ -631,6 +631,8 @@ pub struct AppDatabaseState {
     pub reports_authorized_employee_ids: Vec<String>,
     #[serde(default)]
     pub module_delegations: Vec<ModuleDelegation>,
+    #[serde(default)]
+    pub password_hashes_by_employee: HashMap<String, String>,
 }
 
 #[derive(Debug, Clone, Serialize)]

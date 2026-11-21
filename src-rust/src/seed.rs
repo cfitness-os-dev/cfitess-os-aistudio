@@ -1516,7 +1516,43 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
         stock_authorized_employee_ids: vec![],
         reports_authorized_employee_ids: vec![],
         module_delegations: vec![],
+        password_hashes_by_employee: HashMap::new(),
     }
+}
+
+fn apply_initial_admin_password_bootstrap(state: &mut AppDatabaseState) -> bool {
+    if !state.password_hashes_by_employee.is_empty() {
+        return false;
+    }
+    let Ok(raw_pwd) = std::env::var("CFITNESS_INITIAL_ADMIN_PASSWORD") else {
+        return false;
+    };
+    let clean_pwd = raw_pwd.trim();
+    if clean_pwd.chars().count() < 12 {
+        return false;
+    }
+    let target_id = std::env::var("CFITNESS_INITIAL_ADMIN_ID")
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "emp-mario".to_string());
+
+    let mut updated = false;
+    if state.employees.iter().any(|e| e.id == target_id && e.active) {
+        state.password_hashes_by_employee.insert(
+            target_id.clone(),
+            crate::auth_passwords::hash_password(clean_pwd),
+        );
+        updated = true;
+    }
+    if target_id != "emp-admin" && state.employees.iter().any(|e| e.id == "emp-admin" && e.active) {
+        state.password_hashes_by_employee.insert(
+            "emp-admin".to_string(),
+            crate::auth_passwords::hash_password(clean_pwd),
+        );
+        updated = true;
+    }
+    updated
 }
 
 pub fn load_or_init_state(data_dir: &Path) -> AppDatabaseState {
@@ -1564,6 +1600,9 @@ pub fn load_or_init_state(data_dir: &Path) -> AppDatabaseState {
                         prefs
                     });
                 }
+                if apply_initial_admin_password_bootstrap(&mut parsed) {
+                    migrated = true;
+                }
                 if migrated {
                     let _ = persist_state(data_dir, &parsed);
                 }
@@ -1571,7 +1610,8 @@ pub fn load_or_init_state(data_dir: &Path) -> AppDatabaseState {
             }
         }
     }
-    let state = create_initial_seed_state();
+    let mut state = create_initial_seed_state();
+    let _ = apply_initial_admin_password_bootstrap(&mut state);
     let _ = persist_state(data_dir, &state);
     state
 }

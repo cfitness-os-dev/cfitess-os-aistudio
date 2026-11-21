@@ -1,3 +1,4 @@
+mod auth_passwords;
 mod lead_automations;
 mod models;
 mod rbac;
