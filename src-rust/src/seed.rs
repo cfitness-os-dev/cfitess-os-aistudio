@@ -3,8 +3,7 @@ use crate::models::{
     EmployeeSiteAccess, LeadActivityRecord, LeadAppointmentRecord, LeadFormFieldRecord,
     LeadFormRecord, LeadFormSampleResponseRecord, LeadProspectRecord, LeaveRequest,
     NotificationPrefs, Organization, Position, RecoveryCaseRecord, RoleProfile, SensitiveBankInfo,
-    Shift, Site,
-    SiteHrSettings, SiteKpis, Team, TimeclockAnomaly, UserPreferences,
+    Shift, Site, SiteHrSettings, SiteKpis, StockItemRecord, Team, TimeclockAnomaly, UserPreferences,
 };
 use std::collections::HashMap;
 use std::fs;
@@ -415,6 +414,89 @@ fn default_demo_recovery_cases() -> Vec<RecoveryCaseRecord> {
             status: "pret_contentieux".into(),
             relance_count: 3,
             last_action_note: "Préavis non respecté · Dossier prêt pour transfert recouvrement.".into(),
+        },
+    ]
+}
+
+fn default_demo_stock_items() -> Vec<StockItemRecord> {
+    vec![
+        StockItemRecord {
+            id: "stk-1".into(),
+            club_id: "beynost".into(),
+            name: "Cadenas Acier Haute Sécurité (Vente TPV 8 €)".into(),
+            barcode: Some("3760123450011".into()),
+            category: "Badges & TPV".into(),
+            current_qty: 4,
+            min_threshold: 10,
+            unit: "unités".into(),
+            supplier: "FitSupply Pro Lyon".into(),
+            unit_priceht: 3.2,
+            auto_order_prepared: true,
+        },
+        StockItemRecord {
+            id: "stk-2".into(),
+            club_id: "carre-de-soie".into(),
+            name: "Serviettes Microfibres Brodées C.Fitness".into(),
+            barcode: Some("3760123450028".into()),
+            category: "Textile & Accueil".into(),
+            current_qty: 18,
+            min_threshold: 25,
+            unit: "unités".into(),
+            supplier: "FitSupply Pro Lyon".into(),
+            unit_priceht: 4.5,
+            auto_order_prepared: true,
+        },
+        StockItemRecord {
+            id: "stk-3".into(),
+            club_id: "carre-de-soie".into(),
+            name: "Cartes / Badges RFID MIFARE Heitz Vierges".into(),
+            barcode: Some("3760123450035".into()),
+            category: "Badges & TPV".into(),
+            current_qty: 85,
+            min_threshold: 30,
+            unit: "badges".into(),
+            supplier: "Heitz System".into(),
+            unit_priceht: 1.8,
+            auto_order_prepared: false,
+        },
+        StockItemRecord {
+            id: "stk-4".into(),
+            club_id: "beynost".into(),
+            name: "Spray Désinfectant Virucide Plateau (Bidons 5L)".into(),
+            barcode: Some("3760123450042".into()),
+            category: "Hygiène & Plateau".into(),
+            current_qty: 9,
+            min_threshold: 6,
+            unit: "bidons 5L".into(),
+            supplier: "Hygiène Sport Rhône".into(),
+            unit_priceht: 14.9,
+            auto_order_prepared: false,
+        },
+        StockItemRecord {
+            id: "stk-maint-1".into(),
+            club_id: "carre-de-soie".into(),
+            name: "Câble Acier Gainé 5mm (Poulies & Machines Guidées)".into(),
+            barcode: Some("3760123450103".into()),
+            category: "Pièces Détachées & Maintenance".into(),
+            current_qty: 6,
+            min_threshold: 4,
+            unit: "câbles".into(),
+            supplier: "Technogym France SAV".into(),
+            unit_priceht: 28.5,
+            auto_order_prepared: false,
+        },
+        StockItemRecord {
+            id: "stk-maint-2".into(),
+            club_id: "beynost".into(),
+            name: "Lubrifiant Silicone Tapis de Course (Bidon 1L) + Goupilles 10mm".into(),
+            barcode: Some("3760123450110".into()),
+            category: "Pièces Détachées & Maintenance".into(),
+            current_qty: 3,
+            min_threshold: 5,
+            unit: "kits".into(),
+            supplier: "FitSupply Pro Lyon".into(),
+            unit_priceht: 19.9,
+            auto_order_prepared: true,
         },
     ]
 }
@@ -1674,6 +1756,7 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
         module_delegations: vec![],
         password_hashes_by_employee: HashMap::new(),
         recovery_cases: default_demo_recovery_cases(),
+        stock_items: default_demo_stock_items(),
     }
 }
 
@@ -1792,6 +1875,7 @@ pub fn create_production_initial_state() -> AppDatabaseState {
         module_delegations: vec![],
         password_hashes_by_employee: HashMap::new(),
         recovery_cases: vec![],
+        stock_items: vec![],
     }
 }
 
@@ -1895,6 +1979,10 @@ pub fn load_or_init_state(data_dir: &Path) -> AppDatabaseState {
                         parsed.recovery_cases = baseline.recovery_cases;
                         migrated = true;
                     }
+                    if parsed.stock_items.is_empty() {
+                        parsed.stock_items = baseline.stock_items;
+                        migrated = true;
+                    }
                 }
                 if parsed.lead_settings_by_club.is_empty() {
                     parsed.lead_settings_by_club = default_lead_settings_by_club();
@@ -1959,6 +2047,7 @@ mod tests {
         assert!(state.lead_appointments.is_empty());
         assert!(state.lead_activities.is_empty());
         assert!(state.recovery_cases.is_empty());
+        assert!(state.stock_items.is_empty());
         assert!(state.lead_settings_by_club.contains_key("carre-de-soie"));
         assert!(state.lead_settings_by_club.contains_key("beynost"));
     }

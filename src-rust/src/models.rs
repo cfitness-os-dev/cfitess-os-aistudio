@@ -611,6 +611,23 @@ pub struct RecoveryCaseRecord {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct StockItemRecord {
+    pub id: String,
+    pub club_id: String,
+    pub name: String,
+    #[serde(default)]
+    pub barcode: Option<String>,
+    pub category: String,
+    pub current_qty: u32,
+    pub min_threshold: u32,
+    pub unit: String,
+    pub supplier: String,
+    pub unit_priceht: f64,
+    pub auto_order_prepared: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AppDatabaseState {
     pub version: String,
     pub organization: Organization,
@@ -660,6 +677,8 @@ pub struct AppDatabaseState {
     pub password_hashes_by_employee: HashMap<String, String>,
     #[serde(default)]
     pub recovery_cases: Vec<RecoveryCaseRecord>,
+    #[serde(default)]
+    pub stock_items: Vec<StockItemRecord>,
 }
 
 #[derive(Debug, Clone, Serialize)]

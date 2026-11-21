@@ -294,6 +294,19 @@ pub fn api_router(state: SharedState) -> Router {
             "/api/recovery/cases/:case_id/relance",
             post(crate::recovery::post_recovery_case_relance),
         )
+        .route(
+            "/api/stocks",
+            get(crate::stocks::get_stocks).post(crate::stocks::post_stock_item),
+        )
+        .route("/api/stocks/import", post(crate::stocks::post_stocks_import))
+        .route(
+            "/api/stocks/:item_id/adjust",
+            patch(crate::stocks::patch_stock_adjust),
+        )
+        .route(
+            "/api/stocks/:item_id",
+            axum::routing::delete(crate::stocks::delete_stock_item),
+        )
         .with_state(state)
 }
 

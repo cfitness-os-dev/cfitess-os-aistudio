@@ -518,8 +518,64 @@ const INITIAL_PURCHASE_ORDERS: PurchaseOrderItem[] = [
   },
 ];
 
+async function stocksFetchJson<T>(
+  path: string,
+  actorId: string,
+  siteId: string,
+  init?: RequestInit
+): Promise<T> {
+  const headers = new Headers(init?.headers);
+  headers.set('x-cfitness-actor-id', actorId);
+  headers.set('x-cfitness-site-id', siteId);
+  try {
+    const token = window.sessionStorage.getItem('cfos_bearer_token');
+    const tokenActor = window.sessionStorage.getItem('cfos_bearer_actor_id');
+    if (token && tokenActor === actorId) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+  } catch {
+    // ignore storage errors
+  }
+  if (init?.body && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  let response = await fetch(path, { ...init, headers });
+  if (response.status === 401 && headers.has('Authorization')) {
+    try {
+      window.sessionStorage.removeItem('cfos_bearer_token');
+      window.sessionStorage.removeItem('cfos_bearer_actor_id');
+    } catch {
+      // ignore
+    }
+    headers.delete('Authorization');
+    response = await fetch(path, { ...init, headers });
+  }
+  if (!response.ok) {
+    let errMsg = `Erreur serveur HTTP ${response.status}`;
+    try {
+      const payload = (await response.json()) as { error?: string };
+      if (payload?.error) errMsg = payload.error;
+    } catch {
+      // keep default HTTP message
+    }
+    throw new Error(errMsg);
+  }
+  return (await response.json()) as T;
+}
+
 export function OrchestratorMaintenanceView() {
-  const { clubFilter, heitzMembers, employees, setActiveSection, navSubTarget, isTechnicalMode } = useCfos();
+  const {
+    currentUser,
+    clubFilter,
+    heitzMembers,
+    employees,
+    setActiveSection,
+    navSubTarget,
+    isTechnicalMode,
+  } = useCfos();
+  const activeSiteId =
+    clubFilter === 'beynost' ? 'club-beynost' : 'club-carre-soie';
 
   const [activeTab, setActiveTab] = useState<
     | 'ARCHITECTURE_ORCHESTRATOR'
@@ -566,7 +622,29 @@ export function OrchestratorMaintenanceView() {
   const [tickets, setTickets] = useState<MaintenanceTicket[]>(
     INITIAL_MAINTENANCE_TICKETS
   );
-  const [stocks, setStocks] = useState<StockConsumableItem[]>(INITIAL_STOCKS);
+  const [stocks, setStocks] = useState<StockConsumableItem[]>(
+    import.meta.env.VITE_DEMO_MODE !== 'false' ? INITIAL_STOCKS : []
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    void stocksFetchJson<StockConsumableItem[]>(
+      '/api/stocks',
+      currentUser.id,
+      activeSiteId
+    )
+      .then((list) => {
+        if (!cancelled && Array.isArray(list)) {
+          setStocks(list);
+        }
+      })
+      .catch(() => {
+        // Garde les données initiales en mode démo si hors serveur ou non habilité
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser.id, activeSiteId]);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderItem[]>(
     INITIAL_PURCHASE_ORDERS
   );
@@ -625,27 +703,39 @@ export function OrchestratorMaintenanceView() {
     setScanFeedback(`Nouveau fournisseur ajouté et sélectionné : ${clean}.`);
   };
 
-  const handleAddProductOnly = () => {
+  const handleAddProductOnly = async () => {
     if (!newStockName.trim()) return;
-    const newStk: StockConsumableItem = {
-      id: `stk-${Date.now()}`,
-      clubId: newStockClub,
-      name: newStockName.trim(),
-      barcode: newStockBarcode.trim() || undefined,
-      category: newStockCategory,
-      currentQty: newStockQty,
-      minThreshold: Math.max(5, Math.round(newStockQty * 0.3)),
-      unit: 'unités',
-      supplier: newStockSupplier,
-      unitPriceht: newStockPrice,
-      autoOrderPrepared: false,
-    };
-    setStocks((prev) => [newStk, ...prev]);
-    setScanFeedback(
-      `Produit ajouté directement au stock (${formatClubName(newStockClub, true)}) : ${newStk.name} (${newStk.currentQty} ${newStk.unit}).`
-    );
-    setNewStockName('');
-    setNewStockBarcode('');
+    try {
+      const created = await stocksFetchJson<StockConsumableItem>(
+        '/api/stocks',
+        currentUser.id,
+        activeSiteId,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            clubId: newStockClub,
+            name: newStockName.trim(),
+            barcode: newStockBarcode.trim() || undefined,
+            category: newStockCategory,
+            currentQty: newStockQty,
+            minThreshold: Math.max(5, Math.round(newStockQty * 0.3)),
+            unit: 'unités',
+            supplier: newStockSupplier,
+            unitPriceht: newStockPrice,
+          }),
+        }
+      );
+      setStocks((prev) => [created, ...prev]);
+      setScanFeedback(
+        `Produit ajouté et persisté côté serveur (${formatClubName(newStockClub, true)}) : ${created.name} (${created.currentQty} ${created.unit}).`
+      );
+      setNewStockName('');
+      setNewStockBarcode('');
+    } catch (e) {
+      setScanFeedback(
+        `Échec ajout stock serveur : ${e instanceof Error ? e.message : String(e)}`
+      );
+    }
   };
   const [newStockQty, setNewStockQty] = useState(20);
   const [newStockPrice, setNewStockPrice] = useState(12.5);
@@ -657,7 +747,7 @@ export function OrchestratorMaintenanceView() {
   const [stockSearch, setStockSearch] = useState('');
   const [stockLowOnly, setStockLowOnly] = useState(false);
 
-  const handleBarcodeScanSubmit = (e: React.FormEvent) => {
+  const handleBarcodeScanSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const code = barcodeInput.trim();
     if (!code) return;
@@ -675,27 +765,53 @@ export function OrchestratorMaintenanceView() {
       return;
     }
     const delta = scanMode === 'OUT_1' ? -1 : scanMode === 'IN_1' ? 1 : 10;
-    const nextQty = Math.max(0, match.currentQty + delta);
-    setStocks((prev) =>
-      prev.map((s) =>
-        s.id === match.id
-          ? { ...s, currentQty: nextQty, autoOrderPrepared: nextQty < s.minThreshold }
-          : s
-      )
-    );
-    const modeLabel =
-      scanMode === 'OUT_1' ? 'Sortie (-1)' : scanMode === 'IN_1' ? 'Entrée (+1)' : 'Réception (+10)';
-    setScanFeedback(
-      `Douchette OK · ${modeLabel} : ${match.name} (${code}) → Nouveau stock : ${nextQty} ${match.unit}.`
-    );
-    setBarcodeInput('');
+    try {
+      const updated = await stocksFetchJson<StockConsumableItem>(
+        `/api/stocks/${encodeURIComponent(match.id)}/adjust`,
+        currentUser.id,
+        activeSiteId,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ delta }),
+        }
+      );
+      setStocks((prev) =>
+        prev.map((s) => (s.id === updated.id ? updated : s))
+      );
+      const modeLabel =
+        scanMode === 'OUT_1'
+          ? 'Sortie (-1)'
+          : scanMode === 'IN_1'
+          ? 'Entrée (+1)'
+          : 'Réception (+10)';
+      setScanFeedback(
+        `Douchette OK · ${modeLabel} : ${updated.name} (${code}) → Nouveau stock : ${updated.currentQty} ${updated.unit}.`
+      );
+      setBarcodeInput('');
+    } catch (err) {
+      setScanFeedback(
+        `Échec mouvement douchette : ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
   };
 
-  const handleDeleteStock = (id: string) => {
+  const handleDeleteStock = async (id: string) => {
     const target = stocks.find((s) => s.id === id);
-    setStocks((prev) => prev.filter((s) => s.id !== id));
-    if (target) {
-      setScanFeedback(`Référence supprimée de l'inventaire : ${target.name}.`);
+    try {
+      await stocksFetchJson<{ ok: boolean }>(
+        `/api/stocks/${encodeURIComponent(id)}`,
+        currentUser.id,
+        activeSiteId,
+        { method: 'DELETE' }
+      );
+      setStocks((prev) => prev.filter((s) => s.id !== id));
+      if (target) {
+        setScanFeedback(`Référence supprimée de l'inventaire : ${target.name}.`);
+      }
+    } catch (err) {
+      setScanFeedback(
+        `Échec suppression stock : ${err instanceof Error ? err.message : String(err)}`
+      );
     }
   };
 
@@ -811,11 +927,32 @@ export function OrchestratorMaintenanceView() {
       });
 
       if (addedItems.length > 0) {
-        setStocks((prev) => [...addedItems, ...prev]);
+        void stocksFetchJson<{ createdCount: number; items: StockConsumableItem[] }>(
+          '/api/stocks/import',
+          currentUser.id,
+          activeSiteId,
+          {
+            method: 'POST',
+            body: JSON.stringify({ rows: addedItems }),
+          }
+        )
+          .then((res) => {
+            const created = Array.isArray(res.items) ? res.items : addedItems;
+            setStocks((prev) => [...created, ...prev]);
+            setStockImportReport(
+              `${file.name} importé et persisté : ${res.createdCount} produit(s) ajouté(s), ${skipped} doublon(s) ignoré(s).`
+            );
+          })
+          .catch((err) => {
+            setStockImportReport(
+              `Échec import CSV stock : ${err instanceof Error ? err.message : String(err)}`
+            );
+          });
+      } else {
+        setStockImportReport(
+          `${file.name} analysé : 0 nouveau produit, ${skipped} doublon(s) ignoré(s).`
+        );
       }
-      setStockImportReport(
-        `${file.name} importé : ${addedItems.length} produit(s) ajouté(s), ${skipped} doublon(s) ignoré(s).`
-      );
       e.target.value = '';
     };
     reader.readAsText(file, 'utf-8');
@@ -887,17 +1024,23 @@ export function OrchestratorMaintenanceView() {
     if (!newEquipment.trim()) return;
     const usedPart = newUsedStockId ? stocks.find((s) => s.id === newUsedStockId) : undefined;
     if (usedPart) {
-      setStocks((prev) =>
-        prev.map((s) =>
-          s.id === usedPart.id
-            ? {
-                ...s,
-                currentQty: Math.max(0, s.currentQty - 1),
-                autoOrderPrepared: Math.max(0, s.currentQty - 1) < s.minThreshold,
-              }
-            : s
-        )
-      );
+      void stocksFetchJson<StockConsumableItem>(
+        `/api/stocks/${encodeURIComponent(usedPart.id)}/adjust`,
+        currentUser.id,
+        activeSiteId,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ delta: -1 }),
+        }
+      )
+        .then((updated) => {
+          setStocks((prev) =>
+            prev.map((s) => (s.id === updated.id ? updated : s))
+          );
+        })
+        .catch(() => {
+          // ignore si non habilité
+        });
     }
     const created: MaintenanceTicket = {
       id: `mnt-${Date.now()}`,
@@ -982,35 +1125,47 @@ export function OrchestratorMaintenanceView() {
     );
   };
 
-  const handleOrderStock = (id: string) => {
-    setStocks((prev) =>
-      prev.map((s) =>
-        s.id === id
-          ? {
-              ...s,
-              currentQty: s.currentQty + 25,
-              autoOrderPrepared: false,
-            }
-          : s
-      )
-    );
+  const handleOrderStock = async (id: string) => {
+    try {
+      const updated = await stocksFetchJson<StockConsumableItem>(
+        `/api/stocks/${encodeURIComponent(id)}/adjust`,
+        currentUser.id,
+        activeSiteId,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ delta: 25 }),
+        }
+      );
+      setStocks((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+    } catch (err) {
+      setScanFeedback(
+        `Échec réapprovisionnement (+25) : ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
   };
 
-  const handleConsumeStock = (id: string) => {
-    setStocks((prev) =>
-      prev.map((s) =>
-        s.id === id
-          ? {
-              ...s,
-              currentQty: Math.max(1, s.minThreshold - 3),
-              autoOrderPrepared: true,
-            }
-          : s
-      )
-    );
+  const handleConsumeStock = async (id: string) => {
+    const target = stocks.find((s) => s.id === id);
+    if (!target) return;
+    try {
+      const updated = await stocksFetchJson<StockConsumableItem>(
+        `/api/stocks/${encodeURIComponent(id)}/adjust`,
+        currentUser.id,
+        activeSiteId,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ setQty: Math.max(1, target.minThreshold - 3) }),
+        }
+      );
+      setStocks((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+    } catch (err) {
+      setScanFeedback(
+        `Échec ajustement stock : ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
   };
 
-  const handleCreatePurchaseOrder = (e: React.FormEvent) => {
+  const handleCreatePurchaseOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStockName.trim()) return;
     const totalHt = Math.round(newStockQty * newStockPrice * 100) / 100;
@@ -1026,22 +1181,35 @@ export function OrchestratorMaintenanceView() {
     };
     setPurchaseOrders((prev) => [newPo, ...prev]);
 
-    const newStk: StockConsumableItem = {
-      id: `stk-${Date.now()}`,
-      clubId: newStockClub,
-      name: newStockName.trim(),
-      barcode: newStockBarcode.trim() || undefined,
-      category: newStockCategory,
-      currentQty: newStockQty,
-      minThreshold: Math.max(5, Math.round(newStockQty * 0.3)),
-      unit: 'unités',
-      supplier: newStockSupplier,
-      unitPriceht: newStockPrice,
-      autoOrderPrepared: false,
-    };
-    setStocks((prev) => [newStk, ...prev]);
-    setNewStockName('');
-    setNewStockBarcode('');
+    try {
+      const created = await stocksFetchJson<StockConsumableItem>(
+        '/api/stocks',
+        currentUser.id,
+        activeSiteId,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            clubId: newStockClub,
+            name: newStockName.trim(),
+            barcode: newStockBarcode.trim() || undefined,
+            category: newStockCategory,
+            currentQty: newStockQty,
+            minThreshold: Math.max(5, Math.round(newStockQty * 0.3)),
+            unit: 'unités',
+            supplier: newStockSupplier,
+            unitPriceht: newStockPrice,
+          }),
+        }
+      );
+      setStocks((prev) => [created, ...prev]);
+      setNewStockName('');
+      setNewStockBarcode('');
+      setScanFeedback(`Bon de commande et fiche stock créés côté serveur : ${created.name}.`);
+    } catch (err) {
+      setScanFeedback(
+        `Échec création article commande : ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
   };
 
   const handleAdvancePoStatus = (id: string) => {
