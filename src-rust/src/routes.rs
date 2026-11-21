@@ -10,6 +10,7 @@ use crate::rbac::{
 };
 use crate::seed::{persist_state, REGISTRY_SUMMARY_JSON};
 use axum::{
+    body::Bytes,
     extract::{Path, Query, State},
     http::{header, HeaderMap, HeaderValue, StatusCode},
     response::IntoResponse,
@@ -17,8 +18,10 @@ use axum::{
     Json, Router,
 };
 use chrono::Utc;
+use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use sha2::Sha256;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -843,28 +846,105 @@ async fn post_lead_webhook_club_entry(
     )
 }
 
+fn parse_stripe_signature_header(header: &str) -> (Option<i64>, Vec<String>) {
+    let mut timestamp = None;
+    let mut signatures = Vec::new();
+    for part in header.split(',') {
+        let part = part.trim();
+        if let Some(value) = part.strip_prefix("t=") {
+            timestamp = value.trim().parse::<i64>().ok();
+        } else if let Some(value) = part.strip_prefix("v1=") {
+            let value = value.trim();
+            if !value.is_empty() {
+                signatures.push(value.to_string());
+            }
+        }
+    }
+    (timestamp, signatures)
+}
+
+fn verify_stripe_signature_with_tolerance(
+    secret: &str,
+    payload: &[u8],
+    header: &str,
+    now_ts: i64,
+    tolerance_seconds: i64,
+) -> bool {
+    let (timestamp, signatures) = parse_stripe_signature_header(header);
+    let Some(timestamp) = timestamp else {
+        return false;
+    };
+    if secret.is_empty() || signatures.is_empty() {
+        return false;
+    }
+    if (now_ts - timestamp).abs() > tolerance_seconds.max(0) {
+        return false;
+    }
+
+    let mut signed_payload = Vec::with_capacity(24 + payload.len());
+    signed_payload.extend_from_slice(timestamp.to_string().as_bytes());
+    signed_payload.push(b'.');
+    signed_payload.extend_from_slice(payload);
+
+    signatures.iter().any(|signature| {
+        let Ok(expected) = hex::decode(signature) else {
+            return false;
+        };
+        let Ok(mut mac) = Hmac::<Sha256>::new_from_slice(secret.as_bytes()) else {
+            return false;
+        };
+        mac.update(&signed_payload);
+        mac.verify_slice(&expected).is_ok()
+    })
+}
+
+fn verify_stripe_signature(secret: &str, payload: &[u8], header: &str) -> bool {
+    let tolerance_seconds = std::env::var("CFITNESS_STRIPE_TOLERANCE_SECONDS")
+        .ok()
+        .and_then(|value| value.parse::<i64>().ok())
+        .filter(|value| *value > 0)
+        .unwrap_or(300);
+    verify_stripe_signature_with_tolerance(
+        secret,
+        payload,
+        header,
+        Utc::now().timestamp(),
+        tolerance_seconds,
+    )
+}
+
 async fn post_stripe_appointment_webhook(
     Path(club): Path<String>,
     headers: HeaderMap,
-    Json(payload): Json<StripeAppointmentWebhookPayload>,
+    body: Bytes,
 ) -> impl IntoResponse {
-    let stripe_secret_configured = std::env::var("CFITNESS_STRIPE_WEBHOOK_SECRET")
-        .map(|s| !s.trim().is_empty())
-        .unwrap_or(false);
+    let stripe_secret = std::env::var("CFITNESS_STRIPE_WEBHOOK_SECRET").unwrap_or_default();
+    let stripe_secret_configured = !stripe_secret.trim().is_empty();
     let sig_header = headers
         .get("stripe-signature")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
-    let has_sig_format = sig_header.contains("t=") && sig_header.contains("v1=");
-    if stripe_secret_configured && !has_sig_format {
+    if stripe_secret_configured
+        && !verify_stripe_signature(stripe_secret.trim(), &body, sig_header)
+    {
         return (
             StatusCode::UNAUTHORIZED,
             Json(json!({
                 "ok": false,
-                "error": "En-tête Stripe-Signature manquant ou invalide (401 Unauthorized)."
+                "error": "Signature Stripe invalide, expirée ou absente (401 Unauthorized)."
             })),
         );
     }
+
+    let payload: StripeAppointmentWebhookPayload = match serde_json::from_slice(&body) {
+        Ok(payload) => payload,
+        Err(_) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "ok": false, "error": "Payload JSON Stripe invalide." })),
+            );
+        }
+    };
 
     let payment_status = payload.payment_status.unwrap_or_else(|| "pending".to_string());
     let confirmed = payment_status == "paid";
@@ -876,7 +956,7 @@ async fn post_stripe_appointment_webhook(
             "paymentStatus": payment_status,
             "bookingStatus": if confirmed { "confirme" } else { "provisoire_attente_paiement" },
             "slotBlocked": confirmed,
-            "signatureMode": if stripe_secret_configured { "stripe_signature_checked" } else { "sandbox_no_secret" },
+            "signatureMode": if stripe_secret_configured { "stripe_signature_verified" } else { "sandbox_no_secret" },
             "verifiedAtUtc": Utc::now().to_rfc3339()
         })),
     )
@@ -3859,6 +3939,62 @@ mod tests {
         .await
         .into_response();
         assert_eq!(blocked.status(), StatusCode::TOO_MANY_REQUESTS);
+    }
+
+    #[test]
+    fn stripe_webhook_signature_is_verified_hmac_sha256() {
+        fn sign(secret: &str, timestamp: i64, payload: &[u8]) -> String {
+            let mut mac = Hmac::<Sha256>::new_from_slice(secret.as_bytes()).unwrap();
+            mac.update(format!("{timestamp}.").as_bytes());
+            mac.update(payload);
+            hex::encode(mac.finalize().into_bytes())
+        }
+
+        let secret = "whsec_test_secret";
+        let payload = br#"{"paymentStatus":"paid"}"#;
+        let now = 1_800_000_000i64;
+        let signature = sign(secret, now, payload);
+        let header = format!("t={now},v1={signature}");
+
+        assert!(verify_stripe_signature_with_tolerance(
+            secret, payload, &header, now, 300
+        ));
+
+        // Payload modifié après signature -> refus
+        assert!(!verify_stripe_signature_with_tolerance(
+            secret,
+            br#"{"paymentStatus":"pending"}"#,
+            &header,
+            now,
+            300
+        ));
+
+        // Signature expirée au-delà de la tolérance -> refus
+        assert!(!verify_stripe_signature_with_tolerance(
+            secret,
+            payload,
+            &header,
+            now + 301,
+            300
+        ));
+
+        // En-tête malformé ou secret différent -> refus
+        assert!(!verify_stripe_signature_with_tolerance(
+            secret, payload, "t=abc,v1=zz", now, 300
+        ));
+        assert!(!verify_stripe_signature_with_tolerance(
+            "whsec_other",
+            payload,
+            &header,
+            now,
+            300
+        ));
+
+        // Plusieurs signatures v1 : une seule valide suffit
+        let multi = format!("t={now},v1=deadbeef,v1={signature}");
+        assert!(verify_stripe_signature_with_tolerance(
+            secret, payload, &multi, now, 300
+        ));
     }
 
     #[tokio::test]
