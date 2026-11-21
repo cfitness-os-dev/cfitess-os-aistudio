@@ -61,6 +61,19 @@ const ANTI_GAFFE_RULES = [
 
 const FIELD_GUIDE_PHASES = [
   {
+    id: 'fg-0',
+    phase: 'Phase 0 · Préparer le serveur chez soi (Atelier, avant le jour J)',
+    duration: '45 min (au calme)',
+    goal: 'Monter et tester tout le serveur Linux chez soi pour n’avoir plus qu’à le brancher au club.',
+    checks: [
+      { id: 'fg-0-a', text: 'Installer Debian 12 (ou Ubuntu Server), Git, Docker (+ Docker Compose v2), Ollama (ollama pull qwen2.5:3b) et Tailscale directement sur le futur PC/serveur du club chez vous.' },
+      { id: 'fg-0-b', text: 'Transférer le projet par la méthode la plus simple : git clone https://github.com/cfitness-os-dev/cfitess-os-aistudio.git /opt/cfitness-os (ou via la clé USB auto-installable avec sudo bash install-from-usb.sh dans scripts/usb-kit/).' },
+      { id: 'fg-0-c', text: 'Pour un club sans Internet ou avec une box lente : pré-compiler l’image Docker chez vous (docker compose build --build-arg VITE_DEMO_MODE=false) ou l’exporter sur clé USB (docker save -o cfitness-os-image.tar cfitness-os-cfitness-os:latest).' },
+      { id: 'fg-0-d', text: 'Lancer le serveur chez vous, ouvrir http://localhost:8080 puis tester un redémarrage complet (sudo reboot) : au redémarrage, tout doit repartir tout seul avant même d’aller au club.' },
+    ],
+    verifyTip: 'Tout ce que vous installez chez vous (Debian, Docker, Ollama, image Docker compilée) vous évite d’attendre les téléchargements sur place le jour J.',
+  },
+  {
     id: 'fg-1',
     phase: 'Phase 1 · Avant de partir au club (J-7 à J-1)',
     duration: 'À distance',
@@ -87,14 +100,14 @@ const FIELD_GUIDE_PHASES = [
   },
   {
     id: 'fg-3',
-    phase: 'Phase 3 · Démarrer C.Fitness OS & l’Agent IA local (Ollama)',
+    phase: 'Phase 3 · Passer de la Démo à la Version Réelle & Démarrer l’IA',
     duration: '20 min',
-    goal: 'Lancer l’application + l’IA locale et vérifier qu’elle s’ouvre depuis l’accueil.',
+    goal: 'Couper le mode démo, sécuriser la production et vérifier l’ouverture depuis l’accueil.',
     checks: [
-      { id: 'fg-3-a', text: 'Vérifier le fichier .env (CFITNESS_BIND_ADDR=0.0.0.0:8080, OLLAMA_BASE_URL=http://127.0.0.1:11434, OLLAMA_DEFAULT_MODEL=qwen2.5:3b).' },
-      { id: 'fg-3-b', text: 'Lancer le script d’installation ./deploy-linux.sh (disponible dans l’onglet 2) et vérifier que le service démarre automatiquement au boot (systemctl status cfitness-os).' },
-      { id: 'fg-3-c', text: 'Depuis le PC d’accueil de Carré de Soie, ouvrir http://IP_DU_SERVEUR:8080 dans Chrome, créer un favori « C.Fitness OS » sur le bureau.' },
-      { id: 'fg-3-d', text: 'Ouvrir le menu Recouvrement et vérifier que le voyant « Agent IA local (Ollama) » est vert (En ligne) et qu’il répond à un message test.' },
+      { id: 'fg-3-a', text: 'Dans /opt/cfitness-os/.env : régler CFITNESS_DEMO_MODE=0, CFITNESS_STRICT_SESSION=1, CFITNESS_ALLOWED_ORIGINS=http://IP_SERVEUR:8080 et renseigner des secrets uniques (HEITZ_WS_TOKEN, Stripe, webhooks Lead).' },
+      { id: 'fg-3-b', text: 'Compiler le frontend en mode production strict : docker compose build --build-arg VITE_DEMO_MODE=false && docker compose up -d (ou ./deploy-linux.sh après mise à jour). Cela masque Reset démo et bloque toute bascule rapide.' },
+      { id: 'fg-3-c', text: 'Partir d’une base propre (sans importer cfitness_state.json démo du portable), créer les vrais comptes collaborateurs (avec gestion des vrais mots de passe serveur avant mise en production), puis importer les CSV Heitz, Stocks EAN et Excel Lead.' },
+      { id: 'fg-3-d', text: 'Depuis le PC d’accueil de Carré de Soie, ouvrir http://IP_DU_SERVEUR:8080 dans Chrome, vérifier /api/health et le voyant vert de l’Agent IA local (Ollama).' },
     ],
     verifyTip: 'Si le PC d’accueil n’affiche pas la page, vérifie le pare-feu du serveur : sudo ufw allow 8080/tcp',
   },
@@ -431,15 +444,35 @@ const ENV_PRODUCTION_TEMPLATE = `# =============================================
 # Emplacement sur le serveur : /opt/cfitness-os/.env (chmod 600)
 # ============================================================================
 
+TZ=Europe/Paris
 PORT=8080
-RUST_LOG=info,cfitness_os=debug
+RUST_LOG=info,cfitness_os=info
 CFITNESS_BIND_ADDR=0.0.0.0:8080
 CFITNESS_DATA_DIR=/var/lib/cfitness
 CFITNESS_FRONTEND_DIR=/app/dist
 
+# SÉCURITÉ PRODUCTION (COUPER IMPÉRATIVEMENT LE MODE DÉMO)
+CFITNESS_DEMO_MODE=0
+CFITNESS_STRICT_SESSION=1
+CFITNESS_ALLOWED_ORIGINS=http://10.10.0.10:8080
+
+# SECRETS WEBHOOKS & PASSERELLES (REMPLACER PAR DES CLÉS ALÉATOIRES UNIQUES)
+CFITNESS_STRIPE_WEBHOOK_SECRET=whsec_remplacer_en_prod
+CFITNESS_STRIPE_TOLERANCE_SECONDS=300
+CFITNESS_LEAD_API_KEY=remplacer_cle_api_lead_32car
+CFITNESS_INBOUND_WEBHOOK_SECRET=remplacer_secret_webhook_entrant
+CFITNESS_HEITZ_WEBHOOK_SECRET=remplacer_secret_webhook_heitz
+CFITNESS_WEBHOOK_TOLERANCE_SECONDS=300
+
+# AUTOMATISMES LEAD & IA LOCALE OLLAMA
+CFITNESS_AUTOMATION_SCHEDULER=1
+CFITNESS_AUTOMATION_INTERVAL_SECS=900
+OLLAMA_BASE_URL=http://host.docker.internal:11434
+OLLAMA_DEFAULT_MODEL=qwen2.5:3b
+
 # CONNEXION 100 % LOCALE AU SERVEUR HEITZ (10.10.0.20)
 HEITZ_WS_URL=http://10.10.0.20:8080/api/heitz-ws
-HEITZ_WS_TOKEN=CFITNESS-LOCAL-HZ-TOKEN
+HEITZ_WS_TOKEN=remplacer_token_heitz_local
 TURNSTILE_MODBUS_RELAY_CDS=10.10.0.21:502
 TURNSTILE_MODBUS_RELAY_BEY=10.20.0.21:502
 

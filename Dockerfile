@@ -10,6 +10,8 @@ COPY docker-compose.yml Dockerfile deploy-linux.sh Cargo.toml metadata.json ./
 COPY public ./public
 COPY src ./src
 COPY src-rust ./src-rust
+ARG VITE_DEMO_MODE=true
+ENV VITE_DEMO_MODE=${VITE_DEMO_MODE}
 RUN npm run build
 
 # Étape 2 : Build Backend Rust + Axum + Tokio
