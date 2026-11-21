@@ -461,6 +461,7 @@ async fn post_local_auth_login(
 }
 
 async fn post_heitz_gate_check(
+    State(state): State<SharedState>,
     Json(payload): Json<HeitzGateCheckRequest>,
 ) -> impl IntoResponse {
     if payload.fire_alarm_open {
@@ -520,6 +521,24 @@ async fn post_heitz_gate_check(
         payload.badge_code,
         Utc::now().timestamp()
     );
+
+    // Mise à jour temps réel C.Fitness OS : enregistrement de la venue et remise à zéro du décrochage
+    {
+        let mut db = state.db.write().await;
+        if let Some(prospect) = db.lead_prospects.iter_mut().find(|p| {
+            p.id == payload.member_id
+                || p.phone == payload.badge_code
+                || (p.club_id == payload.club_id && p.last_name.eq_ignore_ascii_case(&payload.member_id))
+        }) {
+            prospect.last_visit_at = Some(Utc::now().to_rfc3339());
+            prospect.days_without_visit = 0;
+            if prospect.stage == "Séance planifiée" || prospect.stage == "Nouveau" {
+                prospect.stage = "Venu".into();
+                prospect.lead_status = "Venu".into();
+            }
+        }
+        let _ = persist_state(&state.data_dir, &db);
+    }
 
     (
         StatusCode::OK,
@@ -2897,6 +2916,28 @@ fn parse_hhmm_minutes(hhmm: &str) -> Option<u32> {
     Some(h * 60 + m)
 }
 
+fn resolve_available_commercial_for_club(db: &AppDatabaseState, club_id: &str) -> String {
+    let today = Utc::now().format("%Y-%m-%d").to_string();
+    let candidates = if club_id == "beynost" {
+        vec!["emp-chloe", "emp-greg", "emp-sarah"]
+    } else {
+        vec!["emp-maxime", "emp-karim", "emp-sarah"]
+    };
+
+    for emp_id in candidates {
+        let is_on_leave = db.leave_requests.iter().any(|lr| {
+            lr.employee_id == emp_id
+                && (lr.status == "VALIDE" || lr.status == "EN_ATTENTE")
+                && lr.start_date.as_str() <= today.as_str()
+                && lr.end_date.as_str() >= today.as_str()
+        });
+        if !is_on_leave {
+            return emp_id.to_string();
+        }
+    }
+    format!("file_attente_{}", club_id)
+}
+
 async fn get_public_lead_form(
     State(state): State<SharedState>,
     Path((club_id, form_id)): Path<(String, String)>,
@@ -2977,6 +3018,7 @@ async fn post_public_lead_form_submit(
         let first_name = parts.next().unwrap_or("Contact").to_string();
         let last_name = parts.next().unwrap_or("Public").to_string();
         let new_pid = format!("pr-pub-{}", Utc::now().timestamp_millis());
+        let assigned_id = resolve_available_commercial_for_club(&db, &club_id);
         db.lead_prospects.insert(
             0,
             crate::models::LeadProspectRecord {
@@ -2998,6 +3040,9 @@ async fn post_public_lead_form_submit(
                 rgpd_consent: payload.rgpd_consent,
                 segments: vec![],
                 trial_date: None,
+                assigned_to_id: Some(assigned_id),
+                last_visit_at: None,
+                days_without_visit: 0,
                 created_at: Utc::now().format("%Y-%m-%d").to_string(),
             },
         );
@@ -3164,6 +3209,7 @@ async fn post_public_book_slot(
         let first_name = parts.next().unwrap_or("Contact").to_string();
         let last_name = parts.next().unwrap_or("Public").to_string();
         let new_pid = format!("pr-book-{}", Utc::now().timestamp_millis());
+        let assigned_id = resolve_available_commercial_for_club(&db, &club_id);
         db.lead_prospects.insert(
             0,
             crate::models::LeadProspectRecord {
@@ -3185,6 +3231,9 @@ async fn post_public_book_slot(
                 rgpd_consent: true,
                 segments: vec![],
                 trial_date: Some(payload.date.clone()),
+                assigned_to_id: Some(assigned_id),
+                last_visit_at: None,
+                days_without_visit: 0,
                 created_at: Utc::now().format("%Y-%m-%d").to_string(),
             },
         );
@@ -3410,6 +3459,7 @@ async fn post_lead_prospects_import(
             continue;
         }
         let pid = format!("pr-imp-{}-{}", Utc::now().timestamp_millis(), created);
+        let assigned_id = resolve_available_commercial_for_club(&db, &item.club_id);
         db.lead_prospects.insert(
             0,
             crate::models::LeadProspectRecord {
@@ -3431,6 +3481,9 @@ async fn post_lead_prospects_import(
                 rgpd_consent: item.rgpd_consent,
                 segments: vec![],
                 trial_date: None,
+                assigned_to_id: Some(assigned_id),
+                last_visit_at: None,
+                days_without_visit: 0,
                 created_at: Utc::now().format("%Y-%m-%d").to_string(),
             },
         );
@@ -4859,5 +4912,86 @@ mod tests {
         let cds_saved = reloaded.lead_settings_by_club.get("carre-de-soie").unwrap();
         assert_eq!(cds_saved["archiveThresholdDays"], 40);
         assert_eq!(cds_saved["dropoutThresholdDays"], 25);
+    }
+
+    #[tokio::test]
+    async fn heitz_gate_check_resets_prospect_dropout_and_rh_leave_assigns_cleanly() {
+        let state = test_state();
+
+        // 1. Positionner un prospect avec décrochage (25 jours sans visite)
+        {
+            let mut db = state.db.write().await;
+            db.lead_prospects.push(crate::models::LeadProspectRecord {
+                id: "pr-test-dropout".into(),
+                gender: "M".into(),
+                first_name: "Julien".into(),
+                last_name: "Roux".into(),
+                email: "julien.roux@exemple.fr".into(),
+                phone: "0699001122".into(),
+                street: "".into(),
+                postal_code: "".into(),
+                city: "".into(),
+                birth_date: "".into(),
+                comment: "Test décrochage".into(),
+                club_id: "carre-de-soie".into(),
+                source: "Site".into(),
+                stage: "Séance planifiée".into(),
+                lead_status: "Séance planifiée".into(),
+                rgpd_consent: true,
+                segments: vec![],
+                trial_date: Some("2026-11-21".into()),
+                assigned_to_id: Some("emp-maxime".into()),
+                last_visit_at: None,
+                days_without_visit: 25,
+                created_at: "2026-10-25".into(),
+            });
+        }
+
+        // 2. Passage portillon Heitz réussi
+        let gate_res = post_heitz_gate_check(
+            State(state.clone()),
+            Json(HeitzGateCheckRequest {
+                club_id: "carre-de-soie".into(),
+                badge_code: "0699001122".into(),
+                member_id: "pr-test-dropout".into(),
+                home_club_id: "carre-de-soie".into(),
+                fin_balance_eur: 0.0,
+                fire_alarm_open: false,
+            }),
+        )
+        .await
+        .into_response();
+        assert_eq!(gate_res.status(), StatusCode::OK);
+
+        // 3. Vérification de la remise à zéro du décrochage et du passage au statut "Venu"
+        {
+            let db = state.db.read().await;
+            let pr = db.lead_prospects.iter().find(|p| p.id == "pr-test-dropout").unwrap();
+            assert_eq!(pr.days_without_visit, 0);
+            assert!(pr.last_visit_at.is_some());
+            assert_eq!(pr.stage, "Venu");
+        }
+
+        // 4. Test d'exclusion des commerciaux en congé RH
+        {
+            let mut db = state.db.write().await;
+            let today = Utc::now().format("%Y-%m-%d").to_string();
+            // Maxime est placé en congé maladie validé
+            db.leave_requests.push(crate::models::LeaveRequest {
+                id: "leave-maxime".into(),
+                employee_id: "emp-maxime".into(),
+                site_id: "site_cds".into(),
+                motive: "Maladie".into(),
+                start_date: today.clone(),
+                end_date: today,
+                status: "VALIDE".into(),
+                comment: "Arrêt maladie".into(),
+            });
+
+            // L'assignation pour Carré de Soie doit exclure Maxime et choisir Karim ou file d'attente
+            let assigned = resolve_available_commercial_for_club(&db, "carre-de-soie");
+            assert_ne!(assigned, "emp-maxime");
+            assert_eq!(assigned, "emp-karim");
+        }
     }
 }

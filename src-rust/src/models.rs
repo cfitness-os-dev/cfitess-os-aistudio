@@ -413,6 +413,12 @@ pub struct LeadProspectRecord {
     pub segments: Vec<String>,
     #[serde(default)]
     pub trial_date: Option<String>,
+    #[serde(default)]
+    pub assigned_to_id: Option<String>,
+    #[serde(default)]
+    pub last_visit_at: Option<String>,
+    #[serde(default)]
+    pub days_without_visit: u32,
     pub created_at: String,
 }
 
