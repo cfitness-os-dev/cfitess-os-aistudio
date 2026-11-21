@@ -1,3 +1,4 @@
+mod lead_automations;
 mod models;
 mod rbac;
 mod routes;
@@ -78,6 +79,8 @@ async fn main() {
     let spa_service = ServeDir::new(&frontend_dir)
         .append_index_html_on_directories(true)
         .fallback(ServeFile::new(index_file));
+
+    lead_automations::spawn_lead_automation_scheduler(shared.clone());
 
     let app: Router = api_router(shared)
         .fallback_service(spa_service)

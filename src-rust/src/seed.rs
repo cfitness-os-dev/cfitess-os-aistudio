@@ -1376,6 +1376,12 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
                 last_inbound_reply_at: None,
                 archived_at: None,
                 converted_offer: None,
+                is_archived: false,
+                archive_reason: None,
+                client_scope: None,
+                client_club_ids: vec![],
+                has_active_vacation: false,
+                last_commercial_touch_at: None,
                 created_at: "2026-11-16".into(),
             },
             LeadProspectRecord {
@@ -1403,6 +1409,12 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
                 last_inbound_reply_at: None,
                 archived_at: None,
                 converted_offer: None,
+                is_archived: false,
+                archive_reason: None,
+                client_scope: None,
+                client_club_ids: vec![],
+                has_active_vacation: false,
+                last_commercial_touch_at: None,
                 created_at: "2026-11-15".into(),
             },
         ],
@@ -1488,6 +1500,8 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
             map
         },
         lead_alerts: vec![],
+        processed_lead_events: vec![],
+        lead_scheduler_status: crate::models::LeadSchedulerStatus::default(),
         // Direction : Finances par défaut. Aucune habilitation nominative
         // n'est accordée à Sarah (responsable de club) tant qu'elle n'est pas
         // explicitement ajoutée ici (ticket #3).

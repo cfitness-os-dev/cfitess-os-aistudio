@@ -425,6 +425,18 @@ pub struct LeadProspectRecord {
     pub archived_at: Option<String>,
     #[serde(default)]
     pub converted_offer: Option<String>,
+    #[serde(default)]
+    pub is_archived: bool,
+    #[serde(default)]
+    pub archive_reason: Option<String>,
+    #[serde(default)]
+    pub client_scope: Option<String>,
+    #[serde(default)]
+    pub client_club_ids: Vec<String>,
+    #[serde(default)]
+    pub has_active_vacation: bool,
+    #[serde(default)]
+    pub last_commercial_touch_at: Option<String>,
     pub created_at: String,
 }
 
@@ -437,10 +449,71 @@ pub struct LeadAlertRecord {
     pub title: String,
     pub message: String,
     pub prospect_id: Option<String>,
+    #[serde(default)]
     pub recipient_ids: Vec<String>,
+    #[serde(default)]
+    pub alert_rule_id: Option<String>,
+    #[serde(default)]
+    pub channel: String,
+    #[serde(default)]
+    pub recipient_employee_ids: Vec<String>,
+    #[serde(default)]
+    pub recipient_channels: Vec<String>,
     pub simulation_mode: bool,
     pub acknowledged: bool,
+    #[serde(default)]
+    pub acknowledged_by: Option<String>,
+    #[serde(default)]
+    pub acknowledged_at: Option<String>,
     pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProcessedWebhookEvent {
+    pub event_key: String,
+    pub source: String,
+    pub club_id: String,
+    pub processed_at: String,
+    pub response_summary: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LeadSchedulerStatus {
+    pub enabled: bool,
+    pub frequency_seconds: u64,
+    pub timezone: String,
+    pub actor_identity: String,
+    #[serde(default)]
+    pub last_archive_run_at: Option<String>,
+    #[serde(default)]
+    pub last_reminder_run_at: Option<String>,
+    #[serde(default)]
+    pub last_run_error: Option<String>,
+    #[serde(default)]
+    pub total_runs: u64,
+    #[serde(default)]
+    pub last_archived_count: usize,
+    #[serde(default)]
+    pub last_reminders_emitted: usize,
+}
+
+impl Default for LeadSchedulerStatus {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            frequency_seconds: 900,
+            timezone: "Europe/Paris".to_string(),
+            actor_identity: "system-scheduler".to_string(),
+            last_archive_run_at: None,
+            last_reminder_run_at: None,
+            last_run_error: None,
+            total_runs: 0,
+            last_archived_count: 0,
+            last_reminders_emitted: 0,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -519,6 +592,10 @@ pub struct AppDatabaseState {
     pub lead_settings_by_club: HashMap<String, serde_json::Value>,
     #[serde(default)]
     pub lead_alerts: Vec<LeadAlertRecord>,
+    #[serde(default)]
+    pub processed_lead_events: Vec<ProcessedWebhookEvent>,
+    #[serde(default)]
+    pub lead_scheduler_status: LeadSchedulerStatus,
     // Habilitations nominatives explicites (délégation module par module).
     // Les profils admin/manager conservent leurs accès par défaut ; ces listes
     // permettent d'ouvrir un module à un collaborateur précis sans changer son rôle.
