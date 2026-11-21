@@ -1,4 +1,4 @@
-use crate::models::StockItemRecord;
+use crate::models::{PurchaseOrderRecord, StockItemRecord};
 use crate::rbac::{can_access_module_action, is_admin_employee};
 use crate::routes::{
     append_audit, authorized_clubs_for_actor, err_resp, resolve_session_actor, SharedState,
@@ -36,6 +36,27 @@ pub struct BatchImportStocksPayload {
 pub struct AdjustStockPayload {
     pub delta: Option<i32>,
     pub set_qty: Option<u32>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreatePurchaseOrderPayload {
+    pub club_id: String,
+    pub reference: Option<String>,
+    pub supplier: String,
+    pub items_summary: String,
+    pub amount_ht_eur: Option<f64>,
+    pub date: Option<String>,
+    pub status: Option<String>,
+    pub linked_stock_id: Option<String>,
+    pub ordered_qty: Option<u32>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub struct UpdatePurchaseOrderStatusPayload {
+    pub status: Option<String>,
+    pub advance: Option<bool>,
 }
 
 fn normalize_club_id(raw: &str) -> Option<&'static str> {
@@ -404,6 +425,329 @@ pub async fn delete_stock_item(
     Ok(Json(json!({ "ok": true, "deletedId": removed.id })))
 }
 
+pub async fn get_purchase_orders(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<PurchaseOrderRecord>>, (StatusCode, Json<Value>)> {
+    let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
+    let db = state.db.read().await;
+
+    let allowed = is_admin_employee(&db, &actor_id)
+        || can_access_module_action(&db, &actor_id, Some(&site_id), "stocks", "view");
+    if !allowed {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Accès refusé (403) : consultation des bons de commande non autorisée.",
+        ));
+    }
+
+    let authorized = authorized_clubs_for_actor(&db, &actor_id);
+    let orders: Vec<PurchaseOrderRecord> = db
+        .purchase_orders
+        .iter()
+        .filter(|po| authorized.contains(&po.club_id))
+        .cloned()
+        .collect();
+    Ok(Json(orders))
+}
+
+pub async fn post_purchase_order(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Json(payload): Json<CreatePurchaseOrderPayload>,
+) -> Result<(StatusCode, Json<PurchaseOrderRecord>), (StatusCode, Json<Value>)> {
+    let (actor_id, _site_id) = resolve_session_actor(&state, &headers).await?;
+    if payload.items_summary.trim().is_empty() {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            "Le récapitulatif des articles du bon de commande est requis.",
+        ));
+    }
+    let Some(club_id) = normalize_club_id(&payload.club_id) else {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            "Club invalide pour le bon de commande.",
+        ));
+    };
+
+    let mut db = state.db.write().await;
+    let authorized = authorized_clubs_for_actor(&db, &actor_id);
+    if !authorized.contains(club_id) {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Accès refusé (403) : club hors de votre périmètre d'habilitation.",
+        ));
+    }
+    let allowed = is_admin_employee(&db, &actor_id)
+        || can_access_module_action(
+            &db,
+            &actor_id,
+            Some(club_to_site_id(club_id)),
+            "stocks",
+            "edit",
+        );
+    if !allowed {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Accès refusé (403) : création de bon de commande non autorisée.",
+        ));
+    }
+
+    let seq = db.purchase_orders.len() + 1;
+    let status = match payload.status.as_deref().map(str::trim) {
+        Some("Brouillon IA") | Some("Commande envoyée") | Some("Livré & Réceptionné") => {
+            payload.status.unwrap().trim().to_string()
+        }
+        _ => "Commande envoyée".to_string(),
+    };
+    let po = PurchaseOrderRecord {
+        id: format!("po-{}-{:03}", Utc::now().timestamp_millis(), seq),
+        reference: payload
+            .reference
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string)
+            .unwrap_or_else(|| format!("BC-{}-{:04}", Utc::now().format("%Y"), 410 + seq)),
+        club_id: club_id.to_string(),
+        supplier: if payload.supplier.trim().is_empty() {
+            "FitSupply Pro Lyon".to_string()
+        } else {
+            payload.supplier.trim().to_string()
+        },
+        items_summary: payload.items_summary.trim().to_string(),
+        amount_ht_eur: payload
+            .amount_ht_eur
+            .filter(|a| a.is_finite() && *a >= 0.0)
+            .unwrap_or(0.0),
+        date: payload
+            .date
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string)
+            .unwrap_or_else(|| Utc::now().format("%Y-%m-%d").to_string()),
+        status,
+        linked_stock_id: payload
+            .linked_stock_id
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string),
+        ordered_qty: payload.ordered_qty,
+    };
+
+    let snapshot = db.clone();
+    db.purchase_orders.insert(0, po.clone());
+
+    append_audit(
+        &mut db,
+        &actor_id,
+        "Stock & Achats (Bon de Commande)",
+        format!(
+            "Création bon de commande {} ({}) sur {}",
+            po.reference, po.items_summary, club_id
+        ),
+        club_to_site_id(club_id),
+        "purchase_orders",
+        None,
+        Some(po.reference.clone()),
+    );
+
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        *db = snapshot;
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec persistance bon de commande : {}", err_msg),
+        ));
+    }
+
+    Ok((StatusCode::CREATED, Json(po)))
+}
+
+pub async fn patch_purchase_order_status(
+    State(state): State<SharedState>,
+    Path(order_id): Path<String>,
+    headers: HeaderMap,
+    Json(payload): Json<UpdatePurchaseOrderStatusPayload>,
+) -> Result<Json<PurchaseOrderRecord>, (StatusCode, Json<Value>)> {
+    let (actor_id, _site_id) = resolve_session_actor(&state, &headers).await?;
+    let mut db = state.db.write().await;
+
+    let (idx, club_id) = {
+        let pos = db
+            .purchase_orders
+            .iter()
+            .position(|po| po.id == order_id)
+            .ok_or_else(|| {
+                err_resp(
+                    StatusCode::NOT_FOUND,
+                    format!("Bon de commande « {} » introuvable.", order_id),
+                )
+            })?;
+        (pos, db.purchase_orders[pos].club_id.clone())
+    };
+
+    let authorized = authorized_clubs_for_actor(&db, &actor_id);
+    if !authorized.contains(&club_id) {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Accès refusé (403) : club hors de votre périmètre d'habilitation.",
+        ));
+    }
+    let allowed = is_admin_employee(&db, &actor_id)
+        || can_access_module_action(
+            &db,
+            &actor_id,
+            Some(club_to_site_id(&club_id)),
+            "stocks",
+            "edit",
+        );
+    if !allowed {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Accès refusé (403) : mise à jour de bon de commande non autorisée.",
+        ));
+    }
+
+    let old_status = db.purchase_orders[idx].status.clone();
+    let next_status = if payload.advance.unwrap_or(false) {
+        match old_status.as_str() {
+            "Brouillon IA" => "Commande envoyée".to_string(),
+            _ => "Livré & Réceptionné".to_string(),
+        }
+    } else if let Some(explicit) = payload.status.as_deref().map(str::trim) {
+        match explicit {
+            "Brouillon IA" | "Commande envoyée" | "Livré & Réceptionné" => explicit.to_string(),
+            _ => {
+                return Err(err_resp(
+                    StatusCode::BAD_REQUEST,
+                    "Statut de commande invalide. Valeurs supportées : Brouillon IA, Commande envoyée, Livré & Réceptionné.",
+                ));
+            }
+        }
+    } else {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            "Aucun statut ou directive d'avancement fournie.",
+        ));
+    };
+
+    let snapshot = db.clone();
+    db.purchase_orders[idx].status = next_status.clone();
+
+    // Si la commande passe au statut "Livré & Réceptionné", incrémenter automatiquement le stock lié
+    if old_status != "Livré & Réceptionné" && next_status == "Livré & Réceptionné" {
+        let linked_id = db.purchase_orders[idx].linked_stock_id.clone();
+        let qty = db.purchase_orders[idx].ordered_qty.unwrap_or(0);
+        if let (Some(stock_id), true) = (linked_id, qty > 0) {
+            if let Some(item) = db
+                .stock_items
+                .iter_mut()
+                .find(|s| s.id == stock_id && s.club_id == club_id)
+            {
+                item.current_qty = item.current_qty.saturating_add(qty);
+                item.auto_order_prepared = item.current_qty < item.min_threshold;
+            }
+        }
+    }
+
+    let updated = db.purchase_orders[idx].clone();
+
+    append_audit(
+        &mut db,
+        &actor_id,
+        "Stock & Achats (Réception Commande)",
+        format!(
+            "Statut bon de commande {} : {} -> {}",
+            updated.reference, old_status, updated.status
+        ),
+        club_to_site_id(&club_id),
+        "purchase_orders",
+        Some(old_status),
+        Some(updated.status.clone()),
+    );
+
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        *db = snapshot;
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec persistance statut bon de commande : {}", err_msg),
+        ));
+    }
+
+    Ok(Json(updated))
+}
+
+pub async fn delete_purchase_order(
+    State(state): State<SharedState>,
+    Path(order_id): Path<String>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let (actor_id, _site_id) = resolve_session_actor(&state, &headers).await?;
+    let mut db = state.db.write().await;
+
+    let (idx, club_id) = {
+        let pos = db
+            .purchase_orders
+            .iter()
+            .position(|po| po.id == order_id)
+            .ok_or_else(|| {
+                err_resp(
+                    StatusCode::NOT_FOUND,
+                    format!("Bon de commande « {} » introuvable.", order_id),
+                )
+            })?;
+        (pos, db.purchase_orders[pos].club_id.clone())
+    };
+
+    let authorized = authorized_clubs_for_actor(&db, &actor_id);
+    if !authorized.contains(&club_id) {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Accès refusé (403) : club hors de votre périmètre d'habilitation.",
+        ));
+    }
+    let allowed = is_admin_employee(&db, &actor_id)
+        || can_access_module_action(
+            &db,
+            &actor_id,
+            Some(club_to_site_id(&club_id)),
+            "stocks",
+            "edit",
+        );
+    if !allowed {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Accès refusé (403) : suppression de bon de commande non autorisée.",
+        ));
+    }
+
+    let snapshot = db.clone();
+    let removed = db.purchase_orders.remove(idx);
+
+    append_audit(
+        &mut db,
+        &actor_id,
+        "Stock & Achats (Suppression Commande)",
+        format!("Suppression bon de commande {}", removed.reference),
+        club_to_site_id(&club_id),
+        "purchase_orders",
+        Some(removed.reference.clone()),
+        None,
+    );
+
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        *db = snapshot;
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec persistance suppression bon de commande : {}", err_msg),
+        ));
+    }
+
+    Ok(Json(json!({ "ok": true, "deletedId": removed.id })))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -554,6 +898,48 @@ mod tests {
             .await
             .unwrap_err();
         assert_eq!(status, StatusCode::FORBIDDEN);
+        let _ = std::fs::remove_dir_all(&state.data_dir);
+    }
+
+    #[tokio::test]
+    async fn purchase_orders_crud_and_delivery_increments_linked_stock() {
+        let state = test_state();
+        let headers = session_headers(&state, "emp-admin", "club-beynost").await;
+
+        // Initial stock "stk-1" on Beynost has current_qty = 4, min_threshold = 10
+        // Initial purchase order "po-1" on Beynost is linked to "stk-1" with ordered_qty = 25 and status "Brouillon IA"
+        let Json(step1) = patch_purchase_order_status(
+            State(state.clone()),
+            Path("po-1".into()),
+            headers.clone(),
+            Json(UpdatePurchaseOrderStatusPayload {
+                advance: Some(true),
+                status: None,
+            }),
+        )
+        .await
+        .expect("envoi commande po-1");
+        assert_eq!(step1.status, "Commande envoyée");
+
+        // Réceptionner la commande -> doit passer à "Livré & Réceptionné" et incrémenter stk-1 de +25 (4 -> 29)
+        let Json(step2) = patch_purchase_order_status(
+            State(state.clone()),
+            Path("po-1".into()),
+            headers,
+            Json(UpdatePurchaseOrderStatusPayload {
+                advance: Some(true),
+                status: None,
+            }),
+        )
+        .await
+        .expect("réception commande po-1");
+        assert_eq!(step2.status, "Livré & Réceptionné");
+
+        let db = state.db.read().await;
+        let stk1 = db.stock_items.iter().find(|s| s.id == "stk-1").unwrap();
+        assert_eq!(stk1.current_qty, 29);
+        assert!(!stk1.auto_order_prepared);
+        drop(db);
         let _ = std::fs::remove_dir_all(&state.data_dir);
     }
 }

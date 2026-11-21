@@ -2,7 +2,7 @@ use crate::models::{
     AmbiguityRecord, AppDatabaseState, AuditEvent, ContractSummary, Employee, EmployeeCounter,
     EmployeeSiteAccess, LeadActivityRecord, LeadAppointmentRecord, LeadFormFieldRecord,
     LeadFormRecord, LeadFormSampleResponseRecord, LeadProspectRecord, LeaveRequest,
-    NotificationPrefs, OrchestratorDecisionRecord, Organization, Position, RecoveryCaseRecord, RoleProfile, SensitiveBankInfo,
+    NotificationPrefs, OrchestratorDecisionRecord, Organization, Position, PurchaseOrderRecord, RecoveryCaseRecord, RoleProfile, SensitiveBankInfo,
     Shift, Site, SiteHrSettings, SiteKpis, StockItemRecord, MaintenanceTicketRecord, Team, TimeclockAnomaly, UserPreferences,
 };
 use std::collections::HashMap;
@@ -611,6 +611,47 @@ fn default_demo_orchestrator_decisions() -> Vec<OrchestratorDecisionRecord> {
             requires_human_approval: true,
             status: "en_attente_validation".into(),
             club_id: "carre-de-soie".into(),
+        },
+    ]
+}
+
+fn default_demo_purchase_orders() -> Vec<PurchaseOrderRecord> {
+    vec![
+        PurchaseOrderRecord {
+            id: "po-1".into(),
+            reference: "BC-2025-0412".into(),
+            club_id: "beynost".into(),
+            supplier: "FitSupply Pro Lyon".into(),
+            items_summary: "25× Cadenas Acier Haute Sécurité + 30× Serviettes C.Fitness".into(),
+            amount_ht_eur: 215.0,
+            date: "14 avril 2025".into(),
+            status: "Brouillon IA".into(),
+            linked_stock_id: Some("stk-1".into()),
+            ordered_qty: Some(25),
+        },
+        PurchaseOrderRecord {
+            id: "po-2".into(),
+            reference: "BC-2025-0409".into(),
+            club_id: "carre-de-soie".into(),
+            supplier: "NutriSport France".into(),
+            items_summary: "12× Whey Isolat 2kg + 10× Packs Boissons BCAA Bar".into(),
+            amount_ht_eur: 603.0,
+            date: "11 avril 2025".into(),
+            status: "Commande envoyée".into(),
+            linked_stock_id: None,
+            ordered_qty: Some(22),
+        },
+        PurchaseOrderRecord {
+            id: "po-3".into(),
+            reference: "BC-2025-0402".into(),
+            club_id: "carre-de-soie".into(),
+            supplier: "Heitz System".into(),
+            items_summary: "100× Badges RFID MIFARE + 10× Rouleaux Thermiques TPV NF525".into(),
+            amount_ht_eur: 198.0,
+            date: "04 avril 2025".into(),
+            status: "Livré & Réceptionné".into(),
+            linked_stock_id: Some("stk-3".into()),
+            ordered_qty: Some(100),
         },
     ]
 }
@@ -1873,6 +1914,7 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
         stock_items: default_demo_stock_items(),
         maintenance_tickets: default_demo_maintenance_tickets(),
         orchestrator_decisions: default_demo_orchestrator_decisions(),
+        purchase_orders: default_demo_purchase_orders(),
     }
 }
 
@@ -1994,6 +2036,7 @@ pub fn create_production_initial_state() -> AppDatabaseState {
         stock_items: vec![],
         maintenance_tickets: vec![],
         orchestrator_decisions: vec![],
+        purchase_orders: vec![],
     }
 }
 
@@ -2109,6 +2152,10 @@ pub fn load_or_init_state(data_dir: &Path) -> AppDatabaseState {
                         parsed.orchestrator_decisions = baseline.orchestrator_decisions;
                         migrated = true;
                     }
+                    if parsed.purchase_orders.is_empty() {
+                        parsed.purchase_orders = baseline.purchase_orders;
+                        migrated = true;
+                    }
                 }
                 if parsed.lead_settings_by_club.is_empty() {
                     parsed.lead_settings_by_club = default_lead_settings_by_club();
@@ -2176,6 +2223,7 @@ mod tests {
         assert!(state.stock_items.is_empty());
         assert!(state.maintenance_tickets.is_empty());
         assert!(state.orchestrator_decisions.is_empty());
+        assert!(state.purchase_orders.is_empty());
         assert!(state.lead_settings_by_club.contains_key("carre-de-soie"));
         assert!(state.lead_settings_by_club.contains_key("beynost"));
     }

@@ -308,6 +308,18 @@ pub fn api_router(state: SharedState) -> Router {
             axum::routing::delete(crate::stocks::delete_stock_item),
         )
         .route(
+            "/api/stocks/orders",
+            get(crate::stocks::get_purchase_orders).post(crate::stocks::post_purchase_order),
+        )
+        .route(
+            "/api/stocks/orders/:order_id/status",
+            patch(crate::stocks::patch_purchase_order_status),
+        )
+        .route(
+            "/api/stocks/orders/:order_id",
+            axum::routing::delete(crate::stocks::delete_purchase_order),
+        )
+        .route(
             "/api/maintenance/tickets",
             get(crate::maintenance::get_maintenance_tickets)
                 .post(crate::maintenance::post_maintenance_ticket),

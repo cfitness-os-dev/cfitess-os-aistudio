@@ -645,6 +645,23 @@ pub struct MaintenanceTicketRecord {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct PurchaseOrderRecord {
+    pub id: String,
+    pub reference: String,
+    pub club_id: String,
+    pub supplier: String,
+    pub items_summary: String,
+    pub amount_ht_eur: f64,
+    pub date: String,
+    pub status: String,
+    #[serde(default)]
+    pub linked_stock_id: Option<String>,
+    #[serde(default)]
+    pub ordered_qty: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StockItemRecord {
     pub id: String,
     pub club_id: String,
@@ -717,6 +734,8 @@ pub struct AppDatabaseState {
     pub maintenance_tickets: Vec<MaintenanceTicketRecord>,
     #[serde(default)]
     pub orchestrator_decisions: Vec<OrchestratorDecisionRecord>,
+    #[serde(default)]
+    pub purchase_orders: Vec<PurchaseOrderRecord>,
 }
 
 #[derive(Debug, Clone, Serialize)]

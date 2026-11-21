@@ -483,6 +483,8 @@ interface PurchaseOrderItem {
   amountHtEur: number;
   date: string;
   status: 'Brouillon IA' | 'Commande envoyée' | 'Livré & Réceptionné';
+  linkedStockId?: string;
+  orderedQty?: number;
 }
 
 const INITIAL_PURCHASE_ORDERS: PurchaseOrderItem[] = [
@@ -686,8 +688,28 @@ export function OrchestratorMaintenanceView() {
     };
   }, [currentUser.id, activeSiteId]);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderItem[]>(
-    INITIAL_PURCHASE_ORDERS
+    import.meta.env.VITE_DEMO_MODE !== 'false' ? INITIAL_PURCHASE_ORDERS : []
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    void stocksFetchJson<PurchaseOrderItem[]>(
+      '/api/stocks/orders',
+      currentUser.id,
+      activeSiteId
+    )
+      .then((list) => {
+        if (!cancelled && Array.isArray(list)) {
+          setPurchaseOrders(list);
+        }
+      })
+      .catch(() => {
+        // Garde les données initiales en mode démo si hors serveur ou non habilité
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser.id, activeSiteId]);
   const [showDiagramBlueprint, setShowDiagramBlueprint] = useState<boolean>(false);
 
   // New stock / purchase order form state
@@ -1342,17 +1364,8 @@ export function OrchestratorMaintenanceView() {
     e.preventDefault();
     if (!newStockName.trim()) return;
     const totalHt = Math.round(newStockQty * newStockPrice * 100) / 100;
-    const newPo: PurchaseOrderItem = {
-      id: `po-${Date.now()}`,
-      reference: `BC-2025-0${Math.floor(420 + Math.random() * 70)}`,
-      clubId: newStockClub,
-      supplier: newStockSupplier,
-      itemsSummary: `${newStockQty}× ${newStockName.trim()}`,
-      amountHtEur: totalHt,
-      date: "Aujourd'hui",
-      status: 'Commande envoyée',
-    };
-    setPurchaseOrders((prev) => [newPo, ...prev]);
+    const reference = `BC-2026-0${Math.floor(420 + Math.random() * 70)}`;
+    const itemsSummary = `${newStockQty}× ${newStockName.trim()}`;
 
     try {
       const created = await stocksFetchJson<StockConsumableItem>(
@@ -1375,10 +1388,47 @@ export function OrchestratorMaintenanceView() {
         }
       );
       setStocks((prev) => [created, ...prev]);
+
+      const createdPo = await stocksFetchJson<PurchaseOrderItem>(
+        '/api/stocks/orders',
+        currentUser.id,
+        activeSiteId,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            clubId: newStockClub,
+            reference,
+            supplier: newStockSupplier,
+            itemsSummary,
+            amountHtEur: totalHt,
+            status: 'Commande envoyée',
+            linkedStockId: created.id,
+            orderedQty: newStockQty,
+          }),
+        }
+      );
+      setPurchaseOrders((prev) => [
+        createdPo,
+        ...prev.filter((po) => po.id !== createdPo.id),
+      ]);
       setNewStockName('');
       setNewStockBarcode('');
-      setScanFeedback(`Bon de commande et fiche stock créés côté serveur : ${created.name}.`);
+      setScanFeedback(
+        `Bon de commande (${createdPo.reference}) et fiche stock créés côté serveur : ${created.name}.`
+      );
     } catch (err) {
+      const fallbackPo: PurchaseOrderItem = {
+        id: `po-${Date.now()}`,
+        reference,
+        clubId: newStockClub,
+        supplier: newStockSupplier,
+        itemsSummary,
+        amountHtEur: totalHt,
+        date: "Aujourd'hui",
+        status: 'Commande envoyée',
+        orderedQty: newStockQty,
+      };
+      setPurchaseOrders((prev) => [fallbackPo, ...prev]);
       setScanFeedback(
         `Échec création article commande : ${err instanceof Error ? err.message : String(err)}`
       );
@@ -1386,16 +1436,53 @@ export function OrchestratorMaintenanceView() {
   };
 
   const handleAdvancePoStatus = (id: string) => {
-    setPurchaseOrders((prev) =>
-      prev.map((po) => {
-        if (po.id !== id) return po;
-        const next: PurchaseOrderItem['status'] =
-          po.status === 'Brouillon IA'
-            ? 'Commande envoyée'
-            : 'Livré & Réceptionné';
-        return { ...po, status: next };
+    void stocksFetchJson<PurchaseOrderItem>(
+      `/api/stocks/orders/${encodeURIComponent(id)}/status`,
+      currentUser.id,
+      activeSiteId,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ advance: true }),
+      }
+    )
+      .then((updated) => {
+        setPurchaseOrders((prev) =>
+          prev.map((po) => (po.id === updated.id ? updated : po))
+        );
+        if (
+          updated.status === 'Livré & Réceptionné' &&
+          updated.linkedStockId &&
+          updated.orderedQty
+        ) {
+          const addQty = updated.orderedQty;
+          setStocks((prev) =>
+            prev.map((s) => {
+              if (s.id !== updated.linkedStockId) return s;
+              const nextQty = s.currentQty + addQty;
+              return {
+                ...s,
+                currentQty: nextQty,
+                autoOrderPrepared: nextQty < s.minThreshold,
+              };
+            })
+          );
+          setScanFeedback(
+            `Commande ${updated.reference} réceptionnée : +${addQty} unités ajoutées au stock.`
+          );
+        }
       })
-    );
+      .catch(() => {
+        setPurchaseOrders((prev) =>
+          prev.map((po) => {
+            if (po.id !== id) return po;
+            const next: PurchaseOrderItem['status'] =
+              po.status === 'Brouillon IA'
+                ? 'Commande envoyée'
+                : 'Livré & Réceptionné';
+            return { ...po, status: next };
+          })
+        );
+      });
   };
 
   const filteredTickets = tickets.filter(
