@@ -655,6 +655,16 @@ pub async fn resolve_session_actor(
         ));
     }
 
+    // Mode démo explicite uniquement (CFITNESS_DEMO_MODE=1) : le fallback acteur depuis les
+    // en-têtes reste autorisé pour la navigation hors login. Hors mode démo, toute requête sans
+    // session Bearer valide est refusée : aucune identité n'est fournie par le client.
+    if std::env::var("CFITNESS_DEMO_MODE").as_deref() != Ok("1") {
+        return Err(err_resp(
+            StatusCode::UNAUTHORIZED,
+            "Session serveur invalide, expirée ou absente (401 Unauthorized). Identité requise via Bearer.",
+        ));
+    }
+
     let (_, fallback_site) = extract_actor_site(headers);
     let actor_id = headers
         .get("x-cfitness-actor-id")
@@ -3908,8 +3918,8 @@ mod tests {
         let state = test_state();
 
         // 1. emp-planif-av (Carré de Soie) tente de modifier Beynost -> 403 FORBIDDEN
-        let mut h_cs = HeaderMap::new();
-        h_cs.insert("x-cfitness-actor-id", HeaderValue::from_static("emp-planif-av"));
+        //    (authentification via session Bearer serveur valide, cf. #2)
+        let h_cs = session_headers(&state, "emp-planif-av", "club-carre-soie").await;
         let forbidden_club = put_employee_site_accesses(
             State(state.clone()),
             h_cs.clone(),
@@ -3930,11 +3940,10 @@ mod tests {
         assert_eq!(forbidden_club.unwrap_err().0, StatusCode::FORBIDDEN);
 
         // 2. emp-master tente d'attribuer admin_systeme -> 403 FORBIDDEN
-        let mut h_master = HeaderMap::new();
-        h_master.insert("x-cfitness-actor-id", HeaderValue::from_static("emp-master"));
+        let h_master = session_headers(&state, "emp-master", "club-carre-soie").await;
         let forbidden_elev = put_employee_site_accesses(
             State(state.clone()),
-            h_master,
+            h_master.clone(),
             Path("emp-employe-multi".to_string()),
             Json(PutEmployeeSiteAccessesPayload {
                 site_accesses: vec![crate::models::EmployeeSiteAccess {
@@ -3952,11 +3961,9 @@ mod tests {
         assert_eq!(forbidden_elev.unwrap_err().0, StatusCode::FORBIDDEN);
 
         // 3. emp-master (Carré de Soie) tente de retirer Beynost d'emp-employe-multi -> 403 FORBIDDEN
-        let mut h_master2 = HeaderMap::new();
-        h_master2.insert("x-cfitness-actor-id", HeaderValue::from_static("emp-master"));
         let forbidden_remove = put_employee_site_accesses(
             State(state.clone()),
-            h_master2,
+            h_master.clone(),
             Path("emp-employe-multi".to_string()),
             Json(PutEmployeeSiteAccessesPayload {
                 site_accesses: vec![crate::models::EmployeeSiteAccess {
@@ -3974,8 +3981,7 @@ mod tests {
         assert_eq!(forbidden_remove.unwrap_err().0, StatusCode::FORBIDDEN);
 
         // 4. Équipe d'un autre club refusée -> 400 BAD_REQUEST
-        let mut h_admin = HeaderMap::new();
-        h_admin.insert("x-cfitness-actor-id", HeaderValue::from_static("emp-admin"));
+        let h_admin = session_headers(&state, "emp-admin", "club-carre-soie").await;
         let bad_team = put_employee_site_accesses(
             State(state.clone()),
             h_admin.clone(),
@@ -3998,7 +4004,7 @@ mod tests {
         // 5. emp-admin attribue deux clubs avec profils/équipes valides -> 200 OK & persisté sur disque
         let ok = put_employee_site_accesses(
             State(state.clone()),
-            h_admin,
+            h_admin.clone(),
             Path("emp-employe-multi".to_string()),
             Json(PutEmployeeSiteAccessesPayload {
                 site_accesses: vec![
@@ -4040,8 +4046,7 @@ mod tests {
             emp.site_accesses[0].profile_id = "employe_standard".to_string();
             emp.site_accesses[1].profile_id = "master_avance".to_string();
         }
-        let mut h_master_cs = HeaderMap::new();
-        h_master_cs.insert("x-cfitness-actor-id", HeaderValue::from_static("emp-master"));
+        let h_master_cs = session_headers(&state, "emp-master", "club-carre-soie").await;
         let ok_preserve = put_employee_site_accesses(
             State(state.clone()),
             h_master_cs.clone(),
