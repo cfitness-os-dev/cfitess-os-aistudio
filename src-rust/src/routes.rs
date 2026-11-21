@@ -180,6 +180,11 @@ pub fn api_router(state: SharedState) -> Router {
         .route("/api/public/forms/:club_id/:form_id/submit", post(post_public_lead_form_submit))
         .route("/api/public/book/:club_id/:slot_type", get(get_public_book_slot).post(post_public_book_slot))
         .route("/api/lead/settings/:club_id", get(get_lead_settings).put(put_lead_settings))
+        .route("/api/lead/alerts", get(get_lead_alerts))
+        .route("/api/lead/alerts/:alert_id/ack", post(post_ack_lead_alert))
+        .route("/api/lead/automations/run-archiving", post(post_run_lead_archiving))
+        .route("/api/lead/webhooks/inbound-reply", post(post_lead_inbound_reply))
+        .route("/api/heitz/sync-sale", post(post_heitz_sync_sale))
         .route("/api/lead/workspace", get(get_lead_workspace))
         .route("/api/lead/forms/:form_id", put(put_lead_form))
         .route("/api/lead/prospects/import", post(post_lead_prospects_import))
@@ -3098,6 +3103,9 @@ async fn post_public_lead_form_submit(
                 assigned_to_id: Some(assigned_id),
                 last_visit_at: None,
                 days_without_visit: 0,
+                last_inbound_reply_at: None,
+                archived_at: None,
+                converted_offer: None,
                 created_at: Utc::now().format("%Y-%m-%d").to_string(),
             },
         );
@@ -3289,6 +3297,9 @@ async fn post_public_book_slot(
                 assigned_to_id: Some(assigned_id),
                 last_visit_at: None,
                 days_without_visit: 0,
+                last_inbound_reply_at: None,
+                archived_at: None,
+                converted_offer: None,
                 created_at: Utc::now().format("%Y-%m-%d").to_string(),
             },
         );
@@ -3539,6 +3550,9 @@ async fn post_lead_prospects_import(
                 assigned_to_id: Some(assigned_id),
                 last_visit_at: None,
                 days_without_visit: 0,
+                last_inbound_reply_at: None,
+                archived_at: None,
+                converted_offer: None,
                 created_at: Utc::now().format("%Y-%m-%d").to_string(),
             },
         );
@@ -3747,6 +3761,429 @@ async fn put_lead_settings(
         "ok": true,
         "clubId": club_id,
         "settings": payload
+    })))
+}
+
+fn emit_lead_alert(
+    db: &mut AppDatabaseState,
+    club_id: &str,
+    event_type: &str,
+    title: String,
+    message: String,
+    prospect_id: Option<String>,
+    extra_recipients: Vec<String>,
+) {
+    let mut recipients = extra_recipients;
+    if let Some(settings) = db.lead_settings_by_club.get(club_id) {
+        if let Some(notif_email) = settings.get("notifEmail").and_then(|v| v.as_str()) {
+            if !notif_email.trim().is_empty() && !recipients.contains(&notif_email.to_string()) {
+                recipients.push(notif_email.to_string());
+            }
+        }
+    }
+    let alert = crate::models::LeadAlertRecord {
+        id: format!("alert-{}-{}", Utc::now().timestamp_millis(), db.lead_alerts.len() + 1),
+        club_id: club_id.to_string(),
+        event_type: event_type.to_string(),
+        title,
+        message,
+        prospect_id,
+        recipient_ids: recipients,
+        simulation_mode: true, // Simulation sécurisée pendant la recette
+        acknowledged: false,
+        created_at: Utc::now().to_rfc3339(),
+    };
+    db.lead_alerts.insert(0, alert);
+    if db.lead_alerts.len() > 200 {
+        db.lead_alerts.truncate(200);
+    }
+}
+
+#[derive(Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub struct LeadAlertsQuery {
+    pub club_id: Option<String>,
+}
+
+async fn get_lead_alerts(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Query(query): Query<LeadAlertsQuery>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let (_actor_id, _site_id) = resolve_session_actor(&state, &headers).await?;
+    let db = state.db.read().await;
+    let alerts: Vec<&crate::models::LeadAlertRecord> = db
+        .lead_alerts
+        .iter()
+        .filter(|a| {
+            query
+                .club_id
+                .as_deref()
+                .map(|cid| cid == "all" || a.club_id == cid)
+                .unwrap_or(true)
+        })
+        .collect();
+    Ok(Json(json!({
+        "ok": true,
+        "alerts": alerts,
+        "simulationMode": true
+    })))
+}
+
+async fn post_ack_lead_alert(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Path(alert_id): Path<String>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let (_actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let mut db = state.db.write().await;
+    let Some(alert) = db.lead_alerts.iter_mut().find(|a| a.id == alert_id) else {
+        return Err(err_resp(StatusCode::NOT_FOUND, "Alerte introuvable."));
+    };
+    alert.acknowledged = true;
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec persistance acquittement alerte : {}", err_msg),
+        ));
+    }
+    Ok(Json(json!({ "ok": true, "alertId": alert_id, "acknowledged": true })))
+}
+
+#[derive(Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub struct RunArchivingPayload {
+    pub club_id: Option<String>,
+}
+
+async fn post_run_lead_archiving(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Json(payload): Json<RunArchivingPayload>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let mut db = state.db.write().await;
+    let club_filter = payload.club_id.as_deref().unwrap_or("all");
+
+    if club_filter != "all" && !actor_has_lead_admin_write_on_club(&db, &actor_id, club_filter) {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Exécution de l'archivage automatique refusée (403).",
+        ));
+    }
+
+    let now_rfc = Utc::now().to_rfc3339();
+    let settings_snapshot = db.lead_settings_by_club.clone();
+    let mut archived_ids = Vec::new();
+    let mut alert_events: Vec<(String, String, String)> = Vec::new();
+
+    for prospect in db.lead_prospects.iter_mut() {
+        if club_filter != "all" && prospect.club_id != club_filter {
+            continue;
+        }
+        if matches!(prospect.stage.as_str(), "Client" | "Archivé" | "Perdu") {
+            continue;
+        }
+        let club_settings = settings_snapshot.get(&prospect.club_id);
+        let auto_archive = club_settings
+            .and_then(|s| s.get("autoArchiveEnabled"))
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true);
+        if !auto_archive {
+            continue;
+        }
+        let threshold_days = club_settings
+            .and_then(|s| s.get("archiveThresholdDays"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(30) as u32;
+        let target_stage = club_settings
+            .and_then(|s| s.get("archiveTargetStage"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("Archivé")
+            .to_string();
+
+        // Si le nombre de jours sans visite/interaction dépasse le seuil et aucune réponse entrante
+        if prospect.days_without_visit >= threshold_days && prospect.last_inbound_reply_at.is_none() {
+            prospect.stage = target_stage.clone();
+            prospect.lead_status = target_stage;
+            prospect.archived_at = Some(now_rfc.clone());
+            archived_ids.push(prospect.id.clone());
+            alert_events.push((
+                prospect.club_id.clone(),
+                prospect.id.clone(),
+                format!("{} {}", prospect.first_name, prospect.last_name),
+            ));
+        }
+    }
+
+    for (cid, pid, pname) in &alert_events {
+        emit_lead_alert(
+            &mut db,
+            cid,
+            "archived",
+            format!("Prospect archivé automatiquement : {}", pname),
+            format!("Inactivité supérieure au seuil configuré pour le club {}.", cid),
+            Some(pid.clone()),
+            vec![],
+        );
+    }
+
+    if !archived_ids.is_empty() {
+        append_audit(
+            &mut db,
+            &actor_id,
+            "lead.automation.archive",
+            format!("Archivage automatique de {} prospect(s) inactif(s)", archived_ids.len()),
+            "lead",
+            club_filter,
+            None,
+            Some(archived_ids.join(", ")),
+        );
+        if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+            return Err(err_resp(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Échec persistance archivage : {}", err_msg),
+            ));
+        }
+    }
+
+    Ok(Json(json!({
+        "ok": true,
+        "archivedCount": archived_ids.len(),
+        "archivedIds": archived_ids
+    })))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LeadInboundReplyPayload {
+    pub club_id: String,
+    pub prospect_id: Option<String>,
+    pub email: Option<String>,
+    pub phone: Option<String>,
+    pub channel: Option<String>, // "whatsapp" | "sms" | "email"
+    pub message_preview: Option<String>,
+}
+
+async fn post_lead_inbound_reply(
+    State(state): State<SharedState>,
+    Json(payload): Json<LeadInboundReplyPayload>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let mut db = state.db.write().await;
+    let now_rfc = Utc::now().to_rfc3339();
+    let channel = payload.channel.as_deref().unwrap_or("whatsapp");
+
+    let found = db.lead_prospects.iter_mut().find(|p| {
+        if let Some(ref pid) = payload.prospect_id {
+            if &p.id == pid {
+                return true;
+            }
+        }
+        if let Some(ref em) = payload.email {
+            if p.club_id == payload.club_id && p.email.eq_ignore_ascii_case(em.trim()) {
+                return true;
+            }
+        }
+        if let Some(ref ph) = payload.phone {
+            if p.club_id == payload.club_id && !ph.trim().is_empty() && p.phone == ph.trim() {
+                return true;
+            }
+        }
+        false
+    });
+
+    let Some(prospect) = found else {
+        return Err(err_resp(
+            StatusCode::NOT_FOUND,
+            "Prospect introuvable pour cette réponse entrante.",
+        ));
+    };
+
+    let was_archived = prospect.stage == "Archivé" || prospect.stage == "Perdu";
+    prospect.last_inbound_reply_at = Some(now_rfc.clone());
+    prospect.days_without_visit = 0;
+    if was_archived {
+        prospect.stage = "À relancer".into();
+        prospect.lead_status = "À relancer".into();
+        prospect.archived_at = None;
+    }
+
+    let pid = prospect.id.clone();
+    let cid = prospect.club_id.clone();
+    let pname = format!("{} {}", prospect.first_name, prospect.last_name);
+    let assigned = prospect.assigned_to_id.clone();
+
+    let mut recipients = Vec::new();
+    if let Some(ref emp_id) = assigned {
+        recipients.push(emp_id.clone());
+    }
+
+    emit_lead_alert(
+        &mut db,
+        &cid,
+        "inbound_reply",
+        format!("Réponse entrante ({}) de {}", channel, pname),
+        payload
+            .message_preview
+            .unwrap_or_else(|| "Le prospect a répondu. Fiche réactivée automatiquement.".into()),
+        Some(pid.clone()),
+        recipients,
+    );
+
+    append_audit(
+        &mut db,
+        "system-webhook",
+        "lead.inbound_reply",
+        format!("Réponse entrante {} pour {} (désarchivé: {})", channel, pname, was_archived),
+        "lead",
+        &cid,
+        None,
+        Some(pid.clone()),
+    );
+
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec persistance réponse entrante : {}", err_msg),
+        ));
+    }
+
+    Ok(Json(json!({
+        "ok": true,
+        "prospectId": pid,
+        "clubId": cid,
+        "reactivatedFromArchive": was_archived,
+        "newStage": if was_archived { "À relancer" } else { "inchangé" }
+    })))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HeitzSyncSalePayload {
+    pub club_id: String,
+    pub prospect_id: Option<String>,
+    pub email: Option<String>,
+    pub phone: Option<String>,
+    pub offer_id: String,
+    pub offer_name: String,
+    pub amount_eur: Option<f64>,
+}
+
+async fn post_heitz_sync_sale(
+    State(state): State<SharedState>,
+    Json(payload): Json<HeitzSyncSalePayload>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let mut db = state.db.write().await;
+
+    // Vérifier si l'offre synchronisée est une offre déclenchante du statut Client pour ce club
+    let club_settings = db.lead_settings_by_club.get(&payload.club_id);
+    let mut is_trigger_offer = false;
+
+    if let Some(settings) = club_settings {
+        if let Some(arr) = settings.get("selectedPassOfferIds").and_then(|v| v.as_array()) {
+            if arr.iter().any(|item| item.as_str() == Some(payload.offer_id.as_str())) {
+                is_trigger_offer = true;
+            }
+        }
+        if !is_trigger_offer {
+            if let Some(single_name) = settings.get("clientPassOffer").and_then(|v| v.as_str()) {
+                if single_name.eq_ignore_ascii_case(payload.offer_name.trim()) {
+                    is_trigger_offer = true;
+                }
+            }
+        }
+    }
+
+    if !is_trigger_offer {
+        return Ok(Json(json!({
+            "ok": true,
+            "converted": false,
+            "reason": "L'offre synchronisée ne fait pas partie des offres déclenchantes configurées pour ce club."
+        })));
+    }
+
+    let found = db.lead_prospects.iter_mut().find(|p| {
+        if let Some(ref pid) = payload.prospect_id {
+            if &p.id == pid {
+                return true;
+            }
+        }
+        if let Some(ref em) = payload.email {
+            if p.club_id == payload.club_id && p.email.eq_ignore_ascii_case(em.trim()) {
+                return true;
+            }
+        }
+        if let Some(ref ph) = payload.phone {
+            if p.club_id == payload.club_id && !ph.trim().is_empty() && p.phone == ph.trim() {
+                return true;
+            }
+        }
+        false
+    });
+
+    let Some(prospect) = found else {
+        return Err(err_resp(
+            StatusCode::NOT_FOUND,
+            "Aucun prospect correspondant trouvé pour cette vente Heitz.",
+        ));
+    };
+
+    let prev_stage = prospect.stage.clone();
+    prospect.stage = "Client".into();
+    prospect.lead_status = "Client".into();
+    prospect.converted_offer = Some(payload.offer_name.clone());
+    prospect.archived_at = None;
+
+    let pid = prospect.id.clone();
+    let cid = prospect.club_id.clone();
+    let pname = format!("{} {}", prospect.first_name, prospect.last_name);
+    let assigned = prospect.assigned_to_id.clone();
+
+    let mut recipients = Vec::new();
+    if let Some(ref emp_id) = assigned {
+        recipients.push(emp_id.clone());
+    }
+
+    emit_lead_alert(
+        &mut db,
+        &cid,
+        "client_converted",
+        format!("Nouveau Client converti : {}", pname),
+        format!(
+            "Souscription Heitz synchronisée ({} — {} €). Statut passé de {} à Client.",
+            payload.offer_name,
+            payload.amount_eur.unwrap_or(0.0),
+            prev_stage
+        ),
+        Some(pid.clone()),
+        recipients,
+    );
+
+    append_audit(
+        &mut db,
+        "heitz-sync",
+        "heitz.sale.client_conversion",
+        format!("Conversion Client via Heitz : {} ({})", pname, payload.offer_name),
+        "lead",
+        &cid,
+        Some(prev_stage),
+        Some("Client".into()),
+    );
+
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec persistance conversion Client : {}", err_msg),
+        ));
+    }
+
+    Ok(Json(json!({
+        "ok": true,
+        "converted": true,
+        "prospectId": pid,
+        "clubId": cid,
+        "offerId": payload.offer_id,
+        "newStage": "Client"
     })))
 }
 
@@ -4998,6 +5435,9 @@ mod tests {
                 assigned_to_id: Some("emp-maxime".into()),
                 last_visit_at: None,
                 days_without_visit: 25,
+                last_inbound_reply_at: None,
+                archived_at: None,
+                converted_offer: None,
                 created_at: "2026-10-25".into(),
             });
         }
@@ -5063,5 +5503,149 @@ mod tests {
         assert!(is_valid_secret_for_employee("emp-admin", "0766"));
         assert!(is_valid_secret_for_employee("emp-mario", "1010"));
         assert!(!is_valid_secret_for_employee("emp-admin", "mauvais_code"));
+    }
+
+    #[tokio::test]
+    async fn lead_archiving_inbound_reply_alerts_and_heitz_client_conversion() {
+        let state = test_state();
+
+        // Connexion admin pour exécuter l'archivage
+        let login_res = post_local_auth_login(
+            State(state.clone()),
+            Json(LocalAuthLoginRequest {
+                email_or_id: "emp-mario".into(),
+                pin_or_password: "1010".into(),
+                role_requested: "admin".into(),
+            }),
+        )
+        .await
+        .into_response();
+        assert_eq!(login_res.status(), StatusCode::OK);
+        let body_bytes = axum::body::to_bytes(login_res.into_body(), usize::MAX).await.unwrap();
+        let login_json: Value = serde_json::from_slice(&body_bytes).unwrap();
+        let token = login_json.get("sessionToken").unwrap().as_str().unwrap().to_string();
+
+        let mut admin_headers = HeaderMap::new();
+        admin_headers.insert("authorization", HeaderValue::from_str(&format!("Bearer {}", token)).unwrap());
+
+        // 1. Insérer un prospect inactif depuis 35 jours (seuil Carré de Soie = 30 jours)
+        {
+            let mut db = state.db.write().await;
+            db.lead_prospects.push(crate::models::LeadProspectRecord {
+                id: "pr-auto-archive".into(),
+                gender: "F".into(),
+                first_name: "Julie".into(),
+                last_name: "Bernard".into(),
+                email: "julie.bernard@exemple.fr".into(),
+                phone: "0688776655".into(),
+                street: "".into(),
+                postal_code: "".into(),
+                city: "".into(),
+                birth_date: "".into(),
+                comment: "".into(),
+                club_id: "carre-de-soie".into(),
+                source: "Site".into(),
+                stage: "Contacté".into(),
+                lead_status: "Contacté".into(),
+                rgpd_consent: true,
+                segments: vec![],
+                trial_date: None,
+                assigned_to_id: Some("emp-maxime".into()),
+                last_visit_at: None,
+                days_without_visit: 35,
+                last_inbound_reply_at: None,
+                archived_at: None,
+                converted_offer: None,
+                created_at: "2026-10-15".into(),
+            });
+        }
+
+        // 2. Exécuter l'archivage automatique
+        let arch_res = post_run_lead_archiving(
+            State(state.clone()),
+            admin_headers.clone(),
+            Json(RunArchivingPayload {
+                club_id: Some("carre-de-soie".into()),
+            }),
+        )
+        .await
+        .unwrap();
+        assert_eq!(arch_res.0["archivedCount"], 1);
+
+        {
+            let db = state.db.read().await;
+            let pr = db.lead_prospects.iter().find(|p| p.id == "pr-auto-archive").unwrap();
+            assert_eq!(pr.stage, "Archivé");
+            assert!(pr.archived_at.is_some());
+            assert!(db.lead_alerts.iter().any(|a| a.event_type == "archived" && a.prospect_id.as_deref() == Some("pr-auto-archive")));
+        }
+
+        // 3. Réponse entrante WhatsApp -> réactive le prospect archivé + émet une alerte au commercial
+        let reply_res = post_lead_inbound_reply(
+            State(state.clone()),
+            Json(LeadInboundReplyPayload {
+                club_id: "carre-de-soie".into(),
+                prospect_id: Some("pr-auto-archive".into()),
+                email: None,
+                phone: None,
+                channel: Some("whatsapp".into()),
+                message_preview: Some("Bonjour, je suis disponible mardi pour visiter le club !".into()),
+            }),
+        )
+        .await
+        .unwrap();
+        assert_eq!(reply_res.0["reactivatedFromArchive"], true);
+        assert_eq!(reply_res.0["newStage"], "À relancer");
+
+        {
+            let db = state.db.read().await;
+            let pr = db.lead_prospects.iter().find(|p| p.id == "pr-auto-archive").unwrap();
+            assert_eq!(pr.stage, "À relancer");
+            assert_eq!(pr.days_without_visit, 0);
+            assert!(db.lead_alerts.iter().any(|a| a.event_type == "inbound_reply" && a.recipient_ids.contains(&"emp-maxime".to_string())));
+        }
+
+        // 4. Vente Heitz d'une offre NON déclenchante -> ne convertit pas
+        let non_trigger_res = post_heitz_sync_sale(
+            State(state.clone()),
+            Json(HeitzSyncSalePayload {
+                club_id: "carre-de-soie".into(),
+                prospect_id: Some("pr-auto-archive".into()),
+                email: None,
+                phone: None,
+                offer_id: "HZ-CDS-BOISSON".into(),
+                offer_name: "Pack Boisson".into(),
+                amount_eur: Some(15.0),
+            }),
+        )
+        .await
+        .unwrap();
+        assert_eq!(non_trigger_res.0["converted"], false);
+
+        // 5. Vente Heitz d'une offre déclenchante configurée (HZ-CDS-ABO-PASS) -> passe en Client
+        let convert_res = post_heitz_sync_sale(
+            State(state.clone()),
+            Json(HeitzSyncSalePayload {
+                club_id: "carre-de-soie".into(),
+                prospect_id: Some("pr-auto-archive".into()),
+                email: None,
+                phone: None,
+                offer_id: "HZ-CDS-ABO-PASS".into(),
+                offer_name: "Pass Liberté + Biocircuit 12 mois".into(),
+                amount_eur: Some(49.9),
+            }),
+        )
+        .await
+        .unwrap();
+        assert_eq!(convert_res.0["converted"], true);
+        assert_eq!(convert_res.0["newStage"], "Client");
+
+        {
+            let db = state.db.read().await;
+            let pr = db.lead_prospects.iter().find(|p| p.id == "pr-auto-archive").unwrap();
+            assert_eq!(pr.stage, "Client");
+            assert_eq!(pr.converted_offer.as_deref(), Some("Pass Liberté + Biocircuit 12 mois"));
+            assert!(db.lead_alerts.iter().any(|a| a.event_type == "client_converted" && a.prospect_id.as_deref() == Some("pr-auto-archive")));
+        }
     }
 }

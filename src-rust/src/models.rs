@@ -419,6 +419,27 @@ pub struct LeadProspectRecord {
     pub last_visit_at: Option<String>,
     #[serde(default)]
     pub days_without_visit: u32,
+    #[serde(default)]
+    pub last_inbound_reply_at: Option<String>,
+    #[serde(default)]
+    pub archived_at: Option<String>,
+    #[serde(default)]
+    pub converted_offer: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LeadAlertRecord {
+    pub id: String,
+    pub club_id: String,
+    pub event_type: String,
+    pub title: String,
+    pub message: String,
+    pub prospect_id: Option<String>,
+    pub recipient_ids: Vec<String>,
+    pub simulation_mode: bool,
+    pub acknowledged: bool,
     pub created_at: String,
 }
 
@@ -496,6 +517,8 @@ pub struct AppDatabaseState {
     pub lead_activities: Vec<LeadActivityRecord>,
     #[serde(default)]
     pub lead_settings_by_club: HashMap<String, serde_json::Value>,
+    #[serde(default)]
+    pub lead_alerts: Vec<LeadAlertRecord>,
     // Habilitations nominatives explicites (délégation module par module).
     // Les profils admin/manager conservent leurs accès par défaut ; ces listes
     // permettent d'ouvrir un module à un collaborateur précis sans changer son rôle.

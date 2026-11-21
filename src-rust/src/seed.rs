@@ -1373,6 +1373,9 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
                 assigned_to_id: Some("emp-maxime".into()),
                 last_visit_at: Some("2026-11-16 10:15".into()),
                 days_without_visit: 5,
+                last_inbound_reply_at: None,
+                archived_at: None,
+                converted_offer: None,
                 created_at: "2026-11-16".into(),
             },
             LeadProspectRecord {
@@ -1397,6 +1400,9 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
                 assigned_to_id: Some("emp-chloe".into()),
                 last_visit_at: None,
                 days_without_visit: 0,
+                last_inbound_reply_at: None,
+                archived_at: None,
+                converted_offer: None,
                 created_at: "2026-11-15".into(),
             },
         ],
@@ -1481,6 +1487,7 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
             );
             map
         },
+        lead_alerts: vec![],
         // Direction : Finances par défaut. Aucune habilitation nominative
         // n'est accordée à Sarah (responsable de club) tant qu'elle n'est pas
         // explicitement ajoutée ici (ticket #3).
