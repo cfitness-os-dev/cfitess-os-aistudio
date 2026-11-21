@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   AccessEvent,
   AdminSection,
@@ -670,6 +670,71 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     return 'violet';
   });
 
+  const appearanceVersionRef = useRef(0);
+
+  const requestPreferencesApi = async (
+    method: 'GET' | 'PUT',
+    siteHeader: string,
+    body?: { themeMode: 'light' | 'dark'; accentColor: AccentColorId }
+  ): Promise<Response | null> => {
+    if (typeof window === 'undefined') return null;
+    let bearer: string | null = null;
+    let bearerActor: string | null = null;
+    try {
+      bearer = window.sessionStorage.getItem('cfos_bearer_token');
+      bearerActor = window.sessionStorage.getItem('cfos_bearer_actor_id');
+    } catch {
+      return null;
+    }
+
+    const baseHeaders: Record<string, string> = {
+      'x-cfitness-site-id': siteHeader,
+    };
+    if (body) {
+      baseHeaders['Content-Type'] = 'application/json';
+    }
+
+    const validBearerForActor =
+      Boolean(bearer) && (!bearerActor || bearerActor === currentUserId);
+
+    if (validBearerForActor && bearer) {
+      const res = await fetch('/api/me/preferences', {
+        method,
+        headers: {
+          ...baseHeaders,
+          Authorization: `Bearer ${bearer}`,
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      if (res.status !== 401) {
+        return res;
+      }
+      // Jeton Bearer périmé (ex. après redémarrage serveur) : purge locale et rattrapage démo si autorisé
+      try {
+        window.sessionStorage.removeItem('cfos_bearer_token');
+        window.sessionStorage.removeItem('cfos_bearer_actor_id');
+      } catch {
+        // ignore
+      }
+      if (!IS_DEMO_CLIENT_MODE) {
+        return res;
+      }
+    }
+
+    if (!IS_DEMO_CLIENT_MODE) {
+      return null;
+    }
+
+    return fetch('/api/me/preferences', {
+      method,
+      headers: {
+        ...baseHeaders,
+        'x-cfitness-actor-id': currentUserId,
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  };
+
   useEffect(() => {
     let nextMode: 'light' | 'dark' = 'dark';
     let nextAccent: AccentColorId = 'violet';
@@ -685,32 +750,22 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     setAccentColorState(nextAccent);
 
     if (!isAuthenticated || typeof window === 'undefined') return;
-    let bearer: string | null = null;
-    let bearerActor: string | null = null;
-    try {
-      bearer = window.sessionStorage.getItem('cfos_bearer_token');
-      bearerActor = window.sessionStorage.getItem('cfos_bearer_actor_id');
-    } catch {
-      return;
-    }
-    if (!bearer || (bearerActor && bearerActor !== currentUserId)) return;
 
     let cancelled = false;
+    const reqVersion = appearanceVersionRef.current;
     const siteHeader =
       primaryAuthorizedClub === 'beynost' ? 'club-beynost' : 'club-carre-soie';
-    void fetch('/api/me/preferences', {
-      headers: {
-        Authorization: `Bearer ${bearer}`,
-        'x-cfitness-site-id': siteHeader,
-      },
-    })
+
+    void requestPreferencesApi('GET', siteHeader)
       .then(async (res) => {
-        if (!res.ok || cancelled) return;
+        if (!res || !res.ok || cancelled || appearanceVersionRef.current !== reqVersion) {
+          return;
+        }
         const prefs = (await res.json()) as {
           themeMode?: string;
           accentColor?: string;
         };
-        if (cancelled) return;
+        if (cancelled || appearanceVersionRef.current !== reqVersion) return;
         if (isValidThemeMode(prefs.themeMode)) {
           setThemeModeState(prefs.themeMode);
           try {
@@ -735,7 +790,8 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [currentUserId, isAuthenticated, primaryAuthorizedClub]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUserId, isAuthenticated]);
 
   const persistAppearancePreferences = async (
     nextMode: 'light' | 'dark',
@@ -743,36 +799,22 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     prevMode: 'light' | 'dark',
     prevAccent: AccentColorId
   ) => {
+    appearanceVersionRef.current += 1;
     try {
       window.localStorage.setItem(themeKeyFor(currentUserId), nextMode);
       window.localStorage.setItem(accentKeyFor(currentUserId), nextAccent);
     } catch {
       // ignore
     }
-    if (typeof window === 'undefined') return;
-    let bearer: string | null = null;
-    let bearerActor: string | null = null;
-    try {
-      bearer = window.sessionStorage.getItem('cfos_bearer_token');
-      bearerActor = window.sessionStorage.getItem('cfos_bearer_actor_id');
-    } catch {
-      return;
-    }
-    if (!bearer || (bearerActor && bearerActor !== currentUserId)) return;
 
     const siteHeader =
-      (clubFilter === 'beynost' ? 'club-beynost' : 'club-carre-soie');
+      clubFilter === 'beynost' ? 'club-beynost' : 'club-carre-soie';
     try {
-      const res = await fetch('/api/me/preferences', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${bearer}`,
-          'x-cfitness-site-id': siteHeader,
-        },
-        body: JSON.stringify({ themeMode: nextMode, accentColor: nextAccent }),
+      const res = await requestPreferencesApi('PUT', siteHeader, {
+        themeMode: nextMode,
+        accentColor: nextAccent,
       });
-      if (!res.ok) {
+      if (res && !res.ok) {
         setThemeModeState(prevMode);
         setAccentColorState(prevAccent);
         try {
