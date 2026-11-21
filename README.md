@@ -101,3 +101,76 @@ curl -fsS http://127.0.0.1:8080/api/health
 - **Données RH & droits RBAC** : volume Docker `cfitness_data` monté sur `/var/lib/cfitness` (`/var/lib/cfitness/cfitness_state.json`).
 - **Sauvegardes & failover multi-appareils** : volume Docker `cfitness_backups` monté sur `/var/backups/cfitness-os` + endpoints `GET /api/admin/backup`, `POST /api/admin/restore` et `GET/POST /api/backup/snapshot`.
 - **Variables réseau Linux / Club** : configurables dans `.env` (`HEITZ_WS_URL`, `HEITZ_WS_TOKEN`, `TURNSTILE_MODBUS_RELAY_CDS`, `TURNSTILE_MODBUS_RELAY_BEY`, `OVH_SIP_TRUNK_HOST`, `YEASTAR_TG400_SIP_GATEWAY`, `BACKUP_SECONDARY_NODES`).
+
+---
+
+## Guide de contribution & Environnement isolé (Codex & Développeurs)
+
+### 1. Prérequis & Versions
+- **Node.js** : >= 20.10.0 (npm >= 10.0)
+- **Rust & Cargo** : >= 1.80.0 (édition 2021)
+- **Docker & Docker Compose** : v2+ (optionnel pour exécution locale pure)
+
+### 2. Point de départ
+- **Dépôt** : `cfitness-os-dev/cfitess-os-aistudio` (privé)
+- **Branche de référence** : `main`
+- **Commit stable de base** : `3416e4f`
+
+### 3. Commandes d'installation & de validation locale
+```bash
+# Installation des dépendances frontend
+npm install
+
+# Validation TypeScript strict (zéro erreur tolérée)
+npm run lint
+
+# Exécution des tests automatisés (41 tests TypeScript)
+npm test
+
+# Compilation des assets frontend (dist/)
+npm run build
+
+# Exécution des tests backend Rust (12 tests unitaires Axum & RBAC)
+cargo test --manifest-path Cargo.toml
+
+# Lancement en développement local (Frontend Vite + Mock/Middleware API sur http://127.0.0.1:5173)
+npm run dev
+
+# OU Lancement du serveur backend Rust natif (sur http://127.0.0.1:8080)
+cargo run --manifest-path Cargo.toml
+```
+
+### 4. Configuration d'un environnement de test isolé (100% fictif)
+Pour exécuter et tester les fonctionnalités en toute étanchéité sans toucher aux données ni déclencher d'appels extérieurs :
+1. Copier le fichier `.env.example` en `.env` :
+   ```bash
+   cp .env.example .env
+   ```
+2. Paramètres recommandés pour l'environnement isolé :
+   - `CFITNESS_DEMO_MODE=1` : Active les personas de test, simule les portillons et passerelles sans appels réels.
+   - `CFITNESS_DATA_DIR=./data_test` : Isole la persistance dans un sous-dossier distinct.
+   - `CFITNESS_STRIPE_WEBHOOK_SECRET=` (laisser vide en démo pour tester les webhooks en mode sandbox).
+   - `CFITNESS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:8080,http://127.0.0.1:8080`
+3. **Réinitialisation des données** :
+   Pour remettre l'état de la base de test à zéro (données de référence seeded) :
+   ```bash
+   rm -f ./data_test/cfitness_state.json
+   # Au prochain démarrage du serveur, l'état complet de référence est automatiquement recréé.
+   ```
+4. **Vérification de la persistance** :
+   - Effectuer une modification (ex: mise à jour des paramètres CRM d'un club via `PUT /api/lead/settings/carre-de-soie`).
+   - Stopper le serveur (`Ctrl+C`), puis le relancer.
+   - Effectuer un `GET /api/lead/settings/carre-de-soie` : vérifier que les données modifiées sont intactes.
+
+### 5. Workflow GitHub & Pull Requests
+1. Ne **jamais** pousser directement sur la branche `main` (branche protégée).
+2. Créer une branche dédiée pour chaque lot ou correctif :
+   ```bash
+   git checkout -b fix/lead-settings-validation
+   ```
+3. Valider que `npm run lint`, `npm test` et `cargo test` passent intégralement avant de pousser.
+4. Ouvrir une **Pull Request** sur GitHub vers `main` avec :
+   - Le contexte du ticket concerné.
+   - Les modifications apportées et les fichiers touchés.
+   - Les preuves de tests exécutés.
+   - Les limites ou suites prévues.
