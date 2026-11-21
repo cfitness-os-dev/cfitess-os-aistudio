@@ -6,6 +6,25 @@
     "date_livraison": "2026-11-19",
     "empreinte_frontend": "/assets/index-CIxUm37l.js"
   },
+  "livraison_actuelle_2026_11_21": {
+    "commit": "09a2a9f",
+    "date_livraison": "2026-11-21",
+    "empreinte_frontend": "/assets/index-DnEgh-pH.js",
+    "tests_executes": [
+      "npm test — 39/39 tests passés",
+      "npx tsc --noEmit — 0 erreur",
+      "cargo test — 9/9 tests passés",
+      "npm run build — OK"
+    ],
+    "preuves_live": [
+      "GET /api/health -> status ok (version 1.2.0-v1.16-unified)",
+      "GET /api/admin/profiles sans Bearer -> 401 Session serveur invalide (CFITNESS_STRICT_SESSION)",
+      "POST /api/v2/appointment/webhooks/stripe/:club avec signature HMAC valide -> 200 signatureMode=stripe_signature_verified",
+      "POST /api/v2/appointment/webhooks/stripe/:club avec signature invalide -> 401"
+    ],
+    "tickets_traites": "#1 à #20 : corrigés, commités et clôturés (historique Git de main)",
+    "reserves": "Les 55 constats restent à recontrôler individuellement sur cette version ; aucune clôture automatique."
+  },
   "consigne": "Reproduire sur la version identifiée ; distinguer historique, corrigé, contesté avec preuve, simulation et hors lot. Une correction proposée ne ferme pas le constat avant recontrôle. Le rangement du dernier message du propriétaire emploie Prospects pour Lead et Mon planning rejoint les mêmes données RH.",
   "reponses": [
     {
