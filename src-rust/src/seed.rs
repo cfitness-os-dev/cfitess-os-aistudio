@@ -3,7 +3,7 @@ use crate::models::{
     EmployeeSiteAccess, LeadActivityRecord, LeadAppointmentRecord, LeadFormFieldRecord,
     LeadFormRecord, LeadFormSampleResponseRecord, LeadProspectRecord, LeaveRequest,
     NotificationPrefs, Organization, Position, RecoveryCaseRecord, RoleProfile, SensitiveBankInfo,
-    Shift, Site, SiteHrSettings, SiteKpis, StockItemRecord, Team, TimeclockAnomaly, UserPreferences,
+    Shift, Site, SiteHrSettings, SiteKpis, StockItemRecord, MaintenanceTicketRecord, Team, TimeclockAnomaly, UserPreferences,
 };
 use std::collections::HashMap;
 use std::fs;
@@ -497,6 +497,63 @@ fn default_demo_stock_items() -> Vec<StockItemRecord> {
             supplier: "FitSupply Pro Lyon".into(),
             unit_priceht: 19.9,
             auto_order_prepared: true,
+        },
+    ]
+}
+
+fn default_demo_maintenance_tickets() -> Vec<MaintenanceTicketRecord> {
+    vec![
+        MaintenanceTicketRecord {
+            id: "mnt-cta-beynost".into(),
+            club_id: "beynost".into(),
+            equipment_name: "Centrale de Traitement d’Air (CTA Beynost – 15 avril)".into(),
+            category: "CVC / Sauna / Douches".into(),
+            issue_description: "Maintenance préventive planifiée CTA Beynost (contrôle débit air neuf & remplacement filtres).".into(),
+            priority: "Préventive".into(),
+            status: "Technicien planifié".into(),
+            supplier_name: "ClimRhône Maintenance".into(),
+            estimated_cost_eur: 240.0,
+            used_part_name: None,
+            created_at: "2026-04-15".into(),
+        },
+        MaintenanceTicketRecord {
+            id: "mnt-clim-center".into(),
+            club_id: "carre-de-soie".into(),
+            equipment_name: "Climatisation – Espace musculation (Carré de Soie · 12:30)".into(),
+            category: "CVC / Sauna / Douches".into(),
+            issue_description: "Intervention maintenance climatisation plateau musculation programmée aujourd’hui à 12h30.".into(),
+            priority: "Urgente".into(),
+            status: "Technicien planifié".into(),
+            supplier_name: "ClimRhône Maintenance".into(),
+            estimated_cost_eur: 150.0,
+            used_part_name: None,
+            created_at: "2026-04-14".into(),
+        },
+        MaintenanceTicketRecord {
+            id: "mnt-1".into(),
+            club_id: "carre-de-soie".into(),
+            equipment_name: "Presse à cuisses Biocircuit #3 (Technogym)".into(),
+            category: "Technogym / Checkup".into(),
+            issue_description: "Calibration servomoteur résistance électronique signalée par télémétrie Mywellness.".into(),
+            priority: "Normale".into(),
+            status: "Technicien planifié".into(),
+            supplier_name: "Technogym France SAV".into(),
+            estimated_cost_eur: 0.0,
+            used_part_name: None,
+            created_at: "2026-04-10".into(),
+        },
+        MaintenanceTicketRecord {
+            id: "mnt-2".into(),
+            club_id: "beynost".into(),
+            equipment_name: "Lecteur Bluetooth BLE Portillon Entrée Droite (Heitz)".into(),
+            category: "Portillons Heitz RFID/BT".into(),
+            issue_description: "Mise à jour firmware Bluetooth Low Energy recommandée pour réduire la latence (<15 ms).".into(),
+            priority: "Préventive".into(),
+            status: "Signalé (Agent Maintenance)".into(),
+            supplier_name: "Heitz System Support".into(),
+            estimated_cost_eur: 0.0,
+            used_part_name: None,
+            created_at: "2026-04-08".into(),
         },
     ]
 }
@@ -1757,6 +1814,7 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
         password_hashes_by_employee: HashMap::new(),
         recovery_cases: default_demo_recovery_cases(),
         stock_items: default_demo_stock_items(),
+        maintenance_tickets: default_demo_maintenance_tickets(),
     }
 }
 
@@ -1876,6 +1934,7 @@ pub fn create_production_initial_state() -> AppDatabaseState {
         password_hashes_by_employee: HashMap::new(),
         recovery_cases: vec![],
         stock_items: vec![],
+        maintenance_tickets: vec![],
     }
 }
 
@@ -1983,6 +2042,10 @@ pub fn load_or_init_state(data_dir: &Path) -> AppDatabaseState {
                         parsed.stock_items = baseline.stock_items;
                         migrated = true;
                     }
+                    if parsed.maintenance_tickets.is_empty() {
+                        parsed.maintenance_tickets = baseline.maintenance_tickets;
+                        migrated = true;
+                    }
                 }
                 if parsed.lead_settings_by_club.is_empty() {
                     parsed.lead_settings_by_club = default_lead_settings_by_club();
@@ -2048,6 +2111,7 @@ mod tests {
         assert!(state.lead_activities.is_empty());
         assert!(state.recovery_cases.is_empty());
         assert!(state.stock_items.is_empty());
+        assert!(state.maintenance_tickets.is_empty());
         assert!(state.lead_settings_by_club.contains_key("carre-de-soie"));
         assert!(state.lead_settings_by_club.contains_key("beynost"));
     }

@@ -307,6 +307,19 @@ pub fn api_router(state: SharedState) -> Router {
             "/api/stocks/:item_id",
             axum::routing::delete(crate::stocks::delete_stock_item),
         )
+        .route(
+            "/api/maintenance/tickets",
+            get(crate::maintenance::get_maintenance_tickets)
+                .post(crate::maintenance::post_maintenance_ticket),
+        )
+        .route(
+            "/api/maintenance/tickets/:ticket_id/status",
+            patch(crate::maintenance::patch_maintenance_ticket_status),
+        )
+        .route(
+            "/api/maintenance/tickets/:ticket_id",
+            axum::routing::delete(crate::maintenance::delete_maintenance_ticket),
+        )
         .with_state(state)
 }
 
@@ -1948,7 +1961,7 @@ async fn put_admin_delegations(
         let module = del.module.trim().to_ascii_lowercase();
         if !matches!(
             module.as_str(),
-            "finances" | "reports" | "recovery" | "stocks"
+            "finances" | "reports" | "recovery" | "stocks" | "maintenance"
         ) {
             return Err(err_resp(
                 StatusCode::BAD_REQUEST,

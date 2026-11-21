@@ -2,6 +2,7 @@ mod auth_passwords;
 mod employee_import;
 mod employee_lifecycle;
 mod lead_automations;
+mod maintenance;
 mod models;
 mod rbac;
 mod recovery;

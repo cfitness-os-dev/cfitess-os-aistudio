@@ -611,6 +611,23 @@ pub struct RecoveryCaseRecord {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct MaintenanceTicketRecord {
+    pub id: String,
+    pub club_id: String,
+    pub equipment_name: String,
+    pub category: String,
+    pub issue_description: String,
+    pub priority: String,
+    pub status: String,
+    pub supplier_name: String,
+    pub estimated_cost_eur: f64,
+    #[serde(default)]
+    pub used_part_name: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StockItemRecord {
     pub id: String,
     pub club_id: String,
@@ -679,6 +696,8 @@ pub struct AppDatabaseState {
     pub recovery_cases: Vec<RecoveryCaseRecord>,
     #[serde(default)]
     pub stock_items: Vec<StockItemRecord>,
+    #[serde(default)]
+    pub maintenance_tickets: Vec<MaintenanceTicketRecord>,
 }
 
 #[derive(Debug, Clone, Serialize)]

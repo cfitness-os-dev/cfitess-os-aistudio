@@ -704,8 +704,18 @@ pub fn can_access_module_action(
                     .any(|id| id == actor_id)
                     && legacy_site_ok())
         }
+        "maintenance" => {
+            is_manager_employee(state, actor_id, req_site_norm.as_deref())
+                || legacy_site_ok()
+        }
         _ => false,
     }
+}
+
+/// Maintenance & SAV : Direction, manager ou collaborateur habilité sur son site.
+#[allow(dead_code)]
+pub fn can_access_maintenance(state: &AppDatabaseState, actor_id: &str, site_id: Option<&str>) -> bool {
+    can_access_module_action(state, actor_id, site_id, "maintenance", "view")
 }
 
 /// Finances : Direction ou habilitation nominative explicite dans le périmètre du club (ticket #3 / #19).

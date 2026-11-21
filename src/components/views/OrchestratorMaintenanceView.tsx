@@ -620,7 +620,7 @@ export function OrchestratorMaintenanceView() {
     INITIAL_ORCHESTRATOR_DECISIONS
   );
   const [tickets, setTickets] = useState<MaintenanceTicket[]>(
-    INITIAL_MAINTENANCE_TICKETS
+    import.meta.env.VITE_DEMO_MODE !== 'false' ? INITIAL_MAINTENANCE_TICKETS : []
   );
   const [stocks, setStocks] = useState<StockConsumableItem[]>(
     import.meta.env.VITE_DEMO_MODE !== 'false' ? INITIAL_STOCKS : []
@@ -636,6 +636,26 @@ export function OrchestratorMaintenanceView() {
       .then((list) => {
         if (!cancelled && Array.isArray(list)) {
           setStocks(list);
+        }
+      })
+      .catch(() => {
+        // Garde les données initiales en mode démo si hors serveur ou non habilité
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser.id, activeSiteId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void stocksFetchJson<MaintenanceTicket[]>(
+      '/api/maintenance/tickets',
+      currentUser.id,
+      activeSiteId
+    )
+      .then((list) => {
+        if (!cancelled && Array.isArray(list)) {
+          setTickets(list);
         }
       })
       .catch(() => {
@@ -1023,34 +1043,13 @@ export function OrchestratorMaintenanceView() {
     e.preventDefault();
     if (!newEquipment.trim()) return;
     const usedPart = newUsedStockId ? stocks.find((s) => s.id === newUsedStockId) : undefined;
-    if (usedPart) {
-      void stocksFetchJson<StockConsumableItem>(
-        `/api/stocks/${encodeURIComponent(usedPart.id)}/adjust`,
-        currentUser.id,
-        activeSiteId,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({ delta: -1 }),
-        }
-      )
-        .then((updated) => {
-          setStocks((prev) =>
-            prev.map((s) => (s.id === updated.id ? updated : s))
-          );
-        })
-        .catch(() => {
-          // ignore si non habilité
-        });
-    }
-    const created: MaintenanceTicket = {
-      id: `mnt-${Date.now()}`,
+    const payload = {
       clubId: newClubId,
       equipmentName: newEquipment.trim(),
       category: newCategory,
       issueDescription:
         newIssue.trim() || 'Contrôle demandé par l’équipe club.',
       priority: newPriority,
-      status: 'Signalé (Agent Maintenance)',
       supplierName:
         newSupplierName.trim() ||
         (newCategory === 'Technogym / Checkup' || newCategory === 'Cardio (Tapis, Vélos, Rameurs)'
@@ -1061,10 +1060,66 @@ export function OrchestratorMaintenanceView() {
           ? 'Technicien Interne / FitSupply'
           : 'Prestataire Maintenance Club'),
       estimatedCostEur: Math.max(0, Number(newEstimatedCost) || 0),
+      usedStockId: usedPart ? usedPart.id : undefined,
       usedPartName: usedPart ? usedPart.name : undefined,
-      createdAt: new Date().toISOString().slice(0, 10),
     };
-    setTickets((prev) => [created, ...prev]);
+
+    void stocksFetchJson<MaintenanceTicket>(
+      '/api/maintenance/tickets',
+      currentUser.id,
+      activeSiteId,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    )
+      .then((created) => {
+        setTickets((prev) => [created, ...prev.filter((t) => t.id !== created.id)]);
+        if (usedPart) {
+          setStocks((prev) =>
+            prev.map((s) => {
+              if (s.id !== usedPart.id) return s;
+              const nextQty = Math.max(0, s.currentQty - 1);
+              return {
+                ...s,
+                currentQty: nextQty,
+                autoOrderPrepared: nextQty < s.minThreshold,
+              };
+            })
+          );
+        }
+      })
+      .catch(() => {
+        // Fallback local en mode démo / hors-ligne
+        const created: MaintenanceTicket = {
+          id: `mnt-${Date.now()}`,
+          clubId: newClubId,
+          equipmentName: payload.equipmentName,
+          category: payload.category,
+          issueDescription: payload.issueDescription,
+          priority: payload.priority,
+          status: 'Signalé (Agent Maintenance)',
+          supplierName: payload.supplierName,
+          estimatedCostEur: payload.estimatedCostEur,
+          usedPartName: payload.usedPartName,
+          createdAt: new Date().toISOString().slice(0, 10),
+        };
+        setTickets((prev) => [created, ...prev]);
+        if (usedPart) {
+          setStocks((prev) =>
+            prev.map((s) => {
+              if (s.id !== usedPart.id) return s;
+              const nextQty = Math.max(0, s.currentQty - 1);
+              return {
+                ...s,
+                currentQty: nextQty,
+                autoOrderPrepared: nextQty < s.minThreshold,
+              };
+            })
+          );
+        }
+      });
+
     setNewEquipment('');
     setNewIssue('');
     setNewSupplierName('');
@@ -1101,20 +1156,52 @@ export function OrchestratorMaintenanceView() {
   };
 
   const handleAdvanceTicketStatus = (id: string) => {
-    setTickets((prev) =>
-      prev.map((t) => {
-        if (t.id !== id) return t;
-        const nextStatus: MaintenanceTicket['status'] =
-          t.status === 'Signalé (Agent Maintenance)'
-            ? 'Pièce commandée'
-            : t.status === 'Pièce commandée'
-            ? 'Technicien planifié'
-            : t.status === 'Technicien planifié'
-            ? 'Résolu'
-            : 'Signalé (Agent Maintenance)';
-        return { ...t, status: nextStatus };
+    void stocksFetchJson<MaintenanceTicket>(
+      `/api/maintenance/tickets/${encodeURIComponent(id)}/status`,
+      currentUser.id,
+      activeSiteId,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ advance: true }),
+      }
+    )
+      .then((updated) => {
+        setTickets((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
       })
-    );
+      .catch(() => {
+        // Fallback local
+        setTickets((prev) =>
+          prev.map((t) => {
+            if (t.id !== id) return t;
+            const nextStatus: MaintenanceTicket['status'] =
+              t.status === 'Signalé (Agent Maintenance)'
+                ? 'Pièce commandée'
+                : t.status === 'Pièce commandée'
+                ? 'Technicien planifié'
+                : t.status === 'Technicien planifié'
+                ? 'Résolu'
+                : 'Signalé (Agent Maintenance)';
+            return { ...t, status: nextStatus };
+          })
+        );
+      });
+  };
+
+  const handleDeleteTicket = (id: string) => {
+    void stocksFetchJson<{ deleted: boolean }>(
+      `/api/maintenance/tickets/${encodeURIComponent(id)}`,
+      currentUser.id,
+      activeSiteId,
+      {
+        method: 'DELETE',
+      }
+    )
+      .then(() => {
+        setTickets((prev) => prev.filter((t) => t.id !== id));
+      })
+      .catch(() => {
+        setTickets((prev) => prev.filter((t) => t.id !== id));
+      });
   };
 
   const handleResetDecision = (id: string) => {
@@ -2643,6 +2730,14 @@ export function OrchestratorMaintenanceView() {
                         }`}
                       >
                         {t.status === 'Résolu' ? 'Réouvrir' : 'Étape suivante →'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteTicket(t.id)}
+                        title="Supprimer ce ticket SAV"
+                        className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
