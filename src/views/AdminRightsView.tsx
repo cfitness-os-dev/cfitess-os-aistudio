@@ -13,6 +13,8 @@ import {
   ShieldCheck,
   Trash2,
   Upload,
+  UserCheck,
+  UserX,
 } from 'lucide-react';
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { useCfos } from '../context/CfosContext';
@@ -197,6 +199,17 @@ export function AdminRightsView({
     errors: string[];
   } | null>(null);
 
+  // État Fiche & activation compte collaborateur
+  const [editEmpId, setEditEmpId] = useState<string>('');
+  const [editFirstName, setEditFirstName] = useState('');
+  const [editLastName, setEditLastName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editMatricule, setEditMatricule] = useState('');
+  const [editContractType, setEditContractType] = useState('CDI');
+  const [editWeeklyHours, setEditWeeklyHours] = useState('35');
+  const [savingEmployeeEdit, setSavingEmployeeEdit] = useState(false);
+
   useEffect(() => {
     setOrgForm(dashboard.organization);
     setOrg02Policy(dashboard.org02BillingPolicy);
@@ -301,6 +314,11 @@ export function AdminRightsView({
     if (!visible.some((e) => e.id === resetEmpId)) {
       setResetEmpId(visible[0].id);
     }
+
+    const editTarget = visible.find((e) => e.id === editEmpId) ?? visible[0];
+    if (editTarget && editTarget.id !== editEmpId) {
+      hydrateEmployeeEditForm(editTarget);
+    }
   }, [
     dashboard.visibleEmployees,
     dashboard.sites,
@@ -308,7 +326,25 @@ export function AdminRightsView({
     delEmpId,
     delSiteId,
     resetEmpId,
+    editEmpId,
   ]);
+
+  function hydrateEmployeeEditForm(
+    emp: DashboardPayload['visibleEmployees'][number]
+  ) {
+    setEditEmpId(emp.id);
+    setEditFirstName(emp.firstName);
+    setEditLastName(emp.lastName);
+    setEditEmail(emp.email ?? '');
+    setEditPhone(emp.phone ?? '');
+    setEditMatricule(emp.matricule);
+    setEditContractType(emp.contract?.contractType ?? 'CDI');
+    setEditWeeklyHours(
+      emp.contract?.weeklyHours !== undefined
+        ? String(emp.contract.weeklyHours)
+        : '35'
+    );
+  }
 
   const activeProfileObj = profiles.find((p) => p.id === selectedProfileId);
   const csSite = dashboard.sites.find((s) => s.id === 'club-carre-soie');
@@ -672,6 +708,85 @@ export function AdminRightsView({
     }
   }
 
+  async function patchEmployeeLifecycle(
+    empId: string,
+    payload: Record<string, unknown>,
+    successMessage: string
+  ) {
+    setStatusMsg(null);
+    setSavingEmployeeEdit(true);
+    try {
+      const res = await adminFetchJson<{
+        ok: boolean;
+        employee: {
+          id: string;
+          firstName: string;
+          lastName: string;
+          email: string;
+          phone: string;
+          matricule: string;
+          active: boolean;
+          contractType: string;
+          weeklyHours?: number | null;
+        };
+      }>(`/api/admin/employees/${encodeURIComponent(empId)}`, auth, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      });
+      await onRefreshDashboard();
+      await loadAudit();
+      if (res.employee) {
+        setEditFirstName(res.employee.firstName);
+        setEditLastName(res.employee.lastName);
+        setEditEmail(res.employee.email);
+        setEditPhone(res.employee.phone);
+        setEditMatricule(res.employee.matricule);
+        setEditContractType(res.employee.contractType);
+        if (res.employee.weeklyHours) {
+          setEditWeeklyHours(String(res.employee.weeklyHours));
+        }
+      }
+      setStatusMsg({ kind: 'ok', text: successMessage });
+    } catch (e) {
+      const msg =
+        e instanceof ApiClientError
+          ? `HTTP ${e.status} — ${e.message}`
+          : String(e);
+      setStatusMsg({ kind: 'err', text: msg });
+    } finally {
+      setSavingEmployeeEdit(false);
+    }
+  }
+
+  async function handleSaveEmployeeDetails() {
+    if (!editEmpId) return;
+    const hours = Number.parseInt(editWeeklyHours, 10);
+    await patchEmployeeLifecycle(
+      editEmpId,
+      {
+        firstName: editFirstName,
+        lastName: editLastName,
+        email: editEmail,
+        phone: editPhone,
+        matricule: editMatricule,
+        contractType: editContractType,
+        ...(Number.isFinite(hours) && hours > 0 ? { weeklyHours: hours } : {}),
+      },
+      `Fiche collaborateur mise à jour pour ${editFirstName} ${editLastName}.`
+    );
+  }
+
+  async function handleToggleEmployeeActive(nextActive: boolean) {
+    if (!editEmpId) return;
+    await patchEmployeeLifecycle(
+      editEmpId,
+      { active: nextActive },
+      nextActive
+        ? `Compte réactivé pour ${editFirstName} ${editLastName}.`
+        : `Compte désactivé pour ${editFirstName} ${editLastName} ; ses sessions actives ont été révoquées.`
+    );
+  }
+
   return cleanUiTree(
     <div className="space-y-5">
       <div className="cf-card p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -694,7 +809,7 @@ export function AdminRightsView({
         <div className="flex flex-wrap gap-1.5">
           {[
             { id: 'permissions' as const, label: isTechnicalMode ? 'Matrice Droits (6×44)' : 'Droits & Rôles', icon: ShieldCheck },
-            { id: 'delegations_security' as const, label: 'Délégations & Mots de passe', icon: KeyRound },
+            { id: 'delegations_security' as const, label: 'Comptes, Délégations & Mots de passe', icon: KeyRound },
             { id: 'import_csv' as const, label: 'Import CSV collaborateurs', icon: Upload },
             { id: 'org_sites' as const, label: 'Organisation & Clubs', icon: Building2 },
             { id: 'audit' as const, label: isTechnicalMode ? 'Journal JOU01 & CSV' : 'Journal d’activité', icon: History },
@@ -1232,9 +1347,10 @@ export function AdminRightsView({
         </div>
       )}
 
-      {/* Onglet 5 : Délégations par club & Mots de passe serveur */}
+      {/* Onglet 5 : Comptes, Délégations par club & Mots de passe serveur */}
       {activeTab === 'delegations_security' && (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           {/* Section 1 : Délégations structurées par club */}
           <div className="cf-card p-5 space-y-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1522,6 +1638,179 @@ export function AdminRightsView({
                 </button>
               </div>
             </form>
+          </div>
+          </div>
+
+          {/* Section 3 : Fiche collaborateur & Activation / Désactivation de compte */}
+          <div className="cf-card p-5 space-y-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="font-semibold text-sm flex items-center gap-2">
+                  {(dashboard.visibleEmployees.find((e) => e.id === editEmpId)
+                    ?.active ?? true) ? (
+                    <UserCheck className="w-4 h-4 text-emerald-400" />
+                  ) : (
+                    <UserX className="w-4 h-4 text-amber-400" />
+                  )}
+                  Fiche &amp; statut du compte collaborateur
+                </h2>
+                <p className="text-xs cf-muted mt-0.5">
+                  Modifiez les coordonnées et le contrat d&apos;un collaborateur
+                  ou désactivez son accès lors d&apos;un départ (révocation
+                  immédiate des sessions sans perdre l&apos;historique).
+                </p>
+              </div>
+              <span
+                className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${
+                  (dashboard.visibleEmployees.find((e) => e.id === editEmpId)
+                    ?.active ?? true)
+                    ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/35'
+                    : 'bg-amber-500/15 text-amber-300 border border-amber-500/35'
+                }`}
+              >
+                {(dashboard.visibleEmployees.find((e) => e.id === editEmpId)
+                  ?.active ?? true)
+                  ? 'Compte actif'
+                  : 'Compte désactivé'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+              <label className="block space-y-1 md:col-span-2">
+                <span className="cf-muted">Collaborateur</span>
+                <select
+                  value={editEmpId}
+                  onChange={(e) => {
+                    const nextEmp = dashboard.visibleEmployees.find(
+                      (emp) => emp.id === e.target.value
+                    );
+                    if (nextEmp) hydrateEmployeeEditForm(nextEmp);
+                  }}
+                  className="cf-input w-full px-3 py-2"
+                >
+                  {dashboard.visibleEmployees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.firstName} {emp.lastName} ({emp.matricule}) —{' '}
+                      {emp.active ? 'Actif' : 'Désactivé'}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block space-y-1">
+                <span className="cf-muted">Prénom</span>
+                <input
+                  type="text"
+                  value={editFirstName}
+                  onChange={(e) => setEditFirstName(e.target.value)}
+                  className="cf-input w-full px-3 py-2"
+                />
+              </label>
+
+              <label className="block space-y-1">
+                <span className="cf-muted">Nom</span>
+                <input
+                  type="text"
+                  value={editLastName}
+                  onChange={(e) => setEditLastName(e.target.value)}
+                  className="cf-input w-full px-3 py-2"
+                />
+              </label>
+
+              <label className="block space-y-1 md:col-span-2">
+                <span className="cf-muted">Email professionnel</span>
+                <input
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  className="cf-input w-full px-3 py-2"
+                />
+              </label>
+
+              <label className="block space-y-1">
+                <span className="cf-muted">Téléphone</span>
+                <input
+                  type="text"
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  className="cf-input w-full px-3 py-2"
+                />
+              </label>
+
+              <label className="block space-y-1">
+                <span className="cf-muted">Matricule</span>
+                <input
+                  type="text"
+                  value={editMatricule}
+                  onChange={(e) => setEditMatricule(e.target.value)}
+                  className="cf-input w-full px-3 py-2"
+                />
+              </label>
+
+              <label className="block space-y-1">
+                <span className="cf-muted">Type de contrat</span>
+                <select
+                  value={editContractType}
+                  onChange={(e) => setEditContractType(e.target.value)}
+                  className="cf-input w-full px-3 py-2"
+                >
+                  {['CDI', 'CDD', 'Alternance', 'Stage', 'Indépendant'].map(
+                    (ct) => (
+                      <option key={ct} value={ct}>
+                        {ct}
+                      </option>
+                    )
+                  )}
+                </select>
+              </label>
+
+              <label className="block space-y-1">
+                <span className="cf-muted">Heures hebdomadaires</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={48}
+                  value={editWeeklyHours}
+                  onChange={(e) => setEditWeeklyHours(e.target.value)}
+                  className="cf-input w-full px-3 py-2"
+                />
+              </label>
+
+              <div className="md:col-span-2 flex flex-wrap items-end justify-end gap-2">
+                {(dashboard.visibleEmployees.find((e) => e.id === editEmpId)
+                  ?.active ?? true) ? (
+                  <button
+                    type="button"
+                    disabled={savingEmployeeEdit || !editEmpId}
+                    onClick={() => void handleToggleEmployeeActive(false)}
+                    className="px-3.5 py-2 rounded-btn border border-amber-500/40 bg-amber-500/15 text-amber-200 hover:bg-amber-500/25 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <UserX className="w-3.5 h-3.5" />
+                    Désactiver le compte
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={savingEmployeeEdit || !editEmpId}
+                    onClick={() => void handleToggleEmployeeActive(true)}
+                    className="px-3.5 py-2 rounded-btn border border-emerald-500/40 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/25 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <UserCheck className="w-3.5 h-3.5" />
+                    Réactiver le compte
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  disabled={savingEmployeeEdit || !editEmpId}
+                  onClick={() => void handleSaveEmployeeDetails()}
+                  className="cf-brand-gradient text-white px-4 py-2 rounded-btn text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  {savingEmployeeEdit ? 'Enregistrement...' : 'Enregistrer la fiche'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

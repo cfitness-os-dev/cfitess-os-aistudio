@@ -248,6 +248,10 @@ pub fn api_router(state: SharedState) -> Router {
             post(crate::employee_import::post_admin_employees_import_csv),
         )
         .route(
+            "/api/admin/employees/:emp_id",
+            patch(crate::employee_lifecycle::patch_admin_employee),
+        )
+        .route(
             "/api/admin/employees/:emp_id/site-accesses",
             put(put_employee_site_accesses),
         )
