@@ -107,6 +107,232 @@ pub fn ambiguities_baseline() -> Vec<AmbiguityRecord> {
     ]
 }
 
+fn default_lead_settings_by_club() -> HashMap<String, serde_json::Value> {
+    let mut map = HashMap::new();
+    map.insert(
+        "carre-de-soie".to_string(),
+        serde_json::json!({
+            "smsCredits": 1420,
+            "salesScript": "1. Accueil & objectif forme\n2. Découverte Biocircuit / Checkup\n3. Proposition créneau essai",
+            "archiveThresholdDays": 30,
+            "notifEmail": "direction@c.fitness",
+            "notifMobile": "07 82 00 00 01",
+            "whatsappNumber": "+33 4 78 00 00 01",
+            "clientPassOffer": "Pass Liberté + Biocircuit 12 mois",
+            "autoAssignEnabled": true,
+            "autoUnassignOnLeave": true,
+            "dropoutThresholdDays": 21,
+            "dropoutResetOnBadge": true,
+            "autoArchiveEnabled": true,
+            "archiveTargetStage": "Archivé",
+            "enabledAlertIds": ["LEAD-0545", "LEAD-0548", "LEAD-0551", "LEAD-0552"],
+            "selectedPassOfferIds": ["HZ-CDS-ABO-PASS", "HZ-CDS-ABO-SOLO"],
+            "clientPassTargetScope": "club",
+            "uiLanguage": "fr"
+        }),
+    );
+    map.insert(
+        "beynost".to_string(),
+        serde_json::json!({
+            "smsCredits": 980,
+            "salesScript": "1. Accueil & objectif forme\n2. Présentation espace fonctionnel & cours\n3. Proposition créneau essai",
+            "archiveThresholdDays": 30,
+            "notifEmail": "direction.beynost@c.fitness",
+            "notifMobile": "07 82 00 00 02",
+            "whatsappNumber": "+33 4 78 00 00 02",
+            "clientPassOffer": "Pass Liberté Beynost 12 mois",
+            "autoAssignEnabled": true,
+            "autoUnassignOnLeave": true,
+            "dropoutThresholdDays": 21,
+            "dropoutResetOnBadge": true,
+            "autoArchiveEnabled": true,
+            "archiveTargetStage": "Archivé",
+            "enabledAlertIds": ["LEAD-0545", "LEAD-0548", "LEAD-0551", "LEAD-0552"],
+            "selectedPassOfferIds": ["HZ-BEY-ABO-PASS", "HZ-BEY-ABO-SOLO"],
+            "clientPassTargetScope": "club",
+            "uiLanguage": "fr"
+        }),
+    );
+    map
+}
+
+fn default_sites(fictive_labels: bool) -> Vec<Site> {
+    vec![
+        Site {
+            id: "club-carre-soie".into(),
+            name: if fictive_labels {
+                "C.Fitness Carré de Soie (Fictif)".into()
+            } else {
+                "C.Fitness Carré de Soie".into()
+            },
+            address: if fictive_labels {
+                "10 Avenue Fictive du Club".into()
+            } else {
+                String::new()
+            },
+            city: if fictive_labels {
+                "Vaulx-en-Velin (Fictif)".into()
+            } else {
+                "Vaulx-en-Velin".into()
+            },
+            timezone: "Europe/Paris".into(),
+            siret: if fictive_labels {
+                "99900011100019".into()
+            } else {
+                String::new()
+            },
+            settings: SiteHrSettings {
+                badge_frequency: "each_shift".into(),
+                tablet_break_badging: true,
+                day_start_hour: "06:00".into(),
+                break_alert_hours: 4,
+                break_alert_enabled: true,
+                consecutive_days_blocking: true,
+                complementary_max_hours: 39,
+                smart_planner_break_max_hours: 4,
+                alerts_layout: "split_13_6".into(),
+                missions_module_active: false,
+                report_rules_visible: true,
+                annualization_period: "01 juin 2026 - 31 mai 2027".into(),
+                acquisition_mode: "jours_ouvrables".into(),
+                annualization_total_motives: 42,
+                annualization_included_motives: 31,
+                sunday_hours_in_annualization: true,
+                rtt_hours_counter_active: false,
+            },
+        },
+        Site {
+            id: "club-beynost".into(),
+            name: if fictive_labels {
+                "C.Fitness Beynost (Fictif)".into()
+            } else {
+                "C.Fitness Beynost".into()
+            },
+            address: if fictive_labels {
+                "25 Rue Fictive des Sports".into()
+            } else {
+                String::new()
+            },
+            city: if fictive_labels {
+                "Beynost (Fictif)".into()
+            } else {
+                "Beynost".into()
+            },
+            timezone: "Europe/Paris".into(),
+            siret: if fictive_labels {
+                "99900011100027".into()
+            } else {
+                String::new()
+            },
+            settings: SiteHrSettings {
+                badge_frequency: "consecutive_shift_series".into(),
+                tablet_break_badging: false,
+                day_start_hour: "05:00".into(),
+                break_alert_hours: 2,
+                break_alert_enabled: false,
+                consecutive_days_blocking: false,
+                complementary_max_hours: 35,
+                smart_planner_break_max_hours: 2,
+                alerts_layout: "single_list".into(),
+                missions_module_active: true,
+                report_rules_visible: false,
+                annualization_period: "01 juin 2026 - 31 mai 2027".into(),
+                acquisition_mode: "jours_ouvrables".into(),
+                annualization_total_motives: 42,
+                annualization_included_motives: 31,
+                sunday_hours_in_annualization: true,
+                rtt_hours_counter_active: false,
+            },
+        },
+    ]
+}
+
+fn default_positions() -> Vec<Position> {
+    vec![
+        Position {
+            id: "pos-cs-accueil".into(),
+            site_id: "club-carre-soie".into(),
+            label: "Accueil & Conseil".into(),
+            color: "#3b82f6".into(),
+            default_break_minutes: 30,
+            active: true,
+        },
+        Position {
+            id: "pos-cs-coach".into(),
+            site_id: "club-carre-soie".into(),
+            label: "Coach Plateau".into(),
+            color: "#8b5cf6".into(),
+            default_break_minutes: 30,
+            active: true,
+        },
+        Position {
+            id: "pos-cs-entretien-a".into(),
+            site_id: "club-carre-soie".into(),
+            label: "Entretien".into(),
+            color: "#10b981".into(),
+            default_break_minutes: 20,
+            active: true,
+        },
+        Position {
+            id: "pos-cs-entretien-b".into(),
+            site_id: "club-carre-soie".into(),
+            label: "Entretien".into(),
+            color: "#14b8a6".into(),
+            default_break_minutes: 20,
+            active: true,
+        },
+        Position {
+            id: "pos-bey-accueil".into(),
+            site_id: "club-beynost".into(),
+            label: "Accueil Club".into(),
+            color: "#3b82f6".into(),
+            default_break_minutes: 30,
+            active: true,
+        },
+        Position {
+            id: "pos-bey-coach".into(),
+            site_id: "club-beynost".into(),
+            label: "Coach Collectifs".into(),
+            color: "#a855f7".into(),
+            default_break_minutes: 30,
+            active: true,
+        },
+    ]
+}
+
+fn default_teams() -> Vec<Team> {
+    vec![
+        Team {
+            id: "team-cs-accueil".into(),
+            site_id: "club-carre-soie".into(),
+            name: "Accueil Carré de Soie".into(),
+        },
+        Team {
+            id: "team-cs-coaching".into(),
+            site_id: "club-carre-soie".into(),
+            name: "Coaching Carré de Soie".into(),
+        },
+        Team {
+            id: "team-bey-accueil".into(),
+            site_id: "club-beynost".into(),
+            name: "Accueil Beynost".into(),
+        },
+        Team {
+            id: "team-bey-coaching".into(),
+            site_id: "club-beynost".into(),
+            name: "Coaching Beynost".into(),
+        },
+    ]
+}
+
+fn env_non_empty(key: &str, default: &str) -> String {
+    std::env::var(key)
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| default.to_string())
+}
+
 pub fn create_initial_seed_state() -> AppDatabaseState {
     let profiles: Vec<RoleProfile> =
         serde_json::from_str(PERMISSIONS_MATRIX_JSON).expect("permissions_matrix.json invalide");
@@ -146,118 +372,9 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
             meal_allowance_eur: 15.5,
             billing_notice: "Rubrique ORG02 (Abonnement & Facturation source) conservée dans le registre pour arbitrage explicite du propriétaire.".into(),
         },
-        sites: vec![
-            Site {
-                id: "club-carre-soie".into(),
-                name: "C.Fitness Carré de Soie (Fictif)".into(),
-                address: "10 Avenue Fictive du Club".into(),
-                city: "Vaulx-en-Velin (Fictif)".into(),
-                timezone: "Europe/Paris".into(),
-                siret: "99900011100019".into(),
-                settings: SiteHrSettings {
-                    badge_frequency: "each_shift".into(),
-                    tablet_break_badging: true,
-                    day_start_hour: "06:00".into(),
-                    break_alert_hours: 4,
-                    break_alert_enabled: true,
-                    consecutive_days_blocking: true,
-                    complementary_max_hours: 39,
-                    smart_planner_break_max_hours: 4,
-                    alerts_layout: "split_13_6".into(),
-                    missions_module_active: false,
-                    report_rules_visible: true,
-                    annualization_period: "01 juin 2026 - 31 mai 2027".into(),
-                    acquisition_mode: "jours_ouvrables".into(),
-                    annualization_total_motives: 42,
-                    annualization_included_motives: 31,
-                    sunday_hours_in_annualization: true,
-                    rtt_hours_counter_active: false,
-                },
-            },
-            Site {
-                id: "club-beynost".into(),
-                name: "C.Fitness Beynost (Fictif)".into(),
-                address: "25 Rue Fictive des Sports".into(),
-                city: "Beynost (Fictif)".into(),
-                timezone: "Europe/Paris".into(),
-                siret: "99900011100027".into(),
-                settings: SiteHrSettings {
-                    badge_frequency: "consecutive_shift_series".into(),
-                    tablet_break_badging: false,
-                    day_start_hour: "05:00".into(),
-                    break_alert_hours: 2,
-                    break_alert_enabled: false,
-                    consecutive_days_blocking: false,
-                    complementary_max_hours: 35,
-                    smart_planner_break_max_hours: 2,
-                    alerts_layout: "single_list".into(),
-                    missions_module_active: true,
-                    report_rules_visible: false,
-                    annualization_period: "01 juin 2026 - 31 mai 2027".into(),
-                    acquisition_mode: "jours_ouvrables".into(),
-                    annualization_total_motives: 42,
-                    annualization_included_motives: 31,
-                    sunday_hours_in_annualization: true,
-                    rtt_hours_counter_active: false,
-                },
-            },
-        ],
-        positions: vec![
-            Position {
-                id: "pos-cs-accueil".into(),
-                site_id: "club-carre-soie".into(),
-                label: "Accueil & Conseil".into(),
-                color: "#3b82f6".into(),
-                default_break_minutes: 30,
-                active: true,
-            },
-            Position {
-                id: "pos-cs-coach".into(),
-                site_id: "club-carre-soie".into(),
-                label: "Coach Plateau".into(),
-                color: "#8b5cf6".into(),
-                default_break_minutes: 30,
-                active: true,
-            },
-            Position {
-                id: "pos-cs-entretien-a".into(),
-                site_id: "club-carre-soie".into(),
-                label: "Entretien".into(),
-                color: "#10b981".into(),
-                default_break_minutes: 20,
-                active: true,
-            },
-            Position {
-                id: "pos-cs-entretien-b".into(),
-                site_id: "club-carre-soie".into(),
-                label: "Entretien".into(),
-                color: "#14b8a6".into(),
-                default_break_minutes: 20,
-                active: true,
-            },
-            Position {
-                id: "pos-bey-accueil".into(),
-                site_id: "club-beynost".into(),
-                label: "Accueil Club".into(),
-                color: "#3b82f6".into(),
-                default_break_minutes: 30,
-                active: true,
-            },
-            Position {
-                id: "pos-bey-coach".into(),
-                site_id: "club-beynost".into(),
-                label: "Coach Collectifs".into(),
-                color: "#a855f7".into(),
-                default_break_minutes: 30,
-                active: true,
-            },
-        ],
-        teams: vec![
-            Team { id: "team-cs-accueil".into(), site_id: "club-carre-soie".into(), name: "Accueil Carré de Soie".into() },
-            Team { id: "team-cs-coaching".into(), site_id: "club-carre-soie".into(), name: "Coaching Carré de Soie".into() },
-            Team { id: "team-bey-accueil".into(), site_id: "club-beynost".into(), name: "Accueil Beynost".into() },
-            Team { id: "team-bey-coaching".into(), site_id: "club-beynost".into(), name: "Coaching Beynost".into() },
-        ],
+        sites: default_sites(true),
+        positions: default_positions(),
+        teams: default_teams(),
         profiles,
         employees: vec![
             Employee {
@@ -1453,54 +1570,7 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
                 status_label: "Confirmé".into(),
             },
         ],
-        lead_settings_by_club: {
-            let mut map = std::collections::HashMap::new();
-            map.insert(
-                "carre-de-soie".to_string(),
-                serde_json::json!({
-                    "smsCredits": 1420,
-                    "salesScript": "1. Accueil & objectif forme\n2. Découverte Biocircuit / Checkup\n3. Proposition créneau essai",
-                    "archiveThresholdDays": 30,
-                    "notifEmail": "direction@c.fitness",
-                    "notifMobile": "07 82 00 00 01",
-                    "whatsappNumber": "+33 4 78 00 00 01",
-                    "clientPassOffer": "Pass Liberté + Biocircuit 12 mois",
-                    "autoAssignEnabled": true,
-                    "autoUnassignOnLeave": true,
-                    "dropoutThresholdDays": 21,
-                    "dropoutResetOnBadge": true,
-                    "autoArchiveEnabled": true,
-                    "archiveTargetStage": "Archivé",
-                    "enabledAlertIds": ["LEAD-0545", "LEAD-0548", "LEAD-0551", "LEAD-0552"],
-                    "selectedPassOfferIds": ["HZ-CDS-ABO-PASS", "HZ-CDS-ABO-SOLO"],
-                    "clientPassTargetScope": "club",
-                    "uiLanguage": "fr"
-                }),
-            );
-            map.insert(
-                "beynost".to_string(),
-                serde_json::json!({
-                    "smsCredits": 980,
-                    "salesScript": "1. Accueil & objectif forme\n2. Présentation espace fonctionnel & cours\n3. Proposition créneau essai",
-                    "archiveThresholdDays": 30,
-                    "notifEmail": "direction.beynost@c.fitness",
-                    "notifMobile": "07 82 00 00 02",
-                    "whatsappNumber": "+33 4 78 00 00 02",
-                    "clientPassOffer": "Pass Liberté Beynost 12 mois",
-                    "autoAssignEnabled": true,
-                    "autoUnassignOnLeave": true,
-                    "dropoutThresholdDays": 21,
-                    "dropoutResetOnBadge": true,
-                    "autoArchiveEnabled": true,
-                    "archiveTargetStage": "Archivé",
-                    "enabledAlertIds": ["LEAD-0545", "LEAD-0548", "LEAD-0551", "LEAD-0552"],
-                    "selectedPassOfferIds": ["HZ-BEY-ABO-PASS", "HZ-BEY-ABO-SOLO"],
-                    "clientPassTargetScope": "club",
-                    "uiLanguage": "fr"
-                }),
-            );
-            map
-        },
+        lead_settings_by_club: default_lead_settings_by_club(),
         lead_alerts: vec![],
         processed_lead_events: vec![],
         lead_scheduler_status: crate::models::LeadSchedulerStatus::default(),
@@ -1520,32 +1590,159 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
     }
 }
 
-fn apply_initial_admin_password_bootstrap(state: &mut AppDatabaseState) -> bool {
+/// État initial vierge pour un déploiement en production (`CFITNESS_DEMO_MODE=0`).
+/// Aucun salarié fictif, aucun shift fictif et aucune donnée opérationnelle simulée.
+pub fn create_production_initial_state() -> AppDatabaseState {
+    let profiles: Vec<RoleProfile> =
+        serde_json::from_str(PERMISSIONS_MATRIX_JSON).expect("permissions_matrix.json invalide");
+
+    let admin_id = env_non_empty("CFITNESS_INITIAL_ADMIN_ID", "emp-mario");
+    let admin_email = env_non_empty("CFITNESS_INITIAL_ADMIN_EMAIL", "direction@c.fitness");
+    let admin_first_name = env_non_empty("CFITNESS_INITIAL_ADMIN_FIRST_NAME", "Direction");
+    let admin_last_name = env_non_empty("CFITNESS_INITIAL_ADMIN_LAST_NAME", "C.Fitness");
+
+    let mut prod_prefs = default_preferences("Français");
+    prod_prefs.calendar_feed_enabled = false;
+    prod_prefs.calendar_feed_token = String::new();
+
+    let mut preferences_by_employee = HashMap::new();
+    preferences_by_employee.insert(admin_id.clone(), prod_prefs);
+
+    AppDatabaseState {
+        version: "1.0.0-production".into(),
+        org02_billing_policy: "exclude_skello_saas".into(),
+        organization: Organization {
+            id: "org-cfitness".into(),
+            name: "C.FITNESS OS".into(),
+            legal_name: "C.FITNESS CLUBS".into(),
+            siren: String::new(),
+            vat_number: String::new(),
+            sector: "Salles de remise en forme & Coaching sportif".into(),
+            contact_email: admin_email.clone(),
+            meal_allowance_eur: 15.5,
+            billing_notice: "Configuration production C.Fitness OS.".into(),
+        },
+        sites: default_sites(false),
+        positions: default_positions(),
+        teams: default_teams(),
+        profiles,
+        employees: vec![Employee {
+            id: admin_id.clone(),
+            first_name: admin_first_name,
+            last_name: admin_last_name,
+            birth_name: None,
+            matricule: "ADM-001".into(),
+            email: admin_email,
+            phone: String::new(),
+            active: true,
+            hr_file_status: "complete".into(),
+            site_accesses: vec![
+                EmployeeSiteAccess {
+                    site_id: "club-carre-soie".into(),
+                    is_primary: true,
+                    profile_id: "admin_systeme".into(),
+                    show_on_planning: false,
+                    team_ids: vec!["team-cs-accueil".into(), "team-cs-coaching".into()],
+                    managed_team_ids: vec!["team-cs-accueil".into(), "team-cs-coaching".into()],
+                    position_ids: vec!["pos-cs-accueil".into()],
+                },
+                EmployeeSiteAccess {
+                    site_id: "club-beynost".into(),
+                    is_primary: false,
+                    profile_id: "admin_systeme".into(),
+                    show_on_planning: false,
+                    team_ids: vec!["team-bey-accueil".into(), "team-bey-coaching".into()],
+                    managed_team_ids: vec!["team-bey-accueil".into(), "team-bey-coaching".into()],
+                    position_ids: vec!["pos-bey-accueil".into()],
+                },
+            ],
+            sensitive_bank: SensitiveBankInfo {
+                payment_mode: "Virement".into(),
+                iban_masked: String::new(),
+                bic: String::new(),
+                nir_masked: String::new(),
+            },
+            contract: ContractSummary {
+                id: "ctr-adm-001".into(),
+                site_id: "club-carre-soie".into(),
+                contract_type: "Mandat / Direction".into(),
+                regime: "forfait_jours".into(),
+                weekly_hours: None,
+                annual_days: None,
+                monthly_gross_eur: None,
+                hourly_rate_eur: None,
+                loaded_cost_factor: 1.0,
+                effective_from: "2026-01-01".into(),
+                effective_to: None,
+            },
+            counter: EmployeeCounter {
+                cp_n_acquired: 0.0,
+                cp_n_taken: 0.0,
+                cp_n_minus1_remaining: 0.0,
+                rtt_days_remaining: None,
+                annualization_balance_hours: None,
+            },
+        }],
+        shifts: vec![],
+        leave_requests: vec![],
+        anomalies: vec![],
+        kpis: vec![],
+        audit_log: vec![],
+        preferences_by_employee,
+        ambiguities: vec![],
+        lead_forms: vec![],
+        lead_prospects: vec![],
+        lead_appointments: vec![],
+        lead_activities: vec![],
+        lead_settings_by_club: default_lead_settings_by_club(),
+        lead_alerts: vec![],
+        processed_lead_events: vec![],
+        lead_scheduler_status: crate::models::LeadSchedulerStatus::default(),
+        finance_authorized_employee_ids: vec![admin_id],
+        recovery_authorized_employee_ids: vec![],
+        stock_authorized_employee_ids: vec![],
+        reports_authorized_employee_ids: vec![],
+        module_delegations: vec![],
+        password_hashes_by_employee: HashMap::new(),
+    }
+}
+
+pub fn apply_admin_password_bootstrap_with(
+    state: &mut AppDatabaseState,
+    raw_pwd: &str,
+    target_id: &str,
+) -> bool {
     if !state.password_hashes_by_employee.is_empty() {
         return false;
     }
-    let Ok(raw_pwd) = std::env::var("CFITNESS_INITIAL_ADMIN_PASSWORD") else {
-        return false;
-    };
     let clean_pwd = raw_pwd.trim();
     if clean_pwd.chars().count() < 12 {
         return false;
     }
-    let target_id = std::env::var("CFITNESS_INITIAL_ADMIN_ID")
-        .ok()
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| "emp-mario".to_string());
+    let clean_target = if target_id.trim().is_empty() {
+        "emp-mario"
+    } else {
+        target_id.trim()
+    };
 
     let mut updated = false;
-    if state.employees.iter().any(|e| e.id == target_id && e.active) {
+    if state
+        .employees
+        .iter()
+        .any(|e| e.id == clean_target && e.active)
+    {
         state.password_hashes_by_employee.insert(
-            target_id.clone(),
+            clean_target.to_string(),
             crate::auth_passwords::hash_password(clean_pwd),
         );
         updated = true;
     }
-    if target_id != "emp-admin" && state.employees.iter().any(|e| e.id == "emp-admin" && e.active) {
+    if clean_target != "emp-admin"
+        && state
+            .employees
+            .iter()
+            .any(|e| e.id == "emp-admin" && e.active)
+    {
         state.password_hashes_by_employee.insert(
             "emp-admin".to_string(),
             crate::auth_passwords::hash_password(clean_pwd),
@@ -1555,50 +1752,61 @@ fn apply_initial_admin_password_bootstrap(state: &mut AppDatabaseState) -> bool 
     updated
 }
 
+fn apply_initial_admin_password_bootstrap(state: &mut AppDatabaseState) -> bool {
+    let Ok(raw_pwd) = std::env::var("CFITNESS_INITIAL_ADMIN_PASSWORD") else {
+        return false;
+    };
+    let target_id = env_non_empty("CFITNESS_INITIAL_ADMIN_ID", "emp-mario");
+    apply_admin_password_bootstrap_with(state, &raw_pwd, &target_id)
+}
+
 pub fn load_or_init_state(data_dir: &Path) -> AppDatabaseState {
+    let demo_mode = crate::routes::is_demo_mode();
     let state_file = data_dir.join("cfitness_state.json");
     if state_file.exists() {
         if let Ok(raw) = fs::read_to_string(&state_file) {
             if let Ok(mut parsed) = serde_json::from_str::<AppDatabaseState>(&raw) {
-                let baseline = create_initial_seed_state();
                 let mut migrated = false;
-                for seed_emp in baseline.employees {
-                    if !parsed.employees.iter().any(|e| e.id == seed_emp.id) {
-                        parsed.employees.push(seed_emp);
+                if demo_mode {
+                    let baseline = create_initial_seed_state();
+                    for seed_emp in baseline.employees {
+                        if !parsed.employees.iter().any(|e| e.id == seed_emp.id) {
+                            parsed.employees.push(seed_emp);
+                            migrated = true;
+                        }
+                    }
+                    for seed_shift in baseline.shifts {
+                        if !parsed.shifts.iter().any(|s| s.id == seed_shift.id) {
+                            parsed.shifts.push(seed_shift);
+                            migrated = true;
+                        }
+                    }
+                    if parsed.lead_forms.is_empty() {
+                        parsed.lead_forms = baseline.lead_forms;
                         migrated = true;
                     }
-                }
-                for seed_shift in baseline.shifts {
-                    if !parsed.shifts.iter().any(|s| s.id == seed_shift.id) {
-                        parsed.shifts.push(seed_shift);
+                    if parsed.lead_prospects.is_empty() {
+                        parsed.lead_prospects = baseline.lead_prospects;
                         migrated = true;
                     }
-                }
-                if parsed.lead_forms.is_empty() {
-                    parsed.lead_forms = baseline.lead_forms;
-                    migrated = true;
-                }
-                if parsed.lead_prospects.is_empty() {
-                    parsed.lead_prospects = baseline.lead_prospects;
-                    migrated = true;
-                }
-                if parsed.lead_appointments.is_empty() {
-                    parsed.lead_appointments = baseline.lead_appointments;
-                    migrated = true;
-                }
-                if parsed.lead_activities.is_empty() {
-                    parsed.lead_activities = baseline.lead_activities;
-                    migrated = true;
+                    if parsed.lead_appointments.is_empty() {
+                        parsed.lead_appointments = baseline.lead_appointments;
+                        migrated = true;
+                    }
+                    if parsed.lead_activities.is_empty() {
+                        parsed.lead_activities = baseline.lead_activities;
+                        migrated = true;
+                    }
+                    for (eid, prefs) in baseline.preferences_by_employee {
+                        parsed.preferences_by_employee.entry(eid).or_insert_with(|| {
+                            migrated = true;
+                            prefs
+                        });
+                    }
                 }
                 if parsed.lead_settings_by_club.is_empty() {
-                    parsed.lead_settings_by_club = baseline.lead_settings_by_club;
+                    parsed.lead_settings_by_club = default_lead_settings_by_club();
                     migrated = true;
-                }
-                for (eid, prefs) in baseline.preferences_by_employee {
-                    parsed.preferences_by_employee.entry(eid).or_insert_with(|| {
-                        migrated = true;
-                        prefs
-                    });
                 }
                 if apply_initial_admin_password_bootstrap(&mut parsed) {
                     migrated = true;
@@ -1610,7 +1818,11 @@ pub fn load_or_init_state(data_dir: &Path) -> AppDatabaseState {
             }
         }
     }
-    let mut state = create_initial_seed_state();
+    let mut state = if demo_mode {
+        create_initial_seed_state()
+    } else {
+        create_production_initial_state()
+    };
     let _ = apply_initial_admin_password_bootstrap(&mut state);
     let _ = persist_state(data_dir, &state);
     state
@@ -1625,4 +1837,67 @@ pub fn persist_state(data_dir: &Path, state: &AppDatabaseState) -> std::io::Resu
     fs::write(&tmp, payload)?;
     fs::rename(&tmp, &target)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn production_initial_state_has_no_fictive_operational_data() {
+        let state = create_production_initial_state();
+        assert_eq!(state.sites.len(), 2);
+        assert!(state.sites.iter().all(|s| !s.name.contains("Fictif")));
+        assert!(!state.organization.name.contains("Fictif"));
+        assert_eq!(state.employees.len(), 1);
+        assert!(state.employees[0].active);
+        assert_eq!(state.employees[0].site_accesses.len(), 2);
+        assert!(state.employees[0]
+            .site_accesses
+            .iter()
+            .all(|a| a.profile_id == "admin_systeme"));
+        assert_eq!(state.profiles.len(), 6);
+        assert!(state.shifts.is_empty());
+        assert!(state.leave_requests.is_empty());
+        assert!(state.anomalies.is_empty());
+        assert!(state.kpis.is_empty());
+        assert!(state.audit_log.is_empty());
+        assert!(state.lead_forms.is_empty());
+        assert!(state.lead_prospects.is_empty());
+        assert!(state.lead_appointments.is_empty());
+        assert!(state.lead_activities.is_empty());
+        assert!(state.lead_settings_by_club.contains_key("carre-de-soie"));
+        assert!(state.lead_settings_by_club.contains_key("beynost"));
+    }
+
+    #[test]
+    fn production_initial_state_accepts_pbkdf2_admin_bootstrap() {
+        let mut state = create_production_initial_state();
+        let target_id = state.employees[0].id.clone();
+
+        assert!(!apply_admin_password_bootstrap_with(
+            &mut state,
+            "trop-court",
+            &target_id
+        ));
+        assert!(state.password_hashes_by_employee.is_empty());
+
+        assert!(apply_admin_password_bootstrap_with(
+            &mut state,
+            "MotDePasseProd2026!",
+            &target_id
+        ));
+        let stored_hash = state
+            .password_hashes_by_employee
+            .get(&target_id)
+            .expect("hash administrateur enregistré");
+        assert!(crate::auth_passwords::verify_password_hash(
+            "MotDePasseProd2026!",
+            stored_hash
+        ));
+        assert!(!crate::auth_passwords::verify_password_hash(
+            "MauvaisMotDePasse!",
+            stored_hash
+        ));
+    }
 }

@@ -5,10 +5,13 @@ import {
   DatabaseBackup,
   Download,
   History,
+  KeyRound,
   Lock,
+  Plus,
   Save,
   ShieldAlert,
   ShieldCheck,
+  Trash2,
   Upload,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -31,7 +34,82 @@ interface AdminRightsViewProps {
   onRefreshDashboard: () => Promise<void>;
 }
 
-type AdminTab = 'org_sites' | 'permissions' | 'audit' | 'backup';
+type AdminTab =
+  | 'org_sites'
+  | 'permissions'
+  | 'delegations_security'
+  | 'audit'
+  | 'backup';
+
+type DelegationModuleId = 'finances' | 'reports' | 'recovery' | 'stocks';
+type DelegationActionId = 'view' | 'edit' | 'export';
+
+interface ModuleDelegationRecord {
+  employeeId: string;
+  siteId: string;
+  module: DelegationModuleId;
+  actions: string[];
+}
+
+const DELEGATION_MODULES: Array<{ id: DelegationModuleId; label: string }> = [
+  { id: 'finances', label: 'Finances & Pilotage' },
+  { id: 'reports', label: 'Rapports & Exports' },
+  { id: 'recovery', label: 'Recouvrement impayés' },
+  { id: 'stocks', label: 'Stocks & Achats' },
+];
+
+const DELEGATION_ACTIONS: Array<{ id: DelegationActionId; label: string }> = [
+  { id: 'view', label: 'Lecture' },
+  { id: 'edit', label: 'Modification' },
+  { id: 'export', label: 'Export' },
+];
+
+function resolveAdminBearer(auth: ApiAuthContext): string | null {
+  if (auth.token && auth.token.trim().length > 0) {
+    return auth.token.trim();
+  }
+  if (typeof window === 'undefined') return null;
+  try {
+    const storedToken = window.sessionStorage.getItem('cfos_bearer_token');
+    const storedActor = window.sessionStorage.getItem('cfos_bearer_actor_id');
+    if (storedToken && storedActor === auth.actorId) {
+      return storedToken;
+    }
+  } catch {
+    // ignore storage errors
+  }
+  return null;
+}
+
+async function adminFetchJson<T>(
+  path: string,
+  auth: ApiAuthContext,
+  init?: RequestInit
+): Promise<T> {
+  const headers = new Headers(init?.headers);
+  headers.set('x-cfitness-actor-id', auth.actorId);
+  headers.set('x-cfitness-site-id', auth.siteId);
+  const bearer = resolveAdminBearer(auth);
+  if (bearer && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${bearer}`);
+  }
+  if (init?.body && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  const response = await fetch(path, { ...init, headers });
+  if (!response.ok) {
+    let errMsg = `Erreur serveur HTTP ${response.status}`;
+    try {
+      const payload = (await response.json()) as { error?: string };
+      if (payload?.error) errMsg = payload.error;
+    } catch {
+      // Garde le message HTTP générique si réponse non JSON
+    }
+    throw new ApiClientError(response.status, errMsg);
+  }
+  return (await response.json()) as T;
+}
 
 const STATE_BADGES: Record<
   ReturnType<typeof getControlState>,
@@ -91,6 +169,19 @@ export function AdminRightsView({
   const [backupPreview, setBackupPreview] = useState('');
   const [restoreInput, setRestoreInput] = useState('');
 
+  // État Délégations structurées & Mots de passe serveur
+  const [delegations, setDelegations] = useState<ModuleDelegationRecord[]>([]);
+  const [delegationsDirty, setDelegationsDirty] = useState(false);
+  const [savingDelegations, setSavingDelegations] = useState(false);
+  const [delEmpId, setDelEmpId] = useState<string>('');
+  const [delSiteId, setDelSiteId] = useState<string>('');
+  const [delModule, setDelModule] = useState<DelegationModuleId>('finances');
+  const [delActions, setDelActions] = useState<DelegationActionId[]>(['view']);
+  const [resetEmpId, setResetEmpId] = useState<string>('');
+  const [resetPwd, setResetPwd] = useState('');
+  const [resetPwdConfirm, setResetPwdConfirm] = useState('');
+  const [savingPassword, setSavingPassword] = useState(false);
+
   useEffect(() => {
     setOrgForm(dashboard.organization);
     setOrg02Policy(dashboard.org02BillingPolicy);
@@ -144,11 +235,65 @@ export function AdminRightsView({
     }
   }
 
+  async function loadDelegations() {
+    try {
+      const data = await adminFetchJson<ModuleDelegationRecord[]>(
+        '/api/admin/delegations',
+        auth
+      );
+      setDelegations(Array.isArray(data) ? data : []);
+      setDelegationsDirty(false);
+    } catch (e) {
+      if (e instanceof ApiClientError && e.status === 403) {
+        return;
+      }
+      setStatusMsg({
+        kind: 'err',
+        text:
+          e instanceof Error
+            ? e.message
+            : 'Erreur lecture des délégations par club.',
+      });
+    }
+  }
+
   useEffect(() => {
     void loadProfiles();
     void loadAudit();
+    void loadDelegations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.actorId, auth.siteId]);
+
+  useEffect(() => {
+    const visible = dashboard.visibleEmployees;
+    if (visible.length === 0) return;
+
+    const currentDelEmp = visible.find((e) => e.id === delEmpId) ?? visible[0];
+    if (currentDelEmp && currentDelEmp.id !== delEmpId) {
+      setDelEmpId(currentDelEmp.id);
+    }
+    if (currentDelEmp) {
+      const attachedSiteIds = currentDelEmp.siteAccesses.map((a) => a.siteId);
+      if (!attachedSiteIds.includes(delSiteId)) {
+        const preferredSite =
+          auth.siteId !== 'all' && attachedSiteIds.includes(auth.siteId)
+            ? auth.siteId
+            : (attachedSiteIds[0] ?? dashboard.sites[0]?.id ?? 'club-carre-soie');
+        setDelSiteId(preferredSite);
+      }
+    }
+
+    if (!visible.some((e) => e.id === resetEmpId)) {
+      setResetEmpId(visible[0].id);
+    }
+  }, [
+    dashboard.visibleEmployees,
+    dashboard.sites,
+    auth.siteId,
+    delEmpId,
+    delSiteId,
+    resetEmpId,
+  ]);
 
   const activeProfileObj = profiles.find((p) => p.id === selectedProfileId);
   const csSite = dashboard.sites.find((s) => s.id === 'club-carre-soie');
@@ -281,6 +426,161 @@ export function AdminRightsView({
     }
   }
 
+  function handleSelectDelEmployee(nextEmpId: string) {
+    setDelEmpId(nextEmpId);
+    const emp = dashboard.visibleEmployees.find((e) => e.id === nextEmpId);
+    if (!emp) return;
+    const attachedIds = emp.siteAccesses.map((a) => a.siteId);
+    if (!attachedIds.includes(delSiteId)) {
+      const preferredSite =
+        auth.siteId !== 'all' && attachedIds.includes(auth.siteId)
+          ? auth.siteId
+          : (attachedIds[0] ?? delSiteId);
+      setDelSiteId(preferredSite);
+    }
+  }
+
+  function handleToggleDelAction(action: DelegationActionId) {
+    setDelActions((prev) =>
+      prev.includes(action)
+        ? prev.filter((item) => item !== action)
+        : [...prev, action]
+    );
+  }
+
+  function handleAddOrUpdateDelegation() {
+    setStatusMsg(null);
+    if (!delEmpId || !delSiteId) {
+      setStatusMsg({
+        kind: 'err',
+        text: 'Sélectionnez un collaborateur et un établissement.',
+      });
+      return;
+    }
+    if (delActions.length === 0) {
+      setStatusMsg({
+        kind: 'err',
+        text: 'Sélectionnez au moins une action autorisée (Lecture, Modification ou Export).',
+      });
+      return;
+    }
+    const cleanActions = [...delActions].sort();
+    setDelegations((prev) => {
+      const existingIdx = prev.findIndex(
+        (d) =>
+          d.employeeId === delEmpId &&
+          d.siteId === delSiteId &&
+          d.module === delModule
+      );
+      const nextEntry: ModuleDelegationRecord = {
+        employeeId: delEmpId,
+        siteId: delSiteId,
+        module: delModule,
+        actions: cleanActions,
+      };
+      if (existingIdx >= 0) {
+        return prev.map((row, idx) => (idx === existingIdx ? nextEntry : row));
+      }
+      return [...prev, nextEntry];
+    });
+    setDelegationsDirty(true);
+  }
+
+  function handleRemoveDelegation(idxToRemove: number) {
+    setDelegations((prev) => prev.filter((_, idx) => idx !== idxToRemove));
+    setDelegationsDirty(true);
+  }
+
+  async function handleSaveDelegations() {
+    setStatusMsg(null);
+    setSavingDelegations(true);
+    try {
+      const saved = await adminFetchJson<ModuleDelegationRecord[]>(
+        '/api/admin/delegations',
+        auth,
+        {
+          method: 'PUT',
+          body: JSON.stringify({ delegations }),
+        }
+      );
+      setDelegations(Array.isArray(saved) ? saved : []);
+      setDelegationsDirty(false);
+      await onRefreshDashboard();
+      await loadAudit();
+      setStatusMsg({
+        kind: 'ok',
+        text: `Délégations par club enregistrées côté serveur (${Array.isArray(saved) ? saved.length : 0} règle(s)).`,
+      });
+    } catch (e) {
+      const msg =
+        e instanceof ApiClientError
+          ? `HTTP ${e.status} — ${e.message}`
+          : String(e);
+      setStatusMsg({ kind: 'err', text: msg });
+    } finally {
+      setSavingDelegations(false);
+    }
+  }
+
+  async function handleResetEmployeePassword() {
+    setStatusMsg(null);
+    const cleanPwd = resetPwd.trim();
+    const cleanConfirm = resetPwdConfirm.trim();
+    if (!resetEmpId) {
+      setStatusMsg({
+        kind: 'err',
+        text: 'Sélectionnez le collaborateur cible.',
+      });
+      return;
+    }
+    if (cleanPwd.length < 12) {
+      setStatusMsg({
+        kind: 'err',
+        text: 'Le nouveau mot de passe doit comporter au moins 12 caractères.',
+      });
+      return;
+    }
+    if (cleanPwd !== cleanConfirm) {
+      setStatusMsg({
+        kind: 'err',
+        text: 'Les deux saisies du mot de passe ne correspondent pas.',
+      });
+      return;
+    }
+    setSavingPassword(true);
+    try {
+      await adminFetchJson<{ ok: boolean; employeeId: string }>(
+        `/api/admin/employees/${encodeURIComponent(resetEmpId)}/password`,
+        auth,
+        {
+          method: 'PUT',
+          body: JSON.stringify({ newSecret: cleanPwd }),
+        }
+      );
+      setResetPwd('');
+      setResetPwdConfirm('');
+      await loadAudit();
+      const targetEmp = dashboard.visibleEmployees.find(
+        (e) => e.id === resetEmpId
+      );
+      const targetLabel = targetEmp
+        ? `${targetEmp.firstName} ${targetEmp.lastName}`
+        : resetEmpId;
+      setStatusMsg({
+        kind: 'ok',
+        text: `Mot de passe serveur mis à jour pour ${targetLabel} ; ses sessions actives ont été révoquées.`,
+      });
+    } catch (e) {
+      const msg =
+        e instanceof ApiClientError
+          ? `HTTP ${e.status} — ${e.message}`
+          : String(e);
+      setStatusMsg({ kind: 'err', text: msg });
+    } finally {
+      setSavingPassword(false);
+    }
+  }
+
   return cleanUiTree(
     <div className="space-y-5">
       <div className="cf-card p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -303,6 +603,7 @@ export function AdminRightsView({
         <div className="flex flex-wrap gap-1.5">
           {[
             { id: 'permissions' as const, label: isTechnicalMode ? 'Matrice Droits (6×44)' : 'Droits & Rôles', icon: ShieldCheck },
+            { id: 'delegations_security' as const, label: 'Délégations & Mots de passe', icon: KeyRound },
             { id: 'org_sites' as const, label: 'Organisation & Clubs', icon: Building2 },
             { id: 'audit' as const, label: isTechnicalMode ? 'Journal JOU01 & CSV' : 'Journal d’activité', icon: History },
             { id: 'backup' as const, label: isTechnicalMode ? 'Sauvegarde TST28' : 'Sauvegarde', icon: DatabaseBackup },
@@ -835,6 +1136,300 @@ export function AdminRightsView({
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Onglet 5 : Délégations par club & Mots de passe serveur */}
+      {activeTab === 'delegations_security' && (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          {/* Section 1 : Délégations structurées par club */}
+          <div className="cf-card p-5 space-y-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="font-semibold text-sm flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-violet-400" />
+                  Délégations par club et module
+                </h2>
+                <p className="text-xs cf-muted mt-0.5">
+                  Accorde un accès ciblé (Finances, Rapports, Recouvrement ou
+                  Stocks) à un collaborateur sur un établissement précis.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleSaveDelegations()}
+                disabled={savingDelegations}
+                className="cf-brand-gradient text-white text-xs font-semibold px-3.5 py-2 rounded-btn flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <Save className="w-3.5 h-3.5" />
+                {savingDelegations
+                  ? 'Enregistrement...'
+                  : 'Enregistrer les délégations'}
+              </button>
+            </div>
+
+            {delegationsDirty && (
+              <div className="text-[11px] px-3 py-2 rounded-btn bg-amber-500/15 border border-amber-500/40 text-amber-200">
+                Modifications en attente : cliquez sur « Enregistrer les
+                délégations » pour appliquer côté serveur.
+              </div>
+            )}
+
+            <div className="cf-card-secondary p-3.5 space-y-3 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <label className="block space-y-1">
+                  <span className="cf-muted">Collaborateur</span>
+                  <select
+                    value={delEmpId}
+                    onChange={(e) => handleSelectDelEmployee(e.target.value)}
+                    className="cf-input w-full px-2.5 py-2"
+                  >
+                    {dashboard.visibleEmployees.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.firstName} {emp.lastName} ({emp.matricule})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block space-y-1">
+                  <span className="cf-muted">Établissement</span>
+                  <select
+                    value={delSiteId}
+                    onChange={(e) => setDelSiteId(e.target.value)}
+                    className="cf-input w-full px-2.5 py-2"
+                  >
+                    {(
+                      dashboard.visibleEmployees
+                        .find((e) => e.id === delEmpId)
+                        ?.siteAccesses.map((a) => {
+                          const foundSite = dashboard.sites.find(
+                            (s) => s.id === a.siteId
+                          );
+                          return {
+                            id: a.siteId,
+                            name: foundSite?.name ?? a.siteId,
+                          };
+                        }) ?? dashboard.sites
+                    ).map((site) => (
+                      <option key={site.id} value={site.id}>
+                        {site.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block space-y-1">
+                  <span className="cf-muted">Module</span>
+                  <select
+                    value={delModule}
+                    onChange={(e) =>
+                      setDelModule(e.target.value as DelegationModuleId)
+                    }
+                    className="cf-input w-full px-2.5 py-2"
+                  >
+                    {DELEGATION_MODULES.map((mod) => (
+                      <option key={mod.id} value={mod.id}>
+                        {mod.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="cf-muted">Actions autorisées :</span>
+                  {DELEGATION_ACTIONS.map((act) => (
+                    <label
+                      key={act.id}
+                      className="inline-flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={delActions.includes(act.id)}
+                        onChange={() => handleToggleDelAction(act.id)}
+                        className="accent-violet-500"
+                      />
+                      <span>{act.label}</span>
+                    </label>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddOrUpdateDelegation}
+                  className="cf-card px-3 py-1.5 font-semibold text-xs flex items-center gap-1.5 hover:border-violet-500/60"
+                >
+                  <Plus className="w-3.5 h-3.5 text-violet-400" />
+                  Ajouter / Mettre à jour
+                </button>
+              </div>
+            </div>
+
+            {delegations.length === 0 ? (
+              <div className="cf-card-secondary p-4 text-xs cf-muted">
+                Aucune délégation nominative active. Les droits par défaut de la
+                matrice s’appliquent.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="cf-muted border-b border-[var(--cf-border)]">
+                    <tr>
+                      <th className="py-2 pr-3">Collaborateur</th>
+                      <th className="py-2 pr-3">Établissement</th>
+                      <th className="py-2 pr-3">Module</th>
+                      <th className="py-2 pr-3">Actions</th>
+                      <th className="py-2 text-right">Retirer</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--cf-border)]">
+                    {delegations.map((del, idx) => {
+                      const emp = dashboard.visibleEmployees.find(
+                        (e) => e.id === del.employeeId
+                      );
+                      const site = dashboard.sites.find(
+                        (s) => s.id === del.siteId
+                      );
+                      const modLabel =
+                        DELEGATION_MODULES.find((m) => m.id === del.module)
+                          ?.label ?? del.module;
+                      return (
+                        <tr
+                          key={`${del.employeeId}-${del.siteId}-${del.module}`}
+                        >
+                          <td className="py-2.5 pr-3 font-medium">
+                            {emp
+                              ? `${emp.firstName} ${emp.lastName}`
+                              : del.employeeId}
+                          </td>
+                          <td className="py-2.5 pr-3">
+                            {site?.name ?? del.siteId}
+                          </td>
+                          <td className="py-2.5 pr-3">{modLabel}</td>
+                          <td className="py-2.5 pr-3">
+                            <div className="flex flex-wrap gap-1">
+                              {del.actions.map((act) => {
+                                const actLabel =
+                                  DELEGATION_ACTIONS.find((a) => a.id === act)
+                                    ?.label ?? act;
+                                return (
+                                  <span
+                                    key={act}
+                                    className="px-2 py-0.5 rounded bg-violet-500/15 text-violet-300 text-[10px] font-medium"
+                                  >
+                                    {actLabel}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </td>
+                          <td className="py-2.5 text-right">
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveDelegation(idx)}
+                              aria-label="Retirer cette délégation"
+                              className="p-1.5 rounded hover:bg-red-500/20 text-red-300 transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Section 2 : Mot de passe serveur administrateur */}
+          <div className="cf-card p-5 space-y-4">
+            <div>
+              <h2 className="font-semibold text-sm flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-emerald-400" />
+                Mot de passe serveur &amp; révocation de session
+              </h2>
+              <p className="text-xs cf-muted mt-0.5">
+                Définit ou réinitialise le mot de passe personnel chiffré
+                (PBKDF2) d’un collaborateur et révoque immédiatement ses
+                sessions ouvertes.
+              </p>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void handleResetEmployeePassword();
+              }}
+              className="space-y-3 text-xs"
+            >
+              <label className="block space-y-1">
+                <span className="cf-muted">Collaborateur cible</span>
+                <select
+                  value={resetEmpId}
+                  onChange={(e) => setResetEmpId(e.target.value)}
+                  className="cf-input w-full px-3 py-2"
+                >
+                  {dashboard.visibleEmployees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.firstName} {emp.lastName} ({emp.matricule})
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block space-y-1">
+                <span className="cf-muted">
+                  Nouveau mot de passe (12 caractères minimum)
+                </span>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={12}
+                  value={resetPwd}
+                  onChange={(e) => setResetPwd(e.target.value)}
+                  placeholder="Au moins 12 caractères..."
+                  className="cf-input w-full px-3 py-2"
+                />
+              </label>
+
+              <label className="block space-y-1">
+                <span className="cf-muted">Confirmer le nouveau mot de passe</span>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={12}
+                  value={resetPwdConfirm}
+                  onChange={(e) => setResetPwdConfirm(e.target.value)}
+                  placeholder="Répétez le mot de passe..."
+                  className="cf-input w-full px-3 py-2"
+                />
+              </label>
+
+              <div className="cf-card-secondary p-3 text-[11px] cf-muted flex items-start gap-2">
+                <Lock className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                <span>
+                  Dès la validation, le code PIN de démonstration éventuel ne
+                  permet plus de se connecter sur ce compte ; seul le mot de
+                  passe défini ici est accepté.
+                </span>
+              </div>
+
+              <div className="pt-1 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={savingPassword}
+                  className="cf-brand-gradient text-white text-xs font-semibold px-4 py-2 rounded-btn flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <KeyRound className="w-3.5 h-3.5" />
+                  {savingPassword
+                    ? 'Mise à jour...'
+                    : 'Enregistrer le mot de passe'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
