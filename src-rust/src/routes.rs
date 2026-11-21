@@ -173,6 +173,7 @@ pub fn api_router(state: SharedState) -> Router {
         .route("/api/public/forms/:club_id/:form_id", get(get_public_lead_form))
         .route("/api/public/forms/:club_id/:form_id/submit", post(post_public_lead_form_submit))
         .route("/api/public/book/:club_id/:slot_type", get(get_public_book_slot).post(post_public_book_slot))
+        .route("/api/lead/settings/:club_id", get(get_lead_settings).put(put_lead_settings))
         .route("/api/lead/workspace", get(get_lead_workspace))
         .route("/api/lead/forms/:form_id", put(put_lead_form))
         .route("/api/lead/prospects/import", post(post_lead_prospects_import))
@@ -3548,6 +3549,99 @@ async fn delete_lead_appointment(
     Ok(Json(json!({ "ok": true, "slotId": slot_id })))
 }
 
+async fn get_lead_settings(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Path(club_id): Path<String>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let db = state.db.read().await;
+    let allowed = authorized_clubs_for_actor(&db, &actor_id);
+    if !allowed.contains(&club_id) {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            format!("Accès refusé (403) : non autorisé sur le club {}", club_id),
+        ));
+    }
+    if let Some(settings) = db.lead_settings_by_club.get(&club_id) {
+        return Ok(Json(json!({
+            "ok": true,
+            "clubId": club_id,
+            "settings": settings
+        })));
+    }
+    let default_val = json!({
+        "smsCredits": if club_id == "beynost" { 980 } else { 1420 },
+        "salesScript": "1. Accueil & objectif forme\n2. Découverte Biocircuit / Checkup\n3. Proposition créneau essai",
+        "archiveThresholdDays": 30,
+        "notifEmail": if club_id == "beynost" { "direction.beynost@c.fitness" } else { "direction@c.fitness" },
+        "notifMobile": if club_id == "beynost" { "07 82 00 00 02" } else { "07 82 00 00 01" },
+        "whatsappNumber": if club_id == "beynost" { "+33 4 78 00 00 02" } else { "+33 4 78 00 00 01" },
+        "clientPassOffer": if club_id == "beynost" { "Pass Liberté Beynost 12 mois" } else { "Pass Liberté + Biocircuit 12 mois" },
+        "autoAssignEnabled": true,
+        "autoUnassignOnLeave": true,
+        "dropoutThresholdDays": 21,
+        "dropoutResetOnBadge": true,
+        "autoArchiveEnabled": true,
+        "archiveTargetStage": "Archivé",
+        "enabledAlertIds": ["LEAD-0545", "LEAD-0548", "LEAD-0551", "LEAD-0552"],
+        "selectedPassOfferIds": if club_id == "beynost" { vec!["HZ-BEY-ABO-PASS", "HZ-BEY-ABO-SOLO"] } else { vec!["HZ-CDS-ABO-PASS", "HZ-CDS-ABO-SOLO"] },
+        "clientPassTargetScope": "club",
+        "uiLanguage": "fr"
+    });
+    Ok(Json(json!({
+        "ok": true,
+        "clubId": club_id,
+        "settings": default_val
+    })))
+}
+
+async fn put_lead_settings(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Path(club_id): Path<String>,
+    Json(payload): Json<Value>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let mut db = state.db.write().await;
+    if !actor_has_lead_admin_write_on_club(&db, &actor_id, &club_id) {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            format!("Modification refusée (403) : droits d'administration CRM requis pour le club {}.", club_id),
+        ));
+    }
+
+    db.lead_settings_by_club.insert(club_id.clone(), payload.clone());
+
+    let audit_id = format!("aud-{}", Utc::now().timestamp_millis());
+    let actor_label = db.employees.iter().find(|e| e.id == actor_id).map(|e| format!("{} {}", e.first_name, e.last_name)).unwrap_or_else(|| actor_id.clone());
+    db.audit_log.push(AuditEvent {
+        id: audit_id,
+        timestamp: Utc::now().to_rfc3339(),
+        actor_id: actor_id.clone(),
+        actor_name: actor_label,
+        action_type: "lead.settings.update".into(),
+        summary: format!("Mise à jour des paramètres CRM du club {}", club_id),
+        site_id: if club_id == "beynost" { "site_beynost".into() } else { "site_cds".into() },
+        target_label: format!("ClubLeadSettings ({})", club_id),
+        before_summary: None,
+        after_summary: Some(format!("Club {} mis à jour", club_id)),
+    });
+
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec persistance serveur : {}", err_msg),
+        ));
+    }
+
+    Ok(Json(json!({
+        "ok": true,
+        "clubId": club_id,
+        "settings": payload
+    })))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -4668,5 +4762,102 @@ mod tests {
         let reloaded = load_or_init_state(&state.data_dir);
         assert!(reloaded.lead_prospects.iter().any(|p| p.id == prospect_id));
         assert!(reloaded.lead_appointments.iter().any(|a| a.date == "2026-12-10" && a.start_time == "14:00"));
+    }
+
+    #[tokio::test]
+    async fn lead_settings_routes_persist_per_club_and_enforce_admin_write() {
+        let state = test_state();
+
+        // 1. Session Mario (Direction / Admin)
+        let mario_login = post_local_auth_login(
+            State(state.clone()),
+            Json(LocalAuthLoginRequest {
+                email_or_id: "emp-mario".to_string(),
+                pin_or_password: "1010".to_string(),
+                role_requested: String::new(),
+            }),
+        )
+        .await
+        .into_response();
+        let mario_bytes = axum::body::to_bytes(mario_login.into_body(), usize::MAX).await.unwrap();
+        let mario_json: Value = serde_json::from_slice(&mario_bytes).unwrap();
+        let mario_token = mario_json["sessionToken"].as_str().unwrap().to_string();
+        let mut h_mario = HeaderMap::new();
+        h_mario.insert(header::AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", mario_token)).unwrap());
+
+        // Lecture des réglages Carré de Soie par Mario
+        let res_get = get_lead_settings(
+            State(state.clone()),
+            h_mario.clone(),
+            Path("carre-de-soie".into()),
+        )
+        .await
+        .unwrap();
+        assert_eq!(res_get.0["ok"], true);
+        assert_eq!(res_get.0["clubId"], "carre-de-soie");
+
+        // 2. Mise à jour des paramètres par Mario (autorisé)
+        let new_settings = json!({
+            "smsCredits": 1500,
+            "salesScript": "Script mis à jour",
+            "archiveThresholdDays": 40,
+            "notifEmail": "direction.cds@c.fitness",
+            "notifMobile": "07 82 00 00 01",
+            "whatsappNumber": "+33 4 78 00 00 01",
+            "autoAssignEnabled": true,
+            "autoUnassignOnLeave": true,
+            "dropoutThresholdDays": 25,
+            "dropoutResetOnBadge": true,
+            "autoArchiveEnabled": true,
+            "archiveTargetStage": "Archivé",
+            "enabledAlertIds": ["LEAD-0545", "LEAD-0548"],
+            "selectedPassOfferIds": ["HZ-CDS-ABO-PASS"],
+            "clientPassTargetScope": "club",
+            "uiLanguage": "fr"
+        });
+
+        let res_put = put_lead_settings(
+            State(state.clone()),
+            h_mario.clone(),
+            Path("carre-de-soie".into()),
+            Json(new_settings.clone()),
+        )
+        .await
+        .unwrap();
+        assert_eq!(res_put.0["ok"], true);
+        assert_eq!(res_put.0["settings"]["archiveThresholdDays"], 40);
+
+        // 3. Rejet 403 pour Chloé (commerciale sans droit d'administration sur CDS)
+        let chloe_login = post_local_auth_login(
+            State(state.clone()),
+            Json(LocalAuthLoginRequest {
+                email_or_id: "emp-chloe".to_string(),
+                pin_or_password: "5320".to_string(),
+                role_requested: String::new(),
+            }),
+        )
+        .await
+        .into_response();
+        let chloe_bytes = axum::body::to_bytes(chloe_login.into_body(), usize::MAX).await.unwrap();
+        let chloe_json: Value = serde_json::from_slice(&chloe_bytes).unwrap();
+        let chloe_token = chloe_json["sessionToken"].as_str().unwrap().to_string();
+        let mut h_chloe = HeaderMap::new();
+        h_chloe.insert(header::AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", chloe_token)).unwrap());
+
+        let chloe_forbidden = put_lead_settings(
+            State(state.clone()),
+            h_chloe,
+            Path("carre-de-soie".into()),
+            Json(new_settings),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(chloe_forbidden.0, StatusCode::FORBIDDEN);
+
+        // 4. Persistance disque vérifiée après rechargement état
+        let reloaded = load_or_init_state(&state.data_dir);
+        let cds_saved = reloaded.lead_settings_by_club.get("carre-de-soie").unwrap();
+        assert_eq!(cds_saved["archiveThresholdDays"], 40);
+        assert_eq!(cds_saved["dropoutThresholdDays"], 25);
     }
 }

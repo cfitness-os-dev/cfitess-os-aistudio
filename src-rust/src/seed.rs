@@ -1427,6 +1427,54 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
                 status_label: "Confirmé".into(),
             },
         ],
+        lead_settings_by_club: {
+            let mut map = std::collections::HashMap::new();
+            map.insert(
+                "carre-de-soie".to_string(),
+                serde_json::json!({
+                    "smsCredits": 1420,
+                    "salesScript": "1. Accueil & objectif forme\n2. Découverte Biocircuit / Checkup\n3. Proposition créneau essai",
+                    "archiveThresholdDays": 30,
+                    "notifEmail": "direction@c.fitness",
+                    "notifMobile": "07 82 00 00 01",
+                    "whatsappNumber": "+33 4 78 00 00 01",
+                    "clientPassOffer": "Pass Liberté + Biocircuit 12 mois",
+                    "autoAssignEnabled": true,
+                    "autoUnassignOnLeave": true,
+                    "dropoutThresholdDays": 21,
+                    "dropoutResetOnBadge": true,
+                    "autoArchiveEnabled": true,
+                    "archiveTargetStage": "Archivé",
+                    "enabledAlertIds": ["LEAD-0545", "LEAD-0548", "LEAD-0551", "LEAD-0552"],
+                    "selectedPassOfferIds": ["HZ-CDS-ABO-PASS", "HZ-CDS-ABO-SOLO"],
+                    "clientPassTargetScope": "club",
+                    "uiLanguage": "fr"
+                }),
+            );
+            map.insert(
+                "beynost".to_string(),
+                serde_json::json!({
+                    "smsCredits": 980,
+                    "salesScript": "1. Accueil & objectif forme\n2. Présentation espace fonctionnel & cours\n3. Proposition créneau essai",
+                    "archiveThresholdDays": 30,
+                    "notifEmail": "direction.beynost@c.fitness",
+                    "notifMobile": "07 82 00 00 02",
+                    "whatsappNumber": "+33 4 78 00 00 02",
+                    "clientPassOffer": "Pass Liberté Beynost 12 mois",
+                    "autoAssignEnabled": true,
+                    "autoUnassignOnLeave": true,
+                    "dropoutThresholdDays": 21,
+                    "dropoutResetOnBadge": true,
+                    "autoArchiveEnabled": true,
+                    "archiveTargetStage": "Archivé",
+                    "enabledAlertIds": ["LEAD-0545", "LEAD-0548", "LEAD-0551", "LEAD-0552"],
+                    "selectedPassOfferIds": ["HZ-BEY-ABO-PASS", "HZ-BEY-ABO-SOLO"],
+                    "clientPassTargetScope": "club",
+                    "uiLanguage": "fr"
+                }),
+            );
+            map
+        },
         // Direction : Finances par défaut. Aucune habilitation nominative
         // n'est accordée à Sarah (responsable de club) tant qu'elle n'est pas
         // explicitement ajoutée ici (ticket #3).
@@ -1474,6 +1522,10 @@ pub fn load_or_init_state(data_dir: &Path) -> AppDatabaseState {
                 }
                 if parsed.lead_activities.is_empty() {
                     parsed.lead_activities = baseline.lead_activities;
+                    migrated = true;
+                }
+                if parsed.lead_settings_by_club.is_empty() {
+                    parsed.lead_settings_by_club = baseline.lead_settings_by_club;
                     migrated = true;
                 }
                 for (eid, prefs) in baseline.preferences_by_employee {

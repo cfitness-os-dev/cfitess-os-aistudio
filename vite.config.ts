@@ -49,6 +49,47 @@ function sendJson(res: ServerResponse, status: number, payload: unknown): void {
   res.end(JSON.stringify(payload));
 }
 
+const mockLeadSettingsByClub: Record<string, Record<string, unknown>> = {
+  'carre-de-soie': {
+    smsCredits: 1420,
+    salesScript: '1. Accueil & objectif forme\n2. Découverte Biocircuit / Checkup\n3. Proposition créneau essai',
+    archiveThresholdDays: 30,
+    notifEmail: 'direction@c.fitness',
+    notifMobile: '07 82 00 00 01',
+    whatsappNumber: '+33 4 78 00 00 01',
+    clientPassOffer: 'Pass Liberté + Biocircuit 12 mois',
+    autoAssignEnabled: true,
+    autoUnassignOnLeave: true,
+    dropoutThresholdDays: 21,
+    dropoutResetOnBadge: true,
+    autoArchiveEnabled: true,
+    archiveTargetStage: 'Archivé',
+    enabledAlertIds: ['LEAD-0545', 'LEAD-0548', 'LEAD-0551', 'LEAD-0552'],
+    selectedPassOfferIds: ['HZ-CDS-ABO-PASS', 'HZ-CDS-ABO-SOLO'],
+    clientPassTargetScope: 'club',
+    uiLanguage: 'fr',
+  },
+  'beynost': {
+    smsCredits: 980,
+    salesScript: '1. Accueil & objectif forme\n2. Présentation espace fonctionnel & cours\n3. Proposition créneau essai',
+    archiveThresholdDays: 30,
+    notifEmail: 'direction.beynost@c.fitness',
+    notifMobile: '07 82 00 00 02',
+    whatsappNumber: '+33 4 78 00 00 02',
+    clientPassOffer: 'Pass Liberté Beynost 12 mois',
+    autoAssignEnabled: true,
+    autoUnassignOnLeave: true,
+    dropoutThresholdDays: 21,
+    dropoutResetOnBadge: true,
+    autoArchiveEnabled: true,
+    archiveTargetStage: 'Archivé',
+    enabledAlertIds: ['LEAD-0545', 'LEAD-0548', 'LEAD-0551', 'LEAD-0552'],
+    selectedPassOfferIds: ['HZ-BEY-ABO-PASS', 'HZ-BEY-ABO-SOLO'],
+    clientPassTargetScope: 'club',
+    uiLanguage: 'fr',
+  },
+};
+
 function headerStr(req: IncomingMessage, key: string, fallback: string): string {
   const val = req.headers[key];
   if (typeof val === 'string' && val.trim()) return val.trim();
@@ -90,6 +131,21 @@ function registerApiRoutes(middlewares: Connect.Server, engine: CFitnessApiEngin
           leadAuditV04: '84 fichiers / 1682 entrées LEAD / 9 modules + 6 comm + 14 paramètres',
           timestampUtc: new Date().toISOString(),
         });
+        return;
+      }
+
+      if (method === 'GET' && path.startsWith('/api/lead/settings/')) {
+        const clubId = path.replace('/api/lead/settings/', '').trim();
+        const settings = mockLeadSettingsByClub[clubId] ?? mockLeadSettingsByClub['carre-de-soie'];
+        sendJson(res, 200, { ok: true, clubId, settings });
+        return;
+      }
+
+      if (method === 'PUT' && path.startsWith('/api/lead/settings/')) {
+        const clubId = path.replace('/api/lead/settings/', '').trim();
+        const body = (await readJsonBody(req)) as Record<string, unknown>;
+        mockLeadSettingsByClub[clubId] = { ...(mockLeadSettingsByClub[clubId] ?? {}), ...body };
+        sendJson(res, 200, { ok: true, clubId, settings: mockLeadSettingsByClub[clubId] });
         return;
       }
 

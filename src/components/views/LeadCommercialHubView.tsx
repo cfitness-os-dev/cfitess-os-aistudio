@@ -718,7 +718,37 @@ export function LeadCommercialHubView({
     return defaultCrmSettings;
   });
   const [crmSettingsSavedNotice, setCrmSettingsSavedNotice] = useState<string | null>(null);
+  const [crmSettingsErrorNotice, setCrmSettingsErrorNotice] = useState<string | null>(null);
+  const [isSavingCrmSettings, setIsSavingCrmSettings] = useState<boolean>(false);
   const [testAlertNotice, setTestAlertNotice] = useState<string | null>(null);
+
+  // Synchronisation serveur des paramètres CRM par club (persistance réelle et partagée)
+  useEffect(() => {
+    let cancelled = false;
+    const loadSettings = async () => {
+      try {
+        const res = await clientApi.getLeadSettings(
+          {
+            actorId: currentUser.id,
+            siteId: selectedProfileClubId === 'beynost' ? 'site_beynost' : 'site_cds',
+          },
+          selectedProfileClubId
+        );
+        if (!cancelled && res.ok && res.settings) {
+          setCrmSettings((prev) => ({
+            ...prev,
+            ...(res.settings as unknown as Partial<typeof defaultCrmSettings>),
+          }));
+        }
+      } catch {
+        // En cas d'indisponibilité temporaire, conserve l'état local sans fausse confirmation
+      }
+    };
+    void loadSettings();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedProfileClubId, currentUser.id]);
   const [rdvRequiresStripe, setRdvRequiresStripe] = useState(false);
   const [rdvStripePaid, setRdvStripePaid] = useState(false);
 
@@ -4623,27 +4653,80 @@ export function LeadCommercialHubView({
                 )}
 
                 {/* Barre d'enregistrement commune pour tous les onglets paramètres */}
-                <div className="flex items-center justify-between gap-2 pt-2">
-                  {crmSettingsSavedNotice ? (
-                    <span className="text-[11px] text-emerald-400 font-bold">{crmSettingsSavedNotice}</span>
-                  ) : (
-                    <span />
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      try {
-                        localStorage.setItem('cfos_lead_crm_settings_v1', JSON.stringify(crmSettings));
-                      } catch {
-                        // ignore
-                      }
-                      setCrmSettingsSavedNotice(`Paramètres « ${selectedSettingsTab} » enregistrés localement.`);
-                      setTimeout(() => setCrmSettingsSavedNotice(null), 3000);
-                    }}
-                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer transition text-xs"
-                  >
-                    Enregistrer les paramètres
-                  </button>
+                <div className="flex flex-col gap-2 pt-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex flex-col">
+                      {crmSettingsSavedNotice && (
+                        <span className="text-[11px] text-emerald-400 font-bold">{crmSettingsSavedNotice}</span>
+                      )}
+                      {crmSettingsErrorNotice && (
+                        <span className="text-[11px] text-rose-400 font-bold bg-rose-950/40 px-2 py-1 rounded border border-rose-800/60">
+                          {crmSettingsErrorNotice}
+                        </span>
+                      )}
+                      {!crmSettingsSavedNotice && !crmSettingsErrorNotice && (
+                        <span className="text-[10px] cf-muted">
+                          Club cible : <strong>{selectedProfileClubId === 'beynost' ? 'Beynost' : 'Carré de Soie'}</strong> · Sauvegarde serveur persistante
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isSavingCrmSettings}
+                      onClick={async () => {
+                        setIsSavingCrmSettings(true);
+                        setCrmSettingsSavedNotice(null);
+                        setCrmSettingsErrorNotice(null);
+                        try {
+                          const res = await clientApi.putLeadSettings(
+                            {
+                              actorId: currentUser.id,
+                              siteId: selectedProfileClubId === 'beynost' ? 'site_beynost' : 'site_cds',
+                            },
+                            selectedProfileClubId,
+                            crmSettings as unknown as Record<string, unknown>
+                          );
+                          if (res.ok) {
+                            try {
+                              localStorage.setItem('cfos_lead_crm_settings_v1', JSON.stringify(crmSettings));
+                            } catch {
+                              // ignore
+                            }
+                            setCrmSettingsSavedNotice(
+                              `✅ Paramètres « ${selectedSettingsTab} » synchronisés et persistés sur le serveur (${
+                                selectedProfileClubId === 'beynost' ? 'Beynost' : 'Carré de Soie'
+                              }).`
+                            );
+                            setTimeout(() => setCrmSettingsSavedNotice(null), 4000);
+                          } else {
+                            setCrmSettingsErrorNotice(
+                              `❌ Rejet serveur : impossible d'enregistrer les paramètres du club ${selectedProfileClubId}.`
+                            );
+                          }
+                        } catch (err) {
+                          setCrmSettingsErrorNotice(
+                            `❌ Échec de sauvegarde serveur : ${
+                              err instanceof Error ? err.message : 'Erreur réseau/droits'
+                            }. Aucune confirmation accordée.`
+                          );
+                        } finally {
+                          setIsSavingCrmSettings(false);
+                        }
+                      }}
+                      className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold cursor-pointer transition text-xs flex items-center gap-1.5"
+                    >
+                      {isSavingCrmSettings ? (
+                        <>
+                          <span className="animate-spin text-xs">⏳</span>
+                          <span>Enregistrement serveur...</span>
+                        </>
+                      ) : (
+                        <span>
+                          Enregistrer les paramètres ({selectedProfileClubId === 'beynost' ? 'Beynost' : 'Carré de Soie'})
+                        </span>
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 {selectedSettingsTab === 'automation' && (

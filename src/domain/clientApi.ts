@@ -500,6 +500,24 @@ export const clientApi = {
     });
   },
 
+  getLeadSettings(
+    auth: ApiAuthContext,
+    clubId: string
+  ): Promise<{ ok: boolean; clubId: string; settings: Record<string, unknown> }> {
+    return requestJson(`/api/lead/settings/${encodeURIComponent(clubId)}`, auth);
+  },
+
+  putLeadSettings(
+    auth: ApiAuthContext,
+    clubId: string,
+    settings: Record<string, unknown>
+  ): Promise<{ ok: boolean; clubId: string; settings: Record<string, unknown> }> {
+    return requestJson(`/api/lead/settings/${encodeURIComponent(clubId)}`, auth, {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+  },
+
   revokeCalendarToken(auth: ApiAuthContext): Promise<UserPreferences> {
     return requestJson<UserPreferences>('/api/me/calendar-token/revoke', auth, {
       method: 'POST',

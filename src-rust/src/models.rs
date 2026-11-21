@@ -488,6 +488,8 @@ pub struct AppDatabaseState {
     pub lead_appointments: Vec<LeadAppointmentRecord>,
     #[serde(default)]
     pub lead_activities: Vec<LeadActivityRecord>,
+    #[serde(default)]
+    pub lead_settings_by_club: HashMap<String, serde_json::Value>,
     // Habilitations nominatives explicites (délégation module par module).
     // Les profils admin/manager conservent leurs accès par défaut ; ces listes
     // permettent d'ouvrir un module à un collaborateur précis sans changer son rôle.

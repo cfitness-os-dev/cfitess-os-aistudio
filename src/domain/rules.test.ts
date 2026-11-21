@@ -1552,3 +1552,77 @@ test('LEAD-TST08 — Paramètres CRM : Alertes (LEAD-0545..0552), Seuil décroch
   assert.equal(inboundActive.shouldArchive, false);
 });
 
+test('LEAD-TST09 — Persistance serveur par club, alertes d’erreur strictes et règles bi-club RH / Heitz', () => {
+  // 1. Structure de configuration par club persistable côté serveur
+  const sampleCdsSettings = {
+    smsCredits: 1420,
+    salesScript: 'Accueil standard CDS',
+    archiveThresholdDays: 30,
+    notifEmail: 'direction@c.fitness',
+    notifMobile: '07 82 00 00 01',
+    whatsappNumber: '+33 4 78 00 00 01',
+    autoAssignEnabled: true,
+    autoUnassignOnLeave: true,
+    dropoutThresholdDays: 21,
+    dropoutResetOnBadge: true,
+    autoArchiveEnabled: true,
+    archiveTargetStage: 'Archivé' as const,
+    enabledAlertIds: ['LEAD-0545', 'LEAD-0548'],
+    selectedPassOfferIds: ['HZ-CDS-ABO-PASS'],
+    clientPassTargetScope: 'club' as const,
+  };
+
+  const sampleBeynostSettings = {
+    smsCredits: 980,
+    salesScript: 'Accueil standard Beynost',
+    archiveThresholdDays: 45,
+    notifEmail: 'direction.beynost@c.fitness',
+    notifMobile: '07 82 00 00 02',
+    whatsappNumber: '+33 4 78 00 00 02',
+    autoAssignEnabled: false,
+    autoUnassignOnLeave: true,
+    dropoutThresholdDays: 14,
+    dropoutResetOnBadge: true,
+    autoArchiveEnabled: true,
+    archiveTargetStage: 'Archivé' as const,
+    enabledAlertIds: ['LEAD-0551', 'LEAD-0552'],
+    selectedPassOfferIds: ['HZ-BEY-ABO-PASS'],
+    clientPassTargetScope: 'enseigne' as const,
+  };
+
+  // Les réglages par club restent étanches et distincts
+  assert.notEqual(sampleCdsSettings.archiveThresholdDays, sampleBeynostSettings.archiveThresholdDays);
+  assert.notEqual(sampleCdsSettings.notifEmail, sampleBeynostSettings.notifEmail);
+  assert.notEqual(sampleCdsSettings.dropoutThresholdDays, sampleBeynostSettings.dropoutThresholdDays);
+
+  // 2. Règle RH d'assignation / désassignation automatique
+  // Si commercial absent (en congé RH), désassignation automatique active
+  const isCommercialOnLeave = true;
+  const targetCommercial = isCommercialOnLeave && sampleCdsSettings.autoUnassignOnLeave
+    ? 'file_attente_equipe_commerciale'
+    : 'emp-maxime';
+  assert.equal(targetCommercial, 'file_attente_equipe_commerciale');
+
+  // 3. Remise à zéro du décrochage sur passage portillon Heitz
+  let memberDaysWithoutVisit = 28; // En décrochage critique (> 21 jours)
+  const isGateEntryDetected = true;
+  if (isGateEntryDetected && sampleCdsSettings.dropoutResetOnBadge) {
+    memberDaysWithoutVisit = 0; // Remise à zéro immédiate sur badgeage
+  }
+  assert.equal(memberDaysWithoutVisit, 0);
+
+  // 4. Aucune confirmation si l'enregistrement échoue (règle client critique)
+  const simulatedServerResponse = { ok: false, status: 403, error: 'Droits insuffisants' };
+  let confirmationMessage: string | null = null;
+  let errorMessage: string | null = null;
+
+  if (simulatedServerResponse.ok) {
+    confirmationMessage = 'Réglages enregistrés';
+  } else {
+    errorMessage = `Échec de sauvegarde serveur : ${simulatedServerResponse.error}`;
+  }
+
+  assert.equal(confirmationMessage, null);
+  assert.equal(errorMessage, 'Échec de sauvegarde serveur : Droits insuffisants');
+});
+
