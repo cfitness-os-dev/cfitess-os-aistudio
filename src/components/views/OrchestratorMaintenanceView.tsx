@@ -617,7 +617,7 @@ export function OrchestratorMaintenanceView() {
 
   const [agents, setAgents] = useState<AgentDefinition[]>(INITIAL_AGENTS);
   const [decisions, setDecisions] = useState<OrchestratorDecisionItem[]>(
-    INITIAL_ORCHESTRATOR_DECISIONS
+    import.meta.env.VITE_DEMO_MODE !== 'false' ? INITIAL_ORCHESTRATOR_DECISIONS : []
   );
   const [tickets, setTickets] = useState<MaintenanceTicket[]>(
     import.meta.env.VITE_DEMO_MODE !== 'false' ? INITIAL_MAINTENANCE_TICKETS : []
@@ -625,6 +625,26 @@ export function OrchestratorMaintenanceView() {
   const [stocks, setStocks] = useState<StockConsumableItem[]>(
     import.meta.env.VITE_DEMO_MODE !== 'false' ? INITIAL_STOCKS : []
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    void stocksFetchJson<OrchestratorDecisionItem[]>(
+      '/api/orchestrator/decisions',
+      currentUser.id,
+      activeSiteId
+    )
+      .then((list) => {
+        if (!cancelled && Array.isArray(list)) {
+          setDecisions(list);
+        }
+      })
+      .catch(() => {
+        // Garde les données initiales en mode démo si hors serveur ou non habilité
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser.id, activeSiteId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -992,15 +1012,47 @@ export function OrchestratorMaintenanceView() {
   const [ticketStatusFilter, setTicketStatusFilter] = useState<'ALL' | MaintenanceTicket['status']>('ALL');
 
   const handleApproveDecision = (id: string) => {
-    setDecisions((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, status: 'execute' } : d))
-    );
+    void stocksFetchJson<OrchestratorDecisionItem>(
+      `/api/orchestrator/decisions/${encodeURIComponent(id)}/status`,
+      currentUser.id,
+      activeSiteId,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'execute' }),
+      }
+    )
+      .then((updated) => {
+        setDecisions((prev) =>
+          prev.map((d) => (d.id === updated.id ? updated : d))
+        );
+      })
+      .catch(() => {
+        setDecisions((prev) =>
+          prev.map((d) => (d.id === id ? { ...d, status: 'execute' } : d))
+        );
+      });
   };
 
   const handleRejectDecision = (id: string) => {
-    setDecisions((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, status: 'refuse' } : d))
-    );
+    void stocksFetchJson<OrchestratorDecisionItem>(
+      `/api/orchestrator/decisions/${encodeURIComponent(id)}/status`,
+      currentUser.id,
+      activeSiteId,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'refuse' }),
+      }
+    )
+      .then((updated) => {
+        setDecisions((prev) =>
+          prev.map((d) => (d.id === updated.id ? updated : d))
+        );
+      })
+      .catch(() => {
+        setDecisions((prev) =>
+          prev.map((d) => (d.id === id ? { ...d, status: 'refuse' } : d))
+        );
+      });
   };
 
   const handleToggleAgentAutonomy = (agentId: string) => {
@@ -1020,11 +1072,11 @@ export function OrchestratorMaintenanceView() {
   };
 
   const handleSimulateOrchestratorEvent = () => {
-    const newDecision: OrchestratorDecisionItem = {
-      id: `orch-${Date.now()}`,
-      timestamp: new Date().toLocaleTimeString('fr-FR'),
+    const targetClub: ClubId = clubFilter === 'beynost' ? 'beynost' : 'carre-de-soie';
+    const payload = {
+      clubId: targetClub,
       triggerEvent:
-        'Nouveau Lead Web qualifié (Sonia Khelifi) + Disponibilité Station Technogym Checkup Beynost vérifiée',
+        'Nouveau Lead Web qualifié (Sonia Khelifi) + Disponibilité Station Technogym Checkup vérifiée',
       sourceSystem: 'Temporal / n8n Workflow #WF-402',
       assignedAgent: 'Agent CRM & Fidélisation + Agent Téléphonie IA',
       agentColor: 'text-emerald-400',
@@ -1033,10 +1085,28 @@ export function OrchestratorMaintenanceView() {
       conflictAvoidedNote:
         'Vérification Orchestrateur OK : Aucun appel sortant en doublon sur les 24 dernières heures.',
       requiresHumanApproval: true,
-      status: 'en_attente_validation',
-      clubId: 'beynost',
     };
-    setDecisions((prev) => [newDecision, ...prev]);
+    void stocksFetchJson<OrchestratorDecisionItem>(
+      '/api/orchestrator/decisions',
+      currentUser.id,
+      activeSiteId,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    )
+      .then((created) => {
+        setDecisions((prev) => [created, ...prev.filter((d) => d.id !== created.id)]);
+      })
+      .catch(() => {
+        const newDecision: OrchestratorDecisionItem = {
+          id: `orch-${Date.now()}`,
+          timestamp: new Date().toLocaleTimeString('fr-FR'),
+          ...payload,
+          status: 'en_attente_validation',
+        };
+        setDecisions((prev) => [newDecision, ...prev]);
+      });
   };
 
   const handleAddTicket = (e: React.FormEvent) => {
@@ -1205,11 +1275,27 @@ export function OrchestratorMaintenanceView() {
   };
 
   const handleResetDecision = (id: string) => {
-    setDecisions((prev) =>
-      prev.map((d) =>
-        d.id === id ? { ...d, status: 'en_attente_validation' } : d
-      )
-    );
+    void stocksFetchJson<OrchestratorDecisionItem>(
+      `/api/orchestrator/decisions/${encodeURIComponent(id)}/status`,
+      currentUser.id,
+      activeSiteId,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'en_attente_validation' }),
+      }
+    )
+      .then((updated) => {
+        setDecisions((prev) =>
+          prev.map((d) => (d.id === updated.id ? updated : d))
+        );
+      })
+      .catch(() => {
+        setDecisions((prev) =>
+          prev.map((d) =>
+            d.id === id ? { ...d, status: 'en_attente_validation' } : d
+          )
+        );
+      });
   };
 
   const handleOrderStock = async (id: string) => {

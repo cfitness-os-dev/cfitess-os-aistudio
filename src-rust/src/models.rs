@@ -611,6 +611,23 @@ pub struct RecoveryCaseRecord {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct OrchestratorDecisionRecord {
+    pub id: String,
+    pub timestamp: String,
+    pub trigger_event: String,
+    pub source_system: String,
+    pub assigned_agent: String,
+    pub agent_color: String,
+    pub proposed_action: String,
+    #[serde(default)]
+    pub conflict_avoided_note: Option<String>,
+    pub requires_human_approval: bool,
+    pub status: String,
+    pub club_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MaintenanceTicketRecord {
     pub id: String,
     pub club_id: String,
@@ -698,6 +715,8 @@ pub struct AppDatabaseState {
     pub stock_items: Vec<StockItemRecord>,
     #[serde(default)]
     pub maintenance_tickets: Vec<MaintenanceTicketRecord>,
+    #[serde(default)]
+    pub orchestrator_decisions: Vec<OrchestratorDecisionRecord>,
 }
 
 #[derive(Debug, Clone, Serialize)]

@@ -4,6 +4,7 @@ mod employee_lifecycle;
 mod lead_automations;
 mod maintenance;
 mod models;
+mod orchestrator;
 mod rbac;
 mod recovery;
 mod routes;

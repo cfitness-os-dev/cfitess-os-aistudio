@@ -2,7 +2,7 @@ use crate::models::{
     AmbiguityRecord, AppDatabaseState, AuditEvent, ContractSummary, Employee, EmployeeCounter,
     EmployeeSiteAccess, LeadActivityRecord, LeadAppointmentRecord, LeadFormFieldRecord,
     LeadFormRecord, LeadFormSampleResponseRecord, LeadProspectRecord, LeaveRequest,
-    NotificationPrefs, Organization, Position, RecoveryCaseRecord, RoleProfile, SensitiveBankInfo,
+    NotificationPrefs, OrchestratorDecisionRecord, Organization, Position, RecoveryCaseRecord, RoleProfile, SensitiveBankInfo,
     Shift, Site, SiteHrSettings, SiteKpis, StockItemRecord, MaintenanceTicketRecord, Team, TimeclockAnomaly, UserPreferences,
 };
 use std::collections::HashMap;
@@ -554,6 +554,63 @@ fn default_demo_maintenance_tickets() -> Vec<MaintenanceTicketRecord> {
             estimated_cost_eur: 0.0,
             used_part_name: None,
             created_at: "2026-04-08".into(),
+        },
+    ]
+}
+
+fn default_demo_orchestrator_decisions() -> Vec<OrchestratorDecisionRecord> {
+    vec![
+        OrchestratorDecisionRecord {
+            id: "orch-1".into(),
+            timestamp: "16:04:12".into(),
+            trigger_event: "Passage refusé au lecteur RFID/Bluetooth Heitz CDS (Romain Vasseur · Solde -39,90 €)".into(),
+            source_system: "API Heitz System".into(),
+            assigned_agent: "Agent Recouvrement".into(),
+            agent_color: "text-rose-400".into(),
+            proposed_action: "Envoyer lien de régularisation SEPA/CB discret par SMS 07 + Notifier l’accueil CDS.".into(),
+            conflict_avoided_note: Some("Action contradictoire évitée : L’Orchestrateur a suspendu la relance promotionnelle « Parrainage » que l’Agent CRM s’apprêtait à envoyer à Romain Vasseur.".into()),
+            requires_human_approval: true,
+            status: "en_attente_validation".into(),
+            club_id: "carre-de-soie".into(),
+        },
+        OrchestratorDecisionRecord {
+            id: "orch-2".into(),
+            timestamp: "15:52:08".into(),
+            trigger_event: "Seuil de stock critique détecté à Beynost : Cadenas Acier (4 unités restantes < seuil 10)".into(),
+            source_system: "Fournisseurs & Stocks".into(),
+            assigned_agent: "Agent Maintenance & Exploitation".into(),
+            agent_color: "text-amber-400".into(),
+            proposed_action: "Valider le bon de commande fournisseur #BC-2026-109 (30× Cadenas Acier + 50× Serviettes C.Fitness · 285,00 € HT).".into(),
+            conflict_avoided_note: None,
+            requires_human_approval: true,
+            status: "en_attente_validation".into(),
+            club_id: "beynost".into(),
+        },
+        OrchestratorDecisionRecord {
+            id: "orch-3".into(),
+            timestamp: "15:30:40".into(),
+            trigger_event: "Bilan Technogym Checkup terminé pour Claire Dubois (Wellness Age™ : 29 ans)".into(),
+            source_system: "Technogym Mywellness Cloud".into(),
+            assigned_agent: "Agent CRM & Fidélisation".into(),
+            agent_color: "text-emerald-400".into(),
+            proposed_action: "Mise à jour automatique du profil unifié PostgreSQL + Notification félicitations coach Karim.".into(),
+            conflict_avoided_note: None,
+            requires_human_approval: false,
+            status: "execute".into(),
+            club_id: "carre-de-soie".into(),
+        },
+        OrchestratorDecisionRecord {
+            id: "orch-4".into(),
+            timestamp: "14:48:19".into(),
+            trigger_event: "Pic d’affluence prévu lundi 18h00–20h00 à Carré de Soie (84 adhérents attendus)".into(),
+            source_system: "Agent Pilotage & Intelligence".into(),
+            assigned_agent: "Agent RH & Organisation".into(),
+            agent_color: "text-blue-400".into(),
+            proposed_action: "Proposer le décalage de 30 min de la pause de Karim Haddad tout en respectant l’IDCC 2511.".into(),
+            conflict_avoided_note: None,
+            requires_human_approval: true,
+            status: "en_attente_validation".into(),
+            club_id: "carre-de-soie".into(),
         },
     ]
 }
@@ -1815,6 +1872,7 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
         recovery_cases: default_demo_recovery_cases(),
         stock_items: default_demo_stock_items(),
         maintenance_tickets: default_demo_maintenance_tickets(),
+        orchestrator_decisions: default_demo_orchestrator_decisions(),
     }
 }
 
@@ -1935,6 +1993,7 @@ pub fn create_production_initial_state() -> AppDatabaseState {
         recovery_cases: vec![],
         stock_items: vec![],
         maintenance_tickets: vec![],
+        orchestrator_decisions: vec![],
     }
 }
 
@@ -2046,6 +2105,10 @@ pub fn load_or_init_state(data_dir: &Path) -> AppDatabaseState {
                         parsed.maintenance_tickets = baseline.maintenance_tickets;
                         migrated = true;
                     }
+                    if parsed.orchestrator_decisions.is_empty() {
+                        parsed.orchestrator_decisions = baseline.orchestrator_decisions;
+                        migrated = true;
+                    }
                 }
                 if parsed.lead_settings_by_club.is_empty() {
                     parsed.lead_settings_by_club = default_lead_settings_by_club();
@@ -2112,6 +2175,7 @@ mod tests {
         assert!(state.recovery_cases.is_empty());
         assert!(state.stock_items.is_empty());
         assert!(state.maintenance_tickets.is_empty());
+        assert!(state.orchestrator_decisions.is_empty());
         assert!(state.lead_settings_by_club.contains_key("carre-de-soie"));
         assert!(state.lead_settings_by_club.contains_key("beynost"));
     }

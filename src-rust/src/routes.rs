@@ -320,6 +320,15 @@ pub fn api_router(state: SharedState) -> Router {
             "/api/maintenance/tickets/:ticket_id",
             axum::routing::delete(crate::maintenance::delete_maintenance_ticket),
         )
+        .route(
+            "/api/orchestrator/decisions",
+            get(crate::orchestrator::get_orchestrator_decisions)
+                .post(crate::orchestrator::post_orchestrator_decision),
+        )
+        .route(
+            "/api/orchestrator/decisions/:decision_id/status",
+            patch(crate::orchestrator::patch_orchestrator_decision_status),
+        )
         .with_state(state)
 }
 
