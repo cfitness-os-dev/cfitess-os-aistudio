@@ -4042,11 +4042,14 @@ async fn put_lead_settings(
         ));
     }
 
-    db.lead_settings_by_club.insert(club_id.clone(), payload.clone());
+    // Keep the live state untouched until the complete settings/audit write succeeds.
+    // The write lock also prevents another request from changing the base meanwhile.
+    let mut next = db.clone();
+    next.lead_settings_by_club.insert(club_id.clone(), payload.clone());
 
     let audit_id = format!("aud-{}", Utc::now().timestamp_millis());
     let actor_label = db.employees.iter().find(|e| e.id == actor_id).map(|e| format!("{} {}", e.first_name, e.last_name)).unwrap_or_else(|| actor_id.clone());
-    db.audit_log.push(AuditEvent {
+    next.audit_log.push(AuditEvent {
         id: audit_id,
         timestamp: Utc::now().to_rfc3339(),
         actor_id: actor_id.clone(),
@@ -4059,12 +4062,14 @@ async fn put_lead_settings(
         after_summary: Some(format!("Club {} mis à jour", club_id)),
     });
 
-    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+    if let Err(err_msg) = persist_state(&state.data_dir, &next) {
         return Err(err_resp(
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Échec persistance serveur : {}", err_msg),
         ));
     }
+
+    *db = next;
 
     Ok(Json(json!({
         "ok": true,
@@ -5290,6 +5295,63 @@ mod tests {
         let cds_saved = reloaded.lead_settings_by_club.get("carre-de-soie").unwrap();
         assert_eq!(cds_saved["archiveThresholdDays"], 40);
         assert_eq!(cds_saved["dropoutThresholdDays"], 25);
+    }
+
+    #[tokio::test]
+    async fn lead_settings_failed_write_preserves_memory_disk_and_audit() {
+        // Exercise both replacing existing settings and creating a missing entry.
+        for existing_settings in [true, false] {
+            let state = test_state();
+            {
+                let mut db = state.db.write().await;
+                if !existing_settings {
+                    db.lead_settings_by_club.remove("carre-de-soie");
+                }
+                persist_state(&state.data_dir, &db).unwrap();
+            }
+            let headers = session_headers(&state, "emp-mario", "club-carre-soie").await;
+            let before = serde_json::to_value(&*state.db.read().await).unwrap();
+            let state_file = state.data_dir.join("cfitness_state.json");
+            let disk_before = std::fs::read(&state_file).unwrap();
+            let visible_before = get_lead_settings(
+                State(state.clone()), headers.clone(), Path("carre-de-soie".into()),
+            ).await.unwrap().0;
+
+            // A directory at the temporary-file path reliably makes fs::write fail,
+            // including on machines where chmod-based failure simulations do not.
+            let blocker = state.data_dir.join("cfitness_state.json.tmp");
+            std::fs::create_dir(&blocker).unwrap();
+            let result = put_lead_settings(
+                State(state.clone()), headers.clone(), Path("carre-de-soie".into()),
+                Json(json!({ "archiveThresholdDays": 99, "salesScript": "failed write" })),
+            ).await;
+            assert!(matches!(result, Err((StatusCode::INTERNAL_SERVER_ERROR, _))));
+            assert!(serde_json::to_value(&*state.db.read().await).unwrap() == before,
+                "A failed settings write must leave the complete in-memory state unchanged");
+            assert_eq!(std::fs::read(&state_file).unwrap(), disk_before);
+            let visible_after = get_lead_settings(
+                State(state.clone()), headers.clone(), Path("carre-de-soie".into()),
+            ).await.unwrap().0;
+            assert_eq!(visible_after, visible_before);
+
+            // A later successful write for the other club must not commit the
+            // rejected settings or their audit entry as a side effect.
+            std::fs::remove_dir(&blocker).unwrap();
+            put_lead_settings(
+                State(state.clone()), headers, Path("beynost".into()),
+                Json(json!({ "archiveThresholdDays": 45 })),
+            ).await.unwrap();
+            let reloaded: AppDatabaseState = serde_json::from_slice(
+                &std::fs::read(&state_file).unwrap(),
+            ).unwrap();
+            let durable = serde_json::to_value(&reloaded).unwrap();
+            assert_eq!(durable["leadSettingsByClub"]["carre-de-soie"],
+                before["leadSettingsByClub"]["carre-de-soie"]);
+            assert_eq!(reloaded.lead_settings_by_club["beynost"]["archiveThresholdDays"], 45);
+            assert_eq!(reloaded.audit_log.len(), before["auditLog"].as_array().unwrap().len() + 1);
+            assert_eq!(reloaded.audit_log.last().unwrap().target_label, "ClubLeadSettings (beynost)");
+            std::fs::remove_dir_all(&state.data_dir).unwrap();
+        }
     }
 
     #[tokio::test]
