@@ -35,6 +35,12 @@ pub struct SharedAppState {
 }
 
 pub fn is_demo_mode() -> bool {
+    let env_is_prod = std::env::var("CFITNESS_ENV")
+        .map(|v| v.eq_ignore_ascii_case("production"))
+        .unwrap_or(false);
+    if env_is_prod {
+        return false;
+    }
     std::env::var("CFITNESS_DEMO_MODE")
         .map(|v| v == "true" || v == "1")
         .unwrap_or(true)

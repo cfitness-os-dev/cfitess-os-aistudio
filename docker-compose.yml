@@ -22,12 +22,12 @@ services:
       RUST_LOG: ${RUST_LOG:-info,cfitness_os=debug}
       # Authentification serveur (CFOS-056 / CFOS-026) : session Bearer obligatoire hors mode démo
       CFITNESS_STRICT_SESSION: ${CFITNESS_STRICT_SESSION:-0}
-      CFITNESS_DEMO_MODE: ${CFITNESS_DEMO_MODE:-0}
+      CFITNESS_DEMO_MODE: ${CFITNESS_DEMO_MODE:-1}
       # Intégrations provider & webhooks signés (Stripe HMAC, Lead, CORS)
       CFITNESS_STRIPE_WEBHOOK_SECRET: ${CFITNESS_STRIPE_WEBHOOK_SECRET:-}
       CFITNESS_STRIPE_TOLERANCE_SECONDS: ${CFITNESS_STRIPE_TOLERANCE_SECONDS:-300}
       CFITNESS_LEAD_API_KEY: ${CFITNESS_LEAD_API_KEY:-}
-      CFITNESS_ALLOWED_ORIGINS: ${CFITNESS_ALLOWED_ORIGINS:-}
+      CFITNESS_ALLOWED_ORIGINS: ${CFITNESS_ALLOWED_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080,http://192.168.1.120:8080,https://hayes-crest-needs-joy.trycloudflare.com}
       # Passerelle locale VM Windows Heitz (Heitz-WS.exe · ID centers 5052 / 5053)
       HEITZ_WS_URL: ${HEITZ_WS_URL:-http://10.10.0.20:8080/api/heitz-ws}
       HEITZ_WS_TOKEN: ${HEITZ_WS_TOKEN:-CFITNESS-LOCAL-HZ-TOKEN}
