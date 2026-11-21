@@ -30,6 +30,7 @@ import { getControlState } from '../domain/rbac';
 import type {
   AppDatabaseState,
   AuditEvent,
+  EmployeeSiteAccess,
   ProfileId,
   RoleProfile,
   Scope,
@@ -209,6 +210,8 @@ export function AdminRightsView({
   const [editContractType, setEditContractType] = useState('CDI');
   const [editWeeklyHours, setEditWeeklyHours] = useState('35');
   const [savingEmployeeEdit, setSavingEmployeeEdit] = useState(false);
+  const [editSiteAccesses, setEditSiteAccesses] = useState<EmployeeSiteAccess[]>([]);
+  const [savingSiteAccesses, setSavingSiteAccesses] = useState(false);
 
   useEffect(() => {
     setOrgForm(dashboard.organization);
@@ -344,6 +347,7 @@ export function AdminRightsView({
         ? String(emp.contract.weeklyHours)
         : '35'
     );
+    setEditSiteAccesses(structuredClone(emp.siteAccesses));
   }
 
   const activeProfileObj = profiles.find((p) => p.id === selectedProfileId);
@@ -785,6 +789,119 @@ export function AdminRightsView({
         ? `Compte réactivé pour ${editFirstName} ${editLastName}.`
         : `Compte désactivé pour ${editFirstName} ${editLastName} ; ses sessions actives ont été révoquées.`
     );
+  }
+
+  function isManagerCapableProfile(profileId: ProfileId): boolean {
+    return (
+      profileId === 'admin_systeme' ||
+      profileId === 'master_avance' ||
+      profileId === 'planificateur_avance' ||
+      profileId === 'planificateur_standard'
+    );
+  }
+
+  function toggleEmployeeSiteAttachment(siteId: string) {
+    setEditSiteAccesses((prev) => {
+      const exists = prev.some((a) => a.siteId === siteId);
+      if (exists) {
+        if (prev.length <= 1) return prev;
+        const filtered = prev.filter((a) => a.siteId !== siteId);
+        if (!filtered.some((a) => a.isPrimary) && filtered[0]) {
+          filtered[0] = { ...filtered[0], isPrimary: true };
+        }
+        return filtered;
+      }
+      const templateProfile: ProfileId = prev[0]?.profileId ?? 'employe_standard';
+      return [
+        ...prev,
+        {
+          siteId,
+          isPrimary: prev.length === 0,
+          profileId: templateProfile,
+          showOnPlanning: templateProfile !== 'admin_systeme',
+          teamIds: [],
+          managedTeamIds: [],
+          positionIds: [],
+        },
+      ];
+    });
+  }
+
+  function setPrimarySiteForEmployee(siteId: string) {
+    setEditSiteAccesses((prev) =>
+      prev.map((a) => ({ ...a, isPrimary: a.siteId === siteId }))
+    );
+  }
+
+  function updateSiteAccessProfile(siteId: string, profileId: ProfileId) {
+    setEditSiteAccesses((prev) =>
+      prev.map((a) =>
+        a.siteId === siteId
+          ? {
+              ...a,
+              profileId,
+              managedTeamIds: isManagerCapableProfile(profileId)
+                ? a.managedTeamIds
+                : [],
+            }
+          : a
+      )
+    );
+  }
+
+  function toggleSiteAccessShowOnPlanning(siteId: string) {
+    setEditSiteAccesses((prev) =>
+      prev.map((a) =>
+        a.siteId === siteId ? { ...a, showOnPlanning: !a.showOnPlanning } : a
+      )
+    );
+  }
+
+  function toggleSiteAccessTeam(
+    siteId: string,
+    field: 'teamIds' | 'managedTeamIds',
+    teamId: string
+  ) {
+    setEditSiteAccesses((prev) =>
+      prev.map((a) => {
+        if (a.siteId !== siteId) return a;
+        const currentList = a[field] ?? [];
+        const nextList = currentList.includes(teamId)
+          ? currentList.filter((id) => id !== teamId)
+          : [...currentList, teamId];
+        return { ...a, [field]: nextList };
+      })
+    );
+  }
+
+  async function handleSaveSiteAccesses() {
+    if (!editEmpId || editSiteAccesses.length === 0) return;
+    setStatusMsg(null);
+    setSavingSiteAccesses(true);
+    try {
+      await adminFetchJson<{ ok: boolean }>(
+        `/api/admin/employees/${encodeURIComponent(editEmpId)}/site-accesses`,
+        auth,
+        {
+          method: 'PUT',
+          body: JSON.stringify({ siteAccesses: editSiteAccesses }),
+        }
+      );
+      await onRefreshDashboard();
+      await loadAudit();
+      setStatusMsg({
+        kind: 'ok',
+        text: `Rattachements multi-clubs, profils et équipes mis à jour pour ${editFirstName} ${editLastName}.`,
+      });
+    } catch (e) {
+      const msg =
+        e instanceof ApiClientError
+          ? `HTTP ${e.status} — ${e.message}`
+          : String(e);
+      setStatusMsg({ kind: 'err', text: msg });
+    } finally {
+      setSavingSiteAccesses(false);
+    }
   }
 
   return cleanUiTree(
@@ -1809,6 +1926,186 @@ export function AdminRightsView({
                   <Save className="w-3.5 h-3.5" />
                   {savingEmployeeEdit ? 'Enregistrement...' : 'Enregistrer la fiche'}
                 </button>
+              </div>
+            </div>
+
+            {/* Sous-section : Rattachement multi-clubs, profils & équipes */}
+            <div className="pt-4 border-t border-[var(--cf-border)] space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-xs font-semibold flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-violet-400" />
+                    Rattachement multi-clubs, profils &amp; équipes
+                  </h3>
+                  <p className="text-[11px] cf-muted mt-0.5">
+                    Définissez sur quels établissements travaille ce collaborateur, son profil par club et ses équipes encadrées.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={
+                    savingSiteAccesses || !editEmpId || editSiteAccesses.length === 0
+                  }
+                  onClick={() => void handleSaveSiteAccesses()}
+                  className="cf-card-secondary px-3.5 py-2 text-xs font-semibold flex items-center gap-1.5 hover:border-violet-500/60 disabled:opacity-50"
+                >
+                  <Save className="w-3.5 h-3.5 text-violet-400" />
+                  {savingSiteAccesses
+                    ? 'Enregistrement...'
+                    : 'Enregistrer les rattachements clubs'}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 text-xs">
+                {dashboard.sites.map((site) => {
+                  const access = editSiteAccesses.find(
+                    (a) => a.siteId === site.id
+                  );
+                  const siteTeams = dashboard.teams.filter(
+                    (t) => t.siteId === site.id
+                  );
+                  const canManageTeams =
+                    access && isManagerCapableProfile(access.profileId);
+
+                  return (
+                    <div
+                      key={site.id}
+                      className={`p-3.5 rounded-card border space-y-3 ${
+                        access
+                          ? 'border-violet-500/40 bg-violet-500/5'
+                          : 'cf-card-secondary opacity-75'
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <label className="inline-flex items-center gap-2 font-semibold cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(access)}
+                            onChange={() => toggleEmployeeSiteAttachment(site.id)}
+                            className="accent-violet-500"
+                          />
+                          <span>{site.name}</span>
+                        </label>
+
+                        {access && (
+                          <div className="flex items-center gap-3 text-[11px]">
+                            <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                              <input
+                                type="radio"
+                                name={`primary-site-${editEmpId}`}
+                                checked={access.isPrimary}
+                                onChange={() => setPrimarySiteForEmployee(site.id)}
+                                className="accent-violet-500"
+                              />
+                              <span>Principal</span>
+                            </label>
+                            <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={access.showOnPlanning}
+                                onChange={() =>
+                                  toggleSiteAccessShowOnPlanning(site.id)
+                                }
+                                className="accent-violet-500"
+                              />
+                              <span>Visible planning</span>
+                            </label>
+                          </div>
+                        )}
+                      </div>
+
+                      {access && (
+                        <div className="space-y-2.5">
+                          <label className="block space-y-1">
+                            <span className="cf-muted text-[11px]">
+                              Profil RH sur ce club
+                            </span>
+                            <select
+                              value={access.profileId}
+                              onChange={(e) =>
+                                updateSiteAccessProfile(
+                                  site.id,
+                                  e.target.value as ProfileId
+                                )
+                              }
+                              className="cf-input w-full px-2.5 py-1.5"
+                            >
+                              {profiles.map((prof) => (
+                                <option key={prof.id} value={prof.id}>
+                                  {prof.name}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+
+                          {siteTeams.length > 0 && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                              <div className="space-y-1">
+                                <div className="text-[11px] cf-muted">
+                                  Équipes rattachées
+                                </div>
+                                {siteTeams.map((team) => (
+                                  <label
+                                    key={team.id}
+                                    className="flex items-center gap-1.5 text-[11px] cursor-pointer"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={access.teamIds.includes(team.id)}
+                                      onChange={() =>
+                                        toggleSiteAccessTeam(
+                                          site.id,
+                                          'teamIds',
+                                          team.id
+                                        )
+                                      }
+                                      className="accent-violet-500"
+                                    />
+                                    <span>{team.name}</span>
+                                  </label>
+                                ))}
+                              </div>
+
+                              <div className="space-y-1">
+                                <div className="text-[11px] cf-muted">
+                                  Équipes encadrées
+                                </div>
+                                {canManageTeams ? (
+                                  siteTeams.map((team) => (
+                                    <label
+                                      key={team.id}
+                                      className="flex items-center gap-1.5 text-[11px] cursor-pointer"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={Boolean(
+                                          access.managedTeamIds?.includes(team.id)
+                                        )}
+                                        onChange={() =>
+                                          toggleSiteAccessTeam(
+                                            site.id,
+                                            'managedTeamIds',
+                                            team.id
+                                          )
+                                        }
+                                        className="accent-violet-500"
+                                      />
+                                      <span>{team.name}</span>
+                                    </label>
+                                  ))
+                                ) : (
+                                  <div className="text-[11px] cf-muted italic">
+                                    Réservé aux profils Planificateur / Manager / Admin.
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
