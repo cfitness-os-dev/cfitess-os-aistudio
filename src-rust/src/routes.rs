@@ -252,6 +252,10 @@ pub fn api_router(state: SharedState) -> Router {
             patch(crate::employee_lifecycle::patch_admin_employee),
         )
         .route(
+            "/api/admin/employees/:emp_id/counters",
+            put(crate::employee_lifecycle::put_admin_employee_counters),
+        )
+        .route(
             "/api/admin/employees/:emp_id/site-accesses",
             put(put_employee_site_accesses),
         )
@@ -277,6 +281,10 @@ pub fn api_router(state: SharedState) -> Router {
         .route(
             "/api/admin/kpis/:site_id",
             put(crate::site_settings::put_admin_site_kpis),
+        )
+        .route(
+            "/api/reports/export-csv",
+            get(crate::site_settings::get_reports_export_csv),
         )
         .route("/api/admin/org02-policy", put(put_org02_policy))
         .route("/api/admin/backup", get(get_backup))
@@ -365,6 +373,26 @@ pub fn api_router(state: SharedState) -> Router {
         .route(
             "/api/timeclock/anomalies/:anomaly_id",
             patch(crate::timeclock::patch_timeclock_anomaly),
+        )
+        .route(
+            "/api/missions",
+            get(crate::missions::get_missions).post(crate::missions::post_mission),
+        )
+        .route(
+            "/api/missions/:mission_id",
+            patch(crate::missions::patch_mission),
+        )
+        .route(
+            "/api/heitz/members",
+            get(crate::heitz_members::get_heitz_members),
+        )
+        .route(
+            "/api/heitz/members/import",
+            post(crate::heitz_members::post_heitz_members_import),
+        )
+        .route(
+            "/api/heitz/members/:member_id",
+            patch(crate::heitz_members::patch_heitz_member),
         )
         .with_state(state)
 }

@@ -1,8 +1,10 @@
 mod auth_passwords;
 mod employee_import;
 mod employee_lifecycle;
+mod heitz_members;
 mod lead_automations;
 mod maintenance;
+mod missions;
 mod models;
 mod orchestrator;
 mod rbac;

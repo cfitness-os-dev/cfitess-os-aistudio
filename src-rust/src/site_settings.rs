@@ -1,9 +1,15 @@
 use crate::models::{Site, SiteKpis};
-use crate::rbac::{can_access_finances, evaluate_permission, is_admin_employee, normalize_site_id};
-use crate::routes::{append_audit, err_resp, resolve_session_actor, SharedState};
+use crate::rbac::{
+    can_access_finances, can_access_reports, evaluate_permission, is_admin_employee,
+    normalize_site_id,
+};
+use crate::routes::{
+    append_audit, authorized_clubs_for_actor, err_resp, resolve_session_actor, SharedState,
+};
 use crate::seed::persist_state;
 use axum::extract::{Path, State};
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
+use axum::response::IntoResponse;
 use axum::Json;
 use serde::Deserialize;
 use serde_json::Value;
@@ -343,6 +349,120 @@ pub async fn put_admin_site_kpis(
     }
 
     Ok(Json(updated))
+}
+
+pub async fn get_reports_export_csv(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+) -> Result<impl IntoResponse, (StatusCode, Json<Value>)> {
+    let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
+    let db = state.db.read().await;
+    let allowed = is_admin_employee(&db, &actor_id)
+        || can_access_reports(&db, &actor_id, Some(&site_id))
+        || can_access_finances(&db, &actor_id, Some(&site_id));
+    if !allowed {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Accès refusé (403) : export des rapports réservé à la Direction ou habilitation Rapports/Finances.",
+        ));
+    }
+
+    let authorized = authorized_clubs_for_actor(&db, &actor_id);
+    let mut csv = String::from("\u{FEFF}Club;Code Site;Période;CA HT (EUR);Objectif Mensuel (EUR);Masse Salariale (EUR);Taux Rétention (%);Heures Travaillées;Productivité (EUR/h);Collaborateurs Actifs;Anomalies Pointage;Articles Stock Critique;Tickets SAV Ouverts;Dossiers Recouvrement\r\n");
+
+    for site in &db.sites {
+        let club_slug = if site.id == "club-beynost" {
+            "beynost"
+        } else {
+            "carre-de-soie"
+        };
+        if !authorized.contains(club_slug) {
+            continue;
+        }
+        let kpi = db.kpis.iter().find(|k| k.site_id == site.id);
+        let period = kpi
+            .map(|k| k.period_label.as_str())
+            .unwrap_or("Mois en cours");
+        let rev = kpi
+            .and_then(|k| k.revenue_eur)
+            .map(|v| format!("{v:.2}"))
+            .unwrap_or_default();
+        let target = kpi
+            .and_then(|k| k.monthly_target_eur)
+            .map(|v| format!("{v:.2}"))
+            .unwrap_or_default();
+        let payroll = kpi
+            .and_then(|k| k.payroll_mass_eur)
+            .map(|v| format!("{v:.2}"))
+            .unwrap_or_default();
+        let retention = kpi
+            .and_then(|k| k.retention_rate_pct)
+            .map(|v| format!("{v:.1}"))
+            .unwrap_or_default();
+        let hours = kpi
+            .and_then(|k| k.worked_hours)
+            .map(|v| format!("{v:.1}"))
+            .unwrap_or_default();
+        let prod = kpi
+            .and_then(|k| k.productivity_per_hour)
+            .map(|v| format!("{v:.2}"))
+            .unwrap_or_default();
+
+        let active_emps = db
+            .employees
+            .iter()
+            .filter(|e| e.active && e.site_accesses.iter().any(|sa| sa.site_id == site.id))
+            .count();
+        let open_anomalies = db
+            .anomalies
+            .iter()
+            .filter(|a| a.site_id == site.id && a.status == "to_review")
+            .count();
+        let low_stocks = db
+            .stock_items
+            .iter()
+            .filter(|s| s.club_id == club_slug && s.current_qty < s.min_threshold)
+            .count();
+        let open_tickets = db
+            .maintenance_tickets
+            .iter()
+            .filter(|t| t.club_id == club_slug && t.status != "Résolu")
+            .count();
+        let open_recovery = db
+            .recovery_cases
+            .iter()
+            .filter(|c| c.club_id == club_slug && c.status != "regularised")
+            .count();
+
+        csv.push_str(&format!(
+            "{};{};{};{};{};{};{};{};{};{};{};{};{};{}\r\n",
+            site.name.replace(';', ","),
+            site.id,
+            period.replace(';', ","),
+            rev,
+            target,
+            payroll,
+            retention,
+            hours,
+            prod,
+            active_emps,
+            open_anomalies,
+            low_stocks,
+            open_tickets,
+            open_recovery
+        ));
+    }
+
+    let mut resp_headers = HeaderMap::new();
+    resp_headers.insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("text/csv; charset=utf-8"),
+    );
+    resp_headers.insert(
+        header::CONTENT_DISPOSITION,
+        HeaderValue::from_static("attachment; filename=\"RAPPORT_DIRECTION_CFITNESS.csv\""),
+    );
+    Ok((resp_headers, csv))
 }
 
 #[cfg(test)]

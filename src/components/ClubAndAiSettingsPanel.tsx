@@ -3,6 +3,7 @@ import {
   Building2,
   CheckCircle2,
   Cpu,
+  Download,
   RefreshCw,
   Save,
   ShieldAlert,
@@ -634,7 +635,15 @@ export function ClubAndAiSettingsPanel() {
                   />
                 </label>
               </div>
-              <div className="flex justify-end">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <a
+                  href="/api/reports/export-csv"
+                  download="RAPPORT_DIRECTION_CFITNESS.csv"
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Exporter Bilan Direction (.CSV)</span>
+                </a>
                 <button
                   type="button"
                   onClick={() => void handleSaveKpi()}

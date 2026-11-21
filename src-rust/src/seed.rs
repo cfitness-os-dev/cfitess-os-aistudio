@@ -3,7 +3,7 @@ use crate::models::{
     EmployeeSiteAccess, LeadActivityRecord, LeadAppointmentRecord, LeadFormFieldRecord,
     LeadFormRecord, LeadFormSampleResponseRecord, LeadProspectRecord, LeaveRequest,
     NotificationPrefs, OrchestratorDecisionRecord, Organization, Position, PurchaseOrderRecord, RecoveryCaseRecord, RoleProfile, SensitiveBankInfo,
-    Shift, Site, SiteHrSettings, SiteKpis, StockItemRecord, MaintenanceTicketRecord, Team, TimeclockAnomaly, UserPreferences,
+    Shift, Site, SiteHrSettings, SiteKpis, StockItemRecord, MaintenanceTicketRecord, MissionRecord, Team, TimeclockAnomaly, UserPreferences,
 };
 use std::collections::HashMap;
 use std::fs;
@@ -652,6 +652,38 @@ fn default_demo_purchase_orders() -> Vec<PurchaseOrderRecord> {
             status: "Livré & Réceptionné".into(),
             linked_stock_id: Some("stk-3".into()),
             ordered_qty: Some(100),
+        },
+    ]
+}
+
+fn default_demo_missions() -> Vec<MissionRecord> {
+    vec![
+        MissionRecord {
+            id: "mis-01".into(),
+            site_id: "club-beynost".into(),
+            title: "Audit matériel cardio & maintenance trimestrielle".into(),
+            budget_hours: 18.0,
+            logged_hours: 12.0,
+            hourly_budget_eur: 28.0,
+            status: "active".into(),
+        },
+        MissionRecord {
+            id: "mis-02".into(),
+            site_id: "club-beynost".into(),
+            title: "Journée Portes Ouvertes Automne — Accueil & Bilans".into(),
+            budget_hours: 24.0,
+            logged_hours: 24.0,
+            hourly_budget_eur: 24.0,
+            status: "done".into(),
+        },
+        MissionRecord {
+            id: "mis-03".into(),
+            site_id: "club-carre-soie".into(),
+            title: "Refonte planning cours collectifs LesMills Q4".into(),
+            budget_hours: 14.0,
+            logged_hours: 8.0,
+            hourly_budget_eur: 32.0,
+            status: "active".into(),
         },
     ]
 }
@@ -1920,6 +1952,8 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
         orchestrator_decisions: default_demo_orchestrator_decisions(),
         purchase_orders: default_demo_purchase_orders(),
         agent_autonomy_modes: HashMap::new(),
+        missions: default_demo_missions(),
+        heitz_members: vec![],
     }
 }
 
@@ -2043,6 +2077,8 @@ pub fn create_production_initial_state() -> AppDatabaseState {
         orchestrator_decisions: vec![],
         purchase_orders: vec![],
         agent_autonomy_modes: HashMap::new(),
+        missions: vec![],
+        heitz_members: vec![],
     }
 }
 
@@ -2162,6 +2198,10 @@ pub fn load_or_init_state(data_dir: &Path) -> AppDatabaseState {
                         parsed.purchase_orders = baseline.purchase_orders;
                         migrated = true;
                     }
+                    if parsed.missions.is_empty() {
+                        parsed.missions = baseline.missions;
+                        migrated = true;
+                    }
                 }
                 if parsed.lead_settings_by_club.is_empty() {
                     parsed.lead_settings_by_club = default_lead_settings_by_club();
@@ -2230,6 +2270,7 @@ mod tests {
         assert!(state.maintenance_tickets.is_empty());
         assert!(state.orchestrator_decisions.is_empty());
         assert!(state.purchase_orders.is_empty());
+        assert!(state.missions.is_empty());
         assert!(state.lead_settings_by_club.contains_key("carre-de-soie"));
         assert!(state.lead_settings_by_club.contains_key("beynost"));
     }

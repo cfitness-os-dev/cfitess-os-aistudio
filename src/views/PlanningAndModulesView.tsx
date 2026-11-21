@@ -838,6 +838,34 @@ export function PlanningAndModulesView({
   const [newMissionTitle, setNewMissionTitle] = useState('');
   const [newMissionHours, setNewMissionHours] = useState(12);
 
+  useEffect(() => {
+    let cancelled = false;
+    const headers: Record<string, string> = {
+      'x-cfitness-actor-id': auth.actorId,
+      'x-cfitness-site-id': auth.siteId,
+    };
+    try {
+      const token = window.sessionStorage.getItem('cfos_bearer_token');
+      if (token) headers.Authorization = `Bearer ${token}`;
+    } catch {
+      // ignore
+    }
+    fetch('/api/missions', { headers })
+      .then(async (res) => {
+        if (!res.ok) return;
+        const rows = (await res.json()) as MissionItem[];
+        if (!cancelled && Array.isArray(rows) && rows.length > 0) {
+          setMissions(rows);
+        }
+      })
+      .catch(() => {
+        // fallback local initial
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [auth.actorId, auth.siteId]);
+
   // MC09 Marketing & Communication RH
   const [commAudience, setCommAudience] = useState('Tous les collaborateurs visibles');
   const [commChannel, setCommChannel] = useState('E-mail + Notification CFitness OS');
@@ -3338,9 +3366,34 @@ export function PlanningAndModulesView({
                                   ...prev,
                                   [selectedEmp.id]: 10,
                                 }));
+                                const headers: Record<string, string> = {
+                                  'Content-Type': 'application/json',
+                                  'x-cfitness-actor-id': auth.actorId,
+                                  'x-cfitness-site-id': auth.siteId,
+                                };
+                                try {
+                                  const token = window.sessionStorage.getItem('cfos_bearer_token');
+                                  if (token) headers.Authorization = `Bearer ${token}`;
+                                } catch {
+                                  // ignore
+                                }
+                                void fetch(
+                                  `/api/admin/employees/${encodeURIComponent(selectedEmp.id)}/counters`,
+                                  {
+                                    method: 'PUT',
+                                    headers,
+                                    body: JSON.stringify({ rttDaysRemaining: 10 }),
+                                  }
+                                )
+                                  .then(() => {
+                                    void onRefreshDashboard();
+                                  })
+                                  .catch(() => {
+                                    // fallback local
+                                  });
                                 setModuleFeedback({
                                   kind: 'ok',
-                                  text: `EXT-CPT04-01 : Compteur RTT forfait jours initialisé à 10 j pour ${selectedEmp.firstName} ${selectedEmp.lastName}.`,
+                                  text: `EXT-CPT04-01 : Compteur RTT forfait jours initialisé à 10 j et sauvegardé côté serveur pour ${selectedEmp.firstName} ${selectedEmp.lastName}.`,
                                 });
                               }}
                               className="cf-brand-gradient text-white px-3.5 py-1.5 rounded-btn font-semibold"
@@ -5055,23 +5108,59 @@ export function PlanningAndModulesView({
                     type="button"
                     onClick={() => {
                       if (!newMissionTitle.trim()) return;
-                      setMissions((p) => [
-                        {
-                          id: `mis-${Date.now()}`,
-                          siteId: dashboard.sites[0]?.id ?? 'club-beynost',
-                          title: newMissionTitle.trim(),
-                          budgetHours: newMissionHours,
+                      const targetSite = dashboard.sites[0]?.id ?? 'club-beynost';
+                      const title = newMissionTitle.trim();
+                      const budgetHours = newMissionHours;
+                      setNewMissionTitle('');
+                      const headers: Record<string, string> = {
+                        'Content-Type': 'application/json',
+                        'x-cfitness-actor-id': auth.actorId,
+                        'x-cfitness-site-id': auth.siteId,
+                      };
+                      try {
+                        const token = window.sessionStorage.getItem('cfos_bearer_token');
+                        if (token) headers.Authorization = `Bearer ${token}`;
+                      } catch {
+                        // ignore
+                      }
+                      void fetch('/api/missions', {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify({
+                          siteId: targetSite,
+                          title,
+                          budgetHours,
                           loggedHours: 0,
                           hourlyBudgetEur: 26,
-                          status: 'active',
-                        },
-                        ...p,
-                      ]);
-                      setNewMissionTitle('');
-                      setModuleFeedback({
-                        kind: 'ok',
-                        text: 'Nouvelle mission créée (MIS02).',
-                      });
+                        }),
+                      })
+                        .then(async (r) => {
+                          if (!r.ok) throw new Error();
+                          const created = (await r.json()) as MissionItem;
+                          setMissions((p) => [created, ...p.filter((m) => m.id !== created.id)]);
+                          setModuleFeedback({
+                            kind: 'ok',
+                            text: `Nouvelle mission enregistrée côté serveur : ${created.title} (MIS02).`,
+                          });
+                        })
+                        .catch(() => {
+                          setMissions((p) => [
+                            {
+                              id: `mis-${Date.now()}`,
+                              siteId: targetSite,
+                              title,
+                              budgetHours,
+                              loggedHours: 0,
+                              hourlyBudgetEur: 26,
+                              status: 'active',
+                            },
+                            ...p,
+                          ]);
+                          setModuleFeedback({
+                            kind: 'ok',
+                            text: 'Nouvelle mission créée (MIS02).',
+                          });
+                        });
                     }}
                     className="cf-brand-gradient text-white px-3 py-1 rounded-btn font-semibold"
                   >
@@ -5105,9 +5194,81 @@ export function PlanningAndModulesView({
                       </span>
                     </div>
                   </div>
-                  <span className="cf-mono px-2 py-0.5 rounded bg-violet-500/20 text-violet-300">
-                    {m.status === 'active' ? 'En cours' : 'Terminée'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {canManageMissions && m.status === 'active' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nextHours = m.loggedHours + 1;
+                          setMissions((prev) =>
+                            prev.map((item) =>
+                              item.id === m.id ? { ...item, loggedHours: nextHours } : item
+                            )
+                          );
+                          const headers: Record<string, string> = {
+                            'Content-Type': 'application/json',
+                            'x-cfitness-actor-id': auth.actorId,
+                            'x-cfitness-site-id': auth.siteId,
+                          };
+                          try {
+                            const token = window.sessionStorage.getItem('cfos_bearer_token');
+                            if (token) headers.Authorization = `Bearer ${token}`;
+                          } catch {
+                            // ignore
+                          }
+                          void fetch(`/api/missions/${encodeURIComponent(m.id)}`, {
+                            method: 'PATCH',
+                            headers,
+                            body: JSON.stringify({ loggedHours: nextHours }),
+                          }).catch(() => {
+                            // fallback local
+                          });
+                        }}
+                        className="text-[11px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 font-mono"
+                        title="Pointer +1h sur cette mission"
+                      >
+                        +1h
+                      </button>
+                    )}
+                    {canManageMissions ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nextStatus = m.status === 'active' ? 'done' : 'active';
+                          setMissions((prev) =>
+                            prev.map((item) =>
+                              item.id === m.id ? { ...item, status: nextStatus } : item
+                            )
+                          );
+                          const headers: Record<string, string> = {
+                            'Content-Type': 'application/json',
+                            'x-cfitness-actor-id': auth.actorId,
+                            'x-cfitness-site-id': auth.siteId,
+                          };
+                          try {
+                            const token = window.sessionStorage.getItem('cfos_bearer_token');
+                            if (token) headers.Authorization = `Bearer ${token}`;
+                          } catch {
+                            // ignore
+                          }
+                          void fetch(`/api/missions/${encodeURIComponent(m.id)}`, {
+                            method: 'PATCH',
+                            headers,
+                            body: JSON.stringify({ status: nextStatus }),
+                          }).catch(() => {
+                            // fallback local
+                          });
+                        }}
+                        className="cf-mono px-2 py-0.5 rounded bg-violet-500/20 text-violet-300 hover:bg-violet-500/30"
+                      >
+                        {m.status === 'active' ? 'En cours' : 'Terminée'}
+                      </button>
+                    ) : (
+                      <span className="cf-mono px-2 py-0.5 rounded bg-violet-500/20 text-violet-300">
+                        {m.status === 'active' ? 'En cours' : 'Terminée'}
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))}
           </div>

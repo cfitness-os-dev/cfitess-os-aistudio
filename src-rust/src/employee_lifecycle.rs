@@ -1,4 +1,5 @@
-use crate::rbac::is_admin_employee;
+use crate::models::EmployeeCounter;
+use crate::rbac::{evaluate_permission, is_admin_employee};
 use crate::routes::{append_audit, err_resp, resolve_session_actor, SharedState};
 use crate::seed::persist_state;
 use axum::extract::{Path, State};
@@ -18,6 +19,16 @@ pub struct PatchAdminEmployeePayload {
     pub active: Option<bool>,
     pub contract_type: Option<String>,
     pub weekly_hours: Option<u32>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub struct UpdateEmployeeCountersPayload {
+    pub cp_n_acquired: Option<f64>,
+    pub cp_n_taken: Option<f64>,
+    pub cp_n_minus1_remaining: Option<f64>,
+    pub rtt_days_remaining: Option<f64>,
+    pub annualization_balance_hours: Option<f64>,
 }
 
 pub async fn patch_admin_employee(
@@ -214,6 +225,98 @@ pub async fn patch_admin_employee(
     })))
 }
 
+pub async fn put_admin_employee_counters(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Path(raw_emp_id): Path<String>,
+    Json(patch): Json<UpdateEmployeeCountersPayload>,
+) -> Result<Json<EmployeeCounter>, (StatusCode, Json<Value>)> {
+    let (actor_id, active_site) = resolve_session_actor(&state, &headers).await?;
+    let mut db = state.db.write().await;
+
+    let allowed = is_admin_employee(&db, &actor_id)
+        || evaluate_permission(&db, &actor_id, &active_site, "ORG04-12", None).allowed
+        || evaluate_permission(&db, &actor_id, &active_site, "ORG04-14", None).allowed;
+    if !allowed {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Accès refusé (403) : modification des compteurs CP/RTT réservée aux profils RH habilités.",
+        ));
+    }
+
+    let target_id = raw_emp_id.trim().to_string();
+    let Some(idx) = db.employees.iter().position(|e| e.id == target_id) else {
+        return Err(err_resp(
+            StatusCode::NOT_FOUND,
+            format!("Collaborateur introuvable : {}", target_id),
+        ));
+    };
+
+    let snapshot = db.clone();
+    let before = format!(
+        "CP={}/{}, RTT={:?}",
+        db.employees[idx].counter.cp_n_acquired,
+        db.employees[idx].counter.cp_n_taken,
+        db.employees[idx].counter.rtt_days_remaining
+    );
+
+    if let Some(v) = patch.cp_n_acquired {
+        if v.is_finite() && v >= 0.0 {
+            db.employees[idx].counter.cp_n_acquired = v;
+        }
+    }
+    if let Some(v) = patch.cp_n_taken {
+        if v.is_finite() && v >= 0.0 {
+            db.employees[idx].counter.cp_n_taken = v;
+        }
+    }
+    if let Some(v) = patch.cp_n_minus1_remaining {
+        if v.is_finite() && v >= 0.0 {
+            db.employees[idx].counter.cp_n_minus1_remaining = v;
+        }
+    }
+    if let Some(v) = patch.rtt_days_remaining {
+        if v.is_finite() && v >= 0.0 {
+            db.employees[idx].counter.rtt_days_remaining = Some(v);
+        }
+    }
+    if let Some(v) = patch.annualization_balance_hours {
+        if v.is_finite() {
+            db.employees[idx].counter.annualization_balance_hours = Some(v);
+        }
+    }
+
+    let updated_counter = db.employees[idx].counter.clone();
+    let emp_site = db.employees[idx].contract.site_id.clone();
+
+    append_audit(
+        &mut db,
+        &actor_id,
+        "RH & Compteurs (Mise à jour CP/RTT)",
+        format!(
+            "Mise à jour compteurs {} : CP acquis={}, CP pris={}, RTT={:?}",
+            target_id,
+            updated_counter.cp_n_acquired,
+            updated_counter.cp_n_taken,
+            updated_counter.rtt_days_remaining
+        ),
+        &emp_site,
+        &target_id,
+        Some(before),
+        Some(format!("RTT={:?}", updated_counter.rtt_days_remaining)),
+    );
+
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        *db = snapshot;
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec persistance compteurs collaborateur : {}", err_msg),
+        ));
+    }
+
+    Ok(Json(updated_counter))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -368,6 +471,31 @@ mod tests {
         .await
         .unwrap_err();
         assert_eq!(status, StatusCode::FORBIDDEN);
+        let _ = std::fs::remove_dir_all(&state.data_dir);
+    }
+
+    #[tokio::test]
+    async fn admin_can_update_employee_counters_and_persist() {
+        let state = test_state();
+        let headers = session_headers(&state, "emp-mario", "club-carre-soie").await;
+
+        let Json(updated) = put_admin_employee_counters(
+            State(state.clone()),
+            headers,
+            Path("emp-sarah".into()),
+            Json(UpdateEmployeeCountersPayload {
+                cp_n_acquired: Some(25.0),
+                cp_n_taken: Some(10.0),
+                cp_n_minus1_remaining: Some(3.5),
+                rtt_days_remaining: Some(10.0),
+                annualization_balance_hours: Some(4.5),
+            }),
+        )
+        .await
+        .expect("admin peut mettre à jour les compteurs CP/RTT");
+
+        assert_eq!(updated.cp_n_acquired, 25.0);
+        assert_eq!(updated.rtt_days_remaining, Some(10.0));
         let _ = std::fs::remove_dir_all(&state.data_dir);
     }
 }

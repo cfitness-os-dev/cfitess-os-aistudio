@@ -615,6 +615,18 @@ pub struct RecoveryCaseRecord {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct MissionRecord {
+    pub id: String,
+    pub site_id: String,
+    pub title: String,
+    pub budget_hours: f64,
+    pub logged_hours: f64,
+    pub hourly_budget_eur: f64,
+    pub status: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct OrchestratorDecisionRecord {
     pub id: String,
     pub timestamp: String,
@@ -683,6 +695,36 @@ pub struct StockItemRecord {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct HeitzMemberRecord {
+    pub id: String,
+    pub badge_code: String,
+    pub rfid_bluetooth_enabled: bool,
+    #[serde(default)]
+    pub mywellness_member_id: Option<String>,
+    pub first_name: String,
+    pub last_name: String,
+    pub phone: String,
+    #[serde(default)]
+    pub email: Option<String>,
+    pub home_club_id: String,
+    pub subscription_name: String,
+    pub active_subscription: bool,
+    pub fin_balance_eur: f64,
+    pub fin_balance_state: i32,
+    #[serde(default)]
+    pub technogym_moves30d: u32,
+    #[serde(default)]
+    pub days_since_last_workout: u32,
+    #[serde(default)]
+    pub loyalty_points: u32,
+    #[serde(default)]
+    pub referrals_count: u32,
+    #[serde(default)]
+    pub last_reward_label: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AppDatabaseState {
     pub version: String,
     pub organization: Organization,
@@ -742,6 +784,10 @@ pub struct AppDatabaseState {
     pub purchase_orders: Vec<PurchaseOrderRecord>,
     #[serde(default)]
     pub agent_autonomy_modes: HashMap<String, String>,
+    #[serde(default)]
+    pub missions: Vec<MissionRecord>,
+    #[serde(default)]
+    pub heitz_members: Vec<HeitzMemberRecord>,
 }
 
 #[derive(Debug, Clone, Serialize)]

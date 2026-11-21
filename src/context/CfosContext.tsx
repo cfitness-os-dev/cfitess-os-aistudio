@@ -871,6 +871,46 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  useEffect(() => {
+    if (!isAuthenticated || typeof window === 'undefined') return;
+    let cancelled = false;
+    const siteHeader =
+      primaryAuthorizedClub === 'beynost' ? 'club-beynost' : 'club-carre-soie';
+    const headers: Record<string, string> = {
+      'x-cfitness-actor-id': currentUserId,
+      'x-cfitness-site-id': siteHeader,
+    };
+    try {
+      const token = window.sessionStorage.getItem('cfos_bearer_token');
+      if (token) headers.Authorization = `Bearer ${token}`;
+    } catch {
+      // ignore
+    }
+    fetch('/api/heitz/members', { headers })
+      .then(async (res) => {
+        if (!res.ok) return;
+        const rows = (await res.json()) as HeitzMember[];
+        if (!cancelled && Array.isArray(rows) && rows.length > 0) {
+          setState((prev) => {
+            const byId = new Map(prev.heitzMembers.map((m) => [m.id, m]));
+            for (const item of rows) {
+              byId.set(item.id, item);
+            }
+            return {
+              ...prev,
+              heitzMembers: Array.from(byId.values()),
+            };
+          });
+        }
+      })
+      .catch(() => {
+        // fallback local
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUserId, isAuthenticated, primaryAuthorizedClub]);
+
   const setActiveSection = (sec: AdminSection, subTarget?: string) => {
     if (sec !== 'governance') {
       setIsArchitectUnlocked(false);
@@ -2274,6 +2314,25 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
         }),
       };
     });
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'x-cfitness-actor-id': currentUserId,
+      'x-cfitness-site-id':
+        primaryAuthorizedClub === 'beynost' ? 'club-beynost' : 'club-carre-soie',
+    };
+    try {
+      const token = window.sessionStorage.getItem('cfos_bearer_token');
+      if (token) headers.Authorization = `Bearer ${token}`;
+    } catch {
+      // ignore
+    }
+    void fetch(`/api/heitz/members/${encodeURIComponent(memberId)}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ finBalanceEur: 0 }),
+    }).catch(() => {
+      // fallback local
+    });
     notify('success', 'Impayé SEPA régularisé : accès portillons Heitz immédiatement rétabli.');
   };
 
@@ -2370,6 +2429,28 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
         afterState: `Abonnement ${newMember.subscriptionName} actif · Badge RFID/BLE activé`,
       }),
     }));
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'x-cfitness-actor-id': currentUserId,
+      'x-cfitness-site-id':
+        params.homeClubId === 'beynost' ? 'club-beynost' : 'club-carre-soie',
+    };
+    try {
+      const token = window.sessionStorage.getItem('cfos_bearer_token');
+      if (token) headers.Authorization = `Bearer ${token}`;
+    } catch {
+      // ignore
+    }
+    void fetch('/api/heitz/members/import', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        source: 'HEITZ_MANUAL',
+        members: [newMember],
+      }),
+    }).catch(() => {
+      // fallback local
+    });
     notify(
       'success',
       `Nouvel adhérent créé : ${newMember.firstName} ${newMember.lastName} (${newMember.badgeCode}).`
@@ -2459,6 +2540,28 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
           afterState: `${toAdd.length} adhérent(s) importé(s), ${skippedDuplicates} doublon(s) ignoré(s)`,
         }),
       }));
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'x-cfitness-actor-id': currentUserId,
+        'x-cfitness-site-id':
+          primaryAuthorizedClub === 'beynost' ? 'club-beynost' : 'club-carre-soie',
+      };
+      try {
+        const token = window.sessionStorage.getItem('cfos_bearer_token');
+        if (token) headers.Authorization = `Bearer ${token}`;
+      } catch {
+        // ignore
+      }
+      void fetch('/api/heitz/members/import', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          source,
+          members: toAdd,
+        }),
+      }).catch(() => {
+        // fallback local
+      });
       notify(
         'success',
         `Import ${source} terminé : ${toAdd.length} adhérent(s) ajouté(s)${
