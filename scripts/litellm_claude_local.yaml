@@ -1,0 +1,21 @@
+model_list:
+  # Redirige les modèles demandés par Claude Code vers Ollama ou LM Studio
+  - model_name: claude-3-7-sonnet-20250219
+    litellm_params:
+      model: ollama_chat/qwen2.5-coder:32b
+      api_base: http://127.0.0.1:11434
+
+  - model_name: claude-3-5-sonnet-20241022
+    litellm_params:
+      model: openai/qwen36-35b
+      api_base: http://127.0.0.1:1234/v1
+      api_key: lm-studio
+
+  - model_name: claude-3-5-haiku-20241022
+    litellm_params:
+      model: ollama_chat/qwen2.5-coder:7b
+      api_base: http://127.0.0.1:11434
+
+litellm_settings:
+  drop_params: true
+  set_verbose: false

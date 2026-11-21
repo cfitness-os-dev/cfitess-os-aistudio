@@ -1111,8 +1111,8 @@ export function AdminShell() {
           </div>
         )}
 
-        {/* Active View Content */}
-        <main className="flex-1 p-3 sm:px-6 sm:pt-6 sm:pb-24 lg:p-6 max-w-[1440px] w-full mx-auto min-w-0 overflow-x-clip">
+        {/* Active View Content (Réservation d'espace inférieur pb-32 sm:pb-36 anti-chevauchement barre mobile #20) */}
+        <main className="flex-1 px-3 pt-3 pb-32 sm:px-6 sm:pt-6 sm:pb-36 lg:p-6 max-w-[1440px] w-full mx-auto min-w-0 overflow-x-clip">
           {activeSection === 'my-day' && (
             <MonCompteRhHubView subTarget={navSubTarget} />
           )}
@@ -1226,6 +1226,9 @@ export function AdminShell() {
             </div>
           )}
           {activeSection === 'governance' && <GovernanceView />}
+
+          {/* Spacer garanti anti-chevauchement avec la barre fixe mobile (< lg) - Défaut #20 */}
+          <div className="h-8 sm:h-12 lg:hidden pointer-events-none" aria-hidden="true" />
         </main>
       </div>
 

@@ -8,43 +8,71 @@
         "baseURL": "http://127.0.0.1:1234/v1"
       },
       "models": {
-        "recursivesi/flint": {
-          "name": "Flint",
+        "qwen36-35b": {
+          "name": "Qwen 3.6 35B A3B UD (Strata GGUF)",
           "limit": {
-            "context": 16384,
-            "output": 4096
+            "context": 32768,
+            "output": 8192
+          }
+        },
+        "qwen38-flash-next@iq3_s": {
+          "name": "Qwen 3.8 Flash Next IQ3_S (Strata GGUF)",
+          "limit": {
+            "context": 32768,
+            "output": 8192
+          }
+        },
+        "huihui-qwen3-coder-30b-a3b-instruct-abliterated": {
+          "name": "Huihui Qwen 3 Coder 30B MoE",
+          "limit": {
+            "context": 32768,
+            "output": 8192
           }
         },
         "qwen3.8-27b-turbo-fable-cold-fusion-735-882-heretic-uncensored-neo-coder-max-mtp": {
           "name": "Qwen 3.8 27B Turbo Neo Coder",
           "limit": {
-            "context": 16384,
+            "context": 32768,
+            "output": 8192
+          }
+        },
+        "green-coding-qwen2.5-coder-14b": {
+          "name": "Green Coding Qwen 2.5 Coder 14B",
+          "limit": {
+            "context": 32768,
+            "output": 4096
+          }
+        },
+        "mistralai/devstral-small-2-2512": {
+          "name": "Mistral Devstral Small 2 24B",
+          "limit": {
+            "context": 32768,
             "output": 4096
           }
         },
         "google/gemma-4-31b-qat": {
-          "name": "Gemma 4 31B QAT",
+          "name": "Google Gemma 4 31B QAT",
           "limit": {
             "context": 16384,
             "output": 4096
           }
         },
-        "deepseek-v4.1-flash-1017": {
-          "name": "DeepSeek V4.1 Flash",
+        "hermes3.6-35b-apex": {
+          "name": "Hermes 3.6 35B Apex",
           "limit": {
             "context": 16384,
             "output": 4096
           }
         },
-        "lfm3-1.7b-uncensored": {
-          "name": "LFM 3 1.7B Uncensored",
+        "recursivesi/flint": {
+          "name": "RecursiveSi Flint 40B",
           "limit": {
             "context": 16384,
             "output": 4096
           }
         },
         "meta/muse-glimmer": {
-          "name": "Muse Glimmer",
+          "name": "Meta Muse Glimmer 28B",
           "limit": {
             "context": 16384,
             "output": 4096
@@ -57,16 +85,69 @@
             "output": 4096
           }
         },
-        "hermes3.6-35b-apex": {
-          "name": "Hermes 3.6 35B Apex",
+        "lfm3-1.7b-uncensored": {
+          "name": "LFM 3 1.7B Uncensored",
           "limit": {
             "context": 16384,
             "output": 4096
           }
         }
       }
+    },
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama Local",
+      "options": {
+        "baseURL": "http://127.0.0.1:11434/v1"
+      },
+      "models": {
+        "qwen3-coder:latest": {
+          "name": "Qwen 3 Coder 30B MoE (Ollama)",
+          "limit": {
+            "context": 32768,
+            "output": 8192
+          }
+        },
+        "qwen3.8:latest": {
+          "name": "Qwen 3.8 27B (Ollama)",
+          "limit": {
+            "context": 32768,
+            "output": 8192
+          }
+        },
+        "lfm3:latest": {
+          "name": "LFM 3 1.7B (Ollama)",
+          "limit": {
+            "context": 16384,
+            "output": 4096
+          }
+        },
+        "qwen2.5:3b": {
+          "name": "Qwen 2.5 3B (Ollama)",
+          "limit": {
+            "context": 32768,
+            "output": 4096
+          }
+        }
+      }
+    },
+    "llamacpp": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "llama.cpp Server",
+      "options": {
+        "baseURL": "http://127.0.0.1:8081/v1"
+      },
+      "models": {
+        "default": {
+          "name": "llama.cpp Active Model",
+          "limit": {
+            "context": 32768,
+            "output": 8192
+          }
+        }
+      }
     }
   },
-  "model": "lmstudio/google/gemma-4-31b-qat",
-  "small_model": "lmstudio/lfm3-1.7b-uncensored"
+  "model": "lmstudio/huihui-qwen3-coder-30b-a3b-instruct-abliterated",
+  "small_model": "ollama/lfm3:latest"
 }

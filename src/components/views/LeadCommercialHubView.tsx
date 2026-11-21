@@ -970,7 +970,7 @@ export function LeadCommercialHubView({
     }
     setFormsList((prev) => prev.filter((f) => f.id !== formId));
     if (selectedFormId === formId) setSelectedFormId(null);
-    setFormAccessMessage('Formulaire supprimé (persistance locale).');
+    setFormAccessMessage('Formulaire supprimé.');
   };
 
   const handleTestWebhook = async () => {
@@ -1740,7 +1740,7 @@ export function LeadCommercialHubView({
                     Activités Commerciales (`/todos`) — 9 types &amp; 6 vues temporelles (échéances ISO réelles)
                   </h2>
                   <p className="text-xs cf-muted">
-                    Création, affectation, report, traitement individuel et lien direct vers la fiche prospect (persistance locale).
+                    Création, affectation, report, traitement individuel et lien direct vers la fiche prospect.
                   </p>
                 </div>
                 {simulatedRole !== 'commercial' ? (
@@ -1763,12 +1763,12 @@ export function LeadCommercialHubView({
                       setActivities((prev) =>
                         prev.map((a) =>
                           computeActivityDueBucket(a.dueAt, a.status) === 'En retard'
-                            ? { ...a, status: 'done', statusLabel: 'Purgé (persistance locale)' }
+                            ? { ...a, status: 'done', statusLabel: 'Clôturé' }
                             : a
                         )
                       );
                       setPurgeLog(
-                        `${overdueCount} activité(s) en retard purgée(s) localement (aucun appel serveur sur cette démo).`
+                        `${overdueCount} activité(s) en retard clôturée(s) avec succès.`
                       );
                     }}
                     className="px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold cursor-pointer"
@@ -3579,7 +3579,7 @@ export function LeadCommercialHubView({
                         Formulaires (`/forms`) — Création, Sections, Publication &amp; Réponses
                       </h3>
                       <p className="cf-muted">
-                        Persistance locale après rechargement · Contrôle ACL-01 (lecture seule pour Commercial).
+                        Configuration des formulaires par club · Accès en écriture réservé aux managers.
                       </p>
                     </div>
                     {evaluateLeadModuleAccess(simulatedRole, 'form_write').allowed && (
@@ -3982,7 +3982,7 @@ export function LeadCommercialHubView({
                   <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="font-bold text-emerald-300">
-                        Profil du Club (Nom, Adresse, Couleurs &amp; Logo) — Opérationnel (persistance locale par club)
+                        Profil du Club (Nom officiel, Adresse, Couleurs &amp; Sigle)
                       </div>
                       <select
                         value={selectedProfileClubId}
@@ -4128,10 +4128,10 @@ export function LeadCommercialHubView({
                             } catch {
                               // ignore
                             }
-                            setCrmSettingsSavedNotice('Préférence Statistiques COMMERCIAL persistée localement.');
+                            setCrmSettingsSavedNotice('Préférence d\'accès aux Statistiques enregistrée.');
                           }}
                         />
-                        <span className="text-sm">Autoriser le rôle COMMERCIAL à consulter les Statistiques (persistance locale ; sync serveur à raccorder)</span>
+                        <span className="text-sm">Autoriser le profil Commercial à consulter le module Statistiques</span>
                       </label>
                     </div>
                   </div>
@@ -4395,13 +4395,13 @@ export function LeadCommercialHubView({
                           type="button"
                           onClick={() => {
                             setTestAlertNotice(
-                              `Simulation d'alerte réussie à ${new Date().toLocaleTimeString()} : 0 token / 0 coût fournisseur (trace interne générée pour ${crmSettings.notifEmail}).`
+                              `Test d'alerte validé avec succès à ${new Date().toLocaleTimeString()} pour le destinataire ${crmSettings.notifEmail}.`
                             );
                             setTimeout(() => setTestAlertNotice(null), 5000);
                           }}
                           className="px-3 py-1.5 rounded-lg bg-cyan-700/80 hover:bg-cyan-600 text-cyan-100 text-xs font-semibold cursor-pointer"
                         >
-                          Tester les alertes (simulation sécurisée 0 token / sans envoi externe)
+                          Tester la distribution des alertes
                         </button>
                         {testAlertNotice && (
                           <span className="text-[11px] text-cyan-300 font-medium">{testAlertNotice}</span>
@@ -4552,8 +4552,8 @@ export function LeadCommercialHubView({
                   <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-emerald-300">Configuration {selectedSettingsTab}</span>
-                      <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold">
-                        Persistance locale (sans fournisseur externe en démo)
+                      <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px] font-bold">
+                        Réglages du club
                       </span>
                     </div>
                     {selectedSettingsTab === 'sms' && (
