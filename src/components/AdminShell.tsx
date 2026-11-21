@@ -70,7 +70,7 @@ interface VisualNavItem {
 const VISUAL_SIDEBAR_ITEMS: VisualNavItem[] = [
   {
     id: 'nav-crm',
-    label: 'Prospection – Vente',
+    label: 'Prospection',
     icon: TrendingUp,
     iconColor: 'text-emerald-500',
     sectionId: 'crm',
@@ -78,7 +78,7 @@ const VISUAL_SIDEBAR_ITEMS: VisualNavItem[] = [
   },
   {
     id: 'nav-adherents',
-    label: 'Adhérents – CRM',
+    label: 'CRM / Adhérents',
     icon: Users,
     iconColor: 'text-amber-500',
     sectionId: 'devices',
@@ -123,7 +123,7 @@ const VISUAL_SIDEBAR_ITEMS: VisualNavItem[] = [
   },
   {
     id: 'nav-personnel',
-    label: 'Collaborateurs et RH',
+    label: 'Mon compte',
     icon: Users,
     iconColor: 'text-blue-500',
     sectionId: 'my-day',
@@ -400,7 +400,7 @@ export function AdminShell() {
             : 'bg-white border-slate-200/80 text-slate-700'
         }`}
       >
-        {/* Brand Header: C.Fitness OS — Deux clubs, une vision */}
+        {/* Brand Header: C.Fitness OS — Une vision unifiée */}
         <div className="px-5 py-4 flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-violet-600 via-purple-600 to-blue-500 flex items-center justify-center shadow-sm shrink-0">
             <span className="font-black text-xl text-white tracking-tighter">C</span>
@@ -413,7 +413,7 @@ export function AdminShell() {
             >
               C.Fitness OS
             </div>
-            <div className="text-[11px] text-slate-400 truncate">Deux clubs, une vision</div>
+            <div className="text-[11px] text-slate-400 truncate">Une vision unifiée</div>
           </div>
         </div>
 
@@ -875,13 +875,19 @@ export function AdminShell() {
                 </div>
               </div>
 
-              {/* Night Mode & Display Color Switcher (PC, Tablette & Téléphone) */}
-              <div className="hidden sm:flex">
-                <ThemeColorControl variant="full" />
-              </div>
-              <div className="flex sm:hidden">
-                <ThemeColorControl variant="compact" />
-              </div>
+              {/* Bascule Jour / Nuit épurée */}
+              <button
+                type="button"
+                onClick={toggleThemeMode}
+                title={isDark ? 'Passer en mode clair' : 'Passer en mode sombre'}
+                className={`p-2 rounded-xl border flex items-center justify-center transition-colors cursor-pointer ${
+                  isDark
+                    ? 'bg-[#1A2033] border-slate-700 text-amber-400 hover:bg-slate-800'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4 text-slate-600" />}
+              </button>
 
               {/* Quick Mobile / Tablet App Preview Button (Image 2) */}
               <button
@@ -1346,7 +1352,7 @@ export function AdminShell() {
                   </div>
                   <div>
                     <div className="font-bold text-sm">C.Fitness OS</div>
-                    <div className="text-[10px] text-slate-400">Deux clubs, une vision</div>
+                    <div className="text-[10px] text-slate-400">Une vision unifiée</div>
                   </div>
                 </div>
                 <button

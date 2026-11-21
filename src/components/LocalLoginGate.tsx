@@ -182,9 +182,9 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-extrabold text-base">C.Fitness OS</span>
-              <span className="text-[11px] text-slate-400">Deux clubs, une vision</span>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 font-mono text-[10px] font-semibold">
-                100% LOCAL · ZÉRO CLOUD EXTERNE
+              <span className="text-[11px] text-slate-400">Une vision unifiée</span>
+              <span className="px-2 py-0.5 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-400 text-[10px] font-semibold">
+                Carré de Soie &amp; Beynost
               </span>
             </div>
             <div className="text-xs text-slate-400">

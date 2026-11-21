@@ -34,17 +34,17 @@ pub struct SharedAppState {
     pub login_attempts: RwLock<HashMap<String, (u32, std::time::Instant)>>,
 }
 
+pub fn is_demo_mode() -> bool {
+    std::env::var("CFITNESS_DEMO_MODE")
+        .map(|v| v == "true" || v == "1")
+        .unwrap_or(true)
+}
+
 fn generate_session_token() -> String {
-    use std::hash::{BuildHasher, Hasher};
-    let mut out = String::with_capacity(64);
-    for round in 0..4u64 {
-        let h = std::collections::hash_map::RandomState::new();
-        let mut hasher = h.build_hasher();
-        hasher.write_u64(round);
-        hasher.write_i64(Utc::now().timestamp_nanos_opt().unwrap_or_default());
-        out.push_str(&format!("{:016x}", hasher.finish()));
-    }
-    format!("cfos_{}", out)
+    use rand::RngCore;
+    let mut bytes = [0u8; 32];
+    rand::thread_rng().fill_bytes(&mut bytes);
+    format!("cfos_{}", hex::encode(bytes))
 }
 
 pub type SharedState = Arc<SharedAppState>;
@@ -308,6 +308,10 @@ pub struct BackupSnapshotIngestRequest {
 }
 
 fn is_valid_secret_for_employee(emp_id: &str, secret: &str) -> bool {
+    // Si hors mode démo (production), les identifiants de test codés en dur sont strictement refusés
+    if !is_demo_mode() {
+        return false;
+    }
     match emp_id {
         "emp-admin" => secret == "0766",
         "emp-mario" => secret == "1010" || secret == "0766",
@@ -537,7 +541,9 @@ async fn post_heitz_gate_check(
                 prospect.lead_status = "Venu".into();
             }
         }
-        let _ = persist_state(&state.data_dir, &db);
+        if let Err(e) = persist_state(&state.data_dir, &db) {
+            tracing::error!("Échec persistance passage portillon Heitz : {}", e);
+        }
     }
 
     (
@@ -944,14 +950,22 @@ async fn post_stripe_appointment_webhook(
         .get("stripe-signature")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
-    if stripe_secret_configured
-        && !verify_stripe_signature(stripe_secret.trim(), &body, sig_header)
-    {
+    if stripe_secret_configured {
+        if !verify_stripe_signature(stripe_secret.trim(), &body, sig_header) {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({
+                    "ok": false,
+                    "error": "Signature Stripe invalide, expirée ou absente (401 Unauthorized)."
+                })),
+            );
+        }
+    } else if !is_demo_mode() {
         return (
             StatusCode::UNAUTHORIZED,
             Json(json!({
                 "ok": false,
-                "error": "Signature Stripe invalide, expirée ou absente (401 Unauthorized)."
+                "error": "CFITNESS_STRIPE_WEBHOOK_SECRET requis en mode production. Webhook non signé refusé."
             })),
         );
     }
@@ -1768,7 +1782,12 @@ async fn put_admin_profile(
         Some(format!("portée={}", prev_scope)),
         Some(after_detail),
     );
-    let _ = persist_state(&state.data_dir, &db);
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec persistance des permissions : {}", err_msg),
+        ));
+    }
 
     Ok(Json(updated))
 }
@@ -1946,7 +1965,12 @@ async fn put_organization(
         Some(prev_name),
         Some(updated.name.clone()),
     );
-    let _ = persist_state(&state.data_dir, &db);
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec persistance des permissions : {}", err_msg),
+        ));
+    }
 
     Ok(Json(updated))
 }
@@ -1981,7 +2005,12 @@ async fn put_org02_policy(
         Some(prev),
         Some(payload.policy.clone()),
     );
-    let _ = persist_state(&state.data_dir, &db);
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec persistance politique ORG02 : {}", err_msg),
+        ));
+    }
 
     Ok(Json(json!({ "policy": payload.policy })))
 }
@@ -2042,7 +2071,12 @@ async fn post_restore(
         None,
         None,
     );
-    let _ = persist_state(&state.data_dir, &db);
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec persistance restauration : {}", err_msg),
+        ));
+    }
 
     Ok(Json(json!({ "restoredAt": now })))
 }
@@ -2553,7 +2587,12 @@ async fn put_preferences(
         None,
         None,
     );
-    let _ = persist_state(&state.data_dir, &db);
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec persistance révocation flux calendrier : {}", err_msg),
+        ));
+    }
 
     Ok(Json(prefs))
 }
@@ -2592,7 +2631,12 @@ async fn post_revoke_calendar_token(
         Some(prev),
         Some(prefs.calendar_feed_token.clone()),
     );
-    let _ = persist_state(&state.data_dir, &db);
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec persistance révocation flux calendrier : {}", err_msg),
+        ));
+    }
 
     Ok(Json(prefs))
 }
@@ -2626,7 +2670,12 @@ async fn post_change_password(
         None,
         None,
     );
-    let _ = persist_state(&state.data_dir, &db);
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec persistance changement mot de passe : {}", err_msg),
+        ));
+    }
 
     Ok(Json(json!({ "changed": true })))
 }
@@ -4993,5 +5042,20 @@ mod tests {
             assert_ne!(assigned, "emp-maxime");
             assert_eq!(assigned, "emp-karim");
         }
+    }
+
+    #[tokio::test]
+    async fn csprng_and_production_security_guards_enforce_isolation() {
+        // 1. Vérification que le générateur de session CSPRNG génère des tokens uniques de 256 bits
+        let t1 = generate_session_token();
+        let t2 = generate_session_token();
+        assert_ne!(t1, t2);
+        assert!(t1.starts_with("cfos_"));
+        assert_eq!(t1.len(), 5 + 64); // "cfos_" + 64 hex chars = 256 bits d'entropie
+
+        // 2. Vérification des secrets démo
+        assert!(is_valid_secret_for_employee("emp-admin", "0766"));
+        assert!(is_valid_secret_for_employee("emp-mario", "1010"));
+        assert!(!is_valid_secret_for_employee("emp-admin", "mauvais_code"));
     }
 }

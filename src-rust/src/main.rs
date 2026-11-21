@@ -3,7 +3,7 @@ mod rbac;
 mod routes;
 mod seed;
 
-use crate::routes::{api_router, SharedAppState};
+use crate::routes::{api_router, is_demo_mode, SharedAppState};
 use crate::seed::load_or_init_state;
 use axum::http::HeaderValue;
 use axum::Router;
@@ -55,7 +55,10 @@ async fn main() {
                 .filter_map(|s| HeaderValue::from_str(s.trim()).ok())
                 .collect();
             if origins.is_empty() {
-                tracing::warn!("CFITNESS_ALLOWED_ORIGINS vide/invalide -> fallback CorsLayer::permissive()");
+                if !is_demo_mode() {
+                    panic!("CFITNESS_ALLOWED_ORIGINS invalide en environnement de production ! Arrêt de sécurité.");
+                }
+                tracing::warn!("CFITNESS_ALLOWED_ORIGINS vide/invalide -> fallback CorsLayer::permissive() (mode démo)");
                 CorsLayer::permissive()
             } else {
                 tracing::info!("CORS restreint aux origines autorisées ({} entrées)", origins.len());
@@ -63,6 +66,9 @@ async fn main() {
             }
         }
         _ => {
+            if !is_demo_mode() {
+                panic!("CFITNESS_ALLOWED_ORIGINS obligatoire en environnement de production ! Définir les domaines autorisés.");
+            }
             tracing::warn!("CFITNESS_ALLOWED_ORIGINS non défini : CORS permissif actif (mode LAN/démo)");
             CorsLayer::permissive()
         }
