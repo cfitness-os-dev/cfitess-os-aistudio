@@ -1567,7 +1567,7 @@ async fn get_admin_profiles(
     State(state): State<SharedState>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<RoleProfile>>, (StatusCode, Json<Value>)> {
-    let (actor_id, site_id) = extract_actor_site(&headers);
+    let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
     let db = state.db.read().await;
 
     let can_read = evaluate_permission(&db, &actor_id, &site_id, "ORG04-31", None).allowed
@@ -1590,7 +1590,7 @@ async fn put_admin_profile(
     Path(profile_id): Path<String>,
     Json(payload): Json<UpdateProfilePayload>,
 ) -> Result<Json<RoleProfile>, (StatusCode, Json<Value>)> {
-    let (actor_id, site_id) = extract_actor_site(&headers);
+    let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
     let mut db = state.db.write().await;
 
     if let Err(reason) = validate_delegation_update(
@@ -1722,7 +1722,7 @@ async fn get_audit_log(
     headers: HeaderMap,
     Query(filters): Query<AuditFilterQuery>,
 ) -> Result<Json<Vec<AuditEvent>>, (StatusCode, Json<Value>)> {
-    let (actor_id, site_id) = extract_actor_site(&headers);
+    let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
     let db = state.db.read().await;
     if !can_view_audit(&db, &actor_id, &site_id) {
         return Err(err_resp(
@@ -1737,7 +1737,10 @@ async fn get_audit_log_csv(
     State(state): State<SharedState>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
-    let (actor_id, site_id) = extract_actor_site(&headers);
+    let (actor_id, site_id) = match resolve_session_actor(&state, &headers).await {
+        Ok(actor) => actor,
+        Err(error) => return error.into_response(),
+    };
     let db = state.db.read().await;
     if !can_view_audit(&db, &actor_id, &site_id) {
         return err_resp(
@@ -1788,7 +1791,7 @@ async fn put_organization(
     headers: HeaderMap,
     Json(patch): Json<UpdateOrganizationPayload>,
 ) -> Result<Json<Organization>, (StatusCode, Json<Value>)> {
-    let (actor_id, site_id) = extract_actor_site(&headers);
+    let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
     let mut db = state.db.write().await;
 
     let check = evaluate_permission(&db, &actor_id, &site_id, "ORG04-32", None);
@@ -1843,7 +1846,7 @@ async fn put_org02_policy(
     headers: HeaderMap,
     Json(payload): Json<UpdateOrg02PolicyPayload>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let (actor_id, site_id) = extract_actor_site(&headers);
+    let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
     let mut db = state.db.write().await;
 
     let check = evaluate_permission(&db, &actor_id, &site_id, "ORG04-32", None);
@@ -1877,7 +1880,7 @@ async fn get_backup(
     State(state): State<SharedState>,
     headers: HeaderMap,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let (actor_id, site_id) = extract_actor_site(&headers);
+    let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
     let db = state.db.read().await;
     let check = evaluate_permission(&db, &actor_id, &site_id, "ORG04-31", None);
     if !check.allowed {
@@ -1896,7 +1899,7 @@ async fn post_restore(
     headers: HeaderMap,
     Json(payload): Json<RestoreBackupPayload>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let (actor_id, site_id) = extract_actor_site(&headers);
+    let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
     let mut db = state.db.write().await;
 
     let check = evaluate_permission(&db, &actor_id, &site_id, "ORG04-31", None);
@@ -2377,7 +2380,7 @@ async fn put_preferences(
     headers: HeaderMap,
     Json(patch): Json<UpdatePreferencesPayload>,
 ) -> Result<Json<UserPreferences>, (StatusCode, Json<Value>)> {
-    let (actor_id, _) = extract_actor_site(&headers);
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
     let mut db = state.db.write().await;
 
     if !db.employees.iter().any(|e| e.id == actor_id) {
@@ -2449,7 +2452,7 @@ async fn post_revoke_calendar_token(
     State(state): State<SharedState>,
     headers: HeaderMap,
 ) -> Result<Json<UserPreferences>, (StatusCode, Json<Value>)> {
-    let (actor_id, _) = extract_actor_site(&headers);
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
     let mut db = state.db.write().await;
 
     if !db.employees.iter().any(|e| e.id == actor_id) {
@@ -2489,7 +2492,7 @@ async fn post_change_password(
     headers: HeaderMap,
     Json(payload): Json<ChangePasswordPayload>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let (actor_id, _) = extract_actor_site(&headers);
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
     let mut db = state.db.write().await;
 
     if !db.employees.iter().any(|e| e.id == actor_id) {
