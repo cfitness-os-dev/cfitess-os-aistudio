@@ -630,6 +630,32 @@ export function OrchestratorMaintenanceView() {
 
   useEffect(() => {
     let cancelled = false;
+    void stocksFetchJson<
+      Record<string, 'validation_humaine' | 'execution_auto_encadree'>
+    >('/api/orchestrator/agents', currentUser.id, activeSiteId)
+      .then((modes) => {
+        if (!cancelled && modes && typeof modes === 'object') {
+          setAgents((prev) =>
+            prev.map((a) => {
+              const mode = modes[a.id];
+              return mode === 'validation_humaine' ||
+                mode === 'execution_auto_encadree'
+                ? { ...a, autonomyMode: mode }
+                : a;
+            })
+          );
+        }
+      })
+      .catch(() => {
+        // Garde les modes par défaut si hors serveur
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser.id, activeSiteId]);
+
+  useEffect(() => {
+    let cancelled = false;
     void stocksFetchJson<OrchestratorDecisionItem[]>(
       '/api/orchestrator/decisions',
       currentUser.id,
@@ -1078,19 +1104,40 @@ export function OrchestratorMaintenanceView() {
   };
 
   const handleToggleAgentAutonomy = (agentId: string) => {
-    setAgents((prev) =>
-      prev.map((a) =>
-        a.id === agentId
-          ? {
-              ...a,
-              autonomyMode:
-                a.autonomyMode === 'validation_humaine'
-                  ? 'execution_auto_encadree'
-                  : 'validation_humaine',
-            }
-          : a
-      )
-    );
+    void stocksFetchJson<{
+      agentId: string;
+      autonomyMode: 'validation_humaine' | 'execution_auto_encadree';
+    }>(
+      `/api/orchestrator/agents/${encodeURIComponent(agentId)}/autonomy`,
+      currentUser.id,
+      activeSiteId,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ toggle: true }),
+      }
+    )
+      .then((res) => {
+        setAgents((prev) =>
+          prev.map((a) =>
+            a.id === res.agentId ? { ...a, autonomyMode: res.autonomyMode } : a
+          )
+        );
+      })
+      .catch(() => {
+        setAgents((prev) =>
+          prev.map((a) =>
+            a.id === agentId
+              ? {
+                  ...a,
+                  autonomyMode:
+                    a.autonomyMode === 'validation_humaine'
+                      ? 'execution_auto_encadree'
+                      : 'validation_humaine',
+                }
+              : a
+          )
+        );
+      });
   };
 
   const handleSimulateOrchestratorEvent = () => {

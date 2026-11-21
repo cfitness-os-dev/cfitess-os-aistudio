@@ -736,6 +736,8 @@ pub struct AppDatabaseState {
     pub orchestrator_decisions: Vec<OrchestratorDecisionRecord>,
     #[serde(default)]
     pub purchase_orders: Vec<PurchaseOrderRecord>,
+    #[serde(default)]
+    pub agent_autonomy_modes: HashMap<String, String>,
 }
 
 #[derive(Debug, Clone, Serialize)]

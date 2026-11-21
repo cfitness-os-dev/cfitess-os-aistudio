@@ -341,6 +341,14 @@ pub fn api_router(state: SharedState) -> Router {
             "/api/orchestrator/decisions/:decision_id/status",
             patch(crate::orchestrator::patch_orchestrator_decision_status),
         )
+        .route(
+            "/api/orchestrator/agents",
+            get(crate::orchestrator::get_orchestrator_agent_autonomies),
+        )
+        .route(
+            "/api/orchestrator/agents/:agent_id/autonomy",
+            put(crate::orchestrator::put_orchestrator_agent_autonomy),
+        )
         .with_state(state)
 }
 

@@ -1915,6 +1915,7 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
         maintenance_tickets: default_demo_maintenance_tickets(),
         orchestrator_decisions: default_demo_orchestrator_decisions(),
         purchase_orders: default_demo_purchase_orders(),
+        agent_autonomy_modes: HashMap::new(),
     }
 }
 
@@ -2037,6 +2038,7 @@ pub fn create_production_initial_state() -> AppDatabaseState {
         maintenance_tickets: vec![],
         orchestrator_decisions: vec![],
         purchase_orders: vec![],
+        agent_autonomy_modes: HashMap::new(),
     }
 }
 

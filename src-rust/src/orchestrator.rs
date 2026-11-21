@@ -9,7 +9,8 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::Json;
 use chrono::Utc;
 use serde::Deserialize;
-use serde_json::Value;
+use serde_json::{json, Value};
+use std::collections::HashMap;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -28,6 +29,136 @@ pub struct CreateOrchestratorDecisionPayload {
 #[serde(rename_all = "camelCase")]
 pub struct UpdateOrchestratorDecisionStatusPayload {
     pub status: String,
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub struct UpdateAgentAutonomyPayload {
+    pub autonomy_mode: Option<String>,
+    pub toggle: Option<bool>,
+}
+
+fn default_agent_autonomy_modes() -> HashMap<String, String> {
+    HashMap::from([
+        ("agent-rh".to_string(), "validation_humaine".to_string()),
+        ("agent-crm".to_string(), "execution_auto_encadree".to_string()),
+        ("agent-recouvrement".to_string(), "validation_humaine".to_string()),
+        ("agent-telephonie".to_string(), "execution_auto_encadree".to_string()),
+        ("agent-maintenance".to_string(), "validation_humaine".to_string()),
+        ("agent-pilotage".to_string(), "execution_auto_encadree".to_string()),
+    ])
+}
+
+pub async fn get_orchestrator_agent_autonomies(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+) -> Result<Json<HashMap<String, String>>, (StatusCode, Json<Value>)> {
+    let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
+    let db = state.db.read().await;
+
+    let allowed = is_admin_employee(&db, &actor_id)
+        || can_access_module_action(&db, &actor_id, Some(&site_id), "maintenance", "view")
+        || can_access_module_action(&db, &actor_id, Some(&site_id), "stocks", "view");
+    if !allowed {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Accès refusé (403) : consultation des réglages d'autonomie IA non autorisée.",
+        ));
+    }
+
+    let mut modes = default_agent_autonomy_modes();
+    for (k, v) in &db.agent_autonomy_modes {
+        if modes.contains_key(k) {
+            modes.insert(k.clone(), v.clone());
+        }
+    }
+    Ok(Json(modes))
+}
+
+pub async fn put_orchestrator_agent_autonomy(
+    State(state): State<SharedState>,
+    Path(agent_id): Path<String>,
+    headers: HeaderMap,
+    Json(payload): Json<UpdateAgentAutonomyPayload>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
+    let defaults = default_agent_autonomy_modes();
+    let Some(default_mode) = defaults.get(agent_id.trim()) else {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            format!("Identifiant d'agent IA inconnu : {}", agent_id),
+        ));
+    };
+
+    let mut db = state.db.write().await;
+    if !is_admin_employee(&db, &actor_id) {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Accès refusé (403) : seul un administrateur peut modifier le mode d'autonomie des Agents IA.",
+        ));
+    }
+
+    let current_mode = db
+        .agent_autonomy_modes
+        .get(agent_id.trim())
+        .cloned()
+        .unwrap_or_else(|| default_mode.clone());
+
+    let next_mode = if payload.toggle.unwrap_or(false) {
+        if current_mode == "validation_humaine" {
+            "execution_auto_encadree".to_string()
+        } else {
+            "validation_humaine".to_string()
+        }
+    } else if let Some(explicit) = payload.autonomy_mode.as_deref().map(str::trim) {
+        match explicit {
+            "validation_humaine" | "execution_auto_encadree" => explicit.to_string(),
+            _ => {
+                return Err(err_resp(
+                    StatusCode::BAD_REQUEST,
+                    "Mode d'autonomie invalide. Valeurs supportées : validation_humaine, execution_auto_encadree.",
+                ));
+            }
+        }
+    } else {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            "Aucun mode d'autonomie ou directive de bascule fournie.",
+        ));
+    };
+
+    let snapshot = db.clone();
+    db.agent_autonomy_modes
+        .insert(agent_id.trim().to_string(), next_mode.clone());
+
+    append_audit(
+        &mut db,
+        &actor_id,
+        "Orchestrateur IA (Autonomie Agent)",
+        format!(
+            "Mode d'autonomie {} : {} -> {}",
+            agent_id.trim(),
+            current_mode,
+            next_mode
+        ),
+        &site_id,
+        "agent_autonomy_modes",
+        Some(current_mode),
+        Some(next_mode.clone()),
+    );
+
+    if let Err(e) = persist_state(&state.data_dir, &db) {
+        *db = snapshot;
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            &format!("Échec de persistance atomique du mode d'autonomie IA : {e}"),
+        ));
+    }
+
+    Ok(Json(json!({
+        "agentId": agent_id.trim(),
+        "autonomyMode": next_mode
+    })))
 }
 
 fn normalize_club_id(raw: &str) -> Option<&'static str> {
@@ -447,5 +578,47 @@ mod tests {
         .await
         .unwrap_err();
         assert_eq!(err_bad.0, StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn test_agent_autonomy_modes_persist_and_enforce_admin_only() {
+        let state = test_state();
+        let admin_headers = session_headers(&state, "emp-admin", "club-carre-soie").await;
+
+        let Json(initial_modes) = get_orchestrator_agent_autonomies(
+            State(state.clone()),
+            admin_headers.clone(),
+        )
+        .await
+        .unwrap();
+        assert_eq!(initial_modes.get("agent-rh").unwrap(), "validation_humaine");
+
+        let Json(toggled) = put_orchestrator_agent_autonomy(
+            State(state.clone()),
+            Path("agent-rh".into()),
+            admin_headers,
+            Json(UpdateAgentAutonomyPayload {
+                autonomy_mode: None,
+                toggle: Some(true),
+            }),
+        )
+        .await
+        .unwrap();
+        assert_eq!(toggled["autonomyMode"], "execution_auto_encadree");
+
+        // Non-admin rejected with 403
+        let cds_headers = session_headers(&state, "emp-accueil-cs", "club-carre-soie").await;
+        let err = put_orchestrator_agent_autonomy(
+            State(state),
+            Path("agent-rh".into()),
+            cds_headers,
+            Json(UpdateAgentAutonomyPayload {
+                autonomy_mode: Some("validation_humaine".into()),
+                toggle: None,
+            }),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(err.0, StatusCode::FORBIDDEN);
     }
 }
