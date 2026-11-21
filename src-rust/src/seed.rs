@@ -2,7 +2,8 @@ use crate::models::{
     AmbiguityRecord, AppDatabaseState, AuditEvent, ContractSummary, Employee, EmployeeCounter,
     EmployeeSiteAccess, LeadActivityRecord, LeadAppointmentRecord, LeadFormFieldRecord,
     LeadFormRecord, LeadFormSampleResponseRecord, LeadProspectRecord, LeaveRequest,
-    NotificationPrefs, Organization, Position, RoleProfile, SensitiveBankInfo, Shift, Site,
+    NotificationPrefs, Organization, Position, RecoveryCaseRecord, RoleProfile, SensitiveBankInfo,
+    Shift, Site,
     SiteHrSettings, SiteKpis, Team, TimeclockAnomaly, UserPreferences,
 };
 use std::collections::HashMap;
@@ -331,6 +332,91 @@ fn env_non_empty(key: &str, default: &str) -> String {
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| default.to_string())
+}
+
+fn default_demo_recovery_cases() -> Vec<RecoveryCaseRecord> {
+    vec![
+        RecoveryCaseRecord {
+            id: "rec-1".into(),
+            member_id: "hm-2".into(),
+            member_name: "Romain Vasseur".into(),
+            club_id: "carre-de-soie".into(),
+            phone: "06 44 19 82 10".into(),
+            email: "romain.vasseur@exemple.fr".into(),
+            contract_label: "Abonnement Bi-Clubs 12 mois (39,90 €/mois)".into(),
+            amount_due_eur: 39.9,
+            days_overdue: 14,
+            unpaid_reason: "Rejet SEPA (AM04) — Provision insuffisante".into(),
+            billed_months: vec!["Octobre 2026".into()],
+            has_signed_contract: true,
+            has_id_and_rib: true,
+            has_cgv_accepted: true,
+            missing_docs: vec![],
+            status: "a_relancer".into(),
+            relance_count: 1,
+            last_action_note: "Portillon bloqué automatiquement · SMS de régularisation envoyé.".into(),
+        },
+        RecoveryCaseRecord {
+            id: "rec-2".into(),
+            member_id: "hm-5".into(),
+            member_name: "Kévin Moreau".into(),
+            club_id: "beynost".into(),
+            phone: "06 52 78 41 09".into(),
+            email: "kevin.moreau@exemple.fr".into(),
+            contract_label: "Formule Performance Engagement 12 mois (49,90 €/mois)".into(),
+            amount_due_eur: 149.7,
+            days_overdue: 64,
+            unpaid_reason: "Opposition bancaire sur mandat SEPA (MD01 / R01)".into(),
+            billed_months: vec!["Août 2026".into(), "Septembre 2026".into(), "Octobre 2026".into()],
+            has_signed_contract: true,
+            has_id_and_rib: true,
+            has_cgv_accepted: true,
+            missing_docs: vec![],
+            status: "pret_contentieux".into(),
+            relance_count: 3,
+            last_action_note: "2 relances SMS + mise en demeure restée sans réponse · Dossier complet pour contentieux.".into(),
+        },
+        RecoveryCaseRecord {
+            id: "rec-3".into(),
+            member_id: "hm-6".into(),
+            member_name: "Laura Bernard".into(),
+            club_id: "carre-de-soie".into(),
+            phone: "06 31 09 77 45".into(),
+            email: "laura.bernard@exemple.fr".into(),
+            contract_label: "Abonnement Liberté Sans Engagement (44,90 €/mois)".into(),
+            amount_due_eur: 89.8,
+            days_overdue: 38,
+            unpaid_reason: "Rejet SEPA (AC04) — Compte bancaire clôturé".into(),
+            billed_months: vec!["Septembre 2026".into(), "Octobre 2026".into()],
+            has_signed_contract: true,
+            has_id_and_rib: false,
+            has_cgv_accepted: true,
+            missing_docs: vec!["Nouveau RIB SEPA à jour".into()],
+            status: "mise_en_demeure".into(),
+            relance_count: 2,
+            last_action_note: "Mise en demeure envoyée · En attente de nouveau RIB ou règlement CB.".into(),
+        },
+        RecoveryCaseRecord {
+            id: "rec-4".into(),
+            member_id: "hm-7".into(),
+            member_name: "Mehdi Benali".into(),
+            club_id: "beynost".into(),
+            phone: "06 77 63 20 18".into(),
+            email: "mehdi.benali@exemple.fr".into(),
+            contract_label: "Abonnement Annuel Prélèvement Mensuel (39,90 €/mois)".into(),
+            amount_due_eur: 119.7,
+            days_overdue: 52,
+            unpaid_reason: "Mandat SEPA révoqué sans respect du préavis CGV (2 mois)".into(),
+            billed_months: vec!["Août 2026".into(), "Septembre 2026".into(), "Octobre 2026".into()],
+            has_signed_contract: true,
+            has_id_and_rib: true,
+            has_cgv_accepted: true,
+            missing_docs: vec![],
+            status: "pret_contentieux".into(),
+            relance_count: 3,
+            last_action_note: "Préavis non respecté · Dossier prêt pour transfert recouvrement.".into(),
+        },
+    ]
 }
 
 pub fn create_initial_seed_state() -> AppDatabaseState {
@@ -1587,6 +1673,7 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
         reports_authorized_employee_ids: vec![],
         module_delegations: vec![],
         password_hashes_by_employee: HashMap::new(),
+        recovery_cases: default_demo_recovery_cases(),
     }
 }
 
@@ -1704,6 +1791,7 @@ pub fn create_production_initial_state() -> AppDatabaseState {
         reports_authorized_employee_ids: vec![],
         module_delegations: vec![],
         password_hashes_by_employee: HashMap::new(),
+        recovery_cases: vec![],
     }
 }
 
@@ -1803,6 +1891,10 @@ pub fn load_or_init_state(data_dir: &Path) -> AppDatabaseState {
                             prefs
                         });
                     }
+                    if parsed.recovery_cases.is_empty() {
+                        parsed.recovery_cases = baseline.recovery_cases;
+                        migrated = true;
+                    }
                 }
                 if parsed.lead_settings_by_club.is_empty() {
                     parsed.lead_settings_by_club = default_lead_settings_by_club();
@@ -1866,6 +1958,7 @@ mod tests {
         assert!(state.lead_prospects.is_empty());
         assert!(state.lead_appointments.is_empty());
         assert!(state.lead_activities.is_empty());
+        assert!(state.recovery_cases.is_empty());
         assert!(state.lead_settings_by_club.contains_key("carre-de-soie"));
         assert!(state.lead_settings_by_club.contains_key("beynost"));
     }

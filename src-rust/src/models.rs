@@ -586,6 +586,31 @@ pub struct LeadActivityRecord {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct RecoveryCaseRecord {
+    pub id: String,
+    pub member_id: String,
+    pub member_name: String,
+    pub club_id: String,
+    pub phone: String,
+    pub email: String,
+    pub contract_label: String,
+    pub amount_due_eur: f64,
+    pub days_overdue: u32,
+    pub unpaid_reason: String,
+    #[serde(default)]
+    pub billed_months: Vec<String>,
+    pub has_signed_contract: bool,
+    pub has_id_and_rib: bool,
+    pub has_cgv_accepted: bool,
+    #[serde(default)]
+    pub missing_docs: Vec<String>,
+    pub status: String,
+    pub relance_count: u32,
+    pub last_action_note: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AppDatabaseState {
     pub version: String,
     pub organization: Organization,
@@ -633,6 +658,8 @@ pub struct AppDatabaseState {
     pub module_delegations: Vec<ModuleDelegation>,
     #[serde(default)]
     pub password_hashes_by_employee: HashMap<String, String>,
+    #[serde(default)]
+    pub recovery_cases: Vec<RecoveryCaseRecord>,
 }
 
 #[derive(Debug, Clone, Serialize)]

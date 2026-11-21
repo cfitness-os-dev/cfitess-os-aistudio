@@ -8,6 +8,7 @@ import {
   FileWarning,
   Lock,
   Mail,
+  Plus,
   RefreshCw,
   Scale,
   Send,
@@ -16,7 +17,53 @@ import {
   Users,
 } from 'lucide-react';
 import { useCfos } from '../../context/CfosContext';
-import type { RecoveryCaseStatus } from '../../types/cfos';
+import type { ClubId, RecoveryCase, RecoveryCaseStatus } from '../../types/cfos';
+
+async function recoveryFetchJson<T>(
+  path: string,
+  actorId: string,
+  siteId: string,
+  init?: RequestInit
+): Promise<T> {
+  const headers = new Headers(init?.headers);
+  headers.set('x-cfitness-actor-id', actorId);
+  headers.set('x-cfitness-site-id', siteId);
+  try {
+    const token = window.sessionStorage.getItem('cfos_bearer_token');
+    const tokenActor = window.sessionStorage.getItem('cfos_bearer_actor_id');
+    if (token && tokenActor === actorId) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+  } catch {
+    // ignore storage errors
+  }
+  if (init?.body && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  let response = await fetch(path, { ...init, headers });
+  if (response.status === 401 && headers.has('Authorization')) {
+    try {
+      window.sessionStorage.removeItem('cfos_bearer_token');
+      window.sessionStorage.removeItem('cfos_bearer_actor_id');
+    } catch {
+      // ignore
+    }
+    headers.delete('Authorization');
+    response = await fetch(path, { ...init, headers });
+  }
+  if (!response.ok) {
+    let errMsg = `Erreur serveur HTTP ${response.status}`;
+    try {
+      const payload = (await response.json()) as { error?: string };
+      if (payload?.error) errMsg = payload.error;
+    } catch {
+      // garde le message HTTP générique
+    }
+    throw new Error(errMsg);
+  }
+  return (await response.json()) as T;
+}
 
 const DEFAULT_CGV_SUMMARY = `CONDITIONS GÉNÉRALES DE VENTE — C.FITNESS (Carré de Soie & Beynost)
 1. Prélèvement SEPA mensuel : échéance mensuelle automatique. Tout rejet bancaire entraîne la suspension immédiate du droit d'accès aux portillons jusqu'à régularisation complète.
@@ -70,6 +117,25 @@ export function RecoveryView() {
   } = useCfos();
 
   const isDark = themeMode === 'dark';
+  const activeSiteId =
+    clubFilter === 'beynost' ? 'club-beynost' : 'club-carre-soie';
+
+  const [serverCases, setServerCases] = useState<RecoveryCase[] | null>(null);
+  const [savingCase, setSavingCase] = useState(false);
+  const [recoveryNotice, setRecoveryNotice] = useState<{
+    kind: 'ok' | 'err';
+    text: string;
+  } | null>(null);
+  const [showNewCaseForm, setShowNewCaseForm] = useState(false);
+  const [newMemberName, setNewMemberName] = useState('');
+  const [newClubId, setNewClubId] = useState<ClubId>(
+    clubFilter === 'beynost' ? 'beynost' : 'carre-de-soie'
+  );
+  const [newAmount, setNewAmount] = useState('39.90');
+  const [newDaysOverdue, setNewDaysOverdue] = useState('15');
+  const [newReason, setNewReason] = useState('Rejet prélèvement SEPA');
+  const [newPhone, setNewPhone] = useState('');
+  const [newEmail, setNewEmail] = useState('');
 
   const [statusFilter, setStatusFilter] = useState<'ALL' | RecoveryCaseStatus>('ALL');
   const [selectedCaseId, setSelectedCaseId] = useState<string>(recoveryCases[0]?.id || '');
@@ -123,25 +189,166 @@ export function RecoveryView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!canAccessRecovery) return;
+    let cancelled = false;
+    void recoveryFetchJson<RecoveryCase[]>(
+      '/api/recovery/cases',
+      currentUser.id,
+      activeSiteId
+    )
+      .then((list) => {
+        if (!cancelled && Array.isArray(list)) {
+          setServerCases(list);
+        }
+      })
+      .catch(() => {
+        // Repli sur les données du contexte local uniquement en mode démo si serveur indisponible
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser.id, activeSiteId, canAccessRecovery]);
+
+  const effectiveCases = serverCases ?? recoveryCases;
+
   const filteredCases = useMemo(() => {
-    return recoveryCases.filter((rc) => {
+    return effectiveCases.filter((rc) => {
       if (clubFilter !== 'all' && rc.clubId !== clubFilter) return false;
       if (statusFilter !== 'ALL' && rc.status !== statusFilter) return false;
       return true;
     });
-  }, [recoveryCases, clubFilter, statusFilter]);
+  }, [effectiveCases, clubFilter, statusFilter]);
 
   const selectedCase =
     filteredCases.find((c) => c.id === selectedCaseId) ||
     filteredCases[0] ||
-    recoveryCases[0] ||
+    effectiveCases[0] ||
     null;
 
-  const activeCases = recoveryCases.filter((c) => c.status !== 'regularise');
+  const activeCases = effectiveCases.filter((c) => c.status !== 'regularise');
   const totalDueEur = activeCases.reduce((sum, c) => sum + c.amountDueEur, 0);
-  const readyForLitigationCount = recoveryCases.filter(
+  const readyForLitigationCount = effectiveCases.filter(
     (c) => c.status === 'pret_contentieux'
   ).length;
+
+  async function handleChangeCaseStatus(
+    caseId: string,
+    status: RecoveryCaseStatus,
+    note?: string
+  ) {
+    setRecoveryNotice(null);
+    setSavingCase(true);
+    try {
+      const updated = await recoveryFetchJson<RecoveryCase>(
+        `/api/recovery/cases/${encodeURIComponent(caseId)}/status`,
+        currentUser.id,
+        activeSiteId,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ status, note }),
+        }
+      );
+      setServerCases((prev) =>
+        (prev ?? recoveryCases).map((rc) => (rc.id === updated.id ? updated : rc))
+      );
+      updateRecoveryCaseStatus(caseId, status, note);
+      setRecoveryNotice({
+        kind: 'ok',
+        text: `Statut mis à jour côté serveur (${STATUS_META[status].label}) pour ${updated.memberName}.`,
+      });
+    } catch (e) {
+      setRecoveryNotice({
+        kind: 'err',
+        text: e instanceof Error ? e.message : 'Échec mise à jour statut.',
+      });
+    } finally {
+      setSavingCase(false);
+    }
+  }
+
+  async function handleRecordRelance(caseId: string, note: string) {
+    setRecoveryNotice(null);
+    setSavingCase(true);
+    try {
+      const updated = await recoveryFetchJson<RecoveryCase>(
+        `/api/recovery/cases/${encodeURIComponent(caseId)}/relance`,
+        currentUser.id,
+        activeSiteId,
+        {
+          method: 'POST',
+          body: JSON.stringify({ note }),
+        }
+      );
+      setServerCases((prev) =>
+        (prev ?? recoveryCases).map((rc) => (rc.id === updated.id ? updated : rc))
+      );
+      recordRecoveryRelance(caseId, note);
+      setRecoveryNotice({
+        kind: 'ok',
+        text: `Relance #${updated.relanceCount} enregistrée côté serveur pour ${updated.memberName}.`,
+      });
+    } catch (e) {
+      setRecoveryNotice({
+        kind: 'err',
+        text: e instanceof Error ? e.message : 'Échec enregistrement relance.',
+      });
+    } finally {
+      setSavingCase(false);
+    }
+  }
+
+  async function handleCreateCase(e: React.FormEvent) {
+    e.preventDefault();
+    setRecoveryNotice(null);
+    const amount = Number.parseFloat(newAmount.replace(',', '.'));
+    const days = Number.parseInt(newDaysOverdue, 10);
+    if (!newMemberName.trim()) {
+      setRecoveryNotice({ kind: 'err', text: 'Indiquez le nom de l’adhérent.' });
+      return;
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setRecoveryNotice({ kind: 'err', text: 'Indiquez un montant dû valide (> 0 €).' });
+      return;
+    }
+    setSavingCase(true);
+    try {
+      const created = await recoveryFetchJson<RecoveryCase>(
+        '/api/recovery/cases',
+        currentUser.id,
+        activeSiteId,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            memberName: newMemberName.trim(),
+            clubId: newClubId,
+            amountDueEur: amount,
+            daysOverdue: Number.isFinite(days) && days >= 0 ? days : 1,
+            unpaidReason: newReason.trim() || 'Rejet prélèvement SEPA',
+            phone: newPhone.trim(),
+            email: newEmail.trim(),
+          }),
+        }
+      );
+      setServerCases((prev) => [created, ...(prev ?? recoveryCases)]);
+      setSelectedCaseId(created.id);
+      setNewMemberName('');
+      setNewPhone('');
+      setNewEmail('');
+      setShowNewCaseForm(false);
+      setRecoveryNotice({
+        kind: 'ok',
+        text: `Dossier créé et enregistré côté serveur pour ${created.memberName} (${created.amountDueEur.toFixed(2)} €).`,
+      });
+    } catch (e) {
+      setRecoveryNotice({
+        kind: 'err',
+        text: e instanceof Error ? e.message : 'Échec création dossier.',
+      });
+    } finally {
+      setSavingCase(false);
+    }
+  }
 
   if (!canAccessRecovery) {
     return (
@@ -315,6 +522,15 @@ DOSSIER ADHÉRENT ACTUEL :
 
           <button
             type="button"
+            onClick={() => setShowNewCaseForm((v) => !v)}
+            className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Nouveau dossier</span>
+          </button>
+
+          <button
+            type="button"
             onClick={handleExportWeeklyCsv}
             className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 hover:brightness-110 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
           >
@@ -323,6 +539,96 @@ DOSSIER ADHÉRENT ACTUEL :
           </button>
         </div>
       </div>
+
+      {recoveryNotice && (
+        <div
+          className={`p-3.5 rounded-xl border text-xs flex items-center gap-2 ${
+            recoveryNotice.kind === 'ok'
+              ? 'bg-emerald-950/35 border-emerald-500/40 text-emerald-200'
+              : 'bg-rose-950/40 border-rose-500/40 text-rose-200'
+          }`}
+        >
+          {recoveryNotice.kind === 'ok' ? (
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          ) : (
+            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+          )}
+          <span>{recoveryNotice.text}</span>
+        </div>
+      )}
+
+      {showNewCaseForm && (
+        <form
+          onSubmit={(e) => void handleCreateCase(e)}
+          className="cf-card p-4 space-y-3 border border-emerald-500/35 text-xs"
+        >
+          <div className="font-bold text-sm">Ouvrir un nouveau dossier impayé</div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+            <input
+              type="text"
+              required
+              placeholder="Nom adhérent *"
+              value={newMemberName}
+              onChange={(e) => setNewMemberName(e.target.value)}
+              className="cf-input px-3 py-2 sm:col-span-2"
+            />
+            <select
+              value={newClubId}
+              onChange={(e) => setNewClubId(e.target.value as ClubId)}
+              className="cf-input px-3 py-2"
+            >
+              <option value="carre-de-soie">Carré de Soie</option>
+              <option value="beynost">Beynost</option>
+            </select>
+            <input
+              type="number"
+              step="0.01"
+              min="1"
+              required
+              placeholder="Montant €"
+              value={newAmount}
+              onChange={(e) => setNewAmount(e.target.value)}
+              className="cf-input px-3 py-2"
+            />
+            <input
+              type="number"
+              min="0"
+              placeholder="Retard (j)"
+              value={newDaysOverdue}
+              onChange={(e) => setNewDaysOverdue(e.target.value)}
+              className="cf-input px-3 py-2"
+            />
+            <input
+              type="text"
+              placeholder="Téléphone"
+              value={newPhone}
+              onChange={(e) => setNewPhone(e.target.value)}
+              className="cf-input px-3 py-2"
+            />
+            <input
+              type="email"
+              placeholder="Email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              className="cf-input px-3 py-2 sm:col-span-2"
+            />
+            <input
+              type="text"
+              placeholder="Motif impayé (ex: Rejet SEPA AM04)"
+              value={newReason}
+              onChange={(e) => setNewReason(e.target.value)}
+              className="cf-input px-3 py-2 sm:col-span-3"
+            />
+            <button
+              type="submit"
+              disabled={savingCase}
+              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer disabled:opacity-50"
+            >
+              {savingCase ? 'Enregistrement...' : 'Créer le dossier'}
+            </button>
+          </div>
+        </form>
+      )}
 
       {/* Panneau d'attribution du droit Recouvrement */}
       {showRightsPanel && currentUser.role === 'admin' && (
@@ -582,66 +888,71 @@ DOSSIER ADHÉRENT ACTUEL :
               <div className="flex flex-wrap gap-2 pt-1">
                 <button
                   type="button"
+                  disabled={savingCase}
                   onClick={() =>
-                    recordRecoveryRelance(
+                    void handleRecordRelance(
                       selectedCase.id,
                       `Relance email/SMS enregistrée le ${new Date().toLocaleDateString('fr-FR')}.`
                     )
                   }
-                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold flex items-center gap-1.5 cursor-pointer"
+                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <Mail className="w-3.5 h-3.5" />
                   <span>Enregistrer 1 relance</span>
                 </button>
                 <button
                   type="button"
+                  disabled={savingCase}
                   onClick={() =>
-                    updateRecoveryCaseStatus(
+                    void handleChangeCaseStatus(
                       selectedCase.id,
                       'mise_en_demeure',
                       'Mise en demeure (délai 8 jours CGV) envoyée.'
                     )
                   }
-                  className="px-3 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-semibold cursor-pointer"
+                  className="px-3 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-semibold cursor-pointer disabled:opacity-50"
                 >
                   Passer en Mise en demeure
                 </button>
                 <button
                   type="button"
+                  disabled={savingCase}
                   onClick={() =>
-                    updateRecoveryCaseStatus(
+                    void handleChangeCaseStatus(
                       selectedCase.id,
                       'pret_contentieux',
                       'Dossier vérifié et prêt pour l’export contentieux hebdomadaire.'
                     )
                   }
-                  className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold cursor-pointer"
+                  className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold cursor-pointer disabled:opacity-50"
                 >
                   Prêt Contentieux
                 </button>
                 <button
                   type="button"
+                  disabled={savingCase}
                   onClick={() =>
-                    updateRecoveryCaseStatus(
+                    void handleChangeCaseStatus(
                       selectedCase.id,
                       'transmis_contentieux',
                       'Dossier transmis à la société de recouvrement.'
                     )
                   }
-                  className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-semibold cursor-pointer"
+                  className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-semibold cursor-pointer disabled:opacity-50"
                 >
                   Marquer Transmis
                 </button>
                 <button
                   type="button"
+                  disabled={savingCase}
                   onClick={() =>
-                    updateRecoveryCaseStatus(
+                    void handleChangeCaseStatus(
                       selectedCase.id,
                       'regularise',
                       'Impayé régularisé par l’adhérent.'
                     )
                   }
-                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold cursor-pointer"
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold cursor-pointer disabled:opacity-50"
                 >
                   Régularisé
                 </button>
@@ -766,6 +1077,26 @@ DOSSIER ADHÉRENT ACTUEL :
                       {msg.role === 'user' ? 'Vous' : `Agent Recouvrement (${selectedModel})`}
                     </div>
                     <div>{msg.content}</div>
+                    {msg.role === 'assistant' &&
+                      selectedCase &&
+                      !msg.content.startsWith('Erreur IA locale') &&
+                      !msg.content.startsWith('Impossible de contacter') && (
+                        <div className="mt-2 pt-2 border-t border-white/10 flex justify-end">
+                          <button
+                            type="button"
+                            disabled={savingCase}
+                            onClick={() =>
+                              void handleRecordRelance(
+                                selectedCase.id,
+                                `[IA Ollama] ${msg.content.slice(0, 140).replace(/\s+/g, ' ')}...`
+                              )
+                            }
+                            className="px-2.5 py-1 rounded bg-emerald-600/25 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-600/35 text-[11px] font-semibold cursor-pointer disabled:opacity-50"
+                          >
+                            Tracer cette réponse en relance
+                          </button>
+                        </div>
+                      )}
                   </div>
                 ))
               )}

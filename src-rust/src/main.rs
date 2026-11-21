@@ -4,6 +4,7 @@ mod employee_lifecycle;
 mod lead_automations;
 mod models;
 mod rbac;
+mod recovery;
 mod routes;
 mod seed;
 mod site_settings;

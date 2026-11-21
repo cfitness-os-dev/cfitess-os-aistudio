@@ -281,6 +281,19 @@ pub fn api_router(state: SharedState) -> Router {
         .route("/api/me/password", post(post_change_password))
         .route("/api/ollama/status", get(get_ollama_status))
         .route("/api/ollama/chat", post(post_ollama_chat))
+        .route(
+            "/api/recovery/cases",
+            get(crate::recovery::get_recovery_cases)
+                .post(crate::recovery::post_recovery_case),
+        )
+        .route(
+            "/api/recovery/cases/:case_id/status",
+            patch(crate::recovery::patch_recovery_case_status),
+        )
+        .route(
+            "/api/recovery/cases/:case_id/relance",
+            post(crate::recovery::post_recovery_case_relance),
+        )
         .with_state(state)
 }
 
