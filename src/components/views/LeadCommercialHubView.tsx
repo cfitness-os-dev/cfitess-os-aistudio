@@ -28,6 +28,8 @@ import type { Prospect } from '../../types/cfos';
 import { cleanUiTree } from '../../domain/cleanModeSanitizer';
 import {
   INITIAL_FICTIVE_SALES,
+  CANONICAL_HEITZ_PASS_OFFERS,
+  CANONICAL_LEAD_ALERTS,
   computeActivityDueBucket,
   computeLeadReportBreakdown,
   filterFictiveSales,
@@ -660,34 +662,63 @@ export function LeadCommercialHubView({
   }, [commLogs]);
 
   // Tab 8 : Réglages CRM persistés (CFOS-005)
+  const defaultCrmSettings = {
+    smsCreditsCds: 1420,
+    smsCreditsBeynost: 980,
+    salesScript: '1. Accueil & objectif forme\n2. Découverte Biocircuit / Checkup\n3. Proposition créneau essai',
+    archiveThresholdDays: 30,
+    notifEmail: 'direction@c.fitness',
+    notifEmailBeynost: 'direction.beynost@c.fitness',
+    notifMobileCds: '07 82 00 00 01',
+    notifMobileBeynost: '07 82 00 00 02',
+    whatsappNumberCds: '+33 4 78 00 00 01',
+    whatsappNumberBeynost: '+33 4 78 00 00 02',
+    clientPassOffer: 'Pass Liberté + Biocircuit 12 mois',
+    autoAssignEnabled: true,
+    autoUnassignOnLeave: true,
+    dropoutThresholdDays: 21,
+    dropoutResetOnBadge: true,
+    autoArchiveEnabled: true,
+    archiveTargetStage: 'Archivé' as const,
+    enabledAlertIds: ['LEAD-0545', 'LEAD-0548', 'LEAD-0551', 'LEAD-0552'],
+    selectedPassOfferIds: ['HZ-CDS-ABO-PASS', 'HZ-CDS-ABO-SOLO', 'HZ-BEY-ABO-PASS', 'HZ-BEY-ABO-SOLO'],
+    clientPassTargetScope: 'enseigne' as const,
+    uiLanguage: 'fr',
+  };
+
   const [crmSettings, setCrmSettings] = useState<{
     smsCreditsCds: number;
     smsCreditsBeynost: number;
     salesScript: string;
     archiveThresholdDays: number;
     notifEmail: string;
+    notifEmailBeynost: string;
+    notifMobileCds: string;
+    notifMobileBeynost: string;
     whatsappNumberCds: string;
     whatsappNumberBeynost: string;
     clientPassOffer: string;
+    autoAssignEnabled: boolean;
+    autoUnassignOnLeave: boolean;
+    dropoutThresholdDays: number;
+    dropoutResetOnBadge: boolean;
+    autoArchiveEnabled: boolean;
+    archiveTargetStage: 'Archivé' | 'Froid';
+    enabledAlertIds: string[];
+    selectedPassOfferIds: string[];
+    clientPassTargetScope: 'club' | 'enseigne';
+    uiLanguage: string;
   }>(() => {
     try {
       const raw = localStorage.getItem('cfos_lead_crm_settings_v1');
-      if (raw) return JSON.parse(raw);
+      if (raw) return { ...defaultCrmSettings, ...JSON.parse(raw) };
     } catch {
       // ignore
     }
-    return {
-      smsCreditsCds: 1420,
-      smsCreditsBeynost: 980,
-      salesScript: '1. Accueil & objectif forme\n2. Découverte Biocircuit / Checkup\n3. Proposition créneau essai',
-      archiveThresholdDays: 30,
-      notifEmail: 'direction@c.fitness',
-      whatsappNumberCds: '+33 4 78 00 00 01',
-      whatsappNumberBeynost: '+33 4 78 00 00 02',
-      clientPassOffer: 'Pass Liberté + Biocircuit 12 mois',
-    };
+    return defaultCrmSettings;
   });
   const [crmSettingsSavedNotice, setCrmSettingsSavedNotice] = useState<string | null>(null);
+  const [testAlertNotice, setTestAlertNotice] = useState<string | null>(null);
   const [rdvRequiresStripe, setRdvRequiresStripe] = useState(false);
   const [rdvStripePaid, setRdvStripePaid] = useState(false);
 
@@ -4053,34 +4084,469 @@ export function LeadCommercialHubView({
                 )}
 
                 {selectedSettingsTab === 'app-settings' && (
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={statsAllowedForCommercial}
-                        onChange={(e) => {
-                          const nextVal = e.target.checked;
-                          setStatsAllowedForCommercial(nextVal);
-                          try {
-                            localStorage.setItem(
-                              'cfos_lead_app_settings_v1',
-                              JSON.stringify({ statsAllowedForCommercial: nextVal })
-                            );
-                          } catch {
-                            // ignore
-                          }
-                          setCrmSettingsSavedNotice('Préférence Statistiques COMMERCIAL persistée localement.');
-                        }}
-                      />
-                      <span>Autoriser le rôle COMMERCIAL à consulter les Statistiques (persistance locale ; sync serveur à raccorder)</span>
-                    </label>
-                    {crmSettingsSavedNotice && (
-                      <div className="text-[11px] text-emerald-400 font-semibold">{crmSettingsSavedNotice}</div>
-                    )}
+                  <div className="space-y-4">
+                    <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+                      <div className="font-bold text-emerald-300 flex items-center justify-between">
+                        <span>Langue d’interface (LEAD-0111)</span>
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 text-[10px] font-bold">
+                          IDCC 2511 · Conforme
+                        </span>
+                      </div>
+                      <div>
+                        <label className="block text-xs cf-muted mb-1">Langue principale du CRM &amp; de l’OS :</label>
+                        <select
+                          value={crmSettings.uiLanguage}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setCrmSettings((s) => ({ ...s, uiLanguage: val }));
+                          }}
+                          className="w-full px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-sm font-medium"
+                        >
+                          <option value="fr">Français (Officiel France — IDCC 2511 / Métropole &amp; Auvergne-Rhône-Alpes)</option>
+                          <option value="en">English (International — Extension future)</option>
+                        </select>
+                        <p className="text-[11px] cf-muted mt-1">
+                          L’affichage, les règles de repos 11h, coupures 20 min et les exports Silae sont verrouillés en standard français.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
+                      <div className="font-bold text-emerald-300">Habilitations &amp; Profils</div>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={statsAllowedForCommercial}
+                          onChange={(e) => {
+                            const nextVal = e.target.checked;
+                            setStatsAllowedForCommercial(nextVal);
+                            try {
+                              localStorage.setItem(
+                                'cfos_lead_app_settings_v1',
+                                JSON.stringify({ statsAllowedForCommercial: nextVal })
+                              );
+                            } catch {
+                              // ignore
+                            }
+                            setCrmSettingsSavedNotice('Préférence Statistiques COMMERCIAL persistée localement.');
+                          }}
+                        />
+                        <span className="text-sm">Autoriser le rôle COMMERCIAL à consulter les Statistiques (persistance locale ; sync serveur à raccorder)</span>
+                      </label>
+                    </div>
                   </div>
                 )}
 
-                {['sms', 'script', 'prospects', 'notifications', 'exclusions', 'whatsapp', 'meetings', 'users'].includes(
+                {selectedSettingsTab === 'prospects' && (
+                  <div className="space-y-4">
+                    {/* LEAD-0488 / LEAD-0489 : Assignation */}
+                    <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-emerald-300">Assignation commerciale automatique (LEAD-0488 / 0489)</span>
+                        <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[10px] font-bold">Round-Robin par club</span>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-2 cursor-pointer text-xs">
+                          <input
+                            type="checkbox"
+                            checked={crmSettings.autoAssignEnabled}
+                            onChange={(e) => setCrmSettings((s) => ({ ...s, autoAssignEnabled: e.target.checked }))}
+                          />
+                          <span>Activer l&apos;assignation automatisée des nouveaux prospects aux commerciaux en poste dans le club</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer text-xs">
+                          <input
+                            type="checkbox"
+                            checked={crmSettings.autoUnassignOnLeave}
+                            onChange={(e) => setCrmSettings((s) => ({ ...s, autoUnassignOnLeave: e.target.checked }))}
+                          />
+                          <span>Désassignation automatisée lors d&apos;une absence ou d&apos;un congé validé dans le planning RH</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* LEAD-0490 / LEAD-0491 / LEAD-0492 : Décrochage sportif */}
+                    <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-emerald-300">Détection du décrochage sportif (LEAD-0490 / 0491 / 0492)</span>
+                        <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold">Passerelle Heitz</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
+                        <label className="block text-xs">
+                          Seuil d&apos;inactivité sportive sans passage borne (jours) :
+                          <input
+                            type="number"
+                            min={1}
+                            max={180}
+                            value={crmSettings.dropoutThresholdDays}
+                            onChange={(e) => setCrmSettings((s) => ({ ...s, dropoutThresholdDays: Number(e.target.value) || 21 }))}
+                            className="w-full mt-1 px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700 text-sm font-semibold"
+                          />
+                          <span className="text-[10px] cf-muted">Valeur de référence auditée : 21 jours d&apos;absence</span>
+                        </label>
+                        <div className="space-y-2">
+                          <label className="flex items-center gap-2 cursor-pointer text-xs">
+                            <input
+                              type="checkbox"
+                              checked={crmSettings.dropoutResetOnBadge}
+                              onChange={(e) => setCrmSettings((s) => ({ ...s, dropoutResetOnBadge: e.target.checked }))}
+                            />
+                            <span>Remise à zéro automatique du compteur d&apos;inactivité dès détection d&apos;un badgeage borne</span>
+                          </label>
+                          <div className="text-[10px] text-cyan-400 font-mono">
+                            Interrogation temps réel : http://10.10.0.20:8080/api/heitz-ws (Centres 5052 &amp; 5053)
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* LEAD-0493 à 0498 : Archivage automatisé */}
+                    <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-emerald-300">Archivage automatisé sans réponse entrante (LEAD-0493 à 0498)</span>
+                        <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[10px] font-bold">Règle stricte</span>
+                      </div>
+                      <div className="space-y-3 text-xs">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={crmSettings.autoArchiveEnabled}
+                            onChange={(e) => setCrmSettings((s) => ({ ...s, autoArchiveEnabled: e.target.checked }))}
+                          />
+                          <span className="font-semibold">Activer l&apos;archivage automatisé des prospects sans réponse</span>
+                        </label>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs cf-muted mb-1">Statut cible de réaffectation :</label>
+                            <div className="flex gap-4">
+                              <label className="flex items-center gap-1.5 cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name="archiveTargetStage"
+                                  value="Archivé"
+                                  checked={crmSettings.archiveTargetStage === 'Archivé'}
+                                  onChange={() => setCrmSettings((s) => ({ ...s, archiveTargetStage: 'Archivé' }))}
+                                />
+                                <span>Archivé (défaut)</span>
+                              </label>
+                              <label className="flex items-center gap-1.5 cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name="archiveTargetStage"
+                                  value="Froid"
+                                  checked={crmSettings.archiveTargetStage === 'Froid'}
+                                  onChange={() => setCrmSettings((s) => ({ ...s, archiveTargetStage: 'Froid' }))}
+                                />
+                                <span>Froid (réactivation ultérieure)</span>
+                              </label>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs cf-muted mb-1">Délai avant archivage (jours) :</label>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                min={1}
+                                max={730}
+                                value={crmSettings.archiveThresholdDays}
+                                onChange={(e) => setCrmSettings((s) => ({ ...s, archiveThresholdDays: Number(e.target.value) || 30 }))}
+                                className="w-24 px-2.5 py-1 rounded bg-slate-950 border border-slate-700 font-bold"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setCrmSettings((s) => ({ ...s, archiveThresholdDays: 30 }))}
+                                className="px-2 py-0.5 rounded text-[11px] bg-slate-800 hover:bg-slate-700 cursor-pointer"
+                              >
+                                30j (démo)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setCrmSettings((s) => ({ ...s, archiveThresholdDays: 365 }))}
+                                className="px-2 py-0.5 rounded text-[11px] bg-slate-800 hover:bg-slate-700 cursor-pointer"
+                              >
+                                365j (prod)
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="p-2.5 rounded-lg bg-emerald-950/40 border border-emerald-500/30 text-[11px] text-emerald-200">
+                          <strong>Règle d&apos;archivage inviolable (LEAD-0498) :</strong> Seule une réponse entrante du prospect (SMS reçu, WhatsApp entrant, appel entrant tracé) réinitialise le compteur. Les emails, SMS et appels sortants émis par le club ne repoussent jamais le délai d&apos;archivage.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedSettingsTab === 'notifications' && (
+                  <div className="space-y-4">
+                    {/* Destinataires par club */}
+                    <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-emerald-300">Destinataires des alertes par club (LEAD-0545..0552)</span>
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">2 clubs configurés</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
+                          <div className="font-bold text-cyan-300">Carré de Soie (Vaulx-en-Velin)</div>
+                          <label className="block">
+                            Email responsable :
+                            <input
+                              type="email"
+                              value={crmSettings.notifEmail}
+                              onChange={(e) => setCrmSettings((s) => ({ ...s, notifEmail: e.target.value }))}
+                              className="w-full mt-1 px-2 py-1 rounded bg-slate-900 border border-slate-700"
+                            />
+                          </label>
+                          <label className="block">
+                            Mobile alerte SMS urgent (GSM-7) :
+                            <input
+                              type="text"
+                              value={crmSettings.notifMobileCds}
+                              onChange={(e) => setCrmSettings((s) => ({ ...s, notifMobileCds: e.target.value }))}
+                              className="w-full mt-1 px-2 py-1 rounded bg-slate-900 border border-slate-700 font-mono"
+                            />
+                          </label>
+                        </div>
+                        <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
+                          <div className="font-bold text-amber-300">Beynost (Côtière)</div>
+                          <label className="block">
+                            Email responsable :
+                            <input
+                              type="email"
+                              value={crmSettings.notifEmailBeynost}
+                              onChange={(e) => setCrmSettings((s) => ({ ...s, notifEmailBeynost: e.target.value }))}
+                              className="w-full mt-1 px-2 py-1 rounded bg-slate-900 border border-slate-700"
+                            />
+                          </label>
+                          <label className="block">
+                            Mobile alerte SMS urgent (GSM-7) :
+                            <input
+                              type="text"
+                              value={crmSettings.notifMobileBeynost}
+                              onChange={(e) => setCrmSettings((s) => ({ ...s, notifMobileBeynost: e.target.value }))}
+                              className="w-full mt-1 px-2 py-1 rounded bg-slate-900 border border-slate-700 font-mono"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Matrice des 8 alertes avec interrupteurs individuels */}
+                    <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-emerald-300">Événements déclencheurs &amp; Canaux (8 alertes auditées)</span>
+                        <span className="text-[10px] cf-muted">Sélection individuelle des notifications</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {CANONICAL_LEAD_ALERTS.map((alert) => {
+                          const isChecked = crmSettings.enabledAlertIds.includes(alert.id);
+                          return (
+                            <div
+                              key={alert.id}
+                              className={`p-2.5 rounded-lg border text-xs transition flex items-start gap-2.5 ${
+                                isChecked
+                                  ? 'bg-slate-950/80 border-emerald-500/40 text-slate-100'
+                                  : 'bg-slate-950/30 border-slate-800/80 text-slate-400'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                id={`alert-toggle-${alert.id}`}
+                                checked={isChecked}
+                                onChange={(e) => {
+                                  const checked = e.target.checked;
+                                  setCrmSettings((s) => ({
+                                    ...s,
+                                    enabledAlertIds: checked
+                                      ? [...s.enabledAlertIds, alert.id]
+                                      : s.enabledAlertIds.filter((id) => id !== alert.id),
+                                  }));
+                                }}
+                                className="mt-0.5 cursor-pointer"
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-1.5 font-bold">
+                                  <span>{alert.label}</span>
+                                  <span
+                                    className={`px-1.5 py-0.2 rounded text-[9px] font-mono ${
+                                      alert.channel === 'SMS'
+                                        ? 'bg-amber-500/20 text-amber-300'
+                                        : alert.channel === 'Email'
+                                        ? 'bg-blue-500/20 text-blue-300'
+                                        : 'bg-purple-500/20 text-purple-300'
+                                    }`}
+                                  >
+                                    {alert.channel}
+                                  </span>
+                                </div>
+                                <div className="text-[10px] cf-muted mt-0.5">{alert.description}</div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Simulateur d'alerte sans envoi réel */}
+                      <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTestAlertNotice(
+                              `Simulation d'alerte réussie à ${new Date().toLocaleTimeString()} : 0 token / 0 coût fournisseur (trace interne générée pour ${crmSettings.notifEmail}).`
+                            );
+                            setTimeout(() => setTestAlertNotice(null), 5000);
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-cyan-700/80 hover:bg-cyan-600 text-cyan-100 text-xs font-semibold cursor-pointer"
+                        >
+                          Tester les alertes (simulation sécurisée 0 token / sans envoi externe)
+                        </button>
+                        {testAlertNotice && (
+                          <span className="text-[11px] text-cyan-300 font-medium">{testAlertNotice}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedSettingsTab === 'exclusions' && (
+                  <div className="space-y-4">
+                    <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-emerald-300">Offres Heitz déclenchant le passage Client (LEAD-0553 / 0554)</span>
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">Mapping Heitz-WS</span>
+                      </div>
+                      <p className="text-xs cf-muted">
+                        Cochez les formules et abonnements importés de la base Heitz dont la validation convertit automatiquement le prospect en Adhérent / Client officiel :
+                      </p>
+
+                      <div className="space-y-3">
+                        {/* Carré de Soie */}
+                        <div>
+                          <div className="text-xs font-bold text-cyan-300 mb-1.5 flex items-center gap-1.5">
+                            <span>Carré de Soie (ID Center 5052)</span>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {CANONICAL_HEITZ_PASS_OFFERS.filter((o) => o.clubId === 'carre-de-soie').map((offer) => {
+                              const isChecked = crmSettings.selectedPassOfferIds.includes(offer.id);
+                              return (
+                                <label
+                                  key={offer.id}
+                                  className={`p-2.5 rounded-lg border text-xs cursor-pointer flex items-center gap-2.5 transition ${
+                                    isChecked
+                                      ? 'bg-slate-950/80 border-cyan-500/40 text-slate-100'
+                                      : 'bg-slate-950/30 border-slate-800/80 text-slate-400'
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={(e) => {
+                                      const checked = e.target.checked;
+                                      setCrmSettings((s) => ({
+                                        ...s,
+                                        selectedPassOfferIds: checked
+                                          ? [...s.selectedPassOfferIds, offer.id]
+                                          : s.selectedPassOfferIds.filter((id) => id !== offer.id),
+                                      }));
+                                    }}
+                                  />
+                                  <div className="flex-1">
+                                    <div className="font-bold">{offer.label}</div>
+                                    <div className="text-[10px] cf-muted font-mono">{offer.id} · {offer.category}</div>
+                                  </div>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Beynost */}
+                        <div>
+                          <div className="text-xs font-bold text-amber-300 mb-1.5 flex items-center gap-1.5">
+                            <span>Beynost (ID Center 5053)</span>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {CANONICAL_HEITZ_PASS_OFFERS.filter((o) => o.clubId === 'beynost').map((offer) => {
+                              const isChecked = crmSettings.selectedPassOfferIds.includes(offer.id);
+                              return (
+                                <label
+                                  key={offer.id}
+                                  className={`p-2.5 rounded-lg border text-xs cursor-pointer flex items-center gap-2.5 transition ${
+                                    isChecked
+                                      ? 'bg-slate-950/80 border-amber-500/40 text-slate-100'
+                                      : 'bg-slate-950/30 border-slate-800/80 text-slate-400'
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={(e) => {
+                                      const checked = e.target.checked;
+                                      setCrmSettings((s) => ({
+                                        ...s,
+                                        selectedPassOfferIds: checked
+                                          ? [...s.selectedPassOfferIds, offer.id]
+                                          : s.selectedPassOfferIds.filter((id) => id !== offer.id),
+                                      }));
+                                    }}
+                                  />
+                                  <div className="flex-1">
+                                    <div className="font-bold">{offer.label}</div>
+                                    <div className="text-[10px] cf-muted font-mono">{offer.id} · {offer.category}</div>
+                                  </div>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <label className="block cf-muted mb-1">Périmètre par défaut du statut Client :</label>
+                          <div className="flex gap-4">
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="clientPassTargetScope"
+                                value="club"
+                                checked={crmSettings.clientPassTargetScope === 'club'}
+                                onChange={() => setCrmSettings((s) => ({ ...s, clientPassTargetScope: 'club' }))}
+                              />
+                              <span>Client Club Unique</span>
+                            </label>
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="clientPassTargetScope"
+                                value="enseigne"
+                                checked={crmSettings.clientPassTargetScope === 'enseigne'}
+                                onChange={() => setCrmSettings((s) => ({ ...s, clientPassTargetScope: 'enseigne' }))}
+                              />
+                              <span>Client Enseigne (2 clubs)</span>
+                            </label>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block cf-muted mb-1">Offre libre / libellé spécifique historique :</label>
+                          <input
+                            type="text"
+                            value={crmSettings.clientPassOffer}
+                            onChange={(e) => setCrmSettings((s) => ({ ...s, clientPassOffer: e.target.value }))}
+                            className="w-full px-2.5 py-1 rounded bg-slate-950 border border-slate-700"
+                            placeholder="Ex : Pass Liberté + Biocircuit 12 mois"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {['sms', 'script', 'whatsapp', 'meetings', 'users'].includes(
                   selectedSettingsTab
                 ) && (
                   <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
@@ -4124,42 +4590,6 @@ export function LeadCommercialHubView({
                         className="w-full px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
                       />
                     )}
-                    {selectedSettingsTab === 'prospects' && (
-                      <label className="block">
-                        Seuil d&apos;archivage sans réponse entrante (jours)
-                        <input
-                          type="number"
-                          min={1}
-                          value={crmSettings.archiveThresholdDays}
-                          onChange={(e) =>
-                            setCrmSettings((s) => ({ ...s, archiveThresholdDays: Number(e.target.value) || 30 }))
-                          }
-                          className="w-full mt-1 px-2 py-1 rounded bg-slate-950 border border-slate-700"
-                        />
-                      </label>
-                    )}
-                    {selectedSettingsTab === 'notifications' && (
-                      <label className="block">
-                        Email destinataire des alertes
-                        <input
-                          type="email"
-                          value={crmSettings.notifEmail}
-                          onChange={(e) => setCrmSettings((s) => ({ ...s, notifEmail: e.target.value }))}
-                          className="w-full mt-1 px-2 py-1 rounded bg-slate-950 border border-slate-700"
-                        />
-                      </label>
-                    )}
-                    {selectedSettingsTab === 'exclusions' && (
-                      <label className="block">
-                        Offre Heitz déclenchant le passage Client
-                        <input
-                          type="text"
-                          value={crmSettings.clientPassOffer}
-                          onChange={(e) => setCrmSettings((s) => ({ ...s, clientPassOffer: e.target.value }))}
-                          className="w-full mt-1 px-2 py-1 rounded bg-slate-950 border border-slate-700"
-                        />
-                      </label>
-                    )}
                     {selectedSettingsTab === 'whatsapp' && (
                       <div className="grid grid-cols-2 gap-2">
                         <label>
@@ -4189,30 +4619,32 @@ export function LeadCommercialHubView({
                           : 'Les rôles et permissions utilisateurs sont gérés dans Droits d’accès (RBAC) et le backend Rust.'}
                       </div>
                     )}
-                    <div className="flex items-center justify-between gap-2">
-                      {crmSettingsSavedNotice ? (
-                        <span className="text-[11px] text-emerald-400 font-bold">{crmSettingsSavedNotice}</span>
-                      ) : (
-                        <span />
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          try {
-                            localStorage.setItem('cfos_lead_crm_settings_v1', JSON.stringify(crmSettings));
-                          } catch {
-                            // ignore
-                          }
-                          setCrmSettingsSavedNotice(`Paramètres « ${selectedSettingsTab} » enregistrés localement.`);
-                          setTimeout(() => setCrmSettingsSavedNotice(null), 3000);
-                        }}
-                        className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold cursor-pointer"
-                      >
-                        Enregistrer
-                      </button>
-                    </div>
                   </div>
                 )}
+
+                {/* Barre d'enregistrement commune pour tous les onglets paramètres */}
+                <div className="flex items-center justify-between gap-2 pt-2">
+                  {crmSettingsSavedNotice ? (
+                    <span className="text-[11px] text-emerald-400 font-bold">{crmSettingsSavedNotice}</span>
+                  ) : (
+                    <span />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      try {
+                        localStorage.setItem('cfos_lead_crm_settings_v1', JSON.stringify(crmSettings));
+                      } catch {
+                        // ignore
+                      }
+                      setCrmSettingsSavedNotice(`Paramètres « ${selectedSettingsTab} » enregistrés localement.`);
+                      setTimeout(() => setCrmSettingsSavedNotice(null), 3000);
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer transition text-xs"
+                  >
+                    Enregistrer les paramètres
+                  </button>
+                </div>
 
                 {selectedSettingsTab === 'automation' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">

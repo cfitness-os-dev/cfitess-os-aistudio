@@ -376,3 +376,162 @@ export function computeActivityDueBucket(
   if (diffDays <= 7) return 'Cette semaine';
   return 'Plus tard';
 }
+
+/**
+ * Offres Heitz importées et éligibles pour le passage au statut Client (LEAD-0553 / LEAD-0554).
+ */
+export interface HeitzClientPassOffer {
+  id: string;
+  clubId: ClubId;
+  label: string;
+  category: 'Abonnement' | 'Carte / Pack' | 'Entreprise';
+  triggersClientStatus: boolean;
+  targetScope: 'club' | 'enseigne';
+}
+
+export const CANONICAL_HEITZ_PASS_OFFERS: readonly HeitzClientPassOffer[] = [
+  {
+    id: 'HZ-CDS-ABO-PASS',
+    clubId: 'carre-de-soie',
+    label: 'Abonnement Annuel Pass Liberté (Biocircuit inclus)',
+    category: 'Abonnement',
+    triggersClientStatus: true,
+    targetScope: 'enseigne',
+  },
+  {
+    id: 'HZ-CDS-ABO-SOLO',
+    clubId: 'carre-de-soie',
+    label: 'Abonnement Club Carré de Soie (Accès unique CDS)',
+    category: 'Abonnement',
+    triggersClientStatus: true,
+    targetScope: 'club',
+  },
+  {
+    id: 'HZ-CDS-CARTE-10',
+    clubId: 'carre-de-soie',
+    label: 'Carte 10 Séances Découverte CDS',
+    category: 'Carte / Pack',
+    triggersClientStatus: true,
+    targetScope: 'club',
+  },
+  {
+    id: 'HZ-CDS-COACH-PK',
+    clubId: 'carre-de-soie',
+    label: 'Pack Coaching Premium Suivi Forme CDS',
+    category: 'Carte / Pack',
+    triggersClientStatus: true,
+    targetScope: 'club',
+  },
+  {
+    id: 'HZ-BEY-ABO-PASS',
+    clubId: 'beynost',
+    label: 'Abonnement Annuel Pass Liberté Beynost',
+    category: 'Abonnement',
+    triggersClientStatus: true,
+    targetScope: 'enseigne',
+  },
+  {
+    id: 'HZ-BEY-ABO-SOLO',
+    clubId: 'beynost',
+    label: 'Abonnement Club Beynost ZAC des Baterses',
+    category: 'Abonnement',
+    triggersClientStatus: true,
+    targetScope: 'club',
+  },
+  {
+    id: 'HZ-BEY-CARTE-10',
+    clubId: 'beynost',
+    label: 'Carte 10 Entrées Découverte Beynost',
+    category: 'Carte / Pack',
+    triggersClientStatus: true,
+    targetScope: 'club',
+  },
+  {
+    id: 'HZ-BEY-ENTREPRISE',
+    clubId: 'beynost',
+    label: 'Convention Entreprise Partenaire Côtière',
+    category: 'Entreprise',
+    triggersClientStatus: true,
+    targetScope: 'club',
+  },
+];
+
+/**
+ * Familles d'alertes & notifications CRM (LEAD-0545 à LEAD-0552).
+ */
+export interface LeadAlertConfigItem {
+  id: string;
+  label: string;
+  description: string;
+  channel: 'SMS' | 'Email' | 'In-App';
+  activeByDefault: boolean;
+  category: 'Rappel 24h' | 'Modification' | 'Annulation' | 'Retard Commercial' | 'Décrochage' | 'Statut Client';
+}
+
+export const CANONICAL_LEAD_ALERTS: readonly LeadAlertConfigItem[] = [
+  {
+    id: 'LEAD-0545',
+    label: 'SMS rappel RDV 24h avant séance',
+    description: 'Envoi automatique au prospect 24h avant sa séance d’essai (GSM-7 sans surcoût)',
+    channel: 'SMS',
+    activeByDefault: false,
+    category: 'Rappel 24h',
+  },
+  {
+    id: 'LEAD-0546',
+    label: 'SMS notification de déplacement / modification RDV',
+    description: 'Envoi instantané au prospect dès qu’un créneau est modifié par le commercial',
+    channel: 'SMS',
+    activeByDefault: false,
+    category: 'Modification',
+  },
+  {
+    id: 'LEAD-0547',
+    label: 'SMS notification d’annulation de RDV',
+    description: 'Alerte au prospect avec lien de réengagement immédiat',
+    channel: 'SMS',
+    activeByDefault: false,
+    category: 'Annulation',
+  },
+  {
+    id: 'LEAD-0548',
+    label: 'Email rappel RDV 24h avec récapitulatif accès club',
+    description: 'Email HTML responsive avec QR code et consignes tenue / badgeage',
+    channel: 'Email',
+    activeByDefault: true,
+    category: 'Rappel 24h',
+  },
+  {
+    id: 'LEAD-0549',
+    label: 'Email notification de modification / confirmation de créneau',
+    description: 'Confirmation de la nouvelle date et heure envoyée au prospect',
+    channel: 'Email',
+    activeByDefault: false,
+    category: 'Modification',
+  },
+  {
+    id: 'LEAD-0550',
+    label: 'Email notification d’annulation de séance',
+    description: 'Notification officielle et proposition de recontact sous 48h',
+    channel: 'Email',
+    activeByDefault: false,
+    category: 'Annulation',
+  },
+  {
+    id: 'LEAD-0551',
+    label: 'Alerte interne In-App : Retard commercial / échéance dépassée',
+    description: 'Notifie le manager quand un prospect n’a reçu aucun contact après la deadline',
+    channel: 'In-App',
+    activeByDefault: true,
+    category: 'Retard Commercial',
+  },
+  {
+    id: 'LEAD-0552',
+    label: 'Désactivation emails service MSDS tiers pour éviter doublons',
+    description: 'Neutralise les notifications redondantes du prestataire externe',
+    channel: 'Email',
+    activeByDefault: true,
+    category: 'Statut Client',
+  },
+];
+

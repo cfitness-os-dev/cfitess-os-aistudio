@@ -3,6 +3,8 @@ import test from 'node:test';
 import { CFitnessApiEngine } from './apiEngine';
 import {
   INITIAL_FICTIVE_SALES,
+  CANONICAL_HEITZ_PASS_OFFERS,
+  CANONICAL_LEAD_ALERTS,
   computeActivityDueBucket,
   computeLeadReportBreakdown,
   filterFictiveSales,
@@ -1522,3 +1524,31 @@ test('LEAD-TST07 — 8 vrais IDs stats, périodes YTD/last_week, CSV multiligne 
   assert.equal(interClub.accepted, false);
   assert.equal(interClub.collisionDetected, true);
 });
+
+test('LEAD-TST08 — Paramètres CRM : Alertes (LEAD-0545..0552), Seuil décrochage Heitz (LEAD-0490..0492), Assignation (LEAD-0488) et Offres Client (LEAD-0553..0554)', () => {
+  // 1. Couverture des 8 alertes canoniques
+  assert.equal(CANONICAL_LEAD_ALERTS.length, 8);
+  const smsAlerts = CANONICAL_LEAD_ALERTS.filter((a) => a.channel === 'SMS');
+  const emailAlerts = CANONICAL_LEAD_ALERTS.filter((a) => a.channel === 'Email');
+  const inAppAlerts = CANONICAL_LEAD_ALERTS.filter((a) => a.channel === 'In-App');
+  assert.equal(smsAlerts.length, 3); // Rappel 24h, Modification, Annulation
+  assert.equal(emailAlerts.length, 4); // Rappel 24h, Modification, Annulation, Désactivation MSDS
+  assert.equal(inAppAlerts.length, 1); // Retard commercial
+
+  // 2. Offres Heitz éligibles au passage Client par club
+  assert.equal(CANONICAL_HEITZ_PASS_OFFERS.length, 8);
+  const cdsOffers = CANONICAL_HEITZ_PASS_OFFERS.filter((o) => o.clubId === 'carre-de-soie');
+  const beyOffers = CANONICAL_HEITZ_PASS_OFFERS.filter((o) => o.clubId === 'beynost');
+  assert.equal(cdsOffers.length, 4);
+  assert.equal(beyOffers.length, 4);
+  assert.ok(cdsOffers.some((o) => o.id === 'HZ-CDS-ABO-PASS' && o.targetScope === 'enseigne'));
+  assert.ok(beyOffers.some((o) => o.id === 'HZ-BEY-ABO-PASS' && o.targetScope === 'enseigne'));
+
+  // 3. Décrochage et archivage
+  const autoArch = evaluateProspectAutoArchive(365, 0, 365, false);
+  assert.equal(autoArch.shouldArchive, true);
+  // Réponse entrante repousse l'archivage
+  const inboundActive = evaluateProspectAutoArchive(10, 0, 365, false);
+  assert.equal(inboundActive.shouldArchive, false);
+});
+
