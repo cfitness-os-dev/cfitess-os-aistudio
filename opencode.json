@@ -1,0 +1,72 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "lmstudio": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "LM Studio",
+      "options": {
+        "baseURL": "http://127.0.0.1:1234/v1"
+      },
+      "models": {
+        "recursivesi/flint": {
+          "name": "Flint",
+          "limit": {
+            "context": 16384,
+            "output": 4096
+          }
+        },
+        "qwen3.8-27b-turbo-fable-cold-fusion-735-882-heretic-uncensored-neo-coder-max-mtp": {
+          "name": "Qwen 3.8 27B Turbo Neo Coder",
+          "limit": {
+            "context": 16384,
+            "output": 4096
+          }
+        },
+        "google/gemma-4-31b-qat": {
+          "name": "Gemma 4 31B QAT",
+          "limit": {
+            "context": 16384,
+            "output": 4096
+          }
+        },
+        "deepseek-v4.1-flash-1017": {
+          "name": "DeepSeek V4.1 Flash",
+          "limit": {
+            "context": 16384,
+            "output": 4096
+          }
+        },
+        "lfm3-1.7b-uncensored": {
+          "name": "LFM 3 1.7B Uncensored",
+          "limit": {
+            "context": 16384,
+            "output": 4096
+          }
+        },
+        "meta/muse-glimmer": {
+          "name": "Muse Glimmer",
+          "limit": {
+            "context": 16384,
+            "output": 4096
+          }
+        },
+        "qwen3.8-27b-uncensored": {
+          "name": "Qwen 3.8 27B Uncensored",
+          "limit": {
+            "context": 16384,
+            "output": 4096
+          }
+        },
+        "hermes3.6-35b-apex": {
+          "name": "Hermes 3.6 35B Apex",
+          "limit": {
+            "context": 16384,
+            "output": 4096
+          }
+        }
+      }
+    }
+  },
+  "model": "lmstudio/google/gemma-4-31b-qat",
+  "small_model": "lmstudio/lfm3-1.7b-uncensored"
+}

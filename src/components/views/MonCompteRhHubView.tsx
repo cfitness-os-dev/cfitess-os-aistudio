@@ -572,7 +572,13 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
 
       {/* Contenu selon onglet */}
       {hubTab === 'github-my-day' && <MyDayCollaboratorView />}
-      {hubTab === 'github-planning' && <PlanningHrView />}
+      {hubTab === 'github-planning' && (
+        <PlanningHrView
+          personalScopeOnly={!isShellAdmin}
+          scopedEmployeeId={isShellAdmin ? undefined : currentUser.id}
+          forcedClubScope={currentUser.clubId}
+        />
+      )}
 
       {(hubTab === 'mon-compte' || hubTab === 'traceability') && (
         <>

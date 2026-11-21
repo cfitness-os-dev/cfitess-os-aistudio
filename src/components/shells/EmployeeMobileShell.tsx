@@ -1799,7 +1799,11 @@ export function EmployeeMobileShell() {
                 <div className="flex-1 p-3 sm:p-4 overflow-y-auto max-h-[680px]">
                   {activeSection === 'my-day' && <MyDayCollaboratorView />}
                   {activeSection === 'planning-hr' && (
-                    <PlanningHrView />
+                    <PlanningHrView
+                      personalScopeOnly
+                      scopedEmployeeId={currentUser.id}
+                      forcedClubScope={currentUser.clubId}
+                    />
                   )}
                   {activeSection === 'recovery' && <RecoveryView />}
                   {activeSection === 'telephony' && <TelephonyView />}
@@ -2103,7 +2107,11 @@ export function EmployeeMobileShell() {
             <main className="flex-1 min-w-0 p-3 sm:p-4 overflow-y-auto overflow-x-clip max-h-[760px]">
               {activeSection === 'my-day' && <MyDayCollaboratorView />}
               {activeSection === 'planning-hr' && (
-                <PlanningHrView />
+                <PlanningHrView
+                  personalScopeOnly
+                  scopedEmployeeId={currentUser.id}
+                  forcedClubScope={currentUser.clubId}
+                />
               )}
               {activeSection === 'recovery' && <RecoveryView />}
               {activeSection === 'telephony' && <TelephonyView />}
