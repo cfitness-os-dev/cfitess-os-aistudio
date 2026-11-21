@@ -4272,6 +4272,7 @@ async fn put_lead_settings(
 }
 
 #[cfg(test)]
+#[allow(unused_must_use)]
 mod tests {
     use super::*;
     use crate::seed::load_or_init_state;
