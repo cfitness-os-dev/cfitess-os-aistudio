@@ -29,10 +29,12 @@ import {
   Info,
   Palette,
   UserCheck,
+  Building2,
 } from 'lucide-react';
 import { ClubId, NavSection } from '../../types/cfos';
 import { HARDWARE_COMPATIBILITY_SPECS } from '../../domain/rules';
 import { BackupFailoverPanel } from '../BackupFailoverPanel';
+import { ClubAndAiSettingsPanel } from '../ClubAndAiSettingsPanel';
 import { SystemSecurityCompatibilityPanel } from '../SystemSecurityCompatibilityPanel';
 import { ThemeColorControl } from '../ThemeColorControl';
 import dockerComposeRaw from '../../../docker-compose.yml?raw';
@@ -796,7 +798,7 @@ export function GovernanceView() {
 
   const isDark = themeMode === 'dark';
 
-  const [spaceMode, setSpaceMode] = useState<'appearance' | 'technical'>('appearance');
+  const [spaceMode, setSpaceMode] = useState<'appearance' | 'clubs_ai' | 'technical'>('appearance');
   const [pinInput, setPinInput] = useState<string>('');
   const [pinError, setPinError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ArchitectTabId>('server_hardware');
@@ -1066,6 +1068,7 @@ ${ONSITE_INSTALLATION_STEPS.map(
 
   const isAdminUser = currentUser.role === 'admin';
   const showTechnicalSpace = isAdminUser && spaceMode === 'technical';
+  const showClubsAiSpace = isAdminUser && spaceMode === 'clubs_ai';
 
   const renderSpaceSwitchHeader = () => (
     <div
@@ -1082,6 +1085,8 @@ ${ONSITE_INSTALLATION_STEPS.map(
         <h1 className="text-lg sm:text-xl font-extrabold tracking-tight mt-0.5">
           {showTechnicalSpace
             ? 'Espace technique & installation'
+            : showClubsAiSpace
+            ? 'Paramètres des clubs & IA locale'
             : 'Apparence et confort d’affichage'}
         </h1>
       </div>
@@ -1091,7 +1096,7 @@ ${ONSITE_INSTALLATION_STEPS.map(
           type="button"
           onClick={() => setSpaceMode('appearance')}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
-            !showTechnicalSpace
+            spaceMode === 'appearance' || !isAdminUser
               ? 'bg-violet-600 text-white shadow-xs'
               : isDark
               ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
@@ -1101,6 +1106,23 @@ ${ONSITE_INSTALLATION_STEPS.map(
           <Palette className="w-3.5 h-3.5" />
           <span>Apparence</span>
         </button>
+
+        {isAdminUser && (
+          <button
+            type="button"
+            onClick={() => setSpaceMode('clubs_ai')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
+              showClubsAiSpace
+                ? 'bg-violet-600 text-white shadow-xs'
+                : isDark
+                ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            <span>Clubs &amp; IA locale</span>
+          </button>
+        )}
 
         {isAdminUser && (
           <button
@@ -1136,6 +1158,18 @@ ${ONSITE_INSTALLATION_STEPS.map(
       </div>
     </div>
   );
+
+  // =========================================================================
+  // ONGLET ADMIN (SANS PIN) : PARAMÈTRES DES CLUBS & IA LOCALE (OLLAMA)
+  // =========================================================================
+  if (showClubsAiSpace) {
+    return (
+      <div className="space-y-5">
+        {renderSpaceSwitchHeader()}
+        <ClubAndAiSettingsPanel />
+      </div>
+    );
+  }
 
   // =========================================================================
   // ONGLET PAR DÉFAUT (SANS PIN, POUR TOUS LES EMPLOYÉS) : APPARENCE

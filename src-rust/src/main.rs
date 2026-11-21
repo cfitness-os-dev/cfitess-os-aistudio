@@ -5,6 +5,7 @@ mod models;
 mod rbac;
 mod routes;
 mod seed;
+mod site_settings;
 
 use crate::routes::{api_router, is_demo_mode, SharedAppState};
 use crate::seed::load_or_init_state;
