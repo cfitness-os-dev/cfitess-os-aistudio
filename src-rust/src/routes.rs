@@ -156,6 +156,14 @@ pub struct UpdatePreferencesPayload {
     pub sso_enabled: Option<bool>,
     pub sso_provider: Option<String>,
     pub sso_domain: Option<String>,
+    pub theme_mode: Option<String>,
+    pub accent_color: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PutModuleDelegationsPayload {
+    pub delegations: Vec<crate::models::ModuleDelegation>,
 }
 
 #[derive(Deserialize)]
@@ -230,6 +238,10 @@ pub fn api_router(state: SharedState) -> Router {
         )
         .route("/api/admin/profiles", get(get_admin_profiles))
         .route("/api/admin/profiles/:profile_id", put(put_admin_profile))
+        .route(
+            "/api/admin/delegations",
+            get(get_admin_delegations).put(put_admin_delegations),
+        )
         .route("/api/admin/employees", post(post_admin_employee))
         .route(
             "/api/admin/employees/:emp_id/site-accesses",
@@ -241,7 +253,10 @@ pub fn api_router(state: SharedState) -> Router {
         .route("/api/admin/org02-policy", put(put_org02_policy))
         .route("/api/admin/backup", get(get_backup))
         .route("/api/admin/restore", post(post_restore))
-        .route("/api/me/preferences", put(put_preferences))
+        .route(
+            "/api/me/preferences",
+            get(get_preferences).put(put_preferences),
+        )
         .route("/api/me/calendar-token/revoke", post(post_revoke_calendar_token))
         .route("/api/me/password", post(post_change_password))
         .route("/api/ollama/status", get(get_ollama_status))
@@ -1772,6 +1787,7 @@ async fn put_admin_profile(
         .position(|p| p.id == profile_id)
         .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Profil introuvable."))?;
 
+    let snapshot = db.clone();
     let prev_scope = db.profiles[idx].scope_selected.clone();
     let profile_name = db.profiles[idx].name.clone();
     let mut changed_actions = Vec::new();
@@ -1817,6 +1833,7 @@ async fn put_admin_profile(
         Some(after_detail),
     );
     if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        *db = snapshot;
         return Err(err_resp(
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Échec persistance des permissions : {}", err_msg),
@@ -1824,6 +1841,127 @@ async fn put_admin_profile(
     }
 
     Ok(Json(updated))
+}
+
+async fn get_admin_delegations(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<crate::models::ModuleDelegation>>, (StatusCode, Json<Value>)> {
+    let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
+    let db = state.db.read().await;
+    let can_view = crate::rbac::is_admin_employee(&db, &actor_id)
+        || evaluate_permission(&db, &actor_id, &site_id, "ORG04-31", None).allowed;
+    if !can_view {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Accès refusé (403) : lecture des délégations réservée à l'administration.",
+        ));
+    }
+    Ok(Json(db.module_delegations.clone()))
+}
+
+async fn put_admin_delegations(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Json(payload): Json<PutModuleDelegationsPayload>,
+) -> Result<Json<Vec<crate::models::ModuleDelegation>>, (StatusCode, Json<Value>)> {
+    let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
+    let mut db = state.db.write().await;
+
+    let can_edit = crate::rbac::is_admin_employee(&db, &actor_id)
+        || evaluate_permission(&db, &actor_id, &site_id, "ORG04-31", None).allowed;
+    if !can_edit {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Accès refusé (403) : modification des délégations réservée à l'administration.",
+        ));
+    }
+
+    let mut normalized = Vec::with_capacity(payload.delegations.len());
+    for del in payload.delegations {
+        let emp_id = del.employee_id.trim().to_string();
+        if !db.employees.iter().any(|e| e.id == emp_id) {
+            return Err(err_resp(
+                StatusCode::BAD_REQUEST,
+                format!("Collaborateur introuvable pour délégation : {}", emp_id),
+            ));
+        }
+
+        let module = del.module.trim().to_ascii_lowercase();
+        if !matches!(
+            module.as_str(),
+            "finances" | "reports" | "recovery" | "stocks"
+        ) {
+            return Err(err_resp(
+                StatusCode::BAD_REQUEST,
+                format!("Module de délégation inconnu : {}", del.module),
+            ));
+        }
+
+        let norm_site = crate::rbac::normalize_site_id(&del.site_id);
+        if norm_site != "all" && !crate::rbac::can_access_site_scope(&db, &emp_id, &norm_site) {
+            return Err(err_resp(
+                StatusCode::BAD_REQUEST,
+                format!(
+                    "Le collaborateur {} n'est pas rattaché au club {}.",
+                    emp_id, del.site_id
+                ),
+            ));
+        }
+
+        let mut clean_actions: Vec<String> = del
+            .actions
+            .into_iter()
+            .map(|a| a.trim().to_ascii_lowercase())
+            .filter(|a| !a.is_empty())
+            .collect();
+        if clean_actions.is_empty() {
+            return Err(err_resp(
+                StatusCode::BAD_REQUEST,
+                "Chaque délégation doit spécifier au moins une action autorisée.",
+            ));
+        }
+        for act in &clean_actions {
+            if !matches!(act.as_str(), "view" | "edit" | "export" | "*") {
+                return Err(err_resp(
+                    StatusCode::BAD_REQUEST,
+                    format!("Action de délégation invalide : {}", act),
+                ));
+            }
+        }
+        clean_actions.sort();
+        clean_actions.dedup();
+
+        normalized.push(crate::models::ModuleDelegation {
+            employee_id: emp_id,
+            site_id: norm_site,
+            module,
+            actions: clean_actions,
+        });
+    }
+
+    let snapshot = db.clone();
+    let prev_count = db.module_delegations.len();
+    db.module_delegations = normalized.clone();
+    append_audit(
+        &mut db,
+        &actor_id,
+        "Mise à jour délégations par club",
+        format!("{} délégation(s) structurée(s) enregistrée(s)", normalized.len()),
+        "org",
+        "ORG04-DEL",
+        Some(format!("count={}", prev_count)),
+        Some(format!("count={}", normalized.len())),
+    );
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        *db = snapshot;
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec persistance des délégations : {}", err_msg),
+        ));
+    }
+
+    Ok(Json(normalized))
 }
 
 fn filter_audit(db: &AppDatabaseState, filters: &AuditFilterQuery) -> Vec<AuditEvent> {
@@ -1962,6 +2100,7 @@ async fn put_organization(
         return Err(err_resp(StatusCode::FORBIDDEN, check.reason));
     }
 
+    let snapshot = db.clone();
     let prev_name = db.organization.name.clone();
     if let Some(v) = patch.name {
         db.organization.name = v;
@@ -2000,6 +2139,7 @@ async fn put_organization(
         Some(updated.name.clone()),
     );
     if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        *db = snapshot;
         return Err(err_resp(
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Échec persistance des permissions : {}", err_msg),
@@ -2026,6 +2166,7 @@ async fn put_org02_policy(
         return Err(err_resp(StatusCode::BAD_REQUEST, "Politique ORG02 invalide."));
     }
 
+    let snapshot = db.clone();
     let prev = db.org02_billing_policy.clone();
     db.org02_billing_policy = payload.policy.clone();
 
@@ -2040,6 +2181,7 @@ async fn put_org02_policy(
         Some(payload.policy.clone()),
     );
     if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        *db = snapshot;
         return Err(err_resp(
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Échec persistance politique ORG02 : {}", err_msg),
@@ -2093,6 +2235,7 @@ async fn post_restore(
         ));
     }
 
+    let snapshot = db.clone();
     *db = parsed;
     let now = Utc::now().to_rfc3339();
     append_audit(
@@ -2106,6 +2249,7 @@ async fn post_restore(
         None,
     );
     if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        *db = snapshot;
         return Err(err_resp(
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Échec persistance restauration : {}", err_msg),
@@ -2281,6 +2425,8 @@ async fn post_admin_employee(
             sso_enabled: false,
             sso_provider: "OIDC / SAML (non activé)".into(),
             sso_domain: String::new(),
+            theme_mode: "dark".into(),
+            accent_color: "violet".into(),
         },
     );
     append_audit(
@@ -2553,11 +2699,70 @@ async fn put_employee_site_accesses(
     })))
 }
 
+fn default_employee_preferences(actor_id: &str) -> UserPreferences {
+    UserPreferences {
+        language: "Français".into(),
+        notifications: crate::models::NotificationPrefs {
+            email_enabled: true,
+            sms_enabled: false,
+            frequency: "daily".into(),
+            digest_hour: "08:30".into(),
+            include_activity_report: false,
+        },
+        calendar_feed_token: format!("cal-{}", actor_id),
+        calendar_feed_enabled: true,
+        sso_enabled: false,
+        sso_provider: "OIDC / SAML (non activé)".into(),
+        sso_domain: String::new(),
+        theme_mode: "dark".into(),
+        accent_color: "violet".into(),
+    }
+}
+
+async fn get_preferences(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+) -> Result<Json<UserPreferences>, (StatusCode, Json<Value>)> {
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let db = state.db.read().await;
+
+    if !db.employees.iter().any(|e| e.id == actor_id) {
+        return Err(err_resp(StatusCode::NOT_FOUND, "Collaborateur introuvable."));
+    }
+
+    let prefs = db
+        .preferences_by_employee
+        .get(&actor_id)
+        .cloned()
+        .unwrap_or_else(|| default_employee_preferences(&actor_id));
+    Ok(Json(prefs))
+}
+
 async fn put_preferences(
     State(state): State<SharedState>,
     headers: HeaderMap,
     Json(patch): Json<UpdatePreferencesPayload>,
 ) -> Result<Json<UserPreferences>, (StatusCode, Json<Value>)> {
+    if let Some(ref mode) = patch.theme_mode {
+        if mode != "dark" && mode != "light" {
+            return Err(err_resp(
+                StatusCode::BAD_REQUEST,
+                "Mode d'apparence invalide (valeurs attendues : dark ou light).",
+            ));
+        }
+    }
+    if let Some(ref accent) = patch.accent_color {
+        if !matches!(
+            accent.as_str(),
+            "violet" | "blue" | "emerald" | "rose" | "amber" | "cyan"
+        ) {
+            return Err(err_resp(
+                StatusCode::BAD_REQUEST,
+                "Couleur d'accentuation invalide.",
+            ));
+        }
+    }
+
     let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
     let mut db = state.db.write().await;
 
@@ -2568,9 +2773,8 @@ async fn put_preferences(
     let mut prefs = db
         .preferences_by_employee
         .get(&actor_id)
-        .or_else(|| db.preferences_by_employee.get("emp-admin"))
         .cloned()
-        .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Préférences absentes."))?;
+        .unwrap_or_else(|| default_employee_preferences(&actor_id));
 
     if let Some(lang) = patch.language {
         prefs.language = lang;
@@ -2604,12 +2808,23 @@ async fn put_preferences(
     if let Some(v) = patch.sso_domain {
         prefs.sso_domain = v;
     }
+    if let Some(v) = patch.theme_mode {
+        prefs.theme_mode = v;
+    }
+    if let Some(v) = patch.accent_color {
+        prefs.accent_color = v;
+    }
 
+    let snapshot = db.clone();
     db.preferences_by_employee
         .insert(actor_id.clone(), prefs.clone());
     let summary = format!(
-        "Mise à jour langue={}, canal e-mail={}, fréquence={}",
-        prefs.language, prefs.notifications.email_enabled, prefs.notifications.frequency
+        "Mise à jour thème={}, accent={}, langue={}, canal e-mail={}, fréquence={}",
+        prefs.theme_mode,
+        prefs.accent_color,
+        prefs.language,
+        prefs.notifications.email_enabled,
+        prefs.notifications.frequency
     );
     append_audit(
         &mut db,
@@ -2622,9 +2837,10 @@ async fn put_preferences(
         None,
     );
     if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        *db = snapshot;
         return Err(err_resp(
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Échec persistance révocation flux calendrier : {}", err_msg),
+            format!("Échec persistance des préférences : {}", err_msg),
         ));
     }
 
@@ -2645,10 +2861,10 @@ async fn post_revoke_calendar_token(
     let mut prefs = db
         .preferences_by_employee
         .get(&actor_id)
-        .or_else(|| db.preferences_by_employee.get("emp-admin"))
         .cloned()
-        .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Préférences absentes."))?;
+        .unwrap_or_else(|| default_employee_preferences(&actor_id));
 
+    let snapshot = db.clone();
     let prev = prefs.calendar_feed_token.clone();
     let suffix = Utc::now().timestamp_millis() & 0xFFFF_FFFF;
     prefs.calendar_feed_token = format!("cal-revoked-new-{:x}", suffix);
@@ -2666,6 +2882,7 @@ async fn post_revoke_calendar_token(
         Some(prefs.calendar_feed_token.clone()),
     );
     if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        *db = snapshot;
         return Err(err_resp(
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Échec persistance révocation flux calendrier : {}", err_msg),
@@ -2694,6 +2911,7 @@ async fn post_change_password(
         ));
     }
 
+    let snapshot = db.clone();
     append_audit(
         &mut db,
         &actor_id,
@@ -2705,6 +2923,7 @@ async fn post_change_password(
         None,
     );
     if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        *db = snapshot;
         return Err(err_resp(
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Échec persistance changement mot de passe : {}", err_msg),
@@ -5176,6 +5395,199 @@ mod tests {
         assert!(is_valid_secret_for_employee("emp-admin", "0766"));
         assert!(is_valid_secret_for_employee("emp-mario", "1010"));
         assert!(!is_valid_secret_for_employee("emp-admin", "mauvais_code"));
+    }
+
+    #[tokio::test]
+    async fn module_delegation_is_scoped_by_employee_club_module_and_action() {
+        let state = test_state();
+        let admin_headers = session_headers(&state, "emp-mario", "club-carre-soie").await;
+        let greg_headers = session_headers(&state, "emp-greg", "club-carre-soie").await;
+
+        // 1. Un non-administrateur (même manager bi-club) ne peut pas modifier les délégations par club (403)
+        let denied = put_admin_delegations(
+            State(state.clone()),
+            greg_headers,
+            Json(PutModuleDelegationsPayload {
+                delegations: vec![crate::models::ModuleDelegation {
+                    employee_id: "emp-greg".into(),
+                    site_id: "club-carre-soie".into(),
+                    module: "finances".into(),
+                    actions: vec!["view".into()],
+                }],
+            }),
+        )
+        .await;
+        assert!(matches!(denied, Err((StatusCode::FORBIDDEN, _))));
+
+        // 2. Validation stricte du module, de l'action et du périmètre club (400)
+        let bad_action = put_admin_delegations(
+            State(state.clone()),
+            admin_headers.clone(),
+            Json(PutModuleDelegationsPayload {
+                delegations: vec![crate::models::ModuleDelegation {
+                    employee_id: "emp-greg".into(),
+                    site_id: "club-carre-soie".into(),
+                    module: "finances".into(),
+                    actions: vec!["delete_all".into()],
+                }],
+            }),
+        )
+        .await;
+        assert!(matches!(bad_action, Err((StatusCode::BAD_REQUEST, _))));
+
+        // 3. Délégation Finances en lecture seule pour Greg (bi-club) uniquement à Carré de Soie
+        let saved = put_admin_delegations(
+            State(state.clone()),
+            admin_headers.clone(),
+            Json(PutModuleDelegationsPayload {
+                delegations: vec![crate::models::ModuleDelegation {
+                    employee_id: "emp-greg".into(),
+                    site_id: "club-carre-soie".into(),
+                    module: "finances".into(),
+                    actions: vec!["view".into()],
+                }],
+            }),
+        )
+        .await
+        .expect("Admin devrait enregistrer la délégation par club")
+        .0;
+        assert_eq!(saved.len(), 1);
+
+        let fetched = get_admin_delegations(State(state.clone()), admin_headers)
+            .await
+            .expect("GET délégations OK")
+            .0;
+        assert_eq!(fetched.len(), 1);
+        assert_eq!(fetched[0].site_id, "club-carre-soie");
+
+        let db = state.db.read().await;
+        // Lecture autorisée à Carré de Soie, écriture refusée à Carré de Soie, tout refusé à Beynost
+        assert!(crate::rbac::can_access_module_action(
+            &db,
+            "emp-greg",
+            Some("club-carre-soie"),
+            "finances",
+            "view"
+        ));
+        assert!(!crate::rbac::can_access_module_action(
+            &db,
+            "emp-greg",
+            Some("club-carre-soie"),
+            "finances",
+            "edit"
+        ));
+        assert!(!crate::rbac::can_access_module_action(
+            &db,
+            "emp-greg",
+            Some("club-beynost"),
+            "finances",
+            "view"
+        ));
+
+        let kpi_cds = filter_kpis_for_actor(&db, "emp-greg", "club-carre-soie");
+        assert_eq!(kpi_cds.len(), 1);
+        assert!(kpi_cds[0].revenue_eur.is_some());
+        let kpi_bey = filter_kpis_for_actor(&db, "emp-greg", "club-beynost");
+        assert_eq!(kpi_bey.len(), 1);
+        assert!(kpi_bey[0].revenue_eur.is_none());
+    }
+
+    #[tokio::test]
+    async fn preferences_appearance_persists_per_employee_and_rolls_back_on_disk_failure() {
+        let state = test_state();
+        let mario_headers = session_headers(&state, "emp-mario", "club-carre-soie").await;
+        let sarah_headers = session_headers(&state, "emp-sarah", "club-carre-soie").await;
+
+        // 1. Rejet des valeurs d'apparence inconnues (400)
+        let bad_mode = put_preferences(
+            State(state.clone()),
+            mario_headers.clone(),
+            Json(UpdatePreferencesPayload {
+                language: None,
+                notifications: None,
+                calendar_feed_enabled: None,
+                sso_enabled: None,
+                sso_provider: None,
+                sso_domain: None,
+                theme_mode: Some("sepia".into()),
+                accent_color: None,
+            }),
+        )
+        .await;
+        assert!(matches!(bad_mode, Err((StatusCode::BAD_REQUEST, _))));
+
+        // 2. Sauvegarde isolée pour Mario (light + emerald) sans impacter Sarah (dark + violet)
+        let updated = put_preferences(
+            State(state.clone()),
+            mario_headers.clone(),
+            Json(UpdatePreferencesPayload {
+                language: None,
+                notifications: None,
+                calendar_feed_enabled: None,
+                sso_enabled: None,
+                sso_provider: None,
+                sso_domain: None,
+                theme_mode: Some("light".into()),
+                accent_color: Some("emerald".into()),
+            }),
+        )
+        .await
+        .expect("PUT préférences Mario OK")
+        .0;
+        assert_eq!(updated.theme_mode, "light");
+        assert_eq!(updated.accent_color, "emerald");
+
+        let sarah_prefs = get_preferences(State(state.clone()), sarah_headers)
+            .await
+            .expect("GET préférences Sarah OK")
+            .0;
+        assert_eq!(sarah_prefs.theme_mode, "dark");
+        assert_eq!(sarah_prefs.accent_color, "violet");
+
+        // Vérification de la persistance disque après rechargement
+        let reloaded = load_or_init_state(&state.data_dir);
+        let mario_reloaded = reloaded.preferences_by_employee.get("emp-mario").unwrap();
+        assert_eq!(mario_reloaded.theme_mode, "light");
+        assert_eq!(mario_reloaded.accent_color, "emerald");
+
+        // 3. Simuler un échec disque : pointer data_dir vers un fichier régulier
+        let blocker_file = std::env::temp_dir().join(format!(
+            "cfos_blocker_{}",
+            Utc::now().timestamp_nanos_opt().unwrap_or_default()
+        ));
+        std::fs::write(&blocker_file, b"blocked").unwrap();
+        let failing_state = Arc::new(SharedAppState {
+            db: RwLock::new(reloaded),
+            data_dir: blocker_file.clone(),
+            sessions: RwLock::new(HashMap::new()),
+            login_attempts: RwLock::new(HashMap::new()),
+        });
+        let failing_headers = session_headers(&failing_state, "emp-mario", "club-carre-soie").await;
+
+        let fail_res = put_preferences(
+            State(failing_state.clone()),
+            failing_headers,
+            Json(UpdatePreferencesPayload {
+                language: Some("English".into()),
+                notifications: None,
+                calendar_feed_enabled: None,
+                sso_enabled: None,
+                sso_provider: None,
+                sso_domain: None,
+                theme_mode: Some("dark".into()),
+                accent_color: Some("rose".into()),
+            }),
+        )
+        .await;
+        assert!(matches!(fail_res, Err((StatusCode::INTERNAL_SERVER_ERROR, _))));
+
+        // Rollback mémoire vérifié : aucune fuite de l'écriture échouée
+        let rolled_back_db = failing_state.db.read().await;
+        let mario_after_fail = rolled_back_db.preferences_by_employee.get("emp-mario").unwrap();
+        assert_eq!(mario_after_fail.theme_mode, "light");
+        assert_eq!(mario_after_fail.accent_color, "emerald");
+        assert_ne!(mario_after_fail.language, "English");
+        let _ = std::fs::remove_file(&blocker_file);
     }
 
 }

@@ -612,48 +612,122 @@ pub fn is_manager_employee(state: &AppDatabaseState, actor_id: &str, site_id: Op
     })
 }
 
-/// Finances : Direction ou habilitation nominative explicite dans le périmètre du club (ticket #3 / #19).
-pub fn can_access_finances(state: &AppDatabaseState, actor_id: &str, site_id: Option<&str>) -> bool {
+pub fn normalize_site_id(site_id: &str) -> String {
+    match site_id.trim().to_ascii_lowercase().as_str() {
+        "cds" | "carre-de-soie" | "club-carre-soie" | "site_cds" => "club-carre-soie".to_string(),
+        "bey" | "beynost" | "club-beynost" | "site_bey" => "club-beynost".to_string(),
+        other => other.to_string(),
+    }
+}
+
+/// Délégation structurée `(collaborateur × club × module × actions)`.
+/// Si une ou plusieurs délégations explicites existent pour `(actor_id, module)`,
+/// elles font foi strictement sur le couple club/action demandé.
+/// À défaut, repli sur les profils par défaut et les listes d'habilitation existantes.
+pub fn can_access_module_action(
+    state: &AppDatabaseState,
+    actor_id: &str,
+    site_id: Option<&str>,
+    module: &str,
+    action: &str,
+) -> bool {
     if is_admin_employee(state, actor_id) {
         return true;
     }
-    state
-        .finance_authorized_employee_ids
+
+    let req_site_norm = site_id.map(normalize_site_id);
+    let req_action = action.trim().to_ascii_lowercase();
+    let req_module = module.trim().to_ascii_lowercase();
+
+    let explicit_for_actor_module: Vec<&crate::models::ModuleDelegation> = state
+        .module_delegations
         .iter()
-        .any(|id| id == actor_id)
-        && site_id.map_or(true, |sid| sid == "all" || can_access_site_scope(state, actor_id, sid))
+        .filter(|d| d.employee_id == actor_id && d.module.eq_ignore_ascii_case(&req_module))
+        .collect();
+
+    if !explicit_for_actor_module.is_empty() {
+        return explicit_for_actor_module.iter().any(|d| {
+            let del_site = normalize_site_id(&d.site_id);
+            let site_matches = match req_site_norm.as_deref() {
+                None => true,
+                Some("all") => {
+                    del_site == "all" || can_access_site_scope(state, actor_id, &del_site)
+                }
+                Some(target) => {
+                    (del_site == target || del_site == "all")
+                        && can_access_site_scope(state, actor_id, target)
+                }
+            };
+            let action_matches = d
+                .actions
+                .iter()
+                .any(|a| a == "*" || a.eq_ignore_ascii_case(&req_action));
+            site_matches && action_matches
+        });
+    }
+
+    let legacy_site_ok = || match req_site_norm.as_deref() {
+        None => true,
+        Some("all") => true,
+        Some(target) => can_access_site_scope(state, actor_id, target),
+    };
+
+    match req_module.as_str() {
+        "finances" => {
+            state
+                .finance_authorized_employee_ids
+                .iter()
+                .any(|id| id == actor_id)
+                && legacy_site_ok()
+        }
+        "reports" => {
+            is_manager_employee(state, actor_id, req_site_norm.as_deref())
+                || (state
+                    .reports_authorized_employee_ids
+                    .iter()
+                    .any(|id| id == actor_id)
+                    && legacy_site_ok())
+        }
+        "recovery" => {
+            is_manager_employee(state, actor_id, req_site_norm.as_deref())
+                || (state
+                    .recovery_authorized_employee_ids
+                    .iter()
+                    .any(|id| id == actor_id)
+                    && legacy_site_ok())
+        }
+        "stocks" => {
+            is_manager_employee(state, actor_id, req_site_norm.as_deref())
+                || (state
+                    .stock_authorized_employee_ids
+                    .iter()
+                    .any(|id| id == actor_id)
+                    && legacy_site_ok())
+        }
+        _ => false,
+    }
+}
+
+/// Finances : Direction ou habilitation nominative explicite dans le périmètre du club (ticket #3 / #19).
+pub fn can_access_finances(state: &AppDatabaseState, actor_id: &str, site_id: Option<&str>) -> bool {
+    can_access_module_action(state, actor_id, site_id, "finances", "view")
 }
 
 /// Rapports : admin/manager par défaut dans leur club, ou délégation nominative (ticket #19).
 pub fn can_access_reports(state: &AppDatabaseState, actor_id: &str, site_id: Option<&str>) -> bool {
-    is_manager_employee(state, actor_id, site_id)
-        || (state
-            .reports_authorized_employee_ids
-            .iter()
-            .any(|id| id == actor_id)
-            && site_id.map_or(true, |sid| sid == "all" || can_access_site_scope(state, actor_id, sid)))
+    can_access_module_action(state, actor_id, site_id, "reports", "view")
 }
 
 /// Recouvrement : admin/manager par défaut, ou délégation nominative liée aux fonctions (ticket #19).
 #[allow(dead_code)]
 pub fn can_access_recovery(state: &AppDatabaseState, actor_id: &str, site_id: Option<&str>) -> bool {
-    is_manager_employee(state, actor_id, site_id)
-        || (state
-            .recovery_authorized_employee_ids
-            .iter()
-            .any(|id| id == actor_id)
-            && site_id.map_or(true, |sid| sid == "all" || can_access_site_scope(state, actor_id, sid)))
+    can_access_module_action(state, actor_id, site_id, "recovery", "view")
 }
 
 /// Stock & Achats : admin/manager par défaut, ou délégation nominative liée aux fonctions (ticket #19).
 #[allow(dead_code)]
 pub fn can_access_stocks(state: &AppDatabaseState, actor_id: &str, site_id: Option<&str>) -> bool {
-    is_manager_employee(state, actor_id, site_id)
-        || (state
-            .stock_authorized_employee_ids
-            .iter()
-            .any(|id| id == actor_id)
-            && site_id.map_or(true, |sid| sid == "all" || can_access_site_scope(state, actor_id, sid)))
+    can_access_module_action(state, actor_id, site_id, "stocks", "view")
 }
 
 pub fn get_visible_sections_for_session(

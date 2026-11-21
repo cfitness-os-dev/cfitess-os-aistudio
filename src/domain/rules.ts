@@ -819,8 +819,11 @@ export function isNavItemAllowedForRole(
   if (!section) return true;
   if (!isSectionAllowedForRole(section, role)) return false;
 
+  // Mon compte personnel : accessible à tous les collaborateurs.
+  if (section === 'my-day' && sub === 'personal') {
+    return true;
+  }
   // Collaborateurs et RH : Direction et managers dans leur périmètre.
-  // Le compte personnel reste accessible séparément via « Mon compte ».
   if (section === 'my-day' && sub === 'MC01') {
     return role === 'admin' || role === 'manager';
   }

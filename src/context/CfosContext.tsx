@@ -100,6 +100,27 @@ const BACKUP_ENVELOPE_KEY = 'cfitness_os_backup_envelope_v13';
 const IDB_NAME = 'cfitness_os_failover_idb';
 const IDB_STORE = 'replica_snapshots';
 
+const VITE_DEMO_ENV = (
+  import.meta as { env?: Record<string, string | undefined> }
+).env?.VITE_DEMO_MODE;
+
+const IS_DEMO_CLIENT_MODE =
+  VITE_DEMO_ENV === 'true' ||
+  (typeof window !== 'undefined' &&
+    VITE_DEMO_ENV !== 'false' &&
+    (window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === '192.168.1.120' ||
+      window.location.hostname.endsWith('.trycloudflare.com')));
+
+function themeKeyFor(userId: string): string {
+  return `${THEME_STORAGE_KEY}:${userId}`;
+}
+
+function accentKeyFor(userId: string): string {
+  return `${ACCENT_STORAGE_KEY}:${userId}`;
+}
+
 function persistEnvelopeToIndexedDb(envelope: BackupSnapshotEnvelope): void {
   try {
     if (typeof window === 'undefined' || !('indexedDB' in window)) return;
@@ -200,6 +221,8 @@ function getDefaultState(): PersistedState {
 
 interface CfosContextValue extends PersistedState {
   currentUser: Employee;
+  authorizedClubIds: ClubId[];
+  isDemoMode: boolean;
   isAuthenticated: boolean;
   isArchitectUnlocked: boolean;
   isTechnicalMode: boolean;
@@ -493,12 +516,18 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
       if (params.get('lock') === '1') {
         return false;
       }
+      if (!IS_DEMO_CLIENT_MODE) {
+        return (
+          window.sessionStorage.getItem('cfos_local_auth_active') === 'true' &&
+          Boolean(window.sessionStorage.getItem('cfos_bearer_token'))
+        );
+      }
       if (window.sessionStorage.getItem('cfos_local_auth_active') === 'false') {
         return false;
       }
       return true;
     } catch {
-      return true;
+      return IS_DEMO_CLIENT_MODE;
     }
   });
   const [shellMode, setShellMode] = useState<ShellMode>(() => {
@@ -553,9 +582,14 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
       }
       if (path.startsWith('/mon-compte') || path.startsWith('/personnel')) {
         const parts = path.split('/').filter(Boolean);
+        const subRaw = parts[1];
         return {
           section: 'my-day' as AdminSection,
-          subTarget: (parts[1]?.toUpperCase() || 'MC01') as string | null,
+          subTarget: (
+            subRaw?.toLowerCase() === 'personal'
+              ? 'personal'
+              : subRaw?.toUpperCase() || 'MC01'
+          ) as string | null,
         };
       }
     } catch {
@@ -568,7 +602,50 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
   const [isArchitectUnlocked, setIsArchitectUnlocked] = useState<boolean>(false);
   const [isTechnicalMode, setIsTechnicalMode] = useState<boolean>(false);
   const toggleTechnicalMode = () => setIsTechnicalMode((prev) => !prev);
-  const [clubFilter, setClubFilter] = useState<ClubFilter>('all');
+
+  const currentUser = useMemo(() => {
+    return state.employees.find((e) => e.id === currentUserId) ?? state.employees[0];
+  }, [state.employees, currentUserId]);
+
+  const authorizedClubIds = useMemo<ClubId[]>(() => {
+    if (currentUser.siteAssignments?.length) {
+      const unique = Array.from(
+        new Set(
+          currentUser.siteAssignments
+            .map((a) => a.clubId)
+            .filter((cid): cid is ClubId => cid === 'carre-de-soie' || cid === 'beynost')
+        )
+      );
+      if (unique.length > 0) return unique;
+    }
+    if (
+      currentUser.role === 'admin' ||
+      ['emp-mario', 'emp-daniel', 'emp-greg', 'emp-maxime'].includes(currentUser.id)
+    ) {
+      return ['carre-de-soie', 'beynost'];
+    }
+    return [currentUser.clubId];
+  }, [currentUser]);
+
+  const primaryAuthorizedClub: ClubId = authorizedClubIds.includes(currentUser.clubId)
+    ? currentUser.clubId
+    : authorizedClubIds[0] ?? 'carre-de-soie';
+
+  const [clubFilter, setClubFilterState] = useState<ClubFilter>(primaryAuthorizedClub);
+  const setClubFilter = (filter: ClubFilter) => {
+    if (filter !== 'all' && authorizedClubIds.includes(filter)) {
+      setClubFilterState(filter);
+      return;
+    }
+    setClubFilterState(primaryAuthorizedClub);
+  };
+
+  useEffect(() => {
+    if (clubFilter === 'all' || !authorizedClubIds.includes(clubFilter as ClubId)) {
+      setClubFilterState(primaryAuthorizedClub);
+    }
+  }, [clubFilter, authorizedClubIds, primaryAuthorizedClub]);
+
   const [activeMywellnessModal, setActiveMywellnessModal] = useState<{
     mywellnessMemberId?: string;
     personName?: string;
@@ -576,7 +653,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
   } | null>(null);
   const [themeMode, setThemeModeState] = useState<'light' | 'dark'>(() => {
     try {
-      const saved = window.localStorage.getItem(THEME_STORAGE_KEY);
+      const saved = window.localStorage.getItem(themeKeyFor(currentUserId));
       if (isValidThemeMode(saved)) return saved;
     } catch {
       // ignore
@@ -585,7 +662,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
   });
   const [accentColor, setAccentColorState] = useState<AccentColorId>(() => {
     try {
-      const saved = window.localStorage.getItem(ACCENT_STORAGE_KEY);
+      const saved = window.localStorage.getItem(accentKeyFor(currentUserId));
       if (isValidAccentColor(saved)) return saved;
     } catch {
       // ignore
@@ -593,46 +670,151 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     return 'violet';
   });
 
-  const setThemeMode = (mode: 'light' | 'dark') => {
-    setThemeModeState(mode);
+  useEffect(() => {
+    let nextMode: 'light' | 'dark' = 'dark';
+    let nextAccent: AccentColorId = 'violet';
     try {
-      window.localStorage.setItem(THEME_STORAGE_KEY, mode);
+      const savedMode = window.localStorage.getItem(themeKeyFor(currentUserId));
+      if (isValidThemeMode(savedMode)) nextMode = savedMode;
+      const savedAccent = window.localStorage.getItem(accentKeyFor(currentUserId));
+      if (isValidAccentColor(savedAccent)) nextAccent = savedAccent;
     } catch {
       // ignore
     }
+    setThemeModeState(nextMode);
+    setAccentColorState(nextAccent);
+
+    if (!isAuthenticated || typeof window === 'undefined') return;
+    let bearer: string | null = null;
+    let bearerActor: string | null = null;
+    try {
+      bearer = window.sessionStorage.getItem('cfos_bearer_token');
+      bearerActor = window.sessionStorage.getItem('cfos_bearer_actor_id');
+    } catch {
+      return;
+    }
+    if (!bearer || (bearerActor && bearerActor !== currentUserId)) return;
+
+    let cancelled = false;
+    const siteHeader =
+      primaryAuthorizedClub === 'beynost' ? 'club-beynost' : 'club-carre-soie';
+    void fetch('/api/me/preferences', {
+      headers: {
+        Authorization: `Bearer ${bearer}`,
+        'x-cfitness-site-id': siteHeader,
+      },
+    })
+      .then(async (res) => {
+        if (!res.ok || cancelled) return;
+        const prefs = (await res.json()) as {
+          themeMode?: string;
+          accentColor?: string;
+        };
+        if (cancelled) return;
+        if (isValidThemeMode(prefs.themeMode)) {
+          setThemeModeState(prefs.themeMode);
+          try {
+            window.localStorage.setItem(themeKeyFor(currentUserId), prefs.themeMode);
+          } catch {
+            // ignore
+          }
+        }
+        if (isValidAccentColor(prefs.accentColor)) {
+          setAccentColorState(prefs.accentColor);
+          try {
+            window.localStorage.setItem(accentKeyFor(currentUserId), prefs.accentColor);
+          } catch {
+            // ignore
+          }
+        }
+      })
+      .catch(() => {
+        // Offline / pure dev preview: garder le cache isolé par collaborateur
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUserId, isAuthenticated, primaryAuthorizedClub]);
+
+  const persistAppearancePreferences = async (
+    nextMode: 'light' | 'dark',
+    nextAccent: AccentColorId,
+    prevMode: 'light' | 'dark',
+    prevAccent: AccentColorId
+  ) => {
+    try {
+      window.localStorage.setItem(themeKeyFor(currentUserId), nextMode);
+      window.localStorage.setItem(accentKeyFor(currentUserId), nextAccent);
+    } catch {
+      // ignore
+    }
+    if (typeof window === 'undefined') return;
+    let bearer: string | null = null;
+    let bearerActor: string | null = null;
+    try {
+      bearer = window.sessionStorage.getItem('cfos_bearer_token');
+      bearerActor = window.sessionStorage.getItem('cfos_bearer_actor_id');
+    } catch {
+      return;
+    }
+    if (!bearer || (bearerActor && bearerActor !== currentUserId)) return;
+
+    const siteHeader =
+      (clubFilter === 'beynost' ? 'club-beynost' : 'club-carre-soie');
+    try {
+      const res = await fetch('/api/me/preferences', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${bearer}`,
+          'x-cfitness-site-id': siteHeader,
+        },
+        body: JSON.stringify({ themeMode: nextMode, accentColor: nextAccent }),
+      });
+      if (!res.ok) {
+        setThemeModeState(prevMode);
+        setAccentColorState(prevAccent);
+        try {
+          window.localStorage.setItem(themeKeyFor(currentUserId), prevMode);
+          window.localStorage.setItem(accentKeyFor(currentUserId), prevAccent);
+        } catch {
+          // ignore
+        }
+        setBannerNotice({
+          tone: 'error',
+          text: 'Impossible d’enregistrer vos préférences d’apparence sur le serveur.',
+        });
+      }
+    } catch {
+      // Offline / dev fallback: conserver la valeur locale isolée pour ce compte
+    }
+  };
+
+  const setThemeMode = (mode: 'light' | 'dark') => {
+    const prevMode = themeMode;
+    setThemeModeState(mode);
+    void persistAppearancePreferences(mode, accentColor, prevMode, accentColor);
   };
 
   const toggleThemeMode = () => {
-    setThemeModeState((prev) => {
-      const next = prev === 'light' ? 'dark' : 'light';
-      try {
-        window.localStorage.setItem(THEME_STORAGE_KEY, next);
-      } catch {
-        // ignore
-      }
-      return next;
-    });
+    const prevMode = themeMode;
+    const next = prevMode === 'light' ? 'dark' : 'light';
+    setThemeModeState(next);
+    void persistAppearancePreferences(next, accentColor, prevMode, accentColor);
   };
 
   const setAccentColor = (color: AccentColorId) => {
+    const prevAccent = accentColor;
     setAccentColorState(color);
-    try {
-      window.localStorage.setItem(ACCENT_STORAGE_KEY, color);
-    } catch {
-      // ignore
-    }
+    void persistAppearancePreferences(themeMode, color, themeMode, prevAccent);
   };
 
   const cycleAccentColor = () => {
-    setAccentColorState((prev) => {
-      const next = getNextAccentColor(prev);
-      try {
-        window.localStorage.setItem(ACCENT_STORAGE_KEY, next);
-      } catch {
-        // ignore
-      }
-      return next;
-    });
+    const prevAccent = accentColor;
+    const next = getNextAccentColor(prevAccent);
+    setAccentColorState(next);
+    void persistAppearancePreferences(themeMode, next, themeMode, prevAccent);
   };
 
   const [bannerNotice, setBannerNotice] = useState<CfosContextValue['bannerNotice']>(null);
@@ -725,10 +907,6 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state]);
 
-  const currentUser = useMemo(() => {
-    return state.employees.find((e) => e.id === currentUserId) ?? state.employees[0];
-  }, [state.employees, currentUserId]);
-
   const appendAudit = (
     prevAudit: AuditEntry[],
     entry: Omit<AuditEntry, 'id' | 'timestamp' | 'actorName' | 'actorRole'>
@@ -789,6 +967,10 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
   };
 
   const switchUserSession = async (employeeId: string, preferredShell?: ShellMode) => {
+    if (!IS_DEMO_CLIENT_MODE) {
+      notify('error', 'Bascule rapide de session désactivée hors mode démo.');
+      return;
+    }
     const target = state.employees.find((e) => e.id === employeeId);
     if (!target) return;
     const authRes = await requestServerBearerSession(target.id, target.pinCode);
@@ -827,32 +1009,40 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
       return { ok: false, message: 'Profil collaborateur introuvable sur le serveur local.' };
     }
 
-    // Verify either the 4-digit PIN or local password ("cfitness2026" / employee PIN)
     const normalizedSecret = secretOrPin.trim();
-    const isValidLocalPassword =
-      normalizedSecret.toLowerCase() === 'cfitness2026' ||
-      normalizedSecret.toLowerCase() === 'cfitness';
+    let authSecret = normalizedSecret;
 
-    if (!isValidLocalPassword) {
-      const pinCheck = verifyEmployeePin(target, normalizedSecret);
-      if (!pinCheck.authenticated) {
-        setState((prev) => ({
-          ...prev,
-          employees: prev.employees.map((e) =>
-            e.id === target.id ? pinCheck.updatedEmployee : e
-          ),
-          auditLogs: appendAudit(prev.auditLogs, {
-            clubId: target.clubId,
-            action: pinCheck.locked ? 'AUTH_LOCALE_VERROUILLAGE_BRUTEFORCE' : 'AUTH_LOCALE_ECHEC',
-            target: `${target.firstName} ${target.lastName} (${target.email})`,
-            afterState: pinCheck.reason,
-          }),
-        }));
-        return { ok: false, message: pinCheck.reason, locked: pinCheck.locked };
+    if (!IS_DEMO_CLIENT_MODE) {
+      if (!normalizedSecret) {
+        return { ok: false, message: 'Identifiant ou mot de passe requis.' };
       }
+    } else {
+      // Mode démo uniquement : code PIN ou mot de passe local démo
+      const isValidLocalPassword =
+        normalizedSecret.toLowerCase() === 'cfitness2026' ||
+        normalizedSecret.toLowerCase() === 'cfitness';
+
+      if (!isValidLocalPassword) {
+        const pinCheck = verifyEmployeePin(target, normalizedSecret);
+        if (!pinCheck.authenticated) {
+          setState((prev) => ({
+            ...prev,
+            employees: prev.employees.map((e) =>
+              e.id === target.id ? pinCheck.updatedEmployee : e
+            ),
+            auditLogs: appendAudit(prev.auditLogs, {
+              clubId: target.clubId,
+              action: pinCheck.locked ? 'AUTH_LOCALE_VERROUILLAGE_BRUTEFORCE' : 'AUTH_LOCALE_ECHEC',
+              target: `${target.firstName} ${target.lastName} (${target.email})`,
+              afterState: pinCheck.reason,
+            }),
+          }));
+          return { ok: false, message: pinCheck.reason, locked: pinCheck.locked };
+        }
+      }
+      authSecret = isValidLocalPassword ? target.pinCode : normalizedSecret;
     }
 
-    const authSecret = isValidLocalPassword ? target.pinCode : normalizedSecret;
     const authRes = await requestServerBearerSession(target.id, authSecret);
     if (!authRes.ok) {
       notify('error', authRes.message);
@@ -893,7 +1083,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
       setShellMode('tablette');
     } else {
       setShellMode('admin');
-      setActiveSection('my-day');
+      setActiveSection('my-day', 'personal');
     }
 
     notify(
@@ -934,13 +1124,17 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
   };
 
   const resetDemoData = () => {
+    if (!IS_DEMO_CLIENT_MODE) {
+      notify('error', 'Réinitialisation démo indisponible en production.');
+      return;
+    }
     const fresh = getDefaultState();
     setState(fresh);
     setIsArchitectUnlocked(false);
     setCurrentUserId('emp-mario');
     setShellMode('admin');
-    setActiveSection('my-day');
-    setClubFilter('all');
+    setActiveSection('my-day', 'personal');
+    setClubFilterState('carre-de-soie');
     try {
       window.sessionStorage.removeItem('cfos_architect_pin_unlocked');
       window.localStorage.removeItem('cfos_architect_pin_unlocked');
@@ -2988,6 +3182,8 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     recoveryCases: recoveryCasesSafe,
     recoveryAuthorizedEmployeeIds: recoveryAuthorizedIds,
     currentUser,
+    authorizedClubIds,
+    isDemoMode: IS_DEMO_CLIENT_MODE,
     isAuthenticated,
     isArchitectUnlocked,
     isTechnicalMode,

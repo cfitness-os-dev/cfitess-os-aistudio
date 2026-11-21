@@ -1554,8 +1554,8 @@ export function PlanningHrView({
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-[10px] font-mono uppercase tracking-wider text-violet-600 font-bold mr-1">
                 {isCoursCollectifsView
-                  ? 'Calques Cours & Coachs :'
-                  : 'Calques Planning Centralisé (Sans Duplication) :'}
+                  ? 'Filtres cours & coachs :'
+                  : 'Filtres du planning :'}
               </span>
               {(() => {
                 const scopedShiftsCount = mergedShifts.filter((s) => {

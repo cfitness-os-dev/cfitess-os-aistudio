@@ -19,7 +19,6 @@ import {
   Lock,
   Home,
   Building2,
-  MapPin,
   TrendingUp,
   Activity,
   Euro,
@@ -52,7 +51,6 @@ import { GovernanceView } from './views/GovernanceView';
 import { RecoveryView } from './views/RecoveryView';
 import { AuthSwitchModal } from './AuthSwitchModal';
 import { MywellnessQuickConnect } from './MywellnessQuickConnect';
-import { ThemeColorControl } from './ThemeColorControl';
 
 interface VisualNavItem {
   id: string;
@@ -70,7 +68,7 @@ interface VisualNavItem {
 const VISUAL_SIDEBAR_ITEMS: VisualNavItem[] = [
   {
     id: 'nav-crm',
-    label: 'Prospection',
+    label: 'Prospection – Vente',
     icon: TrendingUp,
     iconColor: 'text-emerald-500',
     sectionId: 'crm',
@@ -78,7 +76,7 @@ const VISUAL_SIDEBAR_ITEMS: VisualNavItem[] = [
   },
   {
     id: 'nav-adherents',
-    label: 'CRM / Adhérents',
+    label: 'Adhérents – CRM',
     icon: Users,
     iconColor: 'text-amber-500',
     sectionId: 'devices',
@@ -112,6 +110,24 @@ const VISUAL_SIDEBAR_ITEMS: VisualNavItem[] = [
     hasChevron: true,
   },
   {
+    id: 'nav-mon-compte',
+    label: 'Mon compte',
+    icon: UserCheck,
+    iconColor: 'text-blue-500',
+    sectionId: 'my-day',
+    subTarget: 'personal',
+    hasChevron: true,
+  },
+  {
+    id: 'nav-personnel',
+    label: 'Collaborateurs et RH',
+    icon: Users,
+    iconColor: 'text-indigo-500',
+    sectionId: 'my-day',
+    subTarget: 'MC01',
+    hasChevron: true,
+  },
+  {
     id: 'nav-lead-trace',
     label: 'Traçabilité Lead (1682)',
     icon: Compass,
@@ -120,15 +136,6 @@ const VISUAL_SIDEBAR_ITEMS: VisualNavItem[] = [
     subTarget: 'lead-traceability',
     hasChevron: true,
     technicalOnly: true,
-  },
-  {
-    id: 'nav-personnel',
-    label: 'Mon compte',
-    icon: Users,
-    iconColor: 'text-blue-500',
-    sectionId: 'my-day',
-    subTarget: 'MC01',
-    hasChevron: true,
   },
   {
     id: 'nav-tracabilite',
@@ -253,6 +260,8 @@ export function AdminShell() {
   const {
     clubFilter,
     setClubFilter,
+    authorizedClubIds,
+    isDemoMode,
     currentUser,
     activeSection,
     navSubTarget,
@@ -278,7 +287,6 @@ export function AdminShell() {
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [clubsExpanded, setClubsExpanded] = useState(true);
   const [numberedPlanExpanded, setNumberedPlanExpanded] = useState(false);
   const [selectedNavId, setSelectedNavId] = useState<string>('nav-dashboard');
   const [searchQuery, setSearchQuery] = useState('');
@@ -311,9 +319,13 @@ export function AdminShell() {
     } else if (activeSection === 'planning-hr') {
       setSelectedNavId(navSubTarget === 'cours-collectifs' ? 'nav-cours' : 'nav-planning');
     } else if (activeSection === 'my-day') {
-      setSelectedNavId(
-        navSubTarget === 'traceability' ? 'nav-tracabilite' : 'nav-personnel'
-      );
+      if (navSubTarget === 'traceability') {
+        setSelectedNavId('nav-tracabilite');
+      } else if (navSubTarget?.toLowerCase() === 'personal') {
+        setSelectedNavId('nav-mon-compte');
+      } else {
+        setSelectedNavId('nav-personnel');
+      }
     } else if (activeSection === 'orchestrator') {
       if (navSubTarget === 'stocks') setSelectedNavId('nav-stock');
       else if (navSubTarget === 'maintenance') setSelectedNavId('nav-maintenance');
@@ -360,10 +372,6 @@ export function AdminShell() {
 
   const handleGovernanceClick = () => {
     setSelectedNavId('nav-governance');
-    if (activeSection === 'governance' && isArchitectUnlocked) {
-      lockArchitectSpace();
-      return;
-    }
     setActiveSection('governance');
   };
 
@@ -444,87 +452,41 @@ export function AdminShell() {
             <span>Tableau de bord</span>
           </button>
 
-          {/* Expandable Clubs Group: C.Fitness Carré de Soie & C.Fitness Beynost */}
-          <div className="pt-1">
-            <button
-              type="button"
-              onClick={() => setClubsExpanded((prev) => !prev)}
-              className={`w-full px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+          {/* Sélecteur de club unique, strictement limité aux clubs autorisés */}
+          <div className="pt-1 pb-1">
+            <label
+              htmlFor="desktop-club-selector"
+              className="px-2 pb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400"
+            >
+              Établissement actif
+            </label>
+            <div
+              className={`px-3 py-2 rounded-xl border flex items-center gap-2 ${
                 isDark
-                  ? 'text-slate-300 hover:bg-slate-800/60'
-                  : 'text-slate-700 hover:bg-slate-100'
+                  ? 'bg-[#171C2E] border-slate-800 text-slate-100'
+                  : 'bg-slate-50 border-slate-200 text-slate-800'
               }`}
             >
-              <div className="flex items-center gap-3">
-                <Building2 className="w-4 h-4 text-blue-500 shrink-0" />
-                <span>Clubs</span>
-              </div>
-              <ChevronDown
-                className={`w-3.5 h-3.5 text-slate-400 transition-transform ${
-                  clubsExpanded ? '' : '-rotate-90'
-                }`}
-              />
-            </button>
-
-            {clubsExpanded && (
-              <div className="mt-1 ml-4 pl-3 border-l border-slate-200 dark:border-slate-800 space-y-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setClubFilter(clubFilter === 'carre-de-soie' ? 'all' : 'carre-de-soie');
-                    setActiveSection('dashboard');
-                  }}
-                  className={`w-full px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors cursor-pointer ${
-                    clubFilter === 'carre-de-soie'
-                      ? isDark
-                        ? 'bg-violet-500/20 text-violet-300 font-semibold'
-                        : 'bg-violet-50 text-violet-700 font-semibold'
-                      : isDark
-                      ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
-                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    <MapPin className="w-3.5 h-3.5 text-violet-400 shrink-0" />
-                    <span className="truncate">C.Fitness Carré de Soie</span>
-                  </div>
-                  <span className="text-[10px] opacity-70">CDS</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setClubFilter(clubFilter === 'beynost' ? 'all' : 'beynost');
-                    setActiveSection('dashboard');
-                  }}
-                  className={`w-full px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors cursor-pointer ${
-                    clubFilter === 'beynost'
-                      ? isDark
-                        ? 'bg-blue-500/20 text-blue-300 font-semibold'
-                        : 'bg-blue-50 text-blue-700 font-semibold'
-                      : isDark
-                      ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
-                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    <MapPin className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                    <span className="truncate">C.Fitness Beynost</span>
-                  </div>
-                  <span className="text-[10px] opacity-70">BEY</span>
-                </button>
-
-                {clubFilter !== 'all' && (
-                  <button
-                    type="button"
-                    onClick={() => setClubFilter('all')}
-                    className="w-full px-2.5 py-1 text-[11px] text-violet-500 hover:underline text-left cursor-pointer"
-                  >
-                    Afficher les 2 clubs
-                  </button>
-                )}
-              </div>
-            )}
+              <Building2 className="w-4 h-4 text-blue-500 shrink-0" />
+              <select
+                id="desktop-club-selector"
+                aria-label="Club actif"
+                value={clubFilter === 'all' ? authorizedClubIds[0] : clubFilter}
+                disabled={authorizedClubIds.length <= 1}
+                onChange={(e) => {
+                  setClubFilter(e.target.value as 'carre-de-soie' | 'beynost');
+                }}
+                className="w-full bg-transparent text-xs font-semibold outline-hidden cursor-pointer disabled:cursor-default truncate"
+              >
+                {authorizedClubIds.map((cid) => (
+                  <option key={cid} value={cid} className="text-slate-900">
+                    {cid === 'carre-de-soie'
+                      ? 'C.Fitness Carré de Soie'
+                      : 'C.Fitness Beynost'}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* All Visual Navigation Items from Reference Mockup */}
@@ -632,43 +594,31 @@ export function AdminShell() {
           )}
         </nav>
 
-        {/* Bottom Settings / Mon Espace (PIN 0766 — Direction uniquement) & Session Controls */}
+        {/* Bottom Settings / Mon Espace (accessible à tous) & Session Controls */}
         <div
           className={`p-3 border-t space-y-2 ${
             isDark ? 'border-slate-800/80' : 'border-slate-200/80'
           }`}
         >
-          {currentUser.role === 'admin' && (
-            <button
-              type="button"
-              onClick={handleGovernanceClick}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
-                activeSection === 'governance'
-                  ? 'bg-violet-600 text-white shadow-2xs'
-                  : isDark
-                  ? 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-              }`}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <Settings className="w-4 h-4 shrink-0 text-slate-400" />
-                <span className="truncate">Paramètres · Mon Espace</span>
-              </div>
-              <span
-                className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                  isArchitectUnlocked
-                    ? 'bg-rose-600 text-white font-bold'
-                  : isDark
-                  ? 'bg-slate-800 text-slate-400'
-                  : 'bg-slate-100 text-slate-500'
-              }`}
-            >
-              {isArchitectUnlocked ? 'VERROUILLER' : 'PIN'}
-            </span>
+          <button
+            type="button"
+            onClick={handleGovernanceClick}
+            className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+              activeSection === 'governance'
+                ? 'bg-violet-600 text-white shadow-2xs'
+                : isDark
+                ? 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+            }`}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <Settings className="w-4 h-4 shrink-0 text-slate-400" />
+              <span className="truncate">Paramètres · Mon espace</span>
+            </div>
+            <ChevronRight className="w-3.5 h-3.5 shrink-0 opacity-70" />
           </button>
-          )}
 
-          <div className="grid grid-cols-2 gap-1.5">
+          <div className={`grid gap-1.5 ${isDemoMode ? 'grid-cols-2' : 'grid-cols-1'}`}>
             <button
               type="button"
               onClick={logoutSession}
@@ -681,41 +631,45 @@ export function AdminShell() {
               <LogOut className="w-3 h-3" />
               <span>Quitter</span>
             </button>
-            <button
-              type="button"
-              onClick={resetDemoData}
-              className={`py-1.5 px-2 rounded-lg text-[11px] flex items-center justify-center gap-1 cursor-pointer ${
-                isDark
-                  ? 'bg-slate-800/80 hover:bg-slate-800 text-slate-300'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-              }`}
-            >
-              <RotateCcw className="w-3 h-3" />
-              <span>Reset démo</span>
-            </button>
+            {isDemoMode && (
+              <button
+                type="button"
+                onClick={resetDemoData}
+                className={`py-1.5 px-2 rounded-lg text-[11px] flex items-center justify-center gap-1 cursor-pointer ${
+                  isDark
+                    ? 'bg-slate-800/80 hover:bg-slate-800 text-slate-300'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                }`}
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Reset démo</span>
+              </button>
+            )}
           </div>
 
-          <button
-            type="button"
-            onClick={toggleTechnicalMode}
-            title={
-              isTechnicalMode
-                ? 'Revenir à la vue métier épurée'
-                : 'Afficher les onglets techniques, audit et architecture'
-            }
-            className={`w-full py-1 px-2 rounded-lg text-[10px] font-medium flex items-center justify-between cursor-pointer transition-colors ${
-              isTechnicalMode
-                ? isDark
-                  ? 'bg-violet-950/60 text-violet-300 border border-violet-700/60'
-                  : 'bg-violet-50 text-violet-700 border border-violet-200'
-                : isDark
-                ? 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
-                : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <span>{isTechnicalMode ? 'Vue Technique active' : 'Vue Métier épurée'}</span>
-            <span className="font-mono">{isTechnicalMode ? 'Masquer' : 'Tech.'}</span>
-          </button>
+          {isArchitectUnlocked && (
+            <button
+              type="button"
+              onClick={toggleTechnicalMode}
+              title={
+                isTechnicalMode
+                  ? 'Revenir à la vue métier épurée'
+                  : 'Afficher les onglets techniques, audit et architecture'
+              }
+              className={`w-full py-1 px-2 rounded-lg text-[10px] font-medium flex items-center justify-between cursor-pointer transition-colors ${
+                isTechnicalMode
+                  ? isDark
+                    ? 'bg-violet-950/60 text-violet-300 border border-violet-700/60'
+                    : 'bg-violet-50 text-violet-700 border border-violet-200'
+                  : isDark
+                  ? 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
+                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <span>{isTechnicalMode ? 'Vue Technique active' : 'Vue Métier épurée'}</span>
+              <span className="font-mono">{isTechnicalMode ? 'Masquer' : 'Tech.'}</span>
+            </button>
+          )}
         </div>
       </aside>
 
@@ -1061,7 +1015,14 @@ export function AdminShell() {
               {/* User Profile Pill (Thomas CLAUDE / Active User) */}
               <button
                 type="button"
-                onClick={() => setAuthModalOpen(true)}
+                onClick={() => {
+                  if (isDemoMode) {
+                    setAuthModalOpen(true);
+                  } else {
+                    setSelectedNavId('nav-mon-compte');
+                    setActiveSection('my-day', 'personal');
+                  }
+                }}
                 className={`pl-2 pr-3 py-1.5 rounded-xl border flex items-center gap-2.5 cursor-pointer transition-colors ${
                   isDark
                     ? 'bg-[#1A2033] border-slate-700 hover:bg-slate-800 text-white'
@@ -1302,8 +1263,8 @@ export function AdminShell() {
           <button
             type="button"
             onClick={() => {
-              setSelectedNavId('nav-personnel');
-              setActiveSection('my-day', 'MC01');
+              setSelectedNavId('nav-mon-compte');
+              setActiveSection('my-day', 'personal');
             }}
             className={`min-h-[48px] rounded-xl flex flex-col items-center justify-center gap-0.5 text-[10px] font-bold cursor-pointer ${
               activeSection === 'my-day'
@@ -1312,9 +1273,7 @@ export function AdminShell() {
             }`}
           >
             <UserCheck className="w-4 h-4" />
-            <span className="truncate">
-              {currentUser.role === 'admin' || currentUser.role === 'manager' ? 'Collaborateurs' : 'Mon compte'}
-            </span>
+            <span className="truncate">Mon compte</span>
           </button>
 
           <button
@@ -1364,59 +1323,58 @@ export function AdminShell() {
                 </button>
               </div>
 
-              {/* Theme & Display Color Control inside Mobile/Tablet Drawer */}
-              <ThemeColorControl variant="inline" />
+              {/* Bascule rapide Jour / Nuit dans le menu mobile */}
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={toggleThemeMode}
+                  className={`flex-1 py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer ${
+                    isDark
+                      ? 'bg-[#171C2E] border-slate-800 text-amber-300'
+                      : 'bg-slate-50 border-slate-200 text-slate-700'
+                  }`}
+                >
+                  {isDark ? (
+                    <>
+                      <Sun className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Mode Jour</span>
+                    </>
+                  ) : (
+                    <>
+                      <Moon className="w-3.5 h-3.5 text-violet-600" />
+                      <span>Mode Nuit</span>
+                    </>
+                  )}
+                </button>
+              </div>
 
-              {/* Clubs Filter inside Mobile/Tablet Drawer */}
-              <div className="grid grid-cols-3 gap-1.5 text-[11px] font-bold">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setClubFilter('all');
+              {/* Sélecteur de club unique (limité aux clubs autorisés) */}
+              <div
+                className={`px-3 py-2 rounded-xl border flex items-center gap-2 ${
+                  isDark
+                    ? 'bg-[#171C2E] border-slate-800 text-slate-100'
+                    : 'bg-slate-50 border-slate-200 text-slate-800'
+                }`}
+              >
+                <Building2 className="w-4 h-4 text-blue-500 shrink-0" />
+                <select
+                  aria-label="Club actif mobile"
+                  value={clubFilter === 'all' ? authorizedClubIds[0] : clubFilter}
+                  disabled={authorizedClubIds.length <= 1}
+                  onChange={(e) => {
+                    setClubFilter(e.target.value as 'carre-de-soie' | 'beynost');
                     setMobileMenuOpen(false);
                   }}
-                  className={`py-1.5 px-2 rounded-lg border cursor-pointer ${
-                    clubFilter === 'all'
-                      ? 'bg-violet-600 text-white border-violet-600'
-                      : isDark
-                      ? 'bg-slate-900 border-slate-800 text-slate-300'
-                      : 'bg-slate-100 border-slate-200 text-slate-700'
-                  }`}
+                  className="w-full bg-transparent text-xs font-semibold outline-hidden cursor-pointer disabled:cursor-default truncate"
                 >
-                  2 Clubs
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setClubFilter('carre-de-soie');
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`py-1.5 px-2 rounded-lg border cursor-pointer ${
-                    clubFilter === 'carre-de-soie'
-                      ? 'bg-violet-600 text-white border-violet-600'
-                      : isDark
-                      ? 'bg-slate-900 border-slate-800 text-slate-300'
-                      : 'bg-slate-100 border-slate-200 text-slate-700'
-                  }`}
-                >
-                  Carré de Soie
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setClubFilter('beynost');
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`py-1.5 px-2 rounded-lg border cursor-pointer ${
-                    clubFilter === 'beynost'
-                      ? 'bg-violet-600 text-white border-violet-600'
-                      : isDark
-                      ? 'bg-slate-900 border-slate-800 text-slate-300'
-                      : 'bg-slate-100 border-slate-200 text-slate-700'
-                  }`}
-                >
-                  Beynost
-                </button>
+                  {authorizedClubIds.map((cid) => (
+                    <option key={cid} value={cid} className="text-slate-900">
+                      {cid === 'carre-de-soie'
+                        ? 'C.Fitness Carré de Soie'
+                        : 'C.Fitness Beynost'}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <button
@@ -1507,24 +1465,22 @@ export function AdminShell() {
               )}
 
               <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
-                {currentUser.role === 'admin' && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleGovernanceClick();
-                      setMobileMenuOpen(false);
-                    }}
-                    className="w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between bg-slate-100 dark:bg-slate-800 cursor-pointer"
-                  >
-                    <span className="flex items-center gap-2">
-                      <Settings className="w-4 h-4 text-violet-500" />
-                      Paramètres · Mon Espace
-                    </span>
-                    <span className="text-[10px] font-mono">PIN</span>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleGovernanceClick();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between bg-slate-100 dark:bg-slate-800 cursor-pointer"
+                >
+                  <span className="flex items-center gap-2">
+                    <Settings className="w-4 h-4 text-violet-500" />
+                    Paramètres · Mon espace
+                  </span>
+                  <ChevronRight className="w-3.5 h-3.5 opacity-70" />
+                </button>
 
-                <div className="grid grid-cols-2 gap-1.5">
+                <div className={`grid gap-1.5 ${isDemoMode ? 'grid-cols-2' : 'grid-cols-1'}`}>
                   <button
                     type="button"
                     onClick={() => {
@@ -1536,17 +1492,19 @@ export function AdminShell() {
                     <LogOut className="w-3.5 h-3.5" />
                     <span>Quitter</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      resetDemoData();
-                    }}
-                    className="py-2 px-2 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1 bg-slate-100 dark:bg-slate-800 cursor-pointer"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Reset démo</span>
-                  </button>
+                  {isDemoMode && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        resetDemoData();
+                      }}
+                      className="py-2 px-2 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1 bg-slate-100 dark:bg-slate-800 cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Reset démo</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -1554,7 +1512,7 @@ export function AdminShell() {
         </div>
       )}
 
-      {authModalOpen && <AuthSwitchModal onClose={() => setAuthModalOpen(false)} />}
+      {authModalOpen && isDemoMode && <AuthSwitchModal onClose={() => setAuthModalOpen(false)} />}
     </div>
   );
 }

@@ -317,6 +317,14 @@ pub struct NotificationPrefs {
     pub include_activity_report: bool,
 }
 
+fn default_theme_mode() -> String {
+    "dark".to_string()
+}
+
+fn default_accent_color() -> String {
+    "violet".to_string()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UserPreferences {
@@ -327,6 +335,20 @@ pub struct UserPreferences {
     pub sso_enabled: bool,
     pub sso_provider: String,
     pub sso_domain: String,
+    #[serde(default = "default_theme_mode")]
+    pub theme_mode: String,
+    #[serde(default = "default_accent_color")]
+    pub accent_color: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ModuleDelegation {
+    pub employee_id: String,
+    pub site_id: String,
+    pub module: String,
+    #[serde(default)]
+    pub actions: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -607,6 +629,8 @@ pub struct AppDatabaseState {
     pub stock_authorized_employee_ids: Vec<String>,
     #[serde(default)]
     pub reports_authorized_employee_ids: Vec<String>,
+    #[serde(default)]
+    pub module_delegations: Vec<ModuleDelegation>,
 }
 
 #[derive(Debug, Clone, Serialize)]

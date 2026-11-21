@@ -355,6 +355,12 @@ function registerApiRoutes(middlewares: Connect.Server, engine: CFitnessApiEngin
         return;
       }
 
+      if (method === 'GET' && path === '/api/me/preferences') {
+        const result = engine.getOwnPreferences(actorId);
+        sendJson(res, result.status, result.data ?? { error: result.error });
+        return;
+      }
+
       if (method === 'PUT' && path === '/api/me/preferences') {
         const body = (await readJsonBody(req)) as Partial<UserPreferences>;
         const result = engine.updateOwnPreferences(actorId, body);

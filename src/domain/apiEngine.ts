@@ -491,6 +491,24 @@ export class CFitnessApiEngine {
     return { status: 200, data: { policy } };
   }
 
+  public getOwnPreferences(actorId: string): ApiResponse<UserPreferences> {
+    const actor = this.state.employees.find((e) => e.id === actorId);
+    if (!actor) {
+      return { status: 404, error: 'Collaborateur introuvable.' };
+    }
+    const base =
+      this.state.preferencesByEmployee[actorId] ??
+      structuredClone(this.state.preferencesByEmployee['emp-admin']);
+    return {
+      status: 200,
+      data: structuredClone({
+        ...base,
+        themeMode: base.themeMode ?? 'dark',
+        accentColor: base.accentColor ?? 'violet',
+      }),
+    };
+  }
+
   public updateOwnPreferences(
     actorId: string,
     patch: Partial<UserPreferences>
@@ -498,6 +516,15 @@ export class CFitnessApiEngine {
     const actor = this.state.employees.find((e) => e.id === actorId);
     if (!actor) {
       return { status: 404, error: 'Collaborateur introuvable.' };
+    }
+    if (patch.themeMode !== undefined && patch.themeMode !== 'dark' && patch.themeMode !== 'light') {
+      return { status: 400, error: "Mode d'apparence invalide (dark ou light attendu)." };
+    }
+    if (
+      patch.accentColor !== undefined &&
+      !['violet', 'blue', 'emerald', 'rose', 'amber', 'cyan'].includes(patch.accentColor)
+    ) {
+      return { status: 400, error: "Couleur d'accentuation invalide." };
     }
     const current =
       this.state.preferencesByEmployee[actorId] ??
@@ -510,13 +537,15 @@ export class CFitnessApiEngine {
         ...current.notifications,
         ...(patch.notifications ?? {}),
       },
+      themeMode: patch.themeMode ?? current.themeMode ?? 'dark',
+      accentColor: patch.accentColor ?? current.accentColor ?? 'violet',
     };
     this.state.preferencesByEmployee[actorId] = updated;
     this.appendAudit(
       actorId,
       `${actor.firstName} ${actor.lastName}`,
       'Préférences personnelles',
-      `Mise à jour langue=${updated.language}, canal e-mail=${updated.notifications.emailEnabled}, fréquence=${updated.notifications.frequency}`,
+      `Mise à jour thème=${updated.themeMode}, accent=${updated.accentColor}, langue=${updated.language}, canal e-mail=${updated.notifications.emailEnabled}, fréquence=${updated.notifications.frequency}`,
       'org',
       'MC13'
     );

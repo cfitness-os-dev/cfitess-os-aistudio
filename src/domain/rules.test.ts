@@ -1626,3 +1626,46 @@ test('LEAD-TST09 — Persistance serveur par club, alertes d’erreur strictes e
   assert.equal(errorMessage, 'Échec de sauvegarde serveur : Droits insuffisants');
 });
 
+test('Personal Mon compte route and per-employee appearance preferences are isolated cleanly', () => {
+  for (const role of ['admin', 'manager', 'commercial', 'coach', 'apprenti'] as const) {
+    assert.equal(
+      isNavItemAllowedForRole({ sectionId: 'my-day', subTarget: 'personal' }, role),
+      true,
+      `Mon compte doit rester accessible pour ${role}`
+    );
+  }
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'my-day', subTarget: 'MC01' }, 'admin'), true);
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'my-day', subTarget: 'MC01' }, 'manager'), true);
+  assert.equal(isNavItemAllowedForRole({ sectionId: 'my-day', subTarget: 'MC01' }, 'commercial'), false);
+
+  const engine = new CFitnessApiEngine();
+  const invalidMode = engine.updateOwnPreferences('emp-mario', {
+    themeMode: 'sepia' as 'dark',
+  });
+  assert.equal(invalidMode.status, 400);
+
+  const invalidAccent = engine.updateOwnPreferences('emp-mario', {
+    accentColor: 'neon' as 'violet',
+  });
+  assert.equal(invalidAccent.status, 400);
+
+  const marioUpdated = engine.updateOwnPreferences('emp-mario', {
+    themeMode: 'light',
+    accentColor: 'emerald',
+  });
+  assert.equal(marioUpdated.status, 200);
+  assert.equal(marioUpdated.data?.themeMode, 'light');
+  assert.equal(marioUpdated.data?.accentColor, 'emerald');
+
+  const marioFetched = engine.getOwnPreferences('emp-mario');
+  assert.equal(marioFetched.status, 200);
+  assert.equal(marioFetched.data?.themeMode, 'light');
+  assert.equal(marioFetched.data?.accentColor, 'emerald');
+
+  const sarahFetched = engine.getOwnPreferences('emp-sarah');
+  assert.equal(sarahFetched.status, 200);
+  assert.equal(sarahFetched.data?.themeMode, 'dark');
+  assert.equal(sarahFetched.data?.accentColor, 'violet');
+});
+
+

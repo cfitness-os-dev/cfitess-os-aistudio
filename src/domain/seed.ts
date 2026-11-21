@@ -105,6 +105,8 @@ function defaultPreferences(lang = 'Français'): UserPreferences {
     ssoEnabled: false,
     ssoProvider: 'OIDC / SAML (non activé)',
     ssoDomain: '',
+    themeMode: 'dark',
+    accentColor: 'violet',
   };
 }
 

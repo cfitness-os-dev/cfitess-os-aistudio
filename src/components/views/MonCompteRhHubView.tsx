@@ -53,25 +53,29 @@ function siteIdToClubFilter(siteId: string | 'all'): ClubFilter {
 function parseInitialTarget(subTarget?: string | null): {
   tab: MonCompteHubTab;
   section: McSectionId;
+  isPersonalSpace: boolean;
 } {
   if (!subTarget) {
-    return { tab: 'mon-compte', section: 'MC01' };
+    return { tab: 'mon-compte', section: 'MC01', isPersonalSpace: false };
   }
   const normalized = subTarget.trim();
+  if (normalized.toLowerCase() === 'personal') {
+    return { tab: 'mon-compte', section: 'MC01', isPersonalSpace: true };
+  }
   if (normalized === 'traceability') {
-    return { tab: 'traceability', section: 'MC01' };
+    return { tab: 'traceability', section: 'MC01', isPersonalSpace: false };
   }
   if (normalized === 'github-my-day') {
-    return { tab: 'github-my-day', section: 'MC01' };
+    return { tab: 'github-my-day', section: 'MC01', isPersonalSpace: false };
   }
   if (normalized === 'github-planning') {
-    return { tab: 'github-planning', section: 'MC03' };
+    return { tab: 'github-planning', section: 'MC03', isPersonalSpace: false };
   }
   const upper = normalized.toUpperCase();
   if (/^MC(0[1-9]|1[0-3])$/.test(upper)) {
-    return { tab: 'mon-compte', section: upper as McSectionId };
+    return { tab: 'mon-compte', section: upper as McSectionId, isPersonalSpace: false };
   }
-  return { tab: 'mon-compte', section: 'MC01' };
+  return { tab: 'mon-compte', section: 'MC01', isPersonalSpace: false };
 }
 
 export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompteRhHubViewProps) {
@@ -83,6 +87,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
     setActiveSection: setShellSection,
   } = useCfos();
   const initialTarget = parseInitialTarget(subTarget);
+  const isPersonalSpace = !planningOnly && initialTarget.isPersonalSpace;
   const isShellAdmin = currentUser.role === 'admin' || currentUser.role === 'manager';
   const isStrictAdmin = currentUser.role === 'admin';
 
@@ -205,6 +210,9 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
   // Synchronisation lorsque la navigation globale AdminShell change subTarget
   useEffect(() => {
     const parsed = parseInitialTarget(subTarget);
+    if (parsed.isPersonalSpace && activeActorId !== currentUser.id) {
+      setActiveActorId(currentUser.id);
+    }
     setHubTab(parsed.tab);
     if (parsed.tab === 'mon-compte') {
       setActiveSection(parsed.section);
@@ -223,7 +231,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subTarget]);
+  }, [subTarget, currentUser.id]);
 
   // Synchronisation avec le filtre club de la sidebar AdminShell
   useEffect(() => {
@@ -287,14 +295,6 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
       : null;
 
   const effectiveSitesForCanSelect = effectiveDashboard?.sites ?? dashboard?.sites ?? [];
-  const canSelectAllSites =
-    dashboard !== null &&
-    effectiveSitesForCanSelect.length > 1 &&
-    dashboard.session.activeProfile.scopeSelected === 'sites' &&
-    Boolean(
-      dashboard.session.resolvedPermissions['ORG04-07']?.allowed ||
-        dashboard.session.resolvedPermissions['ORG04-38']?.allowed
-    );
 
   return (
     <div className="space-y-5">
@@ -321,9 +321,11 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
             >
               <Users className="w-4 h-4 shrink-0" />
               <span>
-                {isTechnicalMode
+                {isPersonalSpace
+                  ? 'Mon compte personnel'
+                  : isTechnicalMode
                   ? 'Espace Mon compte RH V1.16 (MC01–MC13)'
-                  : 'Espace Personnel & RH'}
+                  : 'Collaborateurs et RH'}
               </span>
             </button>
 
@@ -380,7 +382,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
               <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
               {isTechnicalMode ? (
                 <span>
-                  Profil RBAC V1.16 :{' '}
+                  Rôle et établissement :{' '}
                   <strong className="text-violet-300">
                     {dashboard.session.activeProfile.name}
                   </strong>{' '}
@@ -414,7 +416,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                     <span className="text-sm font-extrabold">Planning des équipes</span>
                   </div>
                 )}
-                {!planningOnly && isStrictAdmin && isTechnicalMode && (
+                {!planningOnly && !isPersonalSpace && isStrictAdmin && isTechnicalMode && (
                   <div className="flex items-center gap-2 min-w-0 max-w-full">
                     <Users className="w-4 h-4 text-violet-400 shrink-0" />
                     <label htmlFor="hub-persona-select" className="text-xs cf-muted hidden sm:inline shrink-0">
@@ -434,7 +436,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                     </select>
                   </div>
                 )}
-                {!planningOnly && (!isStrictAdmin || !isTechnicalMode) && (
+                {!planningOnly && (isPersonalSpace || !isStrictAdmin || !isTechnicalMode) && (
                   <div className="flex items-center gap-2 text-xs font-semibold px-2.5 py-1.5 rounded-xl bg-slate-800/40 border border-[var(--cf-border)] min-w-0 max-w-full">
                     <Users className="w-3.5 h-3.5 text-violet-400 shrink-0" />
                     <span className="truncate">
@@ -454,12 +456,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                     onChange={(e) => handleChangeSite(e.target.value)}
                     className="cf-input text-xs px-2.5 py-1.5 font-medium w-full max-w-[220px] sm:max-w-xs min-w-0 truncate"
                   >
-                    {canSelectAllSites && (
-                      <option value="all">
-                        Tous les clubs ({(effectiveDashboard?.sites ?? dashboard.sites).length})
-                      </option>
-                    )}
-                    {(effectiveDashboard?.sites ?? dashboard.sites).map((s) => (
+                    {effectiveSitesForCanSelect.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name}
                       </option>
@@ -496,6 +493,13 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                 {registry.sections.map((sec) => {
                   const secId = sec.id as McSectionId;
                   if (!isTechnicalMode && secId === 'MC03') return null;
+                  if (
+                    isPersonalSpace &&
+                    !isTechnicalMode &&
+                    !['MC01', 'MC02', 'MC04', 'MC05', 'MC06', 'MC13'].includes(secId)
+                  ) {
+                    return null;
+                  }
                   const isVisible = dashboard.session.visibleSections.includes(secId);
                   if (!isVisible) return null;
                   const isActive =

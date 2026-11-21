@@ -27,11 +27,14 @@ import {
   ExternalLink,
   Power,
   Info,
+  Palette,
+  UserCheck,
 } from 'lucide-react';
 import { ClubId, NavSection } from '../../types/cfos';
 import { HARDWARE_COMPATIBILITY_SPECS } from '../../domain/rules';
 import { BackupFailoverPanel } from '../BackupFailoverPanel';
 import { SystemSecurityCompatibilityPanel } from '../SystemSecurityCompatibilityPanel';
+import { ThemeColorControl } from '../ThemeColorControl';
 import dockerComposeRaw from '../../../docker-compose.yml?raw';
 import dockerfileRaw from '../../../Dockerfile?raw';
 import deployLinuxShRaw from '../../../deploy-linux.sh?raw';
@@ -747,6 +750,7 @@ const THIRD_PARTY_UPDATE_GUIDES: Array<{
 
 export function GovernanceView() {
   const {
+    currentUser,
     clubFilter,
     goNoGoPhases,
     signGoNoGoPhase,
@@ -759,6 +763,7 @@ export function GovernanceView() {
 
   const isDark = themeMode === 'dark';
 
+  const [spaceMode, setSpaceMode] = useState<'appearance' | 'technical'>('appearance');
   const [pinInput, setPinInput] = useState<string>('');
   const [pinError, setPinError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ArchitectTabId>('server_hardware');
@@ -976,7 +981,9 @@ ${ONSITE_INSTALLATION_STEPS.map(
   };
 
   useEffect(() => {
-    if (isArchitectUnlocked) return;
+    if (spaceMode !== 'technical' || currentUser.role !== 'admin' || isArchitectUnlocked) {
+      return;
+    }
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key >= '0' && e.key <= '9') {
         handlePinDigit(e.key);
@@ -1024,12 +1031,116 @@ ${ONSITE_INSTALLATION_STEPS.map(
     }
   };
 
+  const isAdminUser = currentUser.role === 'admin';
+  const showTechnicalSpace = isAdminUser && spaceMode === 'technical';
+
+  const renderSpaceSwitchHeader = () => (
+    <div
+      className={`rounded-2xl border p-4 sm:p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${
+        isDark
+          ? 'bg-[#151A2A] border-slate-800 text-slate-100'
+          : 'bg-white border-slate-200/80 text-slate-900'
+      }`}
+    >
+      <div>
+        <div className="text-[11px] font-bold uppercase tracking-wider text-violet-500">
+          Paramètres · Mon espace
+        </div>
+        <h1 className="text-lg sm:text-xl font-extrabold tracking-tight mt-0.5">
+          {showTechnicalSpace
+            ? 'Espace technique & installation'
+            : 'Apparence et confort d’affichage'}
+        </h1>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setSpaceMode('appearance')}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
+            !showTechnicalSpace
+              ? 'bg-violet-600 text-white shadow-xs'
+              : isDark
+              ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+          }`}
+        >
+          <Palette className="w-3.5 h-3.5" />
+          <span>Apparence</span>
+        </button>
+
+        {isAdminUser && (
+          <button
+            type="button"
+            onClick={() => setSpaceMode('technical')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
+              showTechnicalSpace
+                ? 'bg-violet-600 text-white shadow-xs'
+                : isDark
+                ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            <Lock className="w-3.5 h-3.5" />
+            <span>Espace technique &amp; installation</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
   // =========================================================================
-  // ÉCRAN DE VERROUILLAGE PAR CODE PIN
+  // ONGLET PAR DÉFAUT (SANS PIN, POUR TOUS LES EMPLOYÉS) : APPARENCE
+  // =========================================================================
+  if (!showTechnicalSpace) {
+    return (
+      <div className="space-y-5">
+        {renderSpaceSwitchHeader()}
+
+        <div
+          className={`rounded-2xl border p-5 sm:p-6 shadow-2xs space-y-5 max-w-2xl ${
+            isDark
+              ? 'bg-[#151A2A] border-slate-800 text-slate-100'
+              : 'bg-white border-slate-200/80 text-slate-900'
+          }`}
+        >
+          <div className="space-y-1">
+            <h2 className="text-base font-bold">
+              Préférences visuelles de {currentUser.firstName} {currentUser.lastName}
+            </h2>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Votre choix de thème (Jour / Nuit) et de couleur d&apos;accentuation est personnel et enregistré sur votre compte, indépendamment des autres utilisateurs sur un poste partagé.
+            </p>
+          </div>
+
+          <ThemeColorControl variant="inline" />
+
+          <div className="pt-2 border-t border-slate-200/70 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <span className="text-xs text-slate-400">
+              Langue, notifications et sécurité disponibles dans votre compte personnel.
+            </span>
+            <button
+              type="button"
+              onClick={() => setActiveSection('my-day', 'personal')}
+              className="px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+            >
+              <UserCheck className="w-3.5 h-3.5" />
+              <span>Ouvrir Mon compte</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // ÉCRAN DE VERROUILLAGE PAR CODE PIN (ONGLET TECHNIQUE ADMIN UNIQUEMENT)
   // =========================================================================
   if (!isArchitectUnlocked) {
     return (
-      <div className="min-h-[75vh] flex items-center justify-center p-4">
+      <div className="space-y-5">
+        {renderSpaceSwitchHeader()}
+        <div className="min-h-[65vh] flex items-center justify-center p-4">
         <div
           className={`max-w-md w-full rounded-2xl border p-6 sm:p-8 shadow-xl space-y-6 ${
             isDark
@@ -1130,6 +1241,7 @@ ${ONSITE_INSTALLATION_STEPS.map(
             </button>
           </div>
         </div>
+        </div>
       </div>
     );
   }
@@ -1139,6 +1251,7 @@ ${ONSITE_INSTALLATION_STEPS.map(
   // =========================================================================
   return (
     <div className="space-y-5">
+      {renderSpaceSwitchHeader()}
       {/* En-tête compact sur une seule ligne + barre des 4 onglets */}
       <div
         className={`rounded-2xl border p-4 sm:p-5 shadow-2xs space-y-4 ${

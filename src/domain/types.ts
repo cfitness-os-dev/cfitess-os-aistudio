@@ -230,6 +230,8 @@ export interface UserPreferences {
   ssoEnabled: boolean;
   ssoProvider: string;
   ssoDomain: string;
+  themeMode?: 'light' | 'dark';
+  accentColor?: 'violet' | 'blue' | 'emerald' | 'rose' | 'amber' | 'cyan';
 }
 
 export interface SiteKpis {

@@ -27,6 +27,8 @@ fn default_preferences(lang: &str) -> UserPreferences {
         sso_enabled: false,
         sso_provider: "OIDC / SAML (non activé)".to_string(),
         sso_domain: String::new(),
+        theme_mode: "dark".to_string(),
+        accent_color: "violet".to_string(),
     }
 }
 
@@ -1513,6 +1515,7 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
         recovery_authorized_employee_ids: vec!["emp-greg".into()],
         stock_authorized_employee_ids: vec![],
         reports_authorized_employee_ids: vec![],
+        module_delegations: vec![],
     }
 }
 
