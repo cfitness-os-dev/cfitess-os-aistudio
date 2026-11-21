@@ -14,11 +14,16 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import { useCfos } from '../context/CfosContext';
 import { cleanUiTree } from '../domain/cleanModeSanitizer';
 import type { DashboardPayload } from '../domain/apiEngine';
 import { ApiClientError, clientApi, type ApiAuthContext } from '../domain/clientApi';
+import {
+  EMPLOYEE_CSV_TEMPLATE,
+  getProfileDisplayLabel,
+  parseEmployeesCsv,
+} from '../domain/employeeCsv';
 import { getControlState } from '../domain/rbac';
 import type {
   AppDatabaseState,
@@ -38,6 +43,7 @@ type AdminTab =
   | 'org_sites'
   | 'permissions'
   | 'delegations_security'
+  | 'import_csv'
   | 'audit'
   | 'backup';
 
@@ -181,6 +187,15 @@ export function AdminRightsView({
   const [resetPwd, setResetPwd] = useState('');
   const [resetPwdConfirm, setResetPwdConfirm] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
+
+  // État Import CSV collaborateurs
+  const [csvInput, setCsvInput] = useState('');
+  const [importingCsv, setImportingCsv] = useState(false);
+  const [importReport, setImportReport] = useState<{
+    createdCount: number;
+    skippedCount: number;
+    errors: string[];
+  } | null>(null);
 
   useEffect(() => {
     setOrgForm(dashboard.organization);
@@ -581,6 +596,82 @@ export function AdminRightsView({
     }
   }
 
+  const parsedCsv = parseEmployeesCsv(csvInput);
+
+  function handleDownloadCsvTemplate() {
+    const blob = new Blob(['\uFEFF' + EMPLOYEE_CSV_TEMPLATE], {
+      type: 'text/csv;charset=utf-8;',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'modele_collaborateurs_cfitness.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleCsvFileUpload(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setCsvInput(reader.result);
+        setImportReport(null);
+      }
+    };
+    reader.readAsText(file, 'UTF-8');
+    e.target.value = '';
+  }
+
+  async function handleImportCsvSubmit() {
+    setStatusMsg(null);
+    setImportReport(null);
+    const validRows = parsedCsv.rows
+      .filter((r) => r.errors.length === 0)
+      .map((r) => r.payload);
+    if (validRows.length === 0) {
+      setStatusMsg({
+        kind: 'err',
+        text: 'Aucune ligne valide à importer dans le CSV.',
+      });
+      return;
+    }
+
+    setImportingCsv(true);
+    try {
+      const res = await adminFetchJson<{
+        ok: boolean;
+        createdCount: number;
+        skippedCount: number;
+        createdIds: string[];
+        errors: string[];
+      }>('/api/admin/employees/import-csv', auth, {
+        method: 'POST',
+        body: JSON.stringify({ rows: validRows }),
+      });
+      setImportReport({
+        createdCount: res.createdCount,
+        skippedCount: res.skippedCount,
+        errors: Array.isArray(res.errors) ? res.errors : [],
+      });
+      await onRefreshDashboard();
+      await loadAudit();
+      setStatusMsg({
+        kind: 'ok',
+        text: `Import CSV terminé : ${res.createdCount} collaborateur(s) créé(s), ${res.skippedCount} doublon(s) ignoré(s).`,
+      });
+    } catch (e) {
+      const msg =
+        e instanceof ApiClientError
+          ? `HTTP ${e.status} — ${e.message}`
+          : String(e);
+      setStatusMsg({ kind: 'err', text: msg });
+    } finally {
+      setImportingCsv(false);
+    }
+  }
+
   return cleanUiTree(
     <div className="space-y-5">
       <div className="cf-card p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -604,6 +695,7 @@ export function AdminRightsView({
           {[
             { id: 'permissions' as const, label: isTechnicalMode ? 'Matrice Droits (6×44)' : 'Droits & Rôles', icon: ShieldCheck },
             { id: 'delegations_security' as const, label: 'Délégations & Mots de passe', icon: KeyRound },
+            { id: 'import_csv' as const, label: 'Import CSV collaborateurs', icon: Upload },
             { id: 'org_sites' as const, label: 'Organisation & Clubs', icon: Building2 },
             { id: 'audit' as const, label: isTechnicalMode ? 'Journal JOU01 & CSV' : 'Journal d’activité', icon: History },
             { id: 'backup' as const, label: isTechnicalMode ? 'Sauvegarde TST28' : 'Sauvegarde', icon: DatabaseBackup },
@@ -1431,6 +1523,172 @@ export function AdminRightsView({
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* Onglet 6 : Import CSV collaborateurs */}
+      {activeTab === 'import_csv' && (
+        <div className="cf-card p-5 space-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="font-semibold text-sm flex items-center gap-2">
+                <Upload className="w-4 h-4 text-emerald-400" />
+                Import CSV en masse des collaborateurs (Carré de Soie &amp; Beynost)
+              </h2>
+              <p className="text-xs cf-muted mt-0.5">
+                Importe vos vrais collaborateurs directement en base serveur locale (sans rien commiter sur GitHub). Les mots de passe saisis (&ge; 12 car.) sont hachés immédiatement en PBKDF2.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={handleDownloadCsvTemplate}
+                className="cf-card-secondary px-3.5 py-2 text-xs font-medium flex items-center gap-1.5 hover:border-violet-500/60"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Télécharger modèle CSV
+              </button>
+              <label className="cf-card-secondary px-3.5 py-2 text-xs font-medium flex items-center gap-1.5 hover:border-violet-500/60 cursor-pointer">
+                <Upload className="w-3.5 h-3.5 text-violet-400" />
+                <span>Charger un fichier .csv</span>
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={handleCsvFileUpload}
+                  className="hidden"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="space-y-2 text-xs">
+            <div className="cf-muted">
+              Colonnes reconnues (séparateur <code className="cf-mono">;</code> ou <code className="cf-mono">,</code>) :{' '}
+              <code className="cf-mono">prenom;nom;email;telephone;matricule;clubs;profil;contrat;heures_hebdo;mot_de_passe_initial</code>
+            </div>
+            <textarea
+              value={csvInput}
+              onChange={(e) => {
+                setCsvInput(e.target.value);
+                setImportReport(null);
+              }}
+              rows={7}
+              placeholder={EMPLOYEE_CSV_TEMPLATE}
+              className="cf-input w-full p-3 cf-mono text-[11px]"
+            />
+          </div>
+
+          {parsedCsv.rows.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-3">
+                  <span className="px-2.5 py-1 rounded bg-emerald-500/15 text-emerald-300 font-semibold">
+                    {parsedCsv.validCount} ligne(s) valide(s)
+                  </span>
+                  {parsedCsv.invalidCount > 0 && (
+                    <span className="px-2.5 py-1 rounded bg-red-500/15 text-red-300 font-semibold">
+                      {parsedCsv.invalidCount} ligne(s) avec erreur
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void handleImportCsvSubmit()}
+                  disabled={parsedCsv.validCount === 0 || importingCsv}
+                  className="cf-brand-gradient text-white px-4 py-2 rounded-btn text-xs font-semibold flex items-center gap-1.5 disabled:opacity-40"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  {importingCsv
+                    ? 'Import en cours...'
+                    : `Importer ${parsedCsv.validCount} collaborateur(s)`}
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="cf-muted border-b border-[var(--cf-border)]">
+                    <tr>
+                      <th className="py-2 pr-3">Ligne</th>
+                      <th className="py-2 pr-3">Collaborateur</th>
+                      <th className="py-2 pr-3">Clubs</th>
+                      <th className="py-2 pr-3">Profil</th>
+                      <th className="py-2 pr-3">Contrat</th>
+                      <th className="py-2 pr-3">Mot de passe</th>
+                      <th className="py-2">Statut</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--cf-border)]">
+                    {parsedCsv.rows.map((row) => (
+                      <tr key={row.lineNumber}>
+                        <td className="py-2 pr-3 cf-mono text-[11px]">
+                          #{row.lineNumber}
+                        </td>
+                        <td className="py-2 pr-3">
+                          <div className="font-medium">
+                            {row.payload.firstName} {row.payload.lastName}
+                          </div>
+                          <div className="text-[11px] cf-muted">
+                            {row.payload.email ?? 'email auto @c.fitness'}
+                          </div>
+                        </td>
+                        <td className="py-2 pr-3 text-[11px]">
+                          {row.payload.siteIds
+                            .map((sid) =>
+                              sid === 'club-carre-soie'
+                                ? 'Carré de Soie'
+                                : sid === 'club-beynost'
+                                ? 'Beynost'
+                                : sid
+                            )
+                            .join(' + ') || '—'}
+                        </td>
+                        <td className="py-2 pr-3 text-[11px]">
+                          {getProfileDisplayLabel(row.payload.profileId)}
+                        </td>
+                        <td className="py-2 pr-3 text-[11px]">
+                          {row.payload.contractType ?? 'CDI'}
+                          {row.payload.weeklyHours ? ` · ${row.payload.weeklyHours}h` : ''}
+                        </td>
+                        <td className="py-2 pr-3 text-[11px]">
+                          {row.payload.initialPassword ? (
+                            <span className="text-emerald-300">Fourni (PBKDF2)</span>
+                          ) : (
+                            <span className="cf-muted">À définir ensuite</span>
+                          )}
+                        </td>
+                        <td className="py-2 text-[11px]">
+                          {row.errors.length === 0 ? (
+                            <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-medium">
+                              Prêt
+                            </span>
+                          ) : (
+                            <span className="text-red-300">
+                              {row.errors.join(' ')}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {importReport && (
+            <div className="cf-card-secondary p-3.5 text-xs space-y-1.5">
+              <div className="font-semibold text-emerald-300">
+                Résultat serveur : {importReport.createdCount} créé(s), {importReport.skippedCount} doublon(s) ignoré(s).
+              </div>
+              {importReport.errors.length > 0 && (
+                <ul className="list-disc pl-4 text-amber-200 space-y-0.5">
+                  {importReport.errors.map((err, i) => (
+                    <li key={i}>{err}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
       )}
 

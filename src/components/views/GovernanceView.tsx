@@ -1105,6 +1105,21 @@ ${ONSITE_INSTALLATION_STEPS.map(
         {isAdminUser && (
           <button
             type="button"
+            onClick={() => setActiveSection('my-day', 'MC11')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
+              isDark
+                ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/35 hover:bg-emerald-600/30'
+                : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Droits, Délégations &amp; Import RH</span>
+          </button>
+        )}
+
+        {isAdminUser && (
+          <button
+            type="button"
             onClick={() => setSpaceMode('technical')}
             className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
               showTechnicalSpace
@@ -1162,6 +1177,34 @@ ${ONSITE_INSTALLATION_STEPS.map(
             </button>
           </div>
         </div>
+
+        {isAdminUser && (
+          <div
+            className={`rounded-2xl border p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 max-w-2xl ${
+              isDark
+                ? 'bg-[#151A2A] border-emerald-500/30 text-slate-100'
+                : 'bg-emerald-50/70 border-emerald-200 text-slate-900'
+            }`}
+          >
+            <div className="space-y-1">
+              <div className="text-sm font-bold flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                <span>Droits d&apos;accès, Délégations, Mots de passe &amp; Import CSV</span>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Gérez les profils RH (6×44), les délégations par club, les mots de passe serveur et l&apos;import CSV de vos vrais collaborateurs.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveSection('my-day', 'MC11')}
+              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 cursor-pointer"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Ouvrir Droits &amp; Import RH</span>
+            </button>
+          </div>
+        )}
       </div>
     );
   }

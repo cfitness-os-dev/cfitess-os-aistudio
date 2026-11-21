@@ -1,4 +1,5 @@
 mod auth_passwords;
+mod employee_import;
 mod lead_automations;
 mod models;
 mod rbac;

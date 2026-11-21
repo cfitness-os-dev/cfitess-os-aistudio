@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { CFitnessApiEngine } from './apiEngine';
+import { parseEmployeesCsv } from './employeeCsv';
 import {
   INITIAL_FICTIVE_SALES,
   CANONICAL_HEITZ_PASS_OFFERS,
@@ -1666,6 +1667,36 @@ test('Personal Mon compte route and per-employee appearance preferences are isol
   assert.equal(sarahFetched.status, 200);
   assert.equal(sarahFetched.data?.themeMode, 'dark');
   assert.equal(sarahFetched.data?.accentColor, 'violet');
+});
+
+test('parseEmployeesCsv handles French delimiters, aliases, bi-club tokens, and short passwords', () => {
+  const sampleCsv = [
+    'prénom;nom;email;téléphone;matricule;clubs;profil;contrat;heures_hebdo;mot_de_passe_initial',
+    'Alice;Morel;alice.morel@c.fitness;0601020304;CF-301;Carré de Soie + Beynost;Responsable;CDI;39;MotDePasseValide2026!',
+    'Bob;Test;;;;Beynost;Employé;CDD;24;court',
+    'Claire;Bernard;;0611223344;;ClubInconnu;Employé;CDI;35;',
+  ].join('\n');
+
+  const parsed = parseEmployeesCsv(sampleCsv);
+  assert.equal(parsed.rows.length, 3);
+  assert.equal(parsed.validCount, 1);
+  assert.equal(parsed.invalidCount, 2);
+
+  const row0 = parsed.rows[0];
+  assert.equal(row0.errors.length, 0);
+  assert.deepEqual(row0.payload.siteIds, ['club-carre-soie', 'club-beynost']);
+  assert.equal(row0.payload.profileId, 'planificateur_avance');
+  assert.equal(row0.payload.weeklyHours, 39);
+  assert.equal(row0.payload.initialPassword, 'MotDePasseValide2026!');
+
+  assert.equal(
+    parsed.rows[1].errors.some((e) => e.includes('12 caractères')),
+    true
+  );
+  assert.equal(
+    parsed.rows[2].errors.some((e) => e.includes('Club invalide')),
+    true
+  );
 });
 
 
