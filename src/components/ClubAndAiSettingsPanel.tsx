@@ -9,7 +9,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useCfos } from '../context/CfosContext';
-import type { Site } from '../domain/types';
+import type { Site, SiteKpis } from '../domain/types';
 
 interface OllamaStatusPayload {
   online: boolean;
@@ -86,6 +86,20 @@ export function ClubAndAiSettingsPanel() {
   const [savingSite, setSavingSite] = useState(false);
   const [siteStatus, setSiteStatus] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
+  const [kpisList, setKpisList] = useState<SiteKpis[]>([]);
+  const [draftKpi, setDraftKpi] = useState<{
+    periodLabel: string;
+    revenueEur: string;
+    payrollMassEur: string;
+    workedHours: string;
+  }>({
+    periodLabel: 'Mois en cours',
+    revenueEur: '',
+    payrollMassEur: '',
+    workedHours: '',
+  });
+  const [savingKpi, setSavingKpi] = useState(false);
+
   const [ollamaStatus, setOllamaStatus] = useState<OllamaStatusPayload | null>(null);
   const [loadingOllama, setLoadingOllama] = useState(false);
   const [testingOllama, setTestingOllama] = useState(false);
@@ -109,6 +123,24 @@ export function ClubAndAiSettingsPanel() {
       if (current) {
         setSelectedSiteId(current.id);
         setDraftSite(structuredClone(current));
+      }
+      try {
+        const kpis = await fetchAdminSiteJson<SiteKpis[]>(
+          '/api/admin/kpis',
+          currentUser.id,
+          activeSiteId
+        );
+        setKpisList(kpis);
+        const matchKpi = kpis.find((k) => k.siteId === (current?.id ?? selectedSiteId));
+        setDraftKpi({
+          periodLabel: matchKpi?.periodLabel ?? 'Mois en cours',
+          revenueEur: matchKpi?.revenueEur != null ? String(matchKpi.revenueEur) : '',
+          payrollMassEur:
+            matchKpi?.payrollMassEur != null ? String(matchKpi.payrollMassEur) : '',
+          workedHours: matchKpi?.workedHours != null ? String(matchKpi.workedHours) : '',
+        });
+      } catch {
+        // non-finance profile or offline
       }
     } catch (e) {
       setSiteStatus({
@@ -152,6 +184,56 @@ export function ClubAndAiSettingsPanel() {
     const match = sites.find((s) => s.id === nextId);
     if (match) {
       setDraftSite(structuredClone(match));
+    }
+    const matchKpi = kpisList.find((k) => k.siteId === nextId);
+    setDraftKpi({
+      periodLabel: matchKpi?.periodLabel ?? 'Mois en cours',
+      revenueEur: matchKpi?.revenueEur != null ? String(matchKpi.revenueEur) : '',
+      payrollMassEur:
+        matchKpi?.payrollMassEur != null ? String(matchKpi.payrollMassEur) : '',
+      workedHours: matchKpi?.workedHours != null ? String(matchKpi.workedHours) : '',
+    });
+  }
+
+  async function handleSaveKpi() {
+    if (!draftSite) return;
+    setSiteStatus(null);
+    setSavingKpi(true);
+    try {
+      const updated = await fetchAdminSiteJson<SiteKpis>(
+        `/api/admin/kpis/${encodeURIComponent(draftSite.id)}`,
+        currentUser.id,
+        activeSiteId,
+        {
+          method: 'PUT',
+          body: JSON.stringify({
+            periodLabel: draftKpi.periodLabel.trim() || 'Mois en cours',
+            revenueEur:
+              draftKpi.revenueEur.trim() !== '' ? Number(draftKpi.revenueEur) : undefined,
+            payrollMassEur:
+              draftKpi.payrollMassEur.trim() !== ''
+                ? Number(draftKpi.payrollMassEur)
+                : undefined,
+            workedHours:
+              draftKpi.workedHours.trim() !== '' ? Number(draftKpi.workedHours) : undefined,
+          }),
+        }
+      );
+      setKpisList((prev) => [
+        ...prev.filter((k) => k.siteId !== updated.siteId),
+        updated,
+      ]);
+      setSiteStatus({
+        kind: 'ok',
+        text: `KPIs financiers enregistrés côté serveur pour « ${draftSite.name} » (${updated.periodLabel}).`,
+      });
+    } catch (e) {
+      setSiteStatus({
+        kind: 'err',
+        text: e instanceof Error ? e.message : 'Impossible d’enregistrer les KPIs du club.',
+      });
+    } finally {
+      setSavingKpi(false);
     }
   }
 
@@ -437,6 +519,83 @@ export function ClubAndAiSettingsPanel() {
                 <Save className="w-3.5 h-3.5" />
                 <span>{savingSite ? 'Enregistrement...' : 'Enregistrer ce club'}</span>
               </button>
+            </div>
+
+            <div className={`${subBoxCls} space-y-3 pt-3 mt-2`}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-bold text-xs">
+                  KPIs financiers &amp; productivité du club (Production)
+                </span>
+                <span className="text-[11px] text-slate-400">
+                  Calcul auto productivité €/h
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                <label className="block space-y-1">
+                  <span className="text-slate-400">Période</span>
+                  <input
+                    type="text"
+                    value={draftKpi.periodLabel}
+                    onChange={(e) =>
+                      setDraftKpi({ ...draftKpi, periodLabel: e.target.value })
+                    }
+                    className={inputCls}
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-slate-400">CA HT (€)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step="100"
+                    value={draftKpi.revenueEur}
+                    onChange={(e) =>
+                      setDraftKpi({ ...draftKpi, revenueEur: e.target.value })
+                    }
+                    placeholder="Ex: 48200"
+                    className={inputCls}
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-slate-400">Masse salariale (€)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step="100"
+                    value={draftKpi.payrollMassEur}
+                    onChange={(e) =>
+                      setDraftKpi({ ...draftKpi, payrollMassEur: e.target.value })
+                    }
+                    placeholder="Ex: 14500"
+                    className={inputCls}
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-slate-400">Heures travaillées</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step="1"
+                    value={draftKpi.workedHours}
+                    onChange={(e) =>
+                      setDraftKpi({ ...draftKpi, workedHours: e.target.value })
+                    }
+                    placeholder="Ex: 520"
+                    className={inputCls}
+                  />
+                </label>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => void handleSaveKpi()}
+                  disabled={savingKpi}
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>{savingKpi ? 'Enregistrement...' : 'Enregistrer les KPIs'}</span>
+                </button>
+              </div>
             </div>
           </div>
         )}

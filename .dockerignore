@@ -2,4 +2,13 @@ node_modules
 dist
 target
 .git
+.github
+.vscode
+.agents
+.opencode
 .env
+.env.*
+!.env.example
+*.md
+*.log
+scripts/__pycache__

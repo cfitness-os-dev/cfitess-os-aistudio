@@ -270,6 +270,14 @@ pub fn api_router(state: SharedState) -> Router {
             "/api/admin/sites/:site_id",
             put(crate::site_settings::put_admin_site_settings),
         )
+        .route(
+            "/api/admin/kpis",
+            get(crate::site_settings::get_admin_kpis),
+        )
+        .route(
+            "/api/admin/kpis/:site_id",
+            put(crate::site_settings::put_admin_site_kpis),
+        )
         .route("/api/admin/org02-policy", put(put_org02_policy))
         .route("/api/admin/backup", get(get_backup))
         .route("/api/admin/restore", post(post_restore))

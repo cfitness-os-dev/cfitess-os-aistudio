@@ -14,7 +14,10 @@ mod stocks;
 
 use crate::routes::{api_router, is_demo_mode, SharedAppState};
 use crate::seed::load_or_init_state;
-use axum::http::HeaderValue;
+use axum::body::Body;
+use axum::http::{HeaderValue, Request};
+use axum::middleware::{self, Next};
+use axum::response::Response;
 use axum::Router;
 use std::env;
 use std::net::SocketAddr;
@@ -25,6 +28,26 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+async fn security_headers_middleware(req: Request<Body>, next: Next) -> Response {
+    let mut res = next.run(req).await;
+    let headers = res.headers_mut();
+    headers.insert(
+        "x-content-type-options",
+        HeaderValue::from_static("nosniff"),
+    );
+    headers.insert("x-frame-options", HeaderValue::from_static("SAMEORIGIN"));
+    headers.insert(
+        "referrer-policy",
+        HeaderValue::from_static("strict-origin-when-cross-origin"),
+    );
+    headers.insert(
+        "permissions-policy",
+        HeaderValue::from_static("camera=(), microphone=(self), geolocation=()"),
+    );
+    headers.insert("x-xss-protection", HeaderValue::from_static("0"));
+    res
+}
 
 #[tokio::main]
 async fn main() {
@@ -92,6 +115,7 @@ async fn main() {
 
     let app: Router = api_router(shared)
         .fallback_service(spa_service)
+        .layer(middleware::from_fn(security_headers_middleware))
         .layer(cors_layer)
         .layer(TraceLayer::new_for_http());
 

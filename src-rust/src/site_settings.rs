@@ -1,5 +1,5 @@
-use crate::models::Site;
-use crate::rbac::{evaluate_permission, is_admin_employee, normalize_site_id};
+use crate::models::{Site, SiteKpis};
+use crate::rbac::{can_access_finances, evaluate_permission, is_admin_employee, normalize_site_id};
 use crate::routes::{append_audit, err_resp, resolve_session_actor, SharedState};
 use crate::seed::persist_state;
 use axum::extract::{Path, State};
@@ -22,6 +22,16 @@ pub struct UpdateSiteSettingsPayload {
     pub complementary_max_hours: Option<u32>,
     pub missions_module_active: Option<bool>,
     pub report_rules_visible: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub struct UpdateSiteKpisPayload {
+    pub period_label: Option<String>,
+    pub revenue_eur: Option<f64>,
+    pub payroll_mass_eur: Option<f64>,
+    pub worked_hours: Option<f64>,
+    pub productivity_per_hour: Option<f64>,
 }
 
 fn is_valid_hhmm(value: &str) -> bool {
@@ -182,6 +192,139 @@ pub async fn put_admin_site_settings(
     Ok(Json(updated_site))
 }
 
+pub async fn get_admin_kpis(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<SiteKpis>>, (StatusCode, Json<Value>)> {
+    let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
+    let db = state.db.read().await;
+    let allowed = is_admin_employee(&db, &actor_id)
+        || can_access_finances(&db, &actor_id, Some(&site_id));
+    if !allowed {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Accès refusé (403) : consultation des KPIs financiers réservée à la Direction ou délégation Finances.",
+        ));
+    }
+    Ok(Json(db.kpis.clone()))
+}
+
+pub async fn put_admin_site_kpis(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Path(raw_site_id): Path<String>,
+    Json(patch): Json<UpdateSiteKpisPayload>,
+) -> Result<Json<SiteKpis>, (StatusCode, Json<Value>)> {
+    let (actor_id, _active_site) = resolve_session_actor(&state, &headers).await?;
+    let target_site_id = normalize_site_id(&raw_site_id);
+    if target_site_id != "club-carre-soie" && target_site_id != "club-beynost" {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            format!("Établissement KPI invalide : {}", raw_site_id),
+        ));
+    }
+
+    let mut db = state.db.write().await;
+    let allowed = is_admin_employee(&db, &actor_id)
+        || can_access_finances(&db, &actor_id, Some(&target_site_id));
+    if !allowed {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Accès refusé (403) : modification des KPIs financiers réservée à la Direction ou délégation Finances.",
+        ));
+    }
+
+    for (label, val) in [
+        ("Chiffre d'affaires", patch.revenue_eur),
+        ("Masse salariale", patch.payroll_mass_eur),
+        ("Heures travaillées", patch.worked_hours),
+        ("Productivité horaire", patch.productivity_per_hour),
+    ] {
+        if let Some(v) = val {
+            if !v.is_finite() || v < 0.0 {
+                return Err(err_resp(
+                    StatusCode::BAD_REQUEST,
+                    format!("Valeur invalide pour « {} » (doit être >= 0).", label),
+                ));
+            }
+        }
+    }
+
+    let snapshot = db.clone();
+    let existing_pos = db.kpis.iter().position(|k| k.site_id == target_site_id);
+    let updated = if let Some(idx) = existing_pos {
+        if let Some(ref period) = patch.period_label {
+            if !period.trim().is_empty() {
+                db.kpis[idx].period_label = period.trim().to_string();
+            }
+        }
+        if patch.revenue_eur.is_some() {
+            db.kpis[idx].revenue_eur = patch.revenue_eur;
+        }
+        if patch.payroll_mass_eur.is_some() {
+            db.kpis[idx].payroll_mass_eur = patch.payroll_mass_eur;
+        }
+        if patch.worked_hours.is_some() {
+            db.kpis[idx].worked_hours = patch.worked_hours;
+        }
+        if patch.productivity_per_hour.is_some() {
+            db.kpis[idx].productivity_per_hour = patch.productivity_per_hour;
+        } else if let (Some(rev), Some(hours)) = (db.kpis[idx].revenue_eur, db.kpis[idx].worked_hours) {
+            if hours > 0.0 {
+                db.kpis[idx].productivity_per_hour = Some(((rev / hours) * 100.0).round() / 100.0);
+            }
+        }
+        db.kpis[idx].clone()
+    } else {
+        let rev = patch.revenue_eur;
+        let hours = patch.worked_hours;
+        let prod = patch.productivity_per_hour.or_else(|| match (rev, hours) {
+            (Some(r), Some(h)) if h > 0.0 => Some(((r / h) * 100.0).round() / 100.0),
+            _ => None,
+        });
+        let created = SiteKpis {
+            site_id: target_site_id.clone(),
+            period_label: patch
+                .period_label
+                .as_deref()
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .unwrap_or("Mois en cours")
+                .to_string(),
+            revenue_eur: rev,
+            productivity_per_hour: prod,
+            payroll_mass_eur: patch.payroll_mass_eur,
+            worked_hours: hours,
+        };
+        db.kpis.push(created.clone());
+        created
+    };
+
+    append_audit(
+        &mut db,
+        &actor_id,
+        "Finances & KPIs (Mise à jour)",
+        format!(
+            "Mise à jour KPIs {} ({}) : CA={:?} €, Masse salariale={:?} €",
+            target_site_id, updated.period_label, updated.revenue_eur, updated.payroll_mass_eur
+        ),
+        &target_site_id,
+        "kpis",
+        None,
+        Some(format!("CA={:?}", updated.revenue_eur)),
+    );
+
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        *db = snapshot;
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec de persistance des KPIs du club : {}", err_msg),
+        ));
+    }
+
+    Ok(Json(updated))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -276,6 +419,48 @@ mod tests {
             Path("club-carre-soie".into()),
             Json(UpdateSiteSettingsPayload {
                 name: Some("Hack".into()),
+                ..Default::default()
+            }),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(status, StatusCode::FORBIDDEN);
+        let _ = std::fs::remove_dir_all(&state.data_dir);
+    }
+
+    #[tokio::test]
+    async fn admin_can_upsert_club_kpis_and_persist() {
+        let state = test_state();
+        let headers = session_headers(&state, "emp-mario", "club-beynost").await;
+
+        let Json(updated) = put_admin_site_kpis(
+            State(state.clone()),
+            headers,
+            Path("beynost".into()),
+            Json(UpdateSiteKpisPayload {
+                period_label: Some("Novembre 2026".into()),
+                revenue_eur: Some(42500.0),
+                payroll_mass_eur: Some(14200.0),
+                worked_hours: Some(500.0),
+                productivity_per_hour: None,
+            }),
+        )
+        .await
+        .expect("admin peut mettre à jour les KPIs de Beynost");
+
+        assert_eq!(updated.site_id, "club-beynost");
+        assert_eq!(updated.period_label, "Novembre 2026");
+        assert_eq!(updated.revenue_eur, Some(42500.0));
+        assert_eq!(updated.productivity_per_hour, Some(85.0));
+
+        // Non-finance actor rejected with 403
+        let max_headers = session_headers(&state, "emp-maxime", "club-carre-soie").await;
+        let (status, _) = put_admin_site_kpis(
+            State(state.clone()),
+            max_headers,
+            Path("beynost".into()),
+            Json(UpdateSiteKpisPayload {
+                revenue_eur: Some(100.0),
                 ..Default::default()
             }),
         )

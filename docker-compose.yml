@@ -30,7 +30,7 @@ services:
       CFITNESS_ALLOWED_ORIGINS: ${CFITNESS_ALLOWED_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080,http://192.168.1.120:8080,https://hayes-crest-needs-joy.trycloudflare.com}
       # Passerelle locale VM Windows Heitz (Heitz-WS.exe · ID centers 5052 / 5053)
       HEITZ_WS_URL: ${HEITZ_WS_URL:-http://10.10.0.20:8080/api/heitz-ws}
-      HEITZ_WS_TOKEN: ${HEITZ_WS_TOKEN:-CFITNESS-LOCAL-HZ-TOKEN}
+      HEITZ_WS_TOKEN: ${HEITZ_WS_TOKEN:-}
       # Contrôleurs relais IP Modbus TCP portillons Gunnebo / Axess
       TURNSTILE_MODBUS_RELAY_CDS: ${TURNSTILE_MODBUS_RELAY_CDS:-10.10.0.21:502}
       TURNSTILE_MODBUS_RELAY_BEY: ${TURNSTILE_MODBUS_RELAY_BEY:-10.20.0.21:502}

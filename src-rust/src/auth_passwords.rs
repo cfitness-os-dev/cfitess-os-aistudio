@@ -9,6 +9,14 @@ pub const DEFAULT_PBKDF2_ITERATIONS: u32 = 100_000;
 const MIN_ALLOWED_ITERATIONS: u32 = 10_000;
 const MAX_ALLOWED_ITERATIONS: u32 = 2_000_000;
 
+fn configured_pbkdf2_iterations() -> u32 {
+    std::env::var("CFITNESS_PBKDF2_ITERATIONS")
+        .ok()
+        .and_then(|v| v.trim().parse::<u32>().ok())
+        .unwrap_or(DEFAULT_PBKDF2_ITERATIONS)
+        .clamp(MIN_ALLOWED_ITERATIONS, MAX_ALLOWED_ITERATIONS)
+}
+
 fn pbkdf2_sha256_32(password: &[u8], salt: &[u8], iterations: u32) -> [u8; 32] {
     let mut initial = Vec::with_capacity(salt.len() + 4);
     initial.extend_from_slice(salt);
@@ -45,7 +53,7 @@ fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
 }
 
 pub fn hash_password(password: &str) -> String {
-    hash_password_with_iterations(password, DEFAULT_PBKDF2_ITERATIONS)
+    hash_password_with_iterations(password, configured_pbkdf2_iterations())
 }
 
 pub fn hash_password_with_iterations(password: &str, iterations: u32) -> String {
