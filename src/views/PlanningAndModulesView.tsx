@@ -3908,20 +3908,68 @@ export function PlanningAndModulesView({
                                 kind: 'ok',
                                 text: `Correction OBJ20 enregistrée sans écraser OBJ19 (${an.punchedRange}).`,
                               });
+                              const headers: Record<string, string> = {
+                                'Content-Type': 'application/json',
+                                'x-cfitness-actor-id': auth.actorId,
+                                'x-cfitness-site-id': auth.siteId,
+                              };
+                              try {
+                                const token = window.sessionStorage.getItem('cfos_bearer_token');
+                                if (token) headers.Authorization = `Bearer ${token}`;
+                              } catch {
+                                // ignore
+                              }
+                              void fetch(
+                                `/api/timeclock/anomalies/${encodeURIComponent(an.id)}`,
+                                {
+                                  method: 'PATCH',
+                                  headers,
+                                  body: JSON.stringify({
+                                    status: 'validated',
+                                    note: anomalyNoteInput,
+                                  }),
+                                }
+                              ).then((r) => {
+                                if (r.ok) void onRefreshDashboard();
+                              });
                             }}
-                            className="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                            className="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 cursor-pointer"
                           >
                             Valider retenu
                           </button>
                           <button
                             type="button"
-                            onClick={() =>
+                            onClick={() => {
                               setAnomalyOverrides((p) => ({
                                 ...p,
                                 [an.id]: { status: 'ignored', note: anomalyNoteInput },
-                              }))
-                            }
-                            className="px-2.5 py-1 rounded bg-slate-700/60"
+                              }));
+                              const headers: Record<string, string> = {
+                                'Content-Type': 'application/json',
+                                'x-cfitness-actor-id': auth.actorId,
+                                'x-cfitness-site-id': auth.siteId,
+                              };
+                              try {
+                                const token = window.sessionStorage.getItem('cfos_bearer_token');
+                                if (token) headers.Authorization = `Bearer ${token}`;
+                              } catch {
+                                // ignore
+                              }
+                              void fetch(
+                                `/api/timeclock/anomalies/${encodeURIComponent(an.id)}`,
+                                {
+                                  method: 'PATCH',
+                                  headers,
+                                  body: JSON.stringify({
+                                    status: 'ignored',
+                                    note: anomalyNoteInput,
+                                  }),
+                                }
+                              ).then((r) => {
+                                if (r.ok) void onRefreshDashboard();
+                              });
+                            }}
+                            className="px-2.5 py-1 rounded bg-slate-700/60 cursor-pointer"
                           >
                             Ignorer
                           </button>

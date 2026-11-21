@@ -32,6 +32,8 @@ pub struct UpdateSiteKpisPayload {
     pub payroll_mass_eur: Option<f64>,
     pub worked_hours: Option<f64>,
     pub productivity_per_hour: Option<f64>,
+    pub retention_rate_pct: Option<f64>,
+    pub monthly_target_eur: Option<f64>,
 }
 
 fn is_valid_hhmm(value: &str) -> bool {
@@ -239,6 +241,8 @@ pub async fn put_admin_site_kpis(
         ("Masse salariale", patch.payroll_mass_eur),
         ("Heures travaillées", patch.worked_hours),
         ("Productivité horaire", patch.productivity_per_hour),
+        ("Taux de rétention", patch.retention_rate_pct),
+        ("Objectif mensuel", patch.monthly_target_eur),
     ] {
         if let Some(v) = val {
             if !v.is_finite() || v < 0.0 {
@@ -247,6 +251,14 @@ pub async fn put_admin_site_kpis(
                     format!("Valeur invalide pour « {} » (doit être >= 0).", label),
                 ));
             }
+        }
+    }
+    if let Some(ret) = patch.retention_rate_pct {
+        if ret > 100.0 {
+            return Err(err_resp(
+                StatusCode::BAD_REQUEST,
+                "Le taux de rétention doit être compris entre 0 et 100 %.",
+            ));
         }
     }
 
@@ -266,6 +278,12 @@ pub async fn put_admin_site_kpis(
         }
         if patch.worked_hours.is_some() {
             db.kpis[idx].worked_hours = patch.worked_hours;
+        }
+        if patch.retention_rate_pct.is_some() {
+            db.kpis[idx].retention_rate_pct = patch.retention_rate_pct;
+        }
+        if patch.monthly_target_eur.is_some() {
+            db.kpis[idx].monthly_target_eur = patch.monthly_target_eur;
         }
         if patch.productivity_per_hour.is_some() {
             db.kpis[idx].productivity_per_hour = patch.productivity_per_hour;
@@ -295,6 +313,8 @@ pub async fn put_admin_site_kpis(
             productivity_per_hour: prod,
             payroll_mass_eur: patch.payroll_mass_eur,
             worked_hours: hours,
+            retention_rate_pct: patch.retention_rate_pct,
+            monthly_target_eur: patch.monthly_target_eur,
         };
         db.kpis.push(created.clone());
         created
@@ -443,6 +463,8 @@ mod tests {
                 payroll_mass_eur: Some(14200.0),
                 worked_hours: Some(500.0),
                 productivity_per_hour: None,
+                retention_rate_pct: Some(92.5),
+                monthly_target_eur: Some(46000.0),
             }),
         )
         .await
@@ -452,6 +474,8 @@ mod tests {
         assert_eq!(updated.period_label, "Novembre 2026");
         assert_eq!(updated.revenue_eur, Some(42500.0));
         assert_eq!(updated.productivity_per_hour, Some(85.0));
+        assert_eq!(updated.retention_rate_pct, Some(92.5));
+        assert_eq!(updated.monthly_target_eur, Some(46000.0));
 
         // Non-finance actor rejected with 403
         let max_headers = session_headers(&state, "emp-maxime", "club-carre-soie").await;

@@ -241,6 +241,8 @@ export interface SiteKpis {
   productivityPerHour: number | null;
   payrollMassEur: number | null;
   workedHours: number | null;
+  retentionRatePct?: number | null;
+  monthlyTargetEur?: number | null;
 }
 
 export interface AmbiguityRecord {

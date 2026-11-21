@@ -357,6 +357,15 @@ pub fn api_router(state: SharedState) -> Router {
             "/api/orchestrator/agents/:agent_id/autonomy",
             put(crate::orchestrator::put_orchestrator_agent_autonomy),
         )
+        .route(
+            "/api/timeclock/anomalies",
+            get(crate::timeclock::get_timeclock_anomalies)
+                .post(crate::timeclock::post_timeclock_anomaly),
+        )
+        .route(
+            "/api/timeclock/anomalies/:anomaly_id",
+            patch(crate::timeclock::patch_timeclock_anomaly),
+        )
         .with_state(state)
 }
 

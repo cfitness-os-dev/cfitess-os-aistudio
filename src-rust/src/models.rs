@@ -290,6 +290,10 @@ pub struct SiteKpis {
     pub productivity_per_hour: Option<f64>,
     pub payroll_mass_eur: Option<f64>,
     pub worked_hours: Option<f64>,
+    #[serde(default)]
+    pub retention_rate_pct: Option<f64>,
+    #[serde(default)]
+    pub monthly_target_eur: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

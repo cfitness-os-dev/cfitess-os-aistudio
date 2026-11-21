@@ -1665,6 +1665,8 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
                 productivity_per_hour: Some(112.35),
                 payroll_mass_eur: Some(14850.0),
                 worked_hours: Some(429.0),
+                retention_rate_pct: Some(91.4),
+                monthly_target_eur: Some(50000.0),
             },
             SiteKpis {
                 site_id: "club-beynost".into(),
@@ -1673,6 +1675,8 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
                 productivity_per_hour: None,
                 payroll_mass_eur: Some(10940.0),
                 worked_hours: Some(312.0),
+                retention_rate_pct: Some(89.8),
+                monthly_target_eur: Some(45000.0),
             },
         ],
         audit_log: vec![

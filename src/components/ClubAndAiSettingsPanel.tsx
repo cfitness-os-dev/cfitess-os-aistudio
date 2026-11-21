@@ -92,11 +92,15 @@ export function ClubAndAiSettingsPanel() {
     revenueEur: string;
     payrollMassEur: string;
     workedHours: string;
+    retentionRatePct: string;
+    monthlyTargetEur: string;
   }>({
     periodLabel: 'Mois en cours',
     revenueEur: '',
     payrollMassEur: '',
     workedHours: '',
+    retentionRatePct: '',
+    monthlyTargetEur: '',
   });
   const [savingKpi, setSavingKpi] = useState(false);
 
@@ -138,6 +142,10 @@ export function ClubAndAiSettingsPanel() {
           payrollMassEur:
             matchKpi?.payrollMassEur != null ? String(matchKpi.payrollMassEur) : '',
           workedHours: matchKpi?.workedHours != null ? String(matchKpi.workedHours) : '',
+          retentionRatePct:
+            matchKpi?.retentionRatePct != null ? String(matchKpi.retentionRatePct) : '',
+          monthlyTargetEur:
+            matchKpi?.monthlyTargetEur != null ? String(matchKpi.monthlyTargetEur) : '',
         });
       } catch {
         // non-finance profile or offline
@@ -192,6 +200,10 @@ export function ClubAndAiSettingsPanel() {
       payrollMassEur:
         matchKpi?.payrollMassEur != null ? String(matchKpi.payrollMassEur) : '',
       workedHours: matchKpi?.workedHours != null ? String(matchKpi.workedHours) : '',
+      retentionRatePct:
+        matchKpi?.retentionRatePct != null ? String(matchKpi.retentionRatePct) : '',
+      monthlyTargetEur:
+        matchKpi?.monthlyTargetEur != null ? String(matchKpi.monthlyTargetEur) : '',
     });
   }
 
@@ -216,6 +228,14 @@ export function ClubAndAiSettingsPanel() {
                 : undefined,
             workedHours:
               draftKpi.workedHours.trim() !== '' ? Number(draftKpi.workedHours) : undefined,
+            retentionRatePct:
+              draftKpi.retentionRatePct.trim() !== ''
+                ? Number(draftKpi.retentionRatePct)
+                : undefined,
+            monthlyTargetEur:
+              draftKpi.monthlyTargetEur.trim() !== ''
+                ? Number(draftKpi.monthlyTargetEur)
+                : undefined,
           }),
         }
       );
@@ -530,7 +550,7 @@ export function ClubAndAiSettingsPanel() {
                   Calcul auto productivité €/h
                 </span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 <label className="block space-y-1">
                   <span className="text-slate-400">Période</span>
                   <input
@@ -557,6 +577,20 @@ export function ClubAndAiSettingsPanel() {
                   />
                 </label>
                 <label className="block space-y-1">
+                  <span className="text-slate-400">Objectif CA mensuel (€)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step="100"
+                    value={draftKpi.monthlyTargetEur}
+                    onChange={(e) =>
+                      setDraftKpi({ ...draftKpi, monthlyTargetEur: e.target.value })
+                    }
+                    placeholder="Ex: 50000"
+                    className={inputCls}
+                  />
+                </label>
+                <label className="block space-y-1">
                   <span className="text-slate-400">Masse salariale (€)</span>
                   <input
                     type="number"
@@ -567,6 +601,21 @@ export function ClubAndAiSettingsPanel() {
                       setDraftKpi({ ...draftKpi, payrollMassEur: e.target.value })
                     }
                     placeholder="Ex: 14500"
+                    className={inputCls}
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-slate-400">Taux de rétention (%)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.1"
+                    value={draftKpi.retentionRatePct}
+                    onChange={(e) =>
+                      setDraftKpi({ ...draftKpi, retentionRatePct: e.target.value })
+                    }
+                    placeholder="Ex: 91.4"
                     className={inputCls}
                   />
                 </label>

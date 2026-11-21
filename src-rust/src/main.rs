@@ -11,6 +11,7 @@ mod routes;
 mod seed;
 mod site_settings;
 mod stocks;
+mod timeclock;
 
 use crate::routes::{api_router, is_demo_mode, SharedAppState};
 use crate::seed::load_or_init_state;
