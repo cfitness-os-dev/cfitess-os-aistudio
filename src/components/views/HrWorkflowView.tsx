@@ -321,8 +321,9 @@ function Workflow({
                     </div>
                   ) : (
                     <p className="cf-muted text-sm">
-                      Consultation uniquement. Une autre personne habilitée
-                      traite vos propres demandes.
+                      {row.employeeId === actorId
+                        ? "Consultation uniquement. Une autre personne habilitée traite vos propres demandes."
+                        : "Consultation uniquement. Vos droits ne permettent pas de traiter cette demande."}
                     </p>
                   )}
                 </article>
@@ -335,11 +336,18 @@ function Workflow({
                   <h3 className="font-bold">
                     {row.employeeName} · {punchLabel[row.type] ?? "Pointage"}
                   </h3>
-                  <p>{new Date(row.timestamp).toLocaleString("fr-FR")}</p>
+                  <p>
+                    {new Date(row.timestamp).toLocaleString("fr-FR", {
+                      timeZone: "Europe/Paris",
+                    })}{" "}
+                    · heure de Paris
+                  </p>
                   {row.review && (
-                    <p className="cf-muted">
+                    <p className="cf-muted whitespace-pre-wrap break-words">
                       Note : {row.review.note} ·{" "}
-                      {new Date(row.review.at).toLocaleString("fr-FR")}
+                      {new Date(row.review.at).toLocaleString("fr-FR", {
+                        timeZone: "Europe/Paris",
+                      })}
                     </p>
                   )}
                   {row.canReview && (

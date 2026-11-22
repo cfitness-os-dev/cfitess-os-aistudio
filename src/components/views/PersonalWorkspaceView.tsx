@@ -55,9 +55,11 @@ function PersonalWorkspaceContent({
   club: ClubId;
 }) {
   const { currentUser, setActiveSection } = useCfos();
-  const [tab, setTab] = useState<Tab>(()=>{
-    const requested=new URLSearchParams(window.location.search).get('personalTab');
-    return tabs.find(([key])=>key===requested)?.[0]??'home';
+  const [tab, setTab] = useState<Tab>(() => {
+    const requested = new URLSearchParams(window.location.search).get(
+      "personalTab",
+    );
+    return tabs.find(([key]) => key === requested)?.[0] ?? "home";
   });
   const [data, setData] = useState<PersonalWorkspace | null>(null);
   const [error, setError] = useState("");
@@ -713,10 +715,16 @@ function PersonalWorkspaceContent({
                 <p>Aucun pointage enregistré dans ce club.</p>
               )}
               {data.timeEntries.map((row) => (
-                <p key={row.id}>
-                  {new Date(row.timestamp).toLocaleString("fr-FR")} ·{" "}
-                  {punchLabels[row.type] || "Pointage"}
-                  {row.review && <span className="block cf-muted">Note du responsable : {row.review.note}</span>}
+                <p key={row.id} className="whitespace-pre-wrap break-words">
+                  {new Date(row.timestamp).toLocaleString("fr-FR", {
+                    timeZone: "Europe/Paris",
+                  })}{" "}
+                  · heure de Paris · {punchLabels[row.type] || "Pointage"}
+                  {row.review && (
+                    <span className="block cf-muted">
+                      Note du responsable : {row.review.note}
+                    </span>
+                  )}
                 </p>
               ))}
             </section>
