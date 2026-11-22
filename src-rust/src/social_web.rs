@@ -103,7 +103,24 @@ pub struct UpdateSocialChannelsPayload {
 
 fn is_safe_http_url(raw: &str) -> bool {
     let trimmed = raw.trim();
-    trimmed.is_empty() || trimmed.starts_with("https://") || trimmed.starts_with("http://")
+    if trimmed.is_empty() {
+        return true;
+    }
+    if trimmed.chars().any(|c| c.is_control() || c.is_whitespace()) {
+        return false;
+    }
+    let rest = if let Some(r) = trimmed.strip_prefix("https://") {
+        r
+    } else if let Some(r) = trimmed.strip_prefix("http://") {
+        r
+    } else {
+        return false;
+    };
+    let authority = rest.split(['/', '?', '#']).next().unwrap_or("");
+    if authority.is_empty() || authority.contains('@') {
+        return false;
+    }
+    true
 }
 
 pub async fn put_social_channels(
@@ -128,7 +145,7 @@ pub async fn put_social_channels(
         if !is_safe_http_url(url) {
             return Err(err_resp(
                 StatusCode::BAD_REQUEST,
-                "Chaque lien doit commencer par https:// ou http:// (ou être vide).",
+                "Chaque lien doit être une URL http(s) valide sans espace ni identifiant embarqué (ou être vide).",
             ));
         }
     }
@@ -545,6 +562,95 @@ mod tests {
             .social_posts
             .iter()
             .any(|p| p.id == created.id && p.status == "programme"));
+
+        let _ = std::fs::remove_dir_all(&state.data_dir);
+    }
+
+    #[tokio::test]
+    async fn social_web_rejects_unsafe_urls_and_enforces_rbac_and_club_isolation() {
+        let state = test_state();
+        let admin_headers = session_headers(&state, "emp-mario", "club-carre-soie").await;
+
+        // 1. Rejet des URLs exécutables, avec identifiants embarqués ou caractères de contrôle
+        for bad_url in [
+            "javascript:alert(1)",
+            "https://user:secret@c.fitness",
+            "https://c.fitness/club\r\nX-Injected: 1",
+            "https://",
+        ] {
+            let err = put_social_channels(
+                State(state.clone()),
+                Path("carre-de-soie".into()),
+                admin_headers.clone(),
+                Json(UpdateSocialChannelsPayload {
+                    website_url: bad_url.into(),
+                    club_page_url: "https://c.fitness/club-carre-de-soie".into(),
+                    instagram_handle: "@c.fitness".into(),
+                    instagram_url: "https://www.instagram.com/".into(),
+                    facebook_url: "https://www.facebook.com/".into(),
+                    tiktok_handle: "@c.fitness".into(),
+                    tiktok_url: "https://www.tiktok.com/".into(),
+                    youtube_url: "https://www.youtube.com/".into(),
+                    google_business_url: "https://www.google.com/maps".into(),
+                    google_rating: 4.8,
+                    google_reviews_count: 100,
+                }),
+            )
+            .await
+            .expect_err("unsafe URL must fail");
+            assert_eq!(err.0, StatusCode::BAD_REQUEST);
+        }
+
+        // 2. Un collaborateur non-manager (emp-accueil-cs, Carré de Soie uniquement) ne peut ni modifier
+        // les canaux officiels (403) ni consulter/écrire sur Beynost (403).
+        let accueil_headers = session_headers(&state, "emp-accueil-cs", "club-carre-soie").await;
+        let put_err = put_social_channels(
+            State(state.clone()),
+            Path("carre-de-soie".into()),
+            accueil_headers.clone(),
+            Json(UpdateSocialChannelsPayload {
+                website_url: "https://c.fitness".into(),
+                club_page_url: "https://c.fitness/club-carre-de-soie".into(),
+                instagram_handle: "@c.fitness".into(),
+                instagram_url: "https://www.instagram.com/".into(),
+                facebook_url: "https://www.facebook.com/".into(),
+                tiktok_handle: "@c.fitness".into(),
+                tiktok_url: "https://www.tiktok.com/".into(),
+                youtube_url: "https://www.youtube.com/".into(),
+                google_business_url: "https://www.google.com/maps".into(),
+                google_rating: 4.8,
+                google_reviews_count: 100,
+            }),
+        )
+        .await
+        .expect_err("non-manager cannot edit club social channels");
+        assert_eq!(put_err.0, StatusCode::FORBIDDEN);
+
+        let cross_club_get = get_social_channels(
+            State(state.clone()),
+            Path("beynost".into()),
+            accueil_headers.clone(),
+        )
+        .await
+        .expect_err("employee restricted to Carré de Soie cannot read Beynost channels");
+        assert_eq!(cross_club_get.0, StatusCode::FORBIDDEN);
+
+        let cross_club_post = post_social_post(
+            State(state.clone()),
+            accueil_headers,
+            Json(CreateSocialPostPayload {
+                club_id: "beynost".into(),
+                platform: "Instagram".into(),
+                format: "Story".into(),
+                title: "Test interdit Beynost".into(),
+                caption: "".into(),
+                scheduled_date: "2026-11-26".into(),
+                status: Some("brouillon".into()),
+            }),
+        )
+        .await
+        .expect_err("employee restricted to Carré de Soie cannot post on Beynost");
+        assert_eq!(cross_club_post.0, StatusCode::FORBIDDEN);
 
         let _ = std::fs::remove_dir_all(&state.data_dir);
     }

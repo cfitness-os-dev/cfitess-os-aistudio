@@ -111,6 +111,7 @@ if [ ! -f "$INSTALL_DIR/.env" ]; then
   }
 
   set_kv "CFITNESS_DEMO_MODE" "0"
+  set_kv "VITE_DEMO_MODE" "false"
   set_kv "CFITNESS_STRICT_SESSION" "1"
   set_kv "RUST_LOG" "info,cfitness_os=info"
   set_kv "CFITNESS_LEAD_API_KEY" "$LEAD_KEY"

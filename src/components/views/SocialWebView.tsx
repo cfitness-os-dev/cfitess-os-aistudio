@@ -96,7 +96,11 @@ export function SocialWebView() {
   const [activeTab, setActiveTab] = useState<'vitrine' | 'calendrier' | 'reputation'>('vitrine');
   const [channels, setChannels] = useState<ClubSocialChannels | null>(null);
   const [posts, setPosts] = useState<SocialPostRecord[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadNonce, setReloadNonce] = useState(0);
   const [savingChannels, setSavingChannels] = useState(false);
+  const [creatingPost, setCreatingPost] = useState(false);
   const [feedback, setFeedback] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
   const [newPlatform, setNewPlatform] = useState('Instagram');
@@ -109,27 +113,48 @@ export function SocialWebView() {
   useEffect(() => {
     let cancelled = false;
     const headers = buildAuthHeaders(currentUser.id, activeClub);
+    setLoadingData(true);
+    setLoadError(null);
+    setChannels(null);
     setFeedback(null);
 
     void Promise.all([
-      fetch(`/api/social-web/channels/${activeClub}`, { headers }).then((r) =>
-        r.ok ? r.json() : null
-      ),
-      fetch('/api/social-web/posts', { headers }).then((r) => (r.ok ? r.json() : [])),
+      fetch(`/api/social-web/channels/${activeClub}`, { headers }).then(async (r) => {
+        if (!r.ok) {
+          const err = (await r.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(err?.error || `Impossible de charger les canaux (${r.status}).`);
+        }
+        return (await r.json()) as ClubSocialChannels;
+      }),
+      fetch('/api/social-web/posts', { headers }).then(async (r) => {
+        if (!r.ok) {
+          const err = (await r.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(err?.error || `Impossible de charger le calendrier éditorial (${r.status}).`);
+        }
+        return (await r.json()) as SocialPostRecord[];
+      }),
     ])
       .then(([chData, postsData]) => {
         if (cancelled) return;
-        if (chData) setChannels(chData as ClubSocialChannels);
-        if (Array.isArray(postsData)) setPosts(postsData as SocialPostRecord[]);
+        setChannels(chData);
+        if (Array.isArray(postsData)) setPosts(postsData);
       })
-      .catch(() => {
-        // fallback silencieux
+      .catch((err) => {
+        if (cancelled) return;
+        setLoadError(
+          err instanceof Error
+            ? err.message
+            : 'Erreur réseau lors du chargement des données Site Web & Réseaux.'
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingData(false);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [activeClub, currentUser.id]);
+  }, [activeClub, currentUser.id, reloadNonce]);
 
   const clubPosts = posts.filter(
     (p) =>
@@ -182,7 +207,8 @@ export function SocialWebView() {
 
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim()) return;
+    if (!newTitle.trim() || creatingPost) return;
+    setCreatingPost(true);
     setFeedback(null);
     try {
       const res = await fetch('/api/social-web/posts', {
@@ -198,7 +224,10 @@ export function SocialWebView() {
           status: canEditChannels ? 'programme' : 'a_valider',
         }),
       });
-      if (!res.ok) throw new Error('Création de la publication refusée.');
+      if (!res.ok) {
+        const err = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(err?.error || 'Création de la publication refusée.');
+      }
       const created = (await res.json()) as SocialPostRecord;
       setPosts((prev) => [created, ...prev]);
       setNewTitle('');
@@ -212,34 +241,58 @@ export function SocialWebView() {
         kind: 'err',
         text: err instanceof Error ? err.message : 'Erreur lors de la création.',
       });
+    } finally {
+      setCreatingPost(false);
     }
   };
 
   const handleUpdatePostStatus = async (postId: string, nextStatus: SocialPostRecord['status']) => {
+    setFeedback(null);
     try {
       const res = await fetch(`/api/social-web/posts/${encodeURIComponent(postId)}`, {
         method: 'PATCH',
         headers: buildAuthHeaders(currentUser.id, activeClub),
         body: JSON.stringify({ status: nextStatus }),
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        const err = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(err?.error || 'Impossible de mettre à jour le statut de la publication.');
+      }
       const updated = (await res.json()) as SocialPostRecord;
       setPosts((prev) => prev.map((p) => (p.id === postId ? updated : p)));
-    } catch {
-      // ignore
+      setFeedback({
+        kind: 'ok',
+        text: `Statut de « ${updated.title} » mis à jour (${STATUS_LABELS[updated.status].label}).`,
+      });
+    } catch (err) {
+      setFeedback({
+        kind: 'err',
+        text: err instanceof Error ? err.message : 'Erreur réseau lors de la mise à jour.',
+      });
     }
   };
 
   const handleDeletePost = async (postId: string) => {
+    setFeedback(null);
     try {
       const res = await fetch(`/api/social-web/posts/${encodeURIComponent(postId)}`, {
         method: 'DELETE',
         headers: buildAuthHeaders(currentUser.id, activeClub),
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        const err = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(err?.error || 'Suppression de la publication refusée.');
+      }
       setPosts((prev) => prev.filter((p) => p.id !== postId));
-    } catch {
-      // ignore
+      setFeedback({
+        kind: 'ok',
+        text: 'Publication supprimée du calendrier éditorial.',
+      });
+    } catch (err) {
+      setFeedback({
+        kind: 'err',
+        text: err instanceof Error ? err.message : 'Erreur réseau lors de la suppression.',
+      });
     }
   };
 
@@ -296,6 +349,28 @@ export function SocialWebView() {
           );
         })}
       </div>
+
+      {loadError && (
+        <div
+          role="alert"
+          className="p-3 rounded-xl border bg-rose-500/10 border-rose-500/30 text-rose-300 text-xs font-semibold flex flex-wrap items-center justify-between gap-2"
+        >
+          <span>{loadError}</span>
+          <button
+            type="button"
+            onClick={() => setReloadNonce((n) => n + 1)}
+            className="px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-100 cursor-pointer"
+          >
+            Réessayer
+          </button>
+        </div>
+      )}
+
+      {loadingData && !loadError && (
+        <div role="status" className="p-3 rounded-xl border border-[var(--cf-border)] cf-card-secondary text-xs cf-muted">
+          Chargement des canaux officiels et du calendrier éditorial pour {clubInfo.name}…
+        </div>
+      )}
 
       {feedback && (
         <div
@@ -539,10 +614,11 @@ export function SocialWebView() {
             </label>
             <button
               type="submit"
-              className="w-full cf-brand-gradient text-white py-2 rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+              disabled={creatingPost}
+              className="w-full cf-brand-gradient text-white py-2 rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               <Plus className="w-4 h-4" />
-              <span>Ajouter au calendrier ({clubInfo.name})</span>
+              <span>{creatingPost ? 'Enregistrement…' : `Ajouter au calendrier (${clubInfo.name})`}</span>
             </button>
           </form>
 
