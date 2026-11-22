@@ -803,7 +803,7 @@ export function AdminShell() {
                     className="w-full bg-transparent outline-hidden text-xs placeholder:text-slate-400"
                   />
                   <span
-                    className={`hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono shrink-0 ${
+                    className={`hidden lg:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono shrink-0 ${
                       isDark
                         ? 'bg-slate-800 text-slate-400 border border-slate-700'
                         : 'bg-white text-slate-400 border border-slate-200'
@@ -881,7 +881,7 @@ export function AdminShell() {
             </div>
 
             {/* Right Controls: Date Selector, Light/Dark Toggle, Mobile App Preview, Bell, Chat, User Profile */}
-            <div className="flex items-center gap-2.5 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               {/* Date Picker Selector (Lundi 14 avril 2025) */}
               <div className="hidden xl:flex items-center">
                 <div
@@ -1054,7 +1054,7 @@ export function AdminShell() {
                 onClick={() => setShellMode('telephone')}
                 title="Ouvrir le Softphone WebRTC & Messagerie SMS 07"
                 aria-label="Ouvrir la messagerie et le softphone"
-                className={`hidden sm:flex w-9 h-9 rounded-xl border items-center justify-center cursor-pointer transition-colors ${
+                className={`hidden lg:flex w-9 h-9 rounded-xl border items-center justify-center cursor-pointer transition-colors ${
                   isDark
                     ? 'bg-[#1A2033] border-slate-700 text-slate-300 hover:bg-slate-800'
                     : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
@@ -1063,7 +1063,7 @@ export function AdminShell() {
                 <MessageSquare className="w-4 h-4" />
               </button>
 
-              <div className="hidden md:flex">
+              <div className="hidden xl:flex">
                 <MywellnessQuickConnect variant="header" />
               </div>
 
@@ -1082,6 +1082,7 @@ export function AdminShell() {
               {/* Identité du collaborateur connecté */}
               <button
                 type="button"
+                title={`${currentUser.firstName} ${currentUser.lastName} — ${currentUser.jobTitle}`}
                 onClick={() => {
                   if (isDemoMode) {
                     setAuthModalOpen(true);
@@ -1090,7 +1091,7 @@ export function AdminShell() {
                     setActiveSection('my-day', 'personal');
                   }
                 }}
-                className={`pl-2 pr-3 py-1.5 rounded-xl border flex items-center gap-2.5 cursor-pointer transition-colors ${
+                className={`pl-1.5 pr-2 lg:pl-2 lg:pr-3 py-1.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-colors ${
                   isDark
                     ? 'bg-[#1A2033] border-slate-700 hover:bg-slate-800 text-white'
                     : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-900'
@@ -1099,15 +1100,15 @@ export function AdminShell() {
                 <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-500 text-white font-bold text-xs flex items-center justify-center shrink-0">
                   {`${currentUser.firstName[0] || ''}${currentUser.lastName[0] || ''}`.toUpperCase()}
                 </div>
-                <div className="hidden sm:block text-left leading-tight">
-                  <div className="text-xs font-bold">
+                <div className="hidden md:block text-left leading-tight max-w-[115px] lg:max-w-[165px]">
+                  <div className="text-xs font-bold truncate">
                     {`${currentUser.firstName} ${currentUser.lastName}`}
                   </div>
-                  <div className="text-[10px] text-slate-400">
+                  <div className="hidden xl:block text-[10px] text-slate-400 truncate">
                     {currentUser.jobTitle}
                   </div>
                 </div>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden sm:block" />
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden lg:block" />
               </button>
             </div>
           </div>
