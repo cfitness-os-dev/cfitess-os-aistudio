@@ -1095,9 +1095,9 @@ export function LeadCommercialHubView({
           </div>
           <p className="text-xs text-slate-200">{currentAccess.reason}</p>
           <p className="text-[11px] cf-muted">
-            Conformément aux spécifications <code>08_REPRISE_ET_DROITS</code> et <code>ACL-01</code>, le profil{' '}
+            Conformément aux droits d’accès de votre profil, le rôle{' '}
             <strong>{simulatedRole.toUpperCase()}</strong> ne peut accéder ni à l&apos;interface ni aux routes API
-            associées. Sélectionne <strong>ADMIN</strong> ou <strong>MANAGER</strong> ci-dessus pour inspecter cette section.
+            associées.
           </p>
         </div>
       ) : (
@@ -2052,7 +2052,7 @@ export function LeadCommercialHubView({
               <div className="cf-card p-4 space-y-3">
                 <h2 className="text-sm font-extrabold flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-violet-400" />
-                  Type de Rendez-vous Réservable, Collisions (RDV-01) &amp; Lien Isolé
+                  Type de rendez-vous réservable, collisions &amp; lien de réservation
                 </h2>
                 <p className="text-xs cf-muted">
                   Réservation persistée par club avec détection des collisions inter-types, déplacement et annulation.
@@ -2172,7 +2172,7 @@ export function LeadCommercialHubView({
                     />
                     <span>
                       {isTechnicalMode
-                        ? 'Activer la prévention automatique des collisions inter-types (Décision RDV-01)'
+                        ? 'Activer la prévention automatique des collisions inter-types'
                         : 'Empêcher automatiquement les doubles réservations sur un même créneau'}
                     </span>
                   </label>
@@ -2391,7 +2391,7 @@ export function LeadCommercialHubView({
                 <div className="flex items-center justify-between gap-2">
                   <h2 className="text-sm font-extrabold flex items-center gap-2">
                     <MessageCircle className="w-4 h-4 text-emerald-400" />
-                    Messagerie &amp; Règle Fenêtre Meta 24h (WA-01 / WA-02 / INC-001)
+                    Messagerie &amp; règle fenêtre WhatsApp 24h
                   </h2>
                   <button
                     type="button"
@@ -2491,7 +2491,7 @@ export function LeadCommercialHubView({
                     />
                   </label>
                   <label>
-                    Repli si fenêtre &gt; 24h (WA-01)
+                    Canal de repli si fenêtre &gt; 24h
                     <select
                       value={waFallback}
                       onChange={(e) => setWaFallback(e.target.value as WhatsAppFallbackPolicy)}
@@ -2519,7 +2519,7 @@ export function LeadCommercialHubView({
                       checked={waMediaAttached}
                       onChange={(e) => setWaMediaAttached(e.target.checked)}
                     />
-                    <span>Complétude technique WA-02 : Image JPG/PNG (≤ 5 Mo) jointe</span>
+                    <span>Pièce jointe image JPG/PNG (≤ 5 Mo)</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -2527,7 +2527,7 @@ export function LeadCommercialHubView({
                       checked={waExplicitSave}
                       onChange={(e) => setWaExplicitSave(e.target.checked)}
                     />
-                    <span>Clic explicite « Enregistrer brouillon » (garde-fou INC-001)</span>
+                    <span>Validation explicite « Enregistrer brouillon »</span>
                   </label>
                 </div>
 
@@ -2540,7 +2540,7 @@ export function LeadCommercialHubView({
                 >
                   <div>
                     Fenêtre 24h : <strong>{waDecision.window24hOpen ? 'OUVERTE' : 'FERMÉE (> 24h)'}</strong> · Canal retenu :{' '}
-                    <strong className="font-mono">{waDecision.deliveryChannel}</strong> · Brouillon créé (INC-001) :{' '}
+                    <strong className="font-mono">{waDecision.deliveryChannel}</strong> · Brouillon enregistré :{' '}
                     <strong>{waDecision.draftCreated ? 'OUI (clic explicite)' : 'NON'}</strong>
                   </div>
                   <div className="font-semibold">{waDecision.reason}</div>
@@ -2553,7 +2553,7 @@ export function LeadCommercialHubView({
                   <li>Catégories supportées : <strong>Marketing</strong> et <strong>Utility</strong>.</li>
                   <li>Limites strictes : Nom ≤ <code>100</code> car., Corps ≤ <code>1024</code> car., Footer ≤ <code>60</code> car., Réponse rapide ≤ <code>25</code> car., max <code>10</code> boutons.</li>
                   <li>Types de boutons observés : <strong>Appeler un numéro</strong>, <strong>URL Statique / Dynamique</strong>, <strong>Réponse rapide</strong>.</li>
-                  <li>Média image : JPG/PNG max <code>5 Mo</code> (contrôlé indépendamment de l’approbation Meta — WA-02).</li>
+                  <li>Média image : JPG/PNG max <code>5 Mo</code> (contrôlé avant envoi).</li>
                 </ul>
               </div>
             </div>
@@ -2989,7 +2989,7 @@ export function LeadCommercialHubView({
                   {/* Campagne SMS sans crash RSP-03 + calculateur SMS-01 */}
                   <div className="cf-card p-4 space-y-3">
                     <h3 className="text-sm font-extrabold">
-                      Campagne SMS (12 statuts · STOP auto · Calculateur SMS-01 · Sans crash RSP-03)
+                      Campagne SMS (STOP automatique &amp; calculateur de segments)
                     </h3>
                     <textarea
                       rows={3}
@@ -3261,7 +3261,7 @@ export function LeadCommercialHubView({
                       analyticsSubTab === 'forms' ? 'bg-violet-600 text-white' : 'bg-slate-900 text-slate-300'
                     }`}
                   >
-                    Formulaires (UI-01 &amp; ACL-01)
+                    Formulaires de capture
                   </button>
                 </div>
 
@@ -3623,7 +3623,7 @@ export function LeadCommercialHubView({
                           <th className="py-2 pr-3">Club</th>
                           <th className="py-2 pr-3">Sections / Réponses</th>
                           <th className="py-2 pr-3">Statut</th>
-                          <th className="py-2">Actions (ACL-01)</th>
+                          <th className="py-2">Actions</th>
                         </tr>
                       </thead>
                       <tbody>

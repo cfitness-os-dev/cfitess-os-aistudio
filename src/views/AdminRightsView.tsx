@@ -410,7 +410,7 @@ export function AdminRightsView({
       await loadAudit();
       setStatusMsg({
         kind: 'ok',
-        text: `Profil « ${updated.name} » enregistré côté serveur (effet immédiat TST35 & trace JOU01).`,
+        text: `Profil « ${updated.name} » enregistré côté serveur (effet immédiat).`,
       });
     } catch (e) {
       const msg =
@@ -434,7 +434,7 @@ export function AdminRightsView({
       URL.revokeObjectURL(url);
       setStatusMsg({
         kind: 'ok',
-        text: 'Export CSV du journal JOU01 généré (ADM14-J01).',
+        text: 'Export CSV du journal d’activité généré.',
       });
     } catch (e) {
       setStatusMsg({
@@ -452,7 +452,7 @@ export function AdminRightsView({
       setRestoreInput(res.backupJson);
       setStatusMsg({
         kind: 'ok',
-        text: 'Sauvegarde JSON complète générée côté serveur (TST28).',
+        text: 'Sauvegarde JSON complète générée côté serveur.',
       });
     } catch (e) {
       setStatusMsg({
@@ -471,7 +471,7 @@ export function AdminRightsView({
       await loadAudit();
       setStatusMsg({
         kind: 'ok',
-        text: `Restauration validée côté serveur à ${res.restoredAt} (TST28).`,
+        text: `Restauration validée côté serveur à ${res.restoredAt}.`,
       });
     } catch (e) {
       setStatusMsg({
@@ -1164,7 +1164,7 @@ export function AdminRightsView({
             <div className="cf-card p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <h2 className="font-semibold text-sm">
-                  Organisation (ORG01 — ORG04-32 requis)
+                Organisation ({isTechnicalMode ? 'ORG01 — ORG04-32 requis' : 'Société & paramètres généraux'})
                 </h2>
                 <button
                   type="button"
@@ -1274,7 +1274,7 @@ export function AdminRightsView({
           {csSite && beySite && (
             <div className="cf-card p-5 space-y-3">
               <h2 className="font-semibold text-sm">
-                Paramètres distincts par établissement (PAR01–PAR17)
+                Paramètres distincts par établissement{isTechnicalMode ? ' (PAR01–PAR17)' : ''}
               </h2>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
@@ -1364,7 +1364,7 @@ export function AdminRightsView({
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div>
               <h2 className="font-semibold text-sm">
-                Journal d’activité immuable (JOU01 / ADM14-J01)
+                Journal d’activité immuable{isTechnicalMode ? ' (JOU01 / ADM14-J01)' : ''}
               </h2>
               <p className="text-xs cf-muted">
                 Historisation obligatoire : horodatage, auteur, type, cible, avant/après.
@@ -2284,7 +2284,7 @@ export function AdminRightsView({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="font-semibold text-sm">
-                Sauvegarde & Restauration complète (TST28)
+                Sauvegarde &amp; Restauration complète{isTechnicalMode ? ' (TST28)' : ''}
               </h2>
               <p className="text-xs cf-muted">
                 Exporte et restaure l’état complet (profils, sites, salariés,
