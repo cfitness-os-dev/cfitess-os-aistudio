@@ -50,6 +50,114 @@ pub struct CapturePhotoPayload {
     pub image_base64: String,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct UpdatePhotoPolicyPayload {
+    pub mode: String, // "disabled" | "optional" | "required"
+}
+
+pub(crate) fn club_photo_policy(db: &AppDatabaseState, site_id: &str) -> &'static str {
+    match db
+        .photo_policy_by_club
+        .get(site_id)
+        .map(String::as_str)
+    {
+        Some("disabled") => "disabled",
+        Some("required") => "required",
+        _ => "optional",
+    }
+}
+
+pub async fn get_photo_policy(
+    State(state): State<SharedState>,
+    Path(raw_club): Path<String>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Failure> {
+    let (_, site_id) = club_site(&raw_club)?;
+    let actor_id = authenticated_employee(&state, &headers).await?;
+    let db = state.db.read().await;
+    if !can_access_site_scope(&db, &actor_id, site_id) {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Accès refusé à la politique photo de ce club.",
+        ));
+    }
+    Ok(Json(json!({
+        "siteId": site_id,
+        "mode": club_photo_policy(&db, site_id)
+    })))
+}
+
+pub async fn put_photo_policy(
+    State(state): State<SharedState>,
+    Path(raw_club): Path<String>,
+    headers: HeaderMap,
+    Json(payload): Json<UpdatePhotoPolicyPayload>,
+) -> Result<Json<Value>, Failure> {
+    let (_, site_id) = club_site(&raw_club)?;
+    let actor_id = authenticated_employee(&state, &headers).await?;
+    let mode = match payload.mode.trim() {
+        "disabled" => "disabled",
+        "optional" => "optional",
+        "required" => "required",
+        _ => {
+            return Err(err_resp(
+                StatusCode::BAD_REQUEST,
+                "Politique photo invalide (valeurs acceptées : disabled, optional, required).",
+            ))
+        }
+    };
+
+    let mut db = state.db.write().await;
+    let can_manage = can_access_site_scope(&db, &actor_id, site_id)
+        && evaluate_permission(
+            &db,
+            &actor_id,
+            site_id,
+            "ORG04-37",
+            Some(PermissionTarget {
+                site_id: Some(site_id),
+                target_employee_id: Some(&actor_id),
+                target_team_ids: &[],
+                lock_state: None,
+            }),
+        )
+        .allowed;
+    if !can_manage {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Droits insuffisants pour modifier la politique photo de ce club.",
+        ));
+    }
+
+    let mut next = db.clone();
+    let prev = club_photo_policy(&next, site_id).to_string();
+    next.photo_policy_by_club
+        .insert(site_id.to_string(), mode.to_string());
+    append_audit(
+        &mut next,
+        &actor_id,
+        "PHOTO_POLICY_UPDATED",
+        format!("Politique photo du club {site_id} réglée sur {mode}"),
+        site_id,
+        site_id,
+        Some(prev),
+        Some(mode.to_string()),
+    );
+    persist_state(&state.data_dir, &next).map_err(|err| {
+        err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec de persistance de la politique photo : {err}"),
+        )
+    })?;
+    *db = next;
+
+    Ok(Json(json!({
+        "siteId": site_id,
+        "mode": mode
+    })))
+}
+
 fn club_site(raw: &str) -> Result<(&'static str, &'static str), Failure> {
     match raw {
         "carre-de-soie" | "club-carre-soie" => Ok(("carre-de-soie", "club-carre-soie")),
@@ -244,6 +352,12 @@ pub async fn post_capture_punch_photo(
         return Err(err_resp(
             StatusCode::FORBIDDEN,
             "Votre profil ne dispose pas du droit de pointage sur les terminaux de ce club.",
+        ));
+    }
+    if club_photo_policy(&db, &terminal.site_id) == "disabled" {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "La capture photo au badgeage est désactivée pour ce club.",
         ));
     }
 

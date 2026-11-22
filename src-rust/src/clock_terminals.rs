@@ -647,6 +647,14 @@ pub async fn post_terminal_punch(
         ));
     }
 
+    let photo_policy = crate::punch_photos::club_photo_policy(&db, &term.site_id);
+    if photo_policy == "required" && payload.photo_proof.is_none() {
+        return Err(err_resp(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "Une preuve photo est obligatoire pour pointer sur les terminaux de ce club.",
+        ));
+    }
+
     let punch_id = format!("terminal-punch-{}", rand::random::<u128>());
     let now = Utc::now().to_rfc3339();
     let mut next = db.clone();
