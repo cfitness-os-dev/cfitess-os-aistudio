@@ -277,7 +277,7 @@ const DOC_TEMPLATE_MODELS = [
     date: '2024-05-14',
     author: 'Système',
     selectable: false,
-    note: 'Visuellement grisé avec indicateur rouge (cause non qualifiée — ADM14-D01).',
+    note: 'Modèle désactivé — vérification administrateur requise.',
   },
   {
     id: 'tpl-05',
@@ -285,7 +285,7 @@ const DOC_TEMPLATE_MODELS = [
     date: '2025-03-02',
     author: 'Système',
     selectable: false,
-    note: 'Visuellement grisé avec indicateur rouge (cause non qualifiée — ADM14-D01).',
+    note: 'Modèle désactivé — vérification administrateur requise.',
   },
 ];
 

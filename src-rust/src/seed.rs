@@ -2183,7 +2183,10 @@ fn apply_initial_admin_password_bootstrap(state: &mut AppDatabaseState) -> bool 
 }
 
 pub fn load_or_init_state(data_dir: &Path) -> AppDatabaseState {
-    let demo_mode = crate::routes::is_demo_mode();
+    load_or_init_state_with_mode(data_dir, crate::routes::is_demo_mode())
+}
+
+pub fn load_or_init_state_with_mode(data_dir: &Path, demo_mode: bool) -> AppDatabaseState {
     let state_file = data_dir.join("cfitness_state.json");
     if state_file.exists() {
         if let Ok(raw) = fs::read_to_string(&state_file) {
@@ -2351,5 +2354,61 @@ mod tests {
             "MauvaisMotDePasse!",
             stored_hash
         ));
+    }
+
+    #[test]
+    fn production_initial_state_enforces_official_legal_identities_and_persists_cleanly() {
+        let mut state = create_production_initial_state();
+        let target_id = state.employees[0].id.clone();
+
+        // 1. Identités officielles des deux établissements vérifiées (zéro label fictif)
+        let cds = state
+            .sites
+            .iter()
+            .find(|s| s.id == "club-carre-soie")
+            .expect("Carré de Soie présent");
+        let bey = state
+            .sites
+            .iter()
+            .find(|s| s.id == "club-beynost")
+            .expect("Beynost présent");
+        assert_eq!(cds.name, "C.Fitness Carré de Soie");
+        assert_eq!(cds.siret, "81865131700013");
+        assert!(!cds.address.contains("Fictif"));
+        assert_eq!(bey.name, "C.Fitness Beynost");
+        assert_eq!(bey.siret, "85272252900025");
+        assert!(!bey.address.contains("Fictif"));
+
+        // 2. Zéro donnée opérationnelle fictive en base vierge de production
+        assert_eq!(state.employees.len(), 1);
+        assert!(state.shifts.is_empty());
+        assert!(state.heitz_members.is_empty());
+        assert!(state.stock_items.is_empty());
+        assert!(state.social_posts.is_empty());
+        assert!(state.maintenance_tickets.is_empty());
+
+        // 3. Bootstrap mot de passe PBKDF2 + persistance atomique + rechargement disque
+        assert!(apply_admin_password_bootstrap_with(
+            &mut state,
+            "ProductionAdmin2026!",
+            &target_id
+        ));
+        let dir = std::env::temp_dir().join(format!(
+            "cfos_prod_seed_test_{}",
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default()
+        ));
+        persist_state(&dir, &state).expect("persistance production OK");
+        let reloaded = load_or_init_state_with_mode(&dir, false);
+        assert_eq!(reloaded.employees.len(), 1);
+        assert!(reloaded.heitz_members.is_empty());
+        let hash = reloaded
+            .password_hashes_by_employee
+            .get(&target_id)
+            .expect("hash conservé après redémarrage");
+        assert!(crate::auth_passwords::verify_password_hash(
+            "ProductionAdmin2026!",
+            hash
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
