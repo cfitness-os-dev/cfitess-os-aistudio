@@ -1,4 +1,6 @@
 import type { LeadClubId, LeadSettings } from './leadSettings';
+import type { HeitzSnapshotRow, HeitzIntegration } from './heitzCrm';
+import type { HeitzMember } from '../types/cfos';
 import type { DashboardPayload } from './apiEngine';
 import type {
   CandidateActionRef,
@@ -112,6 +114,19 @@ async function requestJson<T>(
 }
 
 export const clientApi = {
+  getHeitzMembers(auth: ApiAuthContext): Promise<HeitzMember[]> {
+    return requestJson('/api/heitz/members', auth);
+  },
+  getHeitzIntegration(auth: ApiAuthContext): Promise<HeitzIntegration> {
+    return requestJson('/api/heitz/integration', auth);
+  },
+  importHeitzSnapshot(auth: ApiAuthContext, members: HeitzSnapshotRow[]): Promise<{
+    added: number; updated: number; totalProcessed: number; items: HeitzMember[];
+  }> {
+    return requestJson('/api/heitz/members/import', auth, {
+      method: 'POST', body: JSON.stringify({ source: 'HEITZ_CSV', members }),
+    });
+  },
   updateTimeclockSettings(
     auth: ApiAuthContext,
     siteId: string,

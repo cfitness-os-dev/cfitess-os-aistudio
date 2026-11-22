@@ -390,6 +390,7 @@ pub fn api_router(state: SharedState) -> Router {
             "/api/heitz/members",
             get(crate::heitz_members::get_heitz_members),
         )
+        .route("/api/heitz/integration", get(crate::heitz_members::get_heitz_integration))
         .route(
             "/api/heitz/members/import",
             post(crate::heitz_members::post_heitz_members_import),
