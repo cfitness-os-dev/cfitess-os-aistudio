@@ -121,6 +121,9 @@ export function RecoveryView() {
     clubFilter === 'beynost' ? 'club-beynost' : 'club-carre-soie';
 
   const [serverCases, setServerCases] = useState<RecoveryCase[] | null>(null);
+  const [loadingCases, setLoadingCases] = useState(false);
+  const [loadCasesError, setLoadCasesError] = useState<string | null>(null);
+  const [reloadCasesNonce, setReloadCasesNonce] = useState(0);
   const [savingCase, setSavingCase] = useState(false);
   const [recoveryNotice, setRecoveryNotice] = useState<{
     kind: 'ok' | 'err';
@@ -190,8 +193,17 @@ export function RecoveryView() {
   }, []);
 
   useEffect(() => {
+    if (clubFilter === 'beynost' || clubFilter === 'carre-de-soie') {
+      setNewClubId(clubFilter);
+    }
+  }, [clubFilter]);
+
+  useEffect(() => {
     if (!canAccessRecovery) return;
     let cancelled = false;
+    setLoadingCases(true);
+    setLoadCasesError(null);
+    setServerCases(null);
     void recoveryFetchJson<RecoveryCase[]>(
       '/api/recovery/cases',
       currentUser.id,
@@ -202,33 +214,46 @@ export function RecoveryView() {
           setServerCases(list);
         }
       })
-      .catch(() => {
-        // Repli sur les données du contexte local uniquement en mode démo si serveur indisponible
+      .catch((err) => {
+        if (!cancelled) {
+          setLoadCasesError(
+            err instanceof Error
+              ? err.message
+              : 'Impossible de charger les dossiers de recouvrement depuis le serveur.'
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingCases(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [currentUser.id, activeSiteId, canAccessRecovery]);
+  }, [currentUser.id, activeSiteId, canAccessRecovery, reloadCasesNonce]);
 
-  const effectiveCases = serverCases ?? recoveryCases;
+  const effectiveCases = serverCases ?? (loadCasesError ? [] : recoveryCases);
+
+  const clubCases = useMemo(() => {
+    return effectiveCases.filter((rc) =>
+      clubFilter === 'all' ? true : rc.clubId === clubFilter
+    );
+  }, [effectiveCases, clubFilter]);
 
   const filteredCases = useMemo(() => {
-    return effectiveCases.filter((rc) => {
-      if (clubFilter !== 'all' && rc.clubId !== clubFilter) return false;
+    return clubCases.filter((rc) => {
       if (statusFilter !== 'ALL' && rc.status !== statusFilter) return false;
       return true;
     });
-  }, [effectiveCases, clubFilter, statusFilter]);
+  }, [clubCases, statusFilter]);
 
   const selectedCase =
     filteredCases.find((c) => c.id === selectedCaseId) ||
     filteredCases[0] ||
-    effectiveCases[0] ||
     null;
 
-  const activeCases = effectiveCases.filter((c) => c.status !== 'regularise');
+  const activeCases = clubCases.filter((c) => c.status !== 'regularise');
   const totalDueEur = activeCases.reduce((sum, c) => sum + c.amountDueEur, 0);
-  const readyForLitigationCount = effectiveCases.filter(
+  const readyForLitigationCount = clubCases.filter(
     (c) => c.status === 'pret_contentieux'
   ).length;
 
@@ -540,8 +565,31 @@ DOSSIER ADHÉRENT ACTUEL :
         </div>
       </div>
 
+      {loadCasesError && (
+        <div
+          role="alert"
+          className="p-3.5 rounded-xl border bg-rose-950/40 border-rose-500/40 text-rose-200 text-xs flex flex-wrap items-center justify-between gap-2"
+        >
+          <span>{loadCasesError}</span>
+          <button
+            type="button"
+            onClick={() => setReloadCasesNonce((n) => n + 1)}
+            className="px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-100 font-semibold cursor-pointer"
+          >
+            Réessayer
+          </button>
+        </div>
+      )}
+
+      {loadingCases && !loadCasesError && (
+        <div role="status" className="p-3 rounded-xl border border-[var(--cf-border)] cf-card-secondary text-xs cf-muted">
+          Chargement des dossiers de recouvrement depuis le serveur…
+        </div>
+      )}
+
       {recoveryNotice && (
         <div
+          role={recoveryNotice.kind === 'err' ? 'alert' : 'status'}
           className={`p-3.5 rounded-xl border text-xs flex items-center gap-2 ${
             recoveryNotice.kind === 'ok'
               ? 'bg-emerald-950/35 border-emerald-500/40 text-emerald-200'
