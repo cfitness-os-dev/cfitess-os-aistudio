@@ -601,10 +601,6 @@ pub async fn post_terminal_punch(
         }
     };
 
-    if payload.photo_proof.is_some() {
-        return Err(err_resp(StatusCode::CONFLICT,"La capture et la conservation des photos ne sont pas encore disponibles. Aucun pointage avec photo n’a été confirmé."));
-    }
-
     let Some(employee) = db.employees.iter().find(|e| e.id == payload.employee_id) else {
         return Err(err_resp(
             StatusCode::NOT_FOUND,
@@ -653,6 +649,22 @@ pub async fn post_terminal_punch(
 
     let punch_id = format!("terminal-punch-{}", rand::random::<u128>());
     let now = Utc::now().to_rfc3339();
+    let mut next = db.clone();
+
+    let consumed_photo = if let Some(ref photo_id) = payload.photo_proof {
+        Some(crate::punch_photos::consume_punch_photo(
+            &mut next,
+            &state.data_dir,
+            photo_id,
+            &payload.employee_id,
+            &term.id,
+            &term.site_id,
+            &punch_id,
+        )?)
+    } else {
+        None
+    };
+
     let entry = json!({
         "id": punch_id,
         "employeeId": payload.employee_id,
@@ -662,13 +674,14 @@ pub async fn post_terminal_punch(
         "source": "terminal",
         "terminalId": term.id,
         "roomLabel": term.room_label,
-        "photoProofPresent": false
+        "photoProofPresent": consumed_photo.is_some(),
+        "photoProofId": consumed_photo.as_ref().map(|p| p.id.clone()),
+        "photoSha256": consumed_photo.as_ref().map(|p| p.sha256_hex.clone())
     });
 
     rows.push(entry.clone());
     person["timeEntries"] = Value::Array(rows);
 
-    let mut next = db.clone();
     next.personal_workspace
         .people
         .insert(payload.employee_id.clone(), person);
@@ -679,7 +692,13 @@ pub async fn post_terminal_punch(
         "TERMINAL_PUNCH",
         format!(
             "Pointage {} enregistré depuis terminal {} ({}) - photo : {}",
-            payload.punch_type, term.id, term.room_label, "non fournie"
+            payload.punch_type,
+            term.id,
+            term.room_label,
+            consumed_photo
+                .as_ref()
+                .map(|p| p.id.as_str())
+                .unwrap_or("non fournie")
         ),
         &term.site_id,
         &payload.employee_id,
