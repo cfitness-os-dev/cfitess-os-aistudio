@@ -62,9 +62,11 @@ pub(crate) fn club_photo_policy(db: &AppDatabaseState, site_id: &str) -> &'stati
         .get(site_id)
         .map(String::as_str)
     {
-        Some("disabled") => "disabled",
+        None => "optional",
+        Some("optional") => "optional",
         Some("required") => "required",
-        _ => "optional",
+        // Fail-closed sur "disabled" ou toute valeur inconnue/corrompue
+        Some(_) => "disabled",
     }
 }
 
@@ -109,24 +111,25 @@ pub async fn put_photo_policy(
     };
 
     let mut db = state.db.write().await;
-    let can_manage = can_access_site_scope(&db, &actor_id, site_id)
-        && evaluate_permission(
-            &db,
-            &actor_id,
-            site_id,
-            "ORG04-37",
-            Some(PermissionTarget {
-                site_id: Some(site_id),
-                target_employee_id: Some(&actor_id),
-                target_team_ids: &[],
-                lock_state: None,
-            }),
-        )
-        .allowed;
-    if !can_manage {
+    let perm = evaluate_permission(
+        &db,
+        &actor_id,
+        site_id,
+        "ORG04-37",
+        Some(PermissionTarget {
+            site_id: Some(site_id),
+            target_employee_id: Some(&actor_id),
+            target_team_ids: &[],
+            lock_state: None,
+        }),
+    );
+    let can_manage_club = can_access_site_scope(&db, &actor_id, site_id)
+        && perm.allowed
+        && perm.effective_scope == crate::models::Scope::Sites;
+    if !can_manage_club {
         return Err(err_resp(
             StatusCode::FORBIDDEN,
-            "Droits insuffisants pour modifier la politique photo de ce club.",
+            "Seul un responsable de portée établissement (Sites) peut modifier la politique photo globale du club.",
         ));
     }
 
