@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useCfos } from '../../context/CfosContext';
 import {
   Wifi,
@@ -14,12 +14,15 @@ import {
   ClipboardCheck,
   RefreshCw,
   LogOut,
+  Camera,
   CameraOff,
 } from 'lucide-react';
 import { ClubId, PointageType } from '../../types/cfos';
 import { formatPointageType } from '../../domain/rules';
 import { ThemeColorControl } from '../ThemeColorControl';
 import {
+  CapturedPhotoProof,
+  captureTerminalPhoto,
   clearStoredTerminalToken,
   fetchRoomOccurrences,
   fetchTerminalWhoAmI,
@@ -66,6 +69,91 @@ export function KioskTabletShell() {
   const [mode, setMode] = useState<'POINTEUSE_RH' | 'SALLE_COURS' | 'VISITEUR_ESSAI'>('POINTEUSE_RH');
   const [pointageType, setPointageType] = useState<PointageType>('arrivee');
   const [punchBusy, setPunchBusy] = useState(false);
+
+  // Capture webcam réelle (Lot P3)
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [capturingPhoto, setCapturingPhoto] = useState(false);
+  const [capturedPhoto, setCapturedPhoto] = useState<CapturedPhotoProof | null>(null);
+  const [capturedPreviewUrl, setCapturedPreviewUrl] = useState<string | null>(null);
+
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setCameraActive(false);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, [stopCamera]);
+
+  const startCamera = async () => {
+    setCameraError(null);
+    setStatusMessage(null);
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      setCameraError("Votre navigateur ou appareil n'expose pas d'accès caméra (getUserMedia).");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      setCameraActive(true);
+      requestAnimationFrame(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      });
+    } catch (err) {
+      setCameraError(
+        err instanceof Error
+          ? `Accès caméra refusé ou indisponible : ${err.message}`
+          : 'Impossible de démarrer la caméra.'
+      );
+    }
+  };
+
+  const handleCapturePhoto = async () => {
+    if (!deviceToken || !videoRef.current) return;
+    setCapturingPhoto(true);
+    setCameraError(null);
+    setStatusMessage(null);
+    try {
+      const video = videoRef.current;
+      const width = video.videoWidth || 640;
+      const height = video.videoHeight || 480;
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Contexte graphique indisponible.');
+      ctx.drawImage(video, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.78);
+      const proof = await captureTerminalPhoto(deviceToken, dataUrl);
+      setCapturedPhoto(proof);
+      setCapturedPreviewUrl(dataUrl);
+      stopCamera();
+      setStatusMessage({
+        type: 'ok',
+        text: `Preuve photo enregistrée sur le serveur (${Math.round(proof.byteSize / 1024)} Ko, valable 2 min).`,
+      });
+    } catch (err) {
+      setCameraError(err instanceof Error ? err.message : 'Échec de capture photo.');
+    } finally {
+      setCapturingPhoto(false);
+    }
+  };
 
   // Mode Salle de cours (P2)
   const [occurrences, setOccurrences] = useState<RoomCourseOccurrence[]>([]);
@@ -201,11 +289,19 @@ export function KioskTabletShell() {
     setStatusMessage(null);
     setPunchBusy(true);
     try {
-      const res = await submitTerminalPunch(deviceToken, currentUser.id, pointageType);
+      const res = await submitTerminalPunch(
+        deviceToken,
+        currentUser.id,
+        pointageType,
+        capturedPhoto?.photoId
+      );
       setStatusMessage({
         type: 'ok',
-        text: `Pointage « ${formatPointageType(pointageType)} » confirmé pour ${currentUser.firstName} ${currentUser.lastName} sur ${res.roomLabel}.`,
+        text: `Pointage « ${formatPointageType(pointageType)} » confirmé pour ${currentUser.firstName} ${currentUser.lastName} sur ${res.roomLabel}${capturedPhoto ? ' (avec preuve photo)' : ''}.`,
       });
+      setCapturedPhoto(null);
+      setCapturedPreviewUrl(null);
+      stopCamera();
     } catch (err) {
       setStatusMessage({
         type: 'error',
@@ -544,11 +640,106 @@ export function KioskTabletShell() {
                         : 'Aucun utilisateur connecté'}
                     </div>
                   </div>
-                  {!terminalInfo.photoCaptureAvailable && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                  {!terminalInfo.photoCaptureAvailable && !capturedPhoto && !cameraActive && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-slate-500/15 text-slate-400 border border-slate-500/30">
                       <CameraOff className="w-3.5 h-3.5" />
-                      Capture photo non activée sur cette borne
+                      Photo facultative (caméra prête à activer)
                     </span>
+                  )}
+                </div>
+
+                {/* Bloc Capture Photo Matérielle (getUserMedia) */}
+                <div
+                  className={`p-4 rounded-2xl border space-y-3 ${
+                    isDark ? 'bg-slate-900/70 border-slate-700' : 'bg-slate-50 border-slate-200'
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-xs font-bold flex items-center gap-1.5">
+                      <Camera className="w-4 h-4 text-violet-400" />
+                      <span>Preuve photo au badgeage (caméra tablette)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {!cameraActive && !capturedPhoto && (
+                        <button
+                          type="button"
+                          onClick={startCamera}
+                          className="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold cursor-pointer"
+                        >
+                          Activer la caméra
+                        </button>
+                      )}
+                      {cameraActive && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={handleCapturePhoto}
+                            disabled={capturingPhoto}
+                            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold cursor-pointer"
+                          >
+                            {capturingPhoto ? 'Envoi...' : 'Prendre la photo'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={stopCamera}
+                            className="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold cursor-pointer"
+                          >
+                            Couper
+                          </button>
+                        </>
+                      )}
+                      {capturedPhoto && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCapturedPhoto(null);
+                            setCapturedPreviewUrl(null);
+                            startCamera();
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold cursor-pointer"
+                        >
+                          Reprendre
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {cameraError && (
+                    <div className="text-xs text-rose-400 font-semibold flex items-center gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{cameraError}</span>
+                    </div>
+                  )}
+
+                  {cameraActive && (
+                    <div className="overflow-hidden rounded-xl border border-slate-700 bg-black max-w-xs mx-auto">
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="w-full h-44 object-cover"
+                      />
+                    </div>
+                  )}
+
+                  {capturedPhoto && capturedPreviewUrl && (
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={capturedPreviewUrl}
+                        alt="Aperçu preuve photo"
+                        className="w-20 h-16 rounded-lg object-cover border border-emerald-500/60"
+                      />
+                      <div className="text-xs space-y-0.5">
+                        <div className="font-bold text-emerald-400 flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Preuve photo prête ({Math.round(capturedPhoto.byteSize / 1024)} Ko)
+                        </div>
+                        <div className="text-[11px] font-mono text-slate-400">
+                          ID : {capturedPhoto.photoId.slice(0, 18)}…
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
 

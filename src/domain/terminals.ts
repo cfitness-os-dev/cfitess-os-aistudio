@@ -66,6 +66,15 @@ export interface TerminalPunchResponse {
   roomLabel: string;
 }
 
+export interface CapturedPhotoProof {
+  photoId: string;
+  contentType: string;
+  byteSize: number;
+  sha256: string;
+  capturedAt: string;
+  expiresAt: string;
+}
+
 export interface RoomCourseOccurrence {
   occurrenceId: string;
   templateId: string;
@@ -265,14 +274,51 @@ export async function fetchTerminalWhoAmI(
   return await res.json();
 }
 
+export async function captureTerminalPhoto(
+  deviceToken: string,
+  imageBase64: string
+): Promise<CapturedPhotoProof> {
+  const token = getSessionToken();
+  if (!token) {
+    throw new Error("Connectez-vous avec votre compte salarié avant de capturer une photo.");
+  }
+
+  const res = await fetch("/api/terminals/photo-proof", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "x-cfitness-terminal-token": deviceToken,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({ imageBase64 }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new Error(data?.message || "Capture photo refusée par le serveur.");
+  }
+
+  return await res.json();
+}
+
 export async function submitTerminalPunch(
   deviceToken: string,
   employeeId: string,
-  punchType: string
+  punchType: string,
+  photoProof?: string
 ): Promise<TerminalPunchResponse> {
   const token = getSessionToken();
   if (!token) {
     throw new Error("Connectez-vous avec votre compte salarié avant de pointer.");
+  }
+
+  const payload: Record<string, string> = {
+    employeeId,
+    punchType,
+  };
+  if (photoProof) {
+    payload.photoProof = photoProof;
   }
 
   const res = await fetch("/api/terminals/punch", {
@@ -283,10 +329,7 @@ export async function submitTerminalPunch(
       "Content-Type": "application/json",
       Accept: "application/json",
     },
-    body: JSON.stringify({
-      employeeId,
-      punchType,
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (!res.ok) {
