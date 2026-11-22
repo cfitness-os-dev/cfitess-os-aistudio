@@ -1,0 +1,378 @@
+{
+  "status": "proposition à valider, non déployée",
+  "source_file": "public/references/lead_audit/LEAD_AUDIT_EN_COURS/01_CARTOGRAPHIE.json",
+  "source_date": "2026-11-17",
+  "source_limit": "Cartographie connue, non exhaustive",
+  "mapped_known_routes": 46,
+  "scope": "Routes connues seulement ; ne remplace pas la traçabilité des options de INVENTAIRE_LEAD.json",
+  "routes": [
+    {
+      "source_label": "Rechercher un contact",
+      "source_path_pattern": "/club/{club}/search",
+      "source_observation": "Entrée visible ; recherche détaillée non testée",
+      "proposed_target": "Recherche de contact",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Prospects",
+      "source_path_pattern": "/club/{club}/lead",
+      "source_observation": "Liste, filtres, fiche et principaux dialogues préparatoires approfondis ; résultats métier non testés.",
+      "proposed_target": "Prospects",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Clients",
+      "source_path_pattern": "/club/{club}/client",
+      "source_observation": "Liste, sélection multiple, fiche et calendrier de vacances consultés sans enregistrement ; autres états restent ouverts.",
+      "proposed_target": "Clients",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Messagerie",
+      "source_path_pattern": "/club/{club}/messaging",
+      "source_observation": "Liste, sélecteur et une conversation existante consultés sans envoi",
+      "proposed_target": "Messagerie",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Activités",
+      "source_path_pattern": "/club/{club}/todos",
+      "source_observation": "Vues, appel, demande contact/email et tâche SMS planifiée consultés sans traitement. Avis vides dans les deux clubs.",
+      "proposed_target": "Activités",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Planning",
+      "source_path_pattern": "/club/{club}/planning",
+      "source_observation": "Calendrier consulté ; parcours de réservation non validé",
+      "proposed_target": "Planning commercial",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Statistiques",
+      "source_path_pattern": "/club/{club}/statistics",
+      "source_observation": "Huit vues de tableaux et métriques avancées retrouvées après défilement ; calculs et exports non validés.",
+      "proposed_target": "Statistiques",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Ventes",
+      "source_path_pattern": "/club/{club}/sales",
+      "source_observation": "Deux clubs, lignes renseignées et liens de fiche ; aucun détail de transaction distinct démontré.",
+      "proposed_target": "Ventes",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Formulaires",
+      "source_path_pattern": "/club/{club}/forms",
+      "source_observation": "Éditeur existant vide et réponses vides à Beynost, zéro formulaire au second club ; exemple rempli manquant.",
+      "proposed_target": "Formulaires",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Communication / Modèles",
+      "source_path_pattern": "/club/{club}/template",
+      "source_observation": "27 emails existants comparés, modèles SMS/WhatsApp lus ; six types de blocs email détaillés, sans édition.",
+      "proposed_target": "Communication → Modèles",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Communication / Campagnes",
+      "source_path_pattern": "/club/{club}/campaign",
+      "source_observation": "Bilan email envoyé et SMS préparatoire différé consultés. Nouvel assistant email : premier écran seulement ; étapes suivantes non parcourues.",
+      "proposed_target": "Communication → Campagnes",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Communication / Campagnes UTM",
+      "source_path_pattern": "/club/{club}/utm_campaign",
+      "source_observation": "Colonnes observées ; détail à explorer",
+      "proposed_target": "Communication → Campagnes UTM",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Communication / Scénarios",
+      "source_path_pattern": "/club/{club}/scenario",
+      "source_observation": "Modes initiaux Automatique/Manuel, étapes, conditions et verrouillage approfondis ; aucune exécution déclenchée.",
+      "proposed_target": "Communication → Scénarios",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Communication / SMS envoyés",
+      "source_path_pattern": "/club/{club}/sms",
+      "source_observation": "Liste des statuts et colonnes observée ; aucune relance",
+      "proposed_target": "Communication → SMS envoyés",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Communication / Emails échangés",
+      "source_path_pattern": "/club/{club}/email",
+      "source_observation": "Liste des statuts et colonnes observée ; aucune réponse",
+      "proposed_target": "Communication → Emails échangés",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Préférences",
+      "source_path_pattern": "/club/{club}/settings/app-settings",
+      "source_observation": "Langue et restriction des statistiques observées",
+      "proposed_target": "Paramètres → Préférences",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Crédits SMS",
+      "source_path_pattern": "/club/{club}/settings/sms",
+      "source_observation": "Solde, achat et recharge visibles ; aucun achat ni activation",
+      "proposed_target": "Paramètres → Crédits SMS",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Profil du Club",
+      "source_path_pattern": "/club/{club}/settings/marketing",
+      "source_observation": "Champs et contraintes logo observés",
+      "proposed_target": "Paramètres → Profil du club",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Utilisateurs",
+      "source_path_pattern": "/club/{club}/settings/users",
+      "source_observation": "Liste et lien de gestion externe observés ; droits non modifiés",
+      "proposed_target": "Paramètres → Utilisateurs et droits",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Gestion rendez-vous",
+      "source_path_pattern": "/club/{club}/settings/meetings",
+      "source_observation": "Type réservable existant, capacité, fréquence, délais, notifications, jours, lien isolé et Stripe proposés ; aucun Appliquer.",
+      "proposed_target": "Paramètres → Gestion des rendez-vous",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Email & SMS de service",
+      "source_path_pattern": "/club/{club}/settings/automation",
+      "source_observation": "Six éditeurs rappel/modification/annulation consultés sans changement ; variables contextuelles de rendez-vous.",
+      "proposed_target": "Paramètres → Email et SMS de service",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Gestion prospects",
+      "source_path_pattern": "/club/{club}/settings/prospects",
+      "source_observation": "Assignation, décrochage et archivage observés",
+      "proposed_target": "Paramètres → Gestion des prospects",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Segments",
+      "source_path_pattern": "/club/{club}/settings/segments",
+      "source_observation": "Liste vide ; responsive testé sur cette seule page",
+      "proposed_target": "Paramètres → Segments",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Script de vente",
+      "source_path_pattern": "/club/{club}/settings/script",
+      "source_observation": "Éditeur et barre de mise en forme observés",
+      "proposed_target": "Paramètres → Script de vente",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Sources",
+      "source_path_pattern": "/club/{club}/settings/sources",
+      "source_observation": "49 sources et 9 sélections de catégories relevées",
+      "proposed_target": "Paramètres → Sources",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Passage statut client",
+      "source_path_pattern": "/club/{club}/settings/exclusions",
+      "source_observation": "Liste des offres et cases observée ; origine technique à confirmer",
+      "proposed_target": "Paramètres → Passage au statut client",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Notifications",
+      "source_path_pattern": "/club/{club}/settings/notifications",
+      "source_observation": "Quatre familles et destinataire observés",
+      "proposed_target": "Paramètres → Notifications",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "WhatsApp",
+      "source_path_pattern": "/club/{club}/settings/whatsapp",
+      "source_observation": "Compte connecté et éléments du profil observés ; aucune modification Meta",
+      "proposed_target": "Paramètres → WhatsApp",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "API partenaires",
+      "source_path_pattern": "/club/{club}/settings/partners",
+      "source_observation": "Neuf cartes ; fiches hors WhatsApp ouvertes, aucun connecteur activé",
+      "proposed_target": "Paramètres → Connexions partenaires",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Fiche partenaire / STRIPE",
+      "source_path_pattern": "/club/{club}/settings/partners/STRIPE",
+      "source_observation": "Fiche consultée ; connexion/configuration non exécutée",
+      "proposed_target": "Paramètres → Connexions partenaires → Fiche partenaire",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Fiche partenaire / FACEBOOK",
+      "source_path_pattern": "/club/{club}/settings/partners/FACEBOOK",
+      "source_observation": "Fiche consultée ; connexion/configuration non exécutée",
+      "proposed_target": "Paramètres → Connexions partenaires → Fiche partenaire",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Fiche partenaire / GOOGLE",
+      "source_path_pattern": "/club/{club}/settings/partners/GOOGLE",
+      "source_observation": "Fiche consultée ; connexion/configuration non exécutée",
+      "proposed_target": "Paramètres → Connexions partenaires → Fiche partenaire",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Fiche partenaire / HEITZ",
+      "source_path_pattern": "/club/{club}/settings/partners/HEITZ",
+      "source_observation": "Fiche consultée ; connexion/configuration non exécutée",
+      "proposed_target": "Paramètres → Connexions partenaires → Fiche partenaire",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Fiche partenaire / RESAMANIA_2",
+      "source_path_pattern": "/club/{club}/settings/partners/RESAMANIA_2",
+      "source_observation": "Fiche consultée ; connexion/configuration non exécutée",
+      "proposed_target": "Paramètres → Connexions partenaires → Fiche partenaire",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Fiche partenaire / DECIPLUS",
+      "source_path_pattern": "/club/{club}/settings/partners/DECIPLUS",
+      "source_observation": "Fiche consultée ; connexion/configuration non exécutée",
+      "proposed_target": "Paramètres → Connexions partenaires → Fiche partenaire",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Fiche partenaire / CLICKFUNNELS",
+      "source_path_pattern": "/club/{club}/settings/partners/CLICKFUNNELS",
+      "source_observation": "Fiche consultée ; connexion/configuration non exécutée",
+      "proposed_target": "Paramètres → Connexions partenaires → Fiche partenaire",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Fiche partenaire / FUNNELO",
+      "source_path_pattern": "/club/{club}/settings/partners/FUNNELO",
+      "source_observation": "Fiche consultée ; connexion/configuration non exécutée",
+      "proposed_target": "Paramètres → Connexions partenaires → Fiche partenaire",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Fiche prospect",
+      "source_path_pattern": "/club/{club}/lead/{contact}",
+      "source_observation": "Dialogues principaux et panneaux mobile Sommaire/Détails lus ; Histoire sportive non retrouvée dans la fiche observée.",
+      "proposed_target": "Prospects → Détail / création",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Conversation",
+      "source_path_pattern": "/club/{club}/messaging/{conversation}",
+      "source_observation": "Un détail observé ; aucune saisie",
+      "proposed_target": "Messagerie → Détail / création",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Scénario",
+      "source_path_pattern": "/club/{club}/scenario/{scenario}",
+      "source_observation": "Actif et Verrouillé peuvent coexister ; verrouillage et désactivation distincts selon texte UI. Aucun état changé.",
+      "proposed_target": "Communication → Scénarios → Détail / création",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Nouveau type de rendez-vous",
+      "source_path_pattern": "/club/{club}/settings/meetings/new",
+      "source_observation": "Formulaire vide observé puis abandonné",
+      "proposed_target": "Paramètres → Gestion des rendez-vous → Créer",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Nouveau segment",
+      "source_path_pattern": "/club/{club}/settings/segments/new",
+      "source_observation": "Lien observé ; formulaire non ouvert",
+      "proposed_target": "Paramètres → Segments → Créer",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Assistant WhatsApp",
+      "source_path_pattern": "/club/{club}/template/new?templateType=WHATSAPP",
+      "source_observation": "Configuration et éditeur partiels ; INC-001, ne pas reprendre sur compte réel avant clarification",
+      "proposed_target": "Communication → Modèles → Détail / création",
+      "external_product": false,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Gestion des droits externe",
+      "source_path_pattern": "https://pro.masalledesport.com/club/{club}/users",
+      "source_observation": "Rôles lus. Permissions détaillées ClubConnect distinctes de Lead ; ADMIN/MANAGER/COMMERCIAL comparés en interface seulement.",
+      "proposed_target": "Paramètres → Utilisateurs et droits (lien historique vers un autre produit)",
+      "external_product": true,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Application MaSalleDeSport",
+      "source_path_pattern": "https://pro.masalledesport.com/club/{club}",
+      "source_observation": "Lien App observé ; produit distinct non audité ici",
+      "proposed_target": "Autre produit : lien externe, hors module Lead",
+      "external_product": true,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    },
+    {
+      "source_label": "Application ClubConnect",
+      "source_path_pattern": "https://clubconnect.masalledesport.com/club/null",
+      "source_observation": "Valeur null observée ; fonctionnement non prouvé",
+      "proposed_target": "Autre produit : lien externe, hors module Lead",
+      "external_product": true,
+      "implementation_status": "à vérifier dans la prévisualisation ; correspondance proposée"
+    }
+  ]
+}
