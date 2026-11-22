@@ -1283,6 +1283,7 @@ export function AdminShell() {
         <div className="grid grid-cols-5 gap-1 px-2 pt-1.5">
           <button
             type="button"
+            aria-current={activeSection === 'dashboard' ? 'page' : undefined}
             onClick={() => {
               setSelectedNavId('nav-dashboard');
               setActiveSection(isSectionAllowedForRole('dashboard', currentUser.role) ? 'dashboard' : 'my-day');
