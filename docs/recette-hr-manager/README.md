@@ -2,6 +2,8 @@
 
 Exigence complémentaire à développer : [pointeuse sur appareils autorisés et présence avant cours](POINTEUSE_TERMINAUX_ET_AVANT_COURS.md). Ne pas confondre cette cible avec les fonctions déjà testées ci-dessous.
 
+Premier lot applicatif de cette exigence : [droits par salarié et club — P0](DROITS_POINTAGE_P0.md). L'annexe de la spécification ajoute la photo au badgeage, encore à développer.
+
 Lot du 22 novembre 2026, dépendant de la PR #29 (approuvée par pinto1230766 et fusionnée le 22 novembre à 13:23 UTC). Aucun déploiement réalisé par Codex.
 
 ## Comportement livré

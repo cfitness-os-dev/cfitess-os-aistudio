@@ -82,6 +82,7 @@ def main():
         try:
             admin = login('emp-mario', 'CFITNESS_TEST_ADMIN_SECRET')
             employee = login('emp-chloe', 'CFITNESS_TEST_COMMERCIAL_SECRET')
+            assert call('PUT', '/api/hr/clock-policies/beynost/emp-chloe', admin, dict(personalAllowed=True,terminalAllowed=False,expectedRevision=None,reason='Autorisation fictive de recette'))[0] == 200
             assert call('GET', manager)[0] == 401
             assert call('GET', '/api/hr/workspace/unknown', admin)[0] == 400
             assert call('GET', '/api/hr/workspace/carre-de-soie', employee)[0] == 403

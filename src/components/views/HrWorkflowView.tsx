@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useCfos } from "../../context/CfosContext";
+import { ClockPolicyPanel } from "./ClockPolicyPanel";
 import type { ClubId } from "../../types/cfos";
 import {
   csvCell,
@@ -145,6 +146,13 @@ function Workflow({
           : "Pointages enregistrés"
       }
     >
+      {tab === "time" && !personal && (
+        <ClockPolicyPanel
+          key={`${actorId}:${club}`}
+          actor={actorId}
+          club={club}
+        />
+      )}
       <header className="cf-card p-4 space-y-2">
         <h2 className="text-lg font-bold">
           {personal ? "Mes " : ""}

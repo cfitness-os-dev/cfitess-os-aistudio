@@ -1784,65 +1784,10 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     notify('success', 'Créneau retiré du planning.');
   };
 
-  const punchWithPin: CfosContextValue['punchWithPin'] = (clubId, employeeId, pinInput, type) => {
-    const emp = state.employees.find((e) => e.id === employeeId);
-    if (!emp) return { ok: false, message: 'Collaborateur introuvable.' };
-
-    const auth = verifyEmployeePin(emp, pinInput);
-    if (!auth.authenticated) {
-      setState((prev) => ({
-        ...prev,
-        employees: prev.employees.map((e) => (e.id === employeeId ? auth.updatedEmployee : e)),
-        auditLogs: auth.locked
-          ? appendAudit(prev.auditLogs, {
-              clubId,
-              action: 'VERROUILLAGE_PIN_BRUTEFORCE',
-              target: `${emp.firstName} ${emp.lastName}`,
-              afterState: 'Verrouillé après 5 échecs PIN sur kiosque',
-            })
-          : prev.auditLogs,
-      }));
-      return { ok: false, message: auth.reason, locked: auth.locked };
-    }
-
-    const entry: TimeEntry = {
-      id: `te-${Date.now()}`,
-      employeeId,
-      clubId,
-      timestamp: new Date().toISOString(),
-      type,
-      source: 'tablette_pin',
-      syncedFromOffline: state.kioskOfflineMode,
-    };
-
-    setState((prev) => ({
-      ...prev,
-      employees: prev.employees.map((e) => (e.id === employeeId ? auth.updatedEmployee : e)),
-      timeEntries: state.kioskOfflineMode ? prev.timeEntries : [entry, ...prev.timeEntries],
-      offlinePointageQueue: state.kioskOfflineMode
-        ? [entry, ...prev.offlinePointageQueue]
-        : prev.offlinePointageQueue,
-      auditLogs: appendAudit(prev.auditLogs, {
-        clubId,
-        action: state.kioskOfflineMode ? 'POINTAGE_PIN_FILE_HORS_LIGNE' : 'POINTAGE_PIN_TABLETTE',
-        target: `${emp.firstName} ${emp.lastName}`,
-        afterState: `Type: ${type}`,
-      }),
-    }));
-
-    const labelMap: Record<PointageType, string> = {
-      arrivee: 'Arrivée enregistrée',
-      debut_pause: 'Début de pause enregistré',
-      fin_pause: 'Reprise de poste enregistrée',
-      depart: 'Départ enregistré',
-    };
-
-    const suffix = state.kioskOfflineMode
-      ? ' (stocké en file locale hors-ligne — zéro perte).'
-      : ' (horodaté et synchronisé).';
-
-    return { ok: true, message: `${labelMap[type]} pour ${emp.firstName} ${emp.lastName}${suffix}` };
-  };
+  const punchWithPin: CfosContextValue['punchWithPin'] = () => ({
+    ok: false,
+    message: 'Cette ancienne pointeuse locale est désactivée. Utilisez Mon compte si votre responsable vous y autorise. Les terminaux devront être appairés au serveur avant leur mise en service.',
+  });
 
   const unlockEmployeePin = (employeeId: string) => {
     if (currentUser.role !== 'admin' && currentUser.role !== 'manager') {

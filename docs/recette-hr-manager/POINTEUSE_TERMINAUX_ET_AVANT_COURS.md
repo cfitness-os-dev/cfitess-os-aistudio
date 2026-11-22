@@ -102,3 +102,19 @@ Base examinée : main `f7ad853` (PR #32 approuvée/fusionnée sans déploiement)
 4. **Priorité 3 — résilience/matériel** : idempotence, exceptions et hors ligne, essais sur les appareils réellement retenus.
 
 Cette spécification ne certifie aucune de ces fonctions comme déjà implémentée. Toute livraison doit préciser commits, routes, droits, preuves et limites. Aucun déploiement ni changement de droits des comptes réels n'est autorisé par ce document.
+
+## Complément demandé par Daniel : photo au moment du badgeage
+
+La badgeuse doit pouvoir capturer une photo lors du pointage, afin qu'une personne habilitée vérifie visuellement le collaborateur et le contexte de badgeage, selon l'habitude que Daniel décrit dans Skello. **Exigence de développement, pas capture déjà opérationnelle dans P0.**
+
+- Réglage photo par club/appareil : désactivée, facultative ou obligatoire selon la politique retenue. Pour Mon compte, si le pointage personnel est autorisé, appliquer le réglage propre à ce mode ; la photo personnelle ne dispense pas d'un terminal de salle imposé pour le cours.
+- Capture ponctuelle de la caméra pendant l'action, avec aperçu et information claire au salarié ; aucune vidéo ou surveillance continue nécessaire. Contrôle visuel humain, sans ajouter implicitement une reconnaissance faciale.
+- Lier côté serveur photo et événement exact : salarié authentifié, terminal autorisé et salle vérifiée lorsqu'il est utilisé, occurrence de cours éventuelle, heure serveur, version de politique et identifiant de tentative. Un nom de fichier ou un employeeId librement déclaré ne prouve pas ce lien.
+- Le parcours propose une capture caméra et non une sélection d'ancienne photo comme preuve instantanée. Cela améliore la traçabilité sans garantir à lui seul l'identité physique : ne pas déclarer une image incontestablement « prise en direct » à partir du seul horodatage client.
+- Si obligatoire, une photo absente, refusée ou non liée ne doit pas produire le statut normal « pointage confirmé avec photo ». Définir un acquittement cohérent entre stockage privé de la photo et événement ; rejouer une tentative ne doit pas associer la photo à un autre salarié/cours.
+- Panne caméra, refus de permission, réseau indisponible ou échec du stockage : message et statut explicites, possibilité de déclarer un incident et de régulariser avec motif et audit par une personne habilitée. Ne pas effacer une déclaration de travail ni inventer une heure normale en silence.
+- Photos en stockage privé, accès authentifié et borné aux responsables habilités du bon club. Définir séparément le droit de consulter la photo ; le droit de pointer ou de voir ses horaires ne donne pas accès aux photos des collègues. Pas d'URL publique permanente, d'image/base64 dans l'audit textuel, les logs, le dépôt ou les tickets.
+- Prévoir une durée de conservation configurable, l'application effective de la suppression et le traitement des copies/sauvegardes ; tracer les consultations et suppressions selon le dispositif retenu. Une photo supprimée ne doit pas faire disparaître l'événement RH ; son état de conservation reste identifiable.
+- Dans la vue responsable, montrer le lien de consultation autorisé et l'état « photo reçue / indisponible / exception / supprimée selon conservation ». Pour une présence cours, réutiliser le lien de preuve de l'événement concerné sans créer un deuxième pointage RH.
+
+Recette dédiée avec images synthétiques, aucune caméra réelle activée pour la recette de P0 : mode facultatif/obligatoire ; permission caméra refusée ; absence ou mauvais lien de photo ; rejeu/ancienne tentative/autre salarié ; mauvais terminal/salle ; panne photo après clic puis reprise sans doublon ; lecture photo interdite autre club/autre collègue ; conservation et suppression effectives ; expérience tablette, mobile et incident hors ligne. Le lot P1/P2 doit fournir ces preuves avant d'annoncer la fonction terminée.

@@ -16,6 +16,8 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkspaceStore {
+    #[serde(default)]
+    pub clock_policies: HashMap<String, HashMap<String, crate::clock_policy::ClockPolicy>>,
     pub people: HashMap<String, Value>,
     pub checklists: HashMap<String, Vec<Value>>,
 }
@@ -142,6 +144,11 @@ async fn personal_actor(state: &SharedState, headers: &HeaderMap) -> Result<Stri
 }
 fn view(db: &AppDatabaseState, actor: &str, club_id: &str, site: &str) -> Value {
     let data = person(db, actor);
+    let policy = crate::clock_policy::policy(db, actor, club_id);
+    let mut availability = punch_availability(&data, club_id);
+    if !policy.personal_allowed {
+        availability["allowedTypes"] = json!([]);
+    }
     let mut training = items(&fixture(), "training");
     for row in &mut training {
         if let Some(object) = row.as_object_mut() {
@@ -152,7 +159,7 @@ fn view(db: &AppDatabaseState, actor: &str, club_id: &str, site: &str) -> Value 
         "employeeId":actor,"clubId":club_id,"demoMode":is_demo_mode(),"signatureProviderAvailable":false,"canRequestLeave":can_request_leave(db,actor,site),
         "tasks":scoped_rows(&data,"tasks",club_id),"notifications":scoped_rows(&data,"notifications",club_id),
         "documents":items(&data,"documents"),"training":training,"progress":items(&data,"progress"),
-        "timeEntries":scoped_rows(&data,"timeEntries",club_id),"punchAvailability":punch_availability(&data,club_id),"checklists":checklist(db,club_id),
+        "timeEntries":scoped_rows(&data,"timeEntries",club_id),"punchAvailability":availability,"clockingPolicy":{"personalAllowed":policy.personal_allowed,"terminalAllowed":policy.terminal_allowed,"terminalReady":false},"checklists":checklist(db,club_id),
         "shifts":db.shifts.iter().filter(|row|row.employee_id.as_deref()==Some(actor) && row.site_id==site && row.published).collect::<Vec<_>>(),
         "leaves":db.leave_requests.iter().filter(|row|row.employee_id==actor && row.site_id==site).collect::<Vec<_>>()
     })
@@ -183,8 +190,25 @@ mod tests {
     fn state() -> SharedState {
         let data_dir =
             std::env::temp_dir().join(format!("personal-workspace-{}", rand::random::<u128>()));
+        let mut db = load_or_init_state(&data_dir);
+        // Explicit fixture grants for tests of transitions, not a runtime/demo exemption.
+        for employee in ["emp-chloe", "emp-mario"] {
+            for club in ["carre-de-soie", "beynost"] {
+                db.personal_workspace
+                    .clock_policies
+                    .entry(employee.into())
+                    .or_default()
+                    .insert(
+                        club.into(),
+                        crate::clock_policy::ClockPolicy {
+                            personal_allowed: true,
+                            ..Default::default()
+                        },
+                    );
+            }
+        }
         Arc::new(SharedAppState {
-            db: RwLock::new(load_or_init_state(&data_dir)),
+            db: RwLock::new(db),
             data_dir,
             sessions: RwLock::new(HashMap::new()),
             login_attempts: RwLock::new(HashMap::new()),
@@ -674,6 +698,9 @@ pub async fn post_workspace_action(
             });
         }
         "punch" => {
+            if !crate::clock_policy::policy(&next, &actor, club_id).personal_allowed {
+                return Err(err_resp(StatusCode::FORBIDDEN,"Le pointage depuis votre compte n’est pas autorisé dans ce club. Contactez votre responsable pour utiliser une pointeuse autorisée."));
+            }
             let kind = action.punch_type.as_deref().unwrap_or("");
             let available = punch_availability(&data, club_id);
             let valid = available["allowedTypes"]
