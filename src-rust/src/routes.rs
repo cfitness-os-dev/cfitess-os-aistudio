@@ -182,6 +182,9 @@ pub struct RestoreBackupPayload {
 pub fn api_router(state: SharedState) -> Router {
     Router::new()
         .route("/api/health", get(health))
+        .route("/api/hr/workspace/:club_id", get(crate::hr_manager::get_workspace))
+        .route("/api/hr/workspace/:club_id/requests/:request_id", post(crate::hr_manager::decide_request))
+        .route("/api/hr/workspace/:club_id/time-entries/:entry_id", post(crate::hr_manager::review_entry))
         .route("/api/me/workspace/:club_id", get(crate::personal_workspace::get_workspace).post(crate::personal_workspace::post_workspace_action))
         .route("/api/leave-requests/:request_id/decision", patch(crate::leave_requests::patch_leave_request_decision))
         .route("/api/lead/registry", get(get_lead_registry))
@@ -3487,7 +3490,7 @@ fn parse_hhmm_minutes(hhmm: &str) -> Option<u32> {
     Some(h * 60 + m)
 }
 
-fn resolve_available_commercial_for_club(db: &AppDatabaseState, club_id: &str) -> String {
+pub(crate) fn resolve_available_commercial_for_club(db: &AppDatabaseState, club_id: &str) -> String {
     let today = Utc::now().format("%Y-%m-%d").to_string();
     let candidates = if club_id == "beynost" {
         vec!["emp-chloe", "emp-greg", "emp-sarah"]
@@ -3498,7 +3501,8 @@ fn resolve_available_commercial_for_club(db: &AppDatabaseState, club_id: &str) -
     for emp_id in candidates {
         let is_on_leave = db.leave_requests.iter().any(|lr| {
             lr.employee_id == emp_id
-                && (lr.status == "VALIDE" || lr.status == "EN_ATTENTE")
+                && lr.site_id == if club_id == "beynost" { "club-beynost" } else { "club-carre-soie" }
+                && (lr.status == "approved" || lr.status.eq_ignore_ascii_case("valide"))
                 && lr.start_date.as_str() <= today.as_str()
                 && lr.end_date.as_str() >= today.as_str()
         });
@@ -5769,7 +5773,7 @@ mod tests {
             db.leave_requests.push(crate::models::LeaveRequest {
                 id: "leave-maxime".into(),
                 employee_id: "emp-maxime".into(),
-                site_id: "site_cds".into(),
+                site_id: "club-carre-soie".into(),
                 motive: "Maladie".into(),
                 start_date: today.clone(),
                 end_date: today,
