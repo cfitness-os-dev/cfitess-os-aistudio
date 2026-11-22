@@ -140,7 +140,14 @@ export function AtsView({
 
   // Multiposting Job Offer Form (Style Flatchr / Workable)
   const [offerTitle, setOfferTitle] = useState('Conseiller Commercial Fitness (H/F) - 35h');
-  const [offerClub, setOfferClub] = useState<ClubId>('carre-de-soie');
+  const [offerClub, setOfferClub] = useState<ClubId>(
+    clubFilter === 'beynost' ? 'beynost' : 'carre-de-soie'
+  );
+  React.useEffect(() => {
+    if (clubFilter === 'beynost' || clubFilter === 'carre-de-soie') {
+      setOfferClub(clubFilter);
+    }
+  }, [clubFilter]);
   const [offerContract, setOfferContract] = useState<ContractType>('CDI');
 
   const filteredCandidates =

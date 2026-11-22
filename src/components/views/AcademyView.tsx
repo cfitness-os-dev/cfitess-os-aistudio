@@ -43,12 +43,13 @@ export function AcademyView() {
   }, [navSubTarget]);
 
   const [activeModuleId, setActiveModuleId] = useState<string>(trainingModules[0]?.id || 'mod-1');
-  const [selectedOption, setSelectedOption] = useState<number>(0);
+  const [selectedOption, setSelectedOption] = useState<number>(-1);
   const [quizMessage, setQuizMessage] = useState<{
     passed: boolean;
     text: string;
   } | null>(null);
   const [exportToast, setExportToast] = useState<string | null>(null);
+  const [exportingCsv, setExportingCsv] = useState(false);
 
   const selectedModule =
     trainingModules.find((m) => m.id === activeModuleId) || trainingModules[0];
@@ -57,9 +58,48 @@ export function AcademyView() {
     clubFilter === 'all' ? checklists : checklists.filter((c) => c.clubId === clubFilter);
 
   const handleValidateQuiz = () => {
-    if (!selectedModule) return;
+    if (!selectedModule || selectedOption < 0) return;
     const res = completeAcademyQuiz(currentUser.id, selectedModule.id, selectedOption);
     setQuizMessage({ passed: res.passed, text: res.message });
+  };
+
+  const handleExportServerReportCsv = async () => {
+    setExportingCsv(true);
+    setExportToast(null);
+    const activeSiteId =
+      clubFilter === 'beynost' ? 'club-beynost' : 'club-carre-soie';
+    const headers: Record<string, string> = {
+      'x-cfitness-actor-id': currentUser.id,
+      'x-cfitness-site-id': activeSiteId,
+    };
+    try {
+      const token = window.sessionStorage.getItem('cfos_bearer_token');
+      if (token) headers.Authorization = `Bearer ${token}`;
+    } catch {
+      // ignore
+    }
+    try {
+      const res = await fetch('/api/reports/export-csv', { headers });
+      if (!res.ok) {
+        const err = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(err?.error || `Export refusé par le serveur (${res.status}).`);
+      }
+      const csvText = await res.text();
+      const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bilan-direction-cfitness-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setExportToast('Export CSV Bilan Direction téléchargé depuis le serveur.');
+    } catch (err) {
+      setExportToast(
+        err instanceof Error ? err.message : 'Erreur réseau lors de l’export CSV.'
+      );
+    } finally {
+      setExportingCsv(false);
+    }
   };
 
   return (
@@ -235,15 +275,12 @@ export function AcademyView() {
               </div>
               <button
                 type="button"
-                onClick={() =>
-                  setExportToast(
-                    'Rapport mensuel consolidé (PDF / CSV) généré avec succès pour C.Fitness Carré de Soie et C.Fitness Beynost.'
-                  )
-                }
-                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold flex items-center gap-1.5 cursor-pointer self-start"
+                disabled={exportingCsv}
+                onClick={() => void handleExportServerReportCsv()}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold flex items-center gap-1.5 cursor-pointer self-start disabled:opacity-50"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Exporter les Rapports (CSV / PDF)</span>
+                <span>{exportingCsv ? 'Export en cours…' : 'Exporter le Bilan Direction (CSV)'}</span>
               </button>
             </div>
 
@@ -344,7 +381,7 @@ export function AcademyView() {
                   key={mod.id}
                   onClick={() => {
                     setActiveModuleId(mod.id);
-                    setSelectedOption(mod.quizCorrectIndex);
+                    setSelectedOption(-1);
                     setQuizMessage(null);
                   }}
                   className={`w-full p-3.5 rounded-xl border text-left transition-colors cursor-pointer ${
@@ -425,8 +462,10 @@ export function AcademyView() {
                 </div>
 
                 <button
+                  type="button"
+                  disabled={selectedOption < 0}
                   onClick={handleValidateQuiz}
-                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-semibold flex items-center gap-2 cursor-pointer shadow-2xs"
+                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-semibold flex items-center gap-2 cursor-pointer shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Award className="w-4 h-4" />
                   Valider le Quiz &amp; Certifier ce module
