@@ -1,5 +1,6 @@
 """Loopback-only, disposable policy recipe. Test credentials are supplied via env."""
 import json
+from datetime import datetime, timedelta, timezone
 import os
 from pathlib import Path
 import socket
@@ -124,6 +125,38 @@ def main():
             assert call('POST','/api/terminals/punch',employee,entry,device)[0] == 403
             assert call('GET',own,employee)[1]['timeEntries'] == restored['timeEntries']
             checks.append('restart retains personal history and terminal identity; revoked device immediately refused')
+            status, pending = call('POST','/api/terminals/beynost',admin,dict(roomId='pairing-room',roomLabel='Salle appairage fictive',label='Appareil à bloquer'))
+            assert status == 200
+            expiry = datetime.fromisoformat(pending['pairingExpiresAt'].replace('Z','+00:00'))
+            created_at = datetime.fromisoformat(pending['createdAt'].replace('Z','+00:00'))
+            assert (expiry-created_at).total_seconds() == 600
+            pair_body = dict(terminalId=pending['terminalId'],pairingCode='000000')
+            for _ in range(2):
+                assert call('POST','/api/terminals/pair',body=pair_body)[0] == 401
+            stop(proc)
+            proc = start()
+            for attempt in range(3,6):
+                assert call('POST','/api/terminals/pair',body=pair_body)[0] == (429 if attempt==5 else 401)
+            assert call('POST','/api/terminals/pair',body=dict(terminalId=pending['terminalId'],pairingCode=pending['pairingCode']))[0] == 429
+            snapshot = json.loads((folder/'cfitness_state.json').read_text())
+            blocked = next(t for t in snapshot['clockTerminals'] if t['id']==pending['terminalId'])
+            assert blocked['failedPairingAttempts'] == 5 and blocked['status'] == 'pairing_locked'
+            assert not blocked.get('deviceSecretHash') and not blocked.get('pairingCode')
+            checks.append('ten-minute deadline advertised; five-attempt lock survives server restart and invalidates correct code')
+            admin = login('emp-mario','CFITNESS_TEST_ADMIN_SECRET')
+            pending = call('POST','/api/terminals/beynost',admin,dict(roomId='expiry-room',roomLabel='Salle fictive',label='Appareil à expiration'))[1]
+            stop(proc)
+            snapshot = json.loads((folder/'cfitness_state.json').read_text())
+            row = next(t for t in snapshot['clockTerminals'] if t['id']==pending['terminalId'])
+            # Time fixture only, while the disposable server is stopped; never a remote dataset.
+            row['createdAt'] = (datetime.now(timezone.utc)-timedelta(seconds=601)).isoformat()
+            (folder/'cfitness_state.json').write_text(json.dumps(snapshot))
+            proc = start()
+            assert call('POST','/api/terminals/pair',body=dict(terminalId=pending['terminalId'],pairingCode=pending['pairingCode']))[0] == 401
+            snapshot = json.loads((folder/'cfitness_state.json').read_text())
+            expired = next(t for t in snapshot['clockTerminals'] if t['id']==pending['terminalId'])
+            assert expired['status'] == 'pairing_expired' and not expired.get('pairingCode') and not expired.get('deviceSecretHash')
+            checks.append('expired pending code cannot activate a device or return a secret')
         finally:
             stop(proc)
     print(json.dumps(dict(result='passed',count=len(checks),checks=checks,external_sends=False,real_camera=False,photo_capture_available=False)))

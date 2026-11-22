@@ -6,6 +6,8 @@ Premier lot applicatif de cette exigence : [droits par salarié et club — P0](
 
 Suite : [recontrôle serveur des terminaux et de l'intégrité photo](TERMINAUX_INTEGRITE.md), avec défauts reproduits, correctifs et limites du parcours matériel.
 
+Durcissement complémentaire : [expiration et limitation d'essais d'appairage](APPAIRAGE_LIMITES.md), avec recette serveur et suivi automatique.
+
 Lot du 22 novembre 2026, dépendant de la PR #29 (approuvée par pinto1230766 et fusionnée le 22 novembre à 13:23 UTC). Aucun déploiement réalisé par Codex.
 
 ## Comportement livré
