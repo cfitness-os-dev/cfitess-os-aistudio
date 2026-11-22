@@ -1,6 +1,6 @@
 use crate::clock_terminals::{authenticate_terminal, authenticated_employee};
 use crate::models::AppDatabaseState;
-use crate::rbac::{can_access_site_scope, evaluate_permission, PermissionTarget};
+use crate::rbac::can_access_site_scope;
 use crate::routes::{append_audit, err_resp, SharedState};
 use crate::seed::persist_state;
 use axum::{
@@ -70,6 +70,21 @@ pub(crate) fn club_photo_policy(db: &AppDatabaseState, site_id: &str) -> &'stati
     }
 }
 
+/// Autorité explicite propriétaire / super administrateur (`profile_id == "admin_systeme"`),
+/// non déductible d'un profil manager `Sites` ou `Teams`.
+pub(crate) fn is_owner_or_super_admin(db: &AppDatabaseState, actor_id: &str, site_id: &str) -> bool {
+    db.employees
+        .iter()
+        .find(|e| e.id == actor_id)
+        .map(|e| {
+            e.active
+                && e.site_accesses
+                    .iter()
+                    .any(|a| a.site_id == site_id && a.profile_id == "admin_systeme")
+        })
+        .unwrap_or(false)
+}
+
 pub async fn get_photo_policy(
     State(state): State<SharedState>,
     Path(raw_club): Path<String>,
@@ -78,10 +93,11 @@ pub async fn get_photo_policy(
     let (_, site_id) = club_site(&raw_club)?;
     let actor_id = authenticated_employee(&state, &headers).await?;
     let db = state.db.read().await;
-    if !can_access_site_scope(&db, &actor_id, site_id) {
+    if !is_owner_or_super_admin(&db, &actor_id, site_id)
+    {
         return Err(err_resp(
             StatusCode::FORBIDDEN,
-            "Accès refusé à la politique photo de ce club.",
+            "Les réglages photo de la badgeuse sont réservés au propriétaire ou super administrateur.",
         ));
     }
     Ok(Json(json!({
@@ -111,25 +127,11 @@ pub async fn put_photo_policy(
     };
 
     let mut db = state.db.write().await;
-    let perm = evaluate_permission(
-        &db,
-        &actor_id,
-        site_id,
-        "ORG04-37",
-        Some(PermissionTarget {
-            site_id: Some(site_id),
-            target_employee_id: Some(&actor_id),
-            target_team_ids: &[],
-            lock_state: None,
-        }),
-    );
-    let can_manage_club = can_access_site_scope(&db, &actor_id, site_id)
-        && perm.allowed
-        && perm.effective_scope == crate::models::Scope::Sites;
-    if !can_manage_club {
+    if !is_owner_or_super_admin(&db, &actor_id, site_id)
+    {
         return Err(err_resp(
             StatusCode::FORBIDDEN,
-            "Seul un responsable de portée établissement (Sites) peut modifier la politique photo globale du club.",
+            "Seul le propriétaire ou un super administrateur peut modifier la politique photo du club.",
         ));
     }
 
@@ -576,10 +578,11 @@ pub async fn get_punch_photo(
     let actor_id = authenticated_employee(&state, &headers).await?;
     let db = state.db.read().await;
 
-    if !can_access_site_scope(&db, &actor_id, site_id) {
+    if !is_owner_or_super_admin(&db, &actor_id, site_id)
+    {
         return Err(err_resp(
             StatusCode::FORBIDDEN,
-            "Accès refusé aux preuves photo de ce club.",
+            "La consultation des photos de pointage est réservée au propriétaire ou super administrateur.",
         ));
     }
 
@@ -590,34 +593,6 @@ pub async fn get_punch_photo(
     else {
         return Err(err_resp(StatusCode::NOT_FOUND, "Preuve photo introuvable."));
     };
-
-    let target_teams: Vec<String> = db
-        .employees
-        .iter()
-        .find(|e| e.id == record.employee_id)
-        .and_then(|e| e.site_accesses.iter().find(|s| s.site_id == site_id))
-        .map(|s| s.team_ids.clone())
-        .unwrap_or_default();
-
-    let can_manage = evaluate_permission(
-        &db,
-        &actor_id,
-        site_id,
-        "ORG04-37",
-        Some(PermissionTarget {
-            site_id: Some(site_id),
-            target_employee_id: Some(&record.employee_id),
-            target_team_ids: &target_teams,
-            lock_state: None,
-        }),
-    )
-    .allowed;
-    if !can_manage {
-        return Err(err_resp(
-            StatusCode::FORBIDDEN,
-            "Seuls les responsables habilités sur l'équipe du salarié peuvent consulter cette photo.",
-        ));
-    }
 
     let disk_path = photo_disk_path(&state.data_dir, &record.site_id, &record.file_name);
     let bytes = fs::read(&disk_path).map_err(|_| {
