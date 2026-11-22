@@ -1966,6 +1966,8 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
         ]),
         personal_workspace: Default::default(),
         clock_terminals: vec![],
+        course_occurrences: vec![],
+        course_attendances: vec![],
         social_posts: vec![
             crate::models::SocialPostRecord {
                 id: "soc-demo-01".into(),
@@ -2129,6 +2131,8 @@ pub fn create_production_initial_state() -> AppDatabaseState {
         ]),
         personal_workspace: Default::default(),
         clock_terminals: vec![],
+        course_occurrences: vec![],
+        course_attendances: vec![],
         social_posts: vec![],
     }
 }
@@ -2390,6 +2394,8 @@ mod tests {
         assert!(state.stock_items.is_empty());
         assert!(state.social_posts.is_empty());
         assert!(state.clock_terminals.is_empty());
+        assert!(state.course_occurrences.is_empty());
+        assert!(state.course_attendances.is_empty());
         assert!(state.maintenance_tickets.is_empty());
 
         // 3. Bootstrap mot de passe PBKDF2 + persistance atomique + rechargement disque

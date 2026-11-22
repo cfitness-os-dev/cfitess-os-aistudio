@@ -829,6 +829,10 @@ pub struct AppDatabaseState {
     pub social_posts: Vec<SocialPostRecord>,
     #[serde(default)]
     pub clock_terminals: Vec<crate::clock_terminals::ClockTerminal>,
+    #[serde(default)]
+    pub course_occurrences: Vec<crate::course_attendance::CourseOccurrence>,
+    #[serde(default)]
+    pub course_attendances: Vec<crate::course_attendance::CourseAttendanceRecord>,
 }
 
 #[derive(Debug, Clone, Serialize)]
