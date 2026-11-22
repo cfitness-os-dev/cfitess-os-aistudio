@@ -37,7 +37,9 @@ export function DevicesHeitzView() {
   const {
     clubs,
     clubFilter,
+    authorizedClubIds,
     currentUser,
+    canAccessRecovery,
     heitzMembers,
     heitzKpiTickets,
     accessEvents,
@@ -60,12 +62,17 @@ export function DevicesHeitzView() {
 
   const canAccessFinances =
     currentUser.role === 'admin' || Boolean(currentUser.canAccessFinances);
+  const canRegularizeFinancialBalance = canAccessFinances || canAccessRecovery;
+  const defaultAuthorizedClub: ClubId =
+    clubFilter !== 'all' && authorizedClubIds.includes(clubFilter)
+      ? clubFilter
+      : authorizedClubIds[0] ?? 'carre-de-soie';
 
   const [activeSoftwareTab, setActiveSoftwareTab] = useState<
     'HEITZ_DESKTOP' | 'INBODY_LB120'
   >('HEITZ_DESKTOP');
 
-  const [selectedClubGate, setSelectedClubGate] = useState<ClubId>('carre-de-soie');
+  const [selectedClubGate, setSelectedClubGate] = useState<ClubId>(defaultAuthorizedClub);
   const [selectedMemberId, setSelectedMemberId] = useState<string>(
     heitzMembers[0]?.id || 'hm-1'
   );
@@ -98,25 +105,45 @@ export function DevicesHeitzView() {
   const [newMemberLastName, setNewMemberLastName] = useState('');
   const [newMemberPhone, setNewMemberPhone] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
-  const [newMemberClubId, setNewMemberClubId] = useState<ClubId>(
-    clubFilter === 'beynost' ? 'beynost' : 'carre-de-soie'
-  );
+  const [newMemberClubId, setNewMemberClubId] = useState<ClubId>(defaultAuthorizedClub);
   const [newMemberSubscription, setNewMemberSubscription] = useState(
     'Liberté Bi-Club (39,90 €/mois)'
   );
+  const [isCreatingMember, setIsCreatingMember] = useState(false);
+  const [memberFormError, setMemberFormError] = useState<string | null>(null);
 
-  const handleCreateNewMember = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (!authorizedClubIds.includes(selectedClubGate)) {
+      setSelectedClubGate(defaultAuthorizedClub);
+    }
+    if (!authorizedClubIds.includes(newMemberClubId)) {
+      setNewMemberClubId(defaultAuthorizedClub);
+    }
+  }, [authorizedClubIds, defaultAuthorizedClub, selectedClubGate, newMemberClubId]);
+
+  const handleCreateNewMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMemberFirstName.trim() || !newMemberLastName.trim()) return;
-    const created = createHeitzMember({
+    if (!newMemberFirstName.trim() || !newMemberLastName.trim() || isCreatingMember) return;
+    setIsCreatingMember(true);
+    setMemberFormError(null);
+    const result = await createHeitzMember({
       firstName: newMemberFirstName,
       lastName: newMemberLastName,
       phone: newMemberPhone || '06 00 00 00 00',
       email: newMemberEmail || undefined,
-      homeClubId: newMemberClubId,
+      homeClubId: authorizedClubIds.includes(newMemberClubId)
+        ? newMemberClubId
+        : defaultAuthorizedClub,
       subscriptionName: newMemberSubscription,
     });
-    setSelectedMemberId(created.id);
+    setIsCreatingMember(false);
+    if (!result.ok || !result.member) {
+      setMemberFormError(
+        result.error || 'Échec de sauvegarde serveur : aucun dossier n’a été créé.'
+      );
+      return;
+    }
+    setSelectedMemberId(result.member.id);
     setActiveSoftwareTab('HEITZ_DESKTOP');
     setHeitzStatusFilter('ALL');
     setMemberSearch('');
@@ -194,19 +221,24 @@ export function DevicesHeitzView() {
         };
       });
 
-      const res = importHeitzMembers({
+      void importHeitzMembers({
         source: importCsvSource,
         members: parsed,
+      }).then((res) => {
+        if (!res.ok) {
+          setImportReport(`Erreur serveur sur ${file.name} : ${res.error || 'Import refusé.'}`);
+        } else {
+          setImportReport(
+            `${file.name} traité (${res.totalProcessed} ligne(s)) : ${res.added} dossier(s) confirmé(s) serveur, ${res.skippedDuplicates} doublon(s) ignoré(s).`
+          );
+        }
       });
-      setImportReport(
-        `${file.name} traité (${res.totalProcessed} ligne(s)) : ${res.added} adhérent(s) ajouté(s), ${res.skippedDuplicates} doublon(s) ignoré(s).`
-      );
       e.target.value = '';
     };
     reader.readAsText(file, 'utf-8');
   };
 
-  const handleRunSoftwareSync = (source: 'HEITZ_API' | 'MYWELLNESS_API') => {
+  const handleRunSoftwareSync = async (source: 'HEITZ_API' | 'MYWELLNESS_API') => {
     const batch =
       source === 'HEITZ_API'
         ? [
@@ -230,7 +262,7 @@ export function DevicesHeitzView() {
               subscriptionName: 'Privilège + Biocircuit (49,90 €/mois)',
               finBalanceEur: 0,
             },
-          ]
+          ].filter((item) => authorizedClubIds.includes(item.homeClubId))
         : [
             {
               firstName: 'Mehdi',
@@ -239,16 +271,20 @@ export function DevicesHeitzView() {
               email: 'mehdi.kaci@cfitness-demo.fr',
               badgeCode: 'HZ-CDS-9201',
               mywellnessMemberId: 'MW-LYON-8842',
-              homeClubId: 'carre-de-soie' as ClubId,
+              homeClubId: defaultAuthorizedClub,
               subscriptionName: 'Privilège + Biocircuit (49,90 €/mois)',
               finBalanceEur: 0,
             },
           ];
 
-    const res = importHeitzMembers({ source, members: batch });
+    const res = await importHeitzMembers({ source, members: batch });
     const label = source === 'HEITZ_API' ? 'Heitz System' : 'Technogym Mywellness';
+    if (!res.ok) {
+      setImportReport(`Échec synchronisation ${label} : ${res.error || 'Refus serveur.'}`);
+      return;
+    }
     setImportReport(
-      `Synchronisation ${label} : ${res.added} nouveau(x) profil(s) récupéré(s), ${res.skippedDuplicates} doublon(s) ignoré(s). (Prêt pour branchement clé API client en production.)`
+      `Synchronisation locale ${label} : ${res.added} nouveau(x) profil(s) confirmé(s) serveur, ${res.skippedDuplicates} doublon(s) ignoré(s). (Connecteur API éditeur officiel à raccorder en production.)`
     );
   };
 
@@ -280,8 +316,13 @@ export function DevicesHeitzView() {
     'Bilan initial Biocircuit Technogym · Objectif tonification & gain musculaire (+2 kg SMM).'
   );
 
-  const filteredMembers = heitzMembers.filter((m) => {
+  const scopedClubMembers = heitzMembers.filter((m) => {
+    if (!authorizedClubIds.includes(m.homeClubId)) return false;
     if (clubFilter !== 'all' && m.homeClubId !== clubFilter) return false;
+    return true;
+  });
+
+  const filteredMembers = scopedClubMembers.filter((m) => {
     if (heitzStatusFilter === 'OK' && (!m.activeSubscription || m.finBalanceEur < 0)) return false;
     if (heitzStatusFilter === 'IMPAYE' && m.finBalanceEur >= 0) return false;
     if (heitzStatusFilter === 'SUSPENDU' && m.activeSubscription) return false;
@@ -296,9 +337,15 @@ export function DevicesHeitzView() {
   });
 
   const selectedMember =
-    heitzMembers.find((m) => m.id === selectedMemberId) ||
-    filteredMembers[0] ||
-    heitzMembers[0];
+    filteredMembers.find((m) => m.id === selectedMemberId) ??
+    filteredMembers[0] ??
+    null;
+
+  const realActiveCount = scopedClubMembers.filter(
+    (m) => m.activeSubscription && m.finBalanceEur >= 0
+  ).length;
+  const realUnpaidCount = scopedClubMembers.filter((m) => m.finBalanceEur < 0).length;
+  const realSuspendedCount = scopedClubMembers.filter((m) => !m.activeSubscription).length;
 
   const activeGateClub =
     clubs.find((c) => c.id === selectedClubGate) || clubs[0];
@@ -457,13 +504,13 @@ export function DevicesHeitzView() {
                 </div>
                 <h2 className="font-extrabold text-lg tracking-tight text-slate-900">
                   {isFinancesView
-                    ? 'Finances, Caisse TPV NF525 & Relance des Impayés SEPA (102 450 €)'
-                    : 'Adhérents – CRM (1 248), Abonnements & Portillons HeitzSystem Bi-Club'}
+                    ? 'Finances, Caisse Comptoir & Suivi des Impayés SEPA'
+                    : `Adhérents – CRM (${scopedClubMembers.length} fiche(s) dans votre périmètre)`}
                 </h2>
                 <div className="text-xs text-slate-500">
                   {isFinancesView
-                    ? 'Suivi du CA mensuel (Carré de Soie 54 230 € · Beynost 48 220 €), 5 impayés SEPA à relancer (1 250 €) et caisse comptoir NF525'
-                    : 'Fiches adhérents C.Fitness Carré de Soie (682) & C.Fitness Beynost (566), badges RFID/BLE et bilans Technogym Checkup'}
+                    ? 'Suivi financier réservé Direction / profils habilités Finances'
+                    : 'Projection locale C.Fitness OS — HeitzSystem reste le système de référence officiel pour badges, abonnements et prélèvements.'}
                 </div>
               </div>
             </div>
@@ -586,8 +633,9 @@ export function DevicesHeitzView() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Prénom *</label>
+                <label htmlFor="new-member-first" className="block font-semibold text-slate-700 mb-1">Prénom *</label>
                 <input
+                  id="new-member-first"
                   type="text"
                   required
                   value={newMemberFirstName}
@@ -597,8 +645,9 @@ export function DevicesHeitzView() {
                 />
               </div>
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Nom *</label>
+                <label htmlFor="new-member-last" className="block font-semibold text-slate-700 mb-1">Nom *</label>
                 <input
+                  id="new-member-last"
                   type="text"
                   required
                   value={newMemberLastName}
@@ -608,8 +657,9 @@ export function DevicesHeitzView() {
                 />
               </div>
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Téléphone</label>
+                <label htmlFor="new-member-phone" className="block font-semibold text-slate-700 mb-1">Téléphone</label>
                 <input
+                  id="new-member-phone"
                   type="tel"
                   value={newMemberPhone}
                   onChange={(e) => setNewMemberPhone(e.target.value)}
@@ -618,8 +668,9 @@ export function DevicesHeitzView() {
                 />
               </div>
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Email</label>
+                <label htmlFor="new-member-email" className="block font-semibold text-slate-700 mb-1">Email</label>
                 <input
+                  id="new-member-email"
                   type="email"
                   value={newMemberEmail}
                   onChange={(e) => setNewMemberEmail(e.target.value)}
@@ -628,19 +679,26 @@ export function DevicesHeitzView() {
                 />
               </div>
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Club d&apos;appartenance</label>
+                <label htmlFor="new-member-club" className="block font-semibold text-slate-700 mb-1">Club d&apos;appartenance</label>
                 <select
+                  id="new-member-club"
                   value={newMemberClubId}
+                  disabled={authorizedClubIds.length <= 1}
                   onChange={(e) => setNewMemberClubId(e.target.value as ClubId)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 disabled:bg-slate-100"
                 >
-                  <option value="carre-de-soie">C.Fitness Carré de Soie (Vaulx-en-Velin)</option>
-                  <option value="beynost">C.Fitness Beynost (ZAC des Baterses)</option>
+                  {authorizedClubIds.includes('carre-de-soie') && (
+                    <option value="carre-de-soie">C.Fitness Carré de Soie (Vaulx-en-Velin)</option>
+                  )}
+                  {authorizedClubIds.includes('beynost') && (
+                    <option value="beynost">C.Fitness Beynost (ZAC des Baterses)</option>
+                  )}
                 </select>
               </div>
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Formule d&apos;abonnement</label>
+                <label htmlFor="new-member-sub" className="block font-semibold text-slate-700 mb-1">Formule d&apos;abonnement</label>
                 <select
+                  id="new-member-sub"
                   value={newMemberSubscription}
                   onChange={(e) => setNewMemberSubscription(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900"
@@ -652,12 +710,20 @@ export function DevicesHeitzView() {
                 </select>
               </div>
             </div>
+            {memberFormError && (
+              <div role="alert" className="p-2.5 rounded-lg bg-rose-50 border border-rose-300 text-rose-700 text-xs font-semibold">
+                {memberFormError}
+              </div>
+            )}
             <div className="flex justify-end gap-2 pt-1">
               <button
                 type="submit"
-                className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold cursor-pointer"
+                disabled={isCreatingMember}
+                className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-xs font-bold cursor-pointer"
               >
-                Enregistrer l&apos;adhérent et activer son badge
+                {isCreatingMember
+                  ? 'Enregistrement serveur…'
+                  : 'Enregistrer la fiche locale (projection C.Fitness OS)'}
               </button>
             </div>
           </form>
@@ -793,31 +859,48 @@ export function DevicesHeitzView() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t border-slate-100 text-xs">
-            <div
+            <button
+              type="button"
               onClick={() => setHeitzStatusFilter('ALL')}
-              className="p-3 rounded-xl bg-violet-50/70 border border-violet-200 cursor-pointer"
+              className="p-3 rounded-xl bg-violet-50/70 border border-violet-200 cursor-pointer text-left"
             >
-              <div className="text-slate-500 font-medium">Total Adhérents actifs</div>
+              <div className="text-slate-500 font-medium">Fiches dans votre périmètre</div>
               <div className="text-lg font-black text-slate-900 mt-0.5">
-                1 248 <span className="text-emerald-600 text-xs font-bold">↑ +12%</span>
+                {scopedClubMembers.length}
               </div>
-              <div className="text-[11px] text-slate-500">682 Carré de Soie · 566 Beynost</div>
-            </div>
-            <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200">
-              <div className="text-slate-500 font-medium">Abonnements Annuels (41 %)</div>
-              <div className="text-lg font-black text-slate-900 mt-0.5">512 adhérents</div>
-              <div className="text-[11px] text-slate-500">Engagement 12 mois · Prélèvement SEPA</div>
-            </div>
-            <div className="p-3 rounded-xl bg-purple-50/70 border border-purple-200">
-              <div className="text-slate-500 font-medium">Abonnements Mensuels (32 %)</div>
-              <div className="text-lg font-black text-slate-900 mt-0.5">399 adhérents</div>
-              <div className="text-[11px] text-slate-500">Sans engagement · Liberté Bi-Club</div>
-            </div>
-            <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200">
-              <div className="text-slate-500 font-medium">Étudiant (12 %) &amp; Corporate (8 %)</div>
-              <div className="text-lg font-black text-slate-900 mt-0.5">250 adhérents</div>
-              <div className="text-[11px] text-slate-500">+ 87 Autres formules (7 %)</div>
-            </div>
+              <div className="text-[11px] text-slate-500">
+                {clubFilter === 'all'
+                  ? 'Clubs autorisés'
+                  : formatClubName(clubFilter)}
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setHeitzStatusFilter('OK')}
+              className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 cursor-pointer text-left"
+            >
+              <div className="text-slate-500 font-medium">Dossiers actifs à jour</div>
+              <div className="text-lg font-black text-emerald-700 mt-0.5">{realActiveCount}</div>
+              <div className="text-[11px] text-slate-500">Abonnement actif · solde ≥ 0 €</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setHeitzStatusFilter('IMPAYE')}
+              className="p-3 rounded-xl bg-rose-50/70 border border-rose-200 cursor-pointer text-left"
+            >
+              <div className="text-slate-500 font-medium">Dossiers en impayé</div>
+              <div className="text-lg font-black text-rose-700 mt-0.5">{realUnpaidCount}</div>
+              <div className="text-[11px] text-slate-500">Référence financière : HeitzSystem</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setHeitzStatusFilter('SUSPENDU')}
+              className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 cursor-pointer text-left"
+            >
+              <div className="text-slate-500 font-medium">Dossiers suspendus / gelés</div>
+              <div className="text-lg font-black text-amber-700 mt-0.5">{realSuspendedCount}</div>
+              <div className="text-[11px] text-slate-500">Gel médical / suspension</div>
+            </button>
           </div>
         )}
       </div>
@@ -909,13 +992,13 @@ export function DevicesHeitzView() {
               >
                 Fiches Adhérents ({heitzMembers.length})
               </button>
-              {navSubTarget !== 'finances' && (
+              {navSubTarget !== 'finances' && selectedMember && (
                 <button
                   type="button"
                   onClick={() => handleScanBadge(selectedMember.id)}
                   className="px-2.5 py-1 rounded-lg hover:bg-slate-200 text-slate-700 cursor-pointer"
                 >
-                  Contrôle d&apos;Accès Tripodes
+                  Simulation passage portillon
                 </button>
               )}
               {navSubTarget === 'finances' && (
@@ -956,26 +1039,32 @@ export function DevicesHeitzView() {
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-slate-500">Club pupitre :</span>
-              <button
-                onClick={() => setSelectedClubGate('carre-de-soie')}
-                className={`px-2.5 py-1 rounded-lg font-bold cursor-pointer ${
-                  selectedClubGate === 'carre-de-soie'
-                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white'
-                    : 'bg-white border border-slate-200 text-slate-700'
-                }`}
-              >
-                Carré de Soie (CDS)
-              </button>
-              <button
-                onClick={() => setSelectedClubGate('beynost')}
-                className={`px-2.5 py-1 rounded-lg font-bold cursor-pointer ${
-                  selectedClubGate === 'beynost'
-                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white'
-                    : 'bg-white border border-slate-200 text-slate-700'
-                }`}
-              >
-                Beynost (BEY)
-              </button>
+              {authorizedClubIds.includes('carre-de-soie') && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedClubGate('carre-de-soie')}
+                  className={`px-2.5 py-1 rounded-lg font-bold cursor-pointer ${
+                    selectedClubGate === 'carre-de-soie'
+                      ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white'
+                      : 'bg-white border border-slate-200 text-slate-700'
+                  }`}
+                >
+                  Carré de Soie
+                </button>
+              )}
+              {authorizedClubIds.includes('beynost') && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedClubGate('beynost')}
+                  className={`px-2.5 py-1 rounded-lg font-bold cursor-pointer ${
+                    selectedClubGate === 'beynost'
+                      ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white'
+                      : 'bg-white border border-slate-200 text-slate-700'
+                  }`}
+                >
+                  Beynost
+                </button>
+              )}
             </div>
           </div>
 
@@ -1033,8 +1122,12 @@ export function DevicesHeitzView() {
 
               <div className="p-3 border-b border-slate-200 space-y-2 bg-slate-50">
                 <div className="relative">
+                  <label htmlFor="heitz-member-search" className="sr-only">
+                    Rechercher un adhérent par badge, nom ou téléphone
+                  </label>
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                   <input
+                    id="heitz-member-search"
                     type="text"
                     value={memberSearch}
                     onChange={(e) => setMemberSearch(e.target.value)}
@@ -1076,14 +1169,18 @@ export function DevicesHeitzView() {
                   return (
                     <div
                       key={m.id}
-                      onClick={() => setSelectedMemberId(m.id)}
-                      className={`p-3 flex items-center justify-between gap-2 cursor-pointer transition-colors ${
+                      className={`p-3 flex items-center justify-between gap-2 transition-colors ${
                         isSelected
                           ? 'bg-violet-50/70 border-l-4 border-l-violet-600'
                           : 'hover:bg-slate-50'
                       }`}
                     >
-                      <div className="min-w-0">
+                      <button
+                        type="button"
+                        aria-pressed={isSelected}
+                        onClick={() => setSelectedMemberId(m.id)}
+                        className="min-w-0 flex-1 text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 rounded"
+                      >
                         <div className="flex items-center gap-1.5">
                           <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${statusDot}`} />
                           <span className="font-bold text-slate-900 truncate">
@@ -1102,14 +1199,11 @@ export function DevicesHeitzView() {
                             {m.finBalanceEur.toFixed(2)} €
                           </span>
                         </div>
-                      </div>
+                      </button>
 
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSimulatePassage(m.id, selectedClubGate);
-                        }}
+                        onClick={() => handleSimulatePassage(m.id, selectedClubGate)}
                         className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-[11px] font-bold flex items-center gap-1 shrink-0 cursor-pointer"
                       >
                         <QrCode className="w-3 h-3" />
@@ -1121,8 +1215,16 @@ export function DevicesHeitzView() {
               </div>
             </div>
 
-            {/* CENTER PANE (5 cols): Authentic Heitz Member Fiche (Dossier Adhérent) */}
-            {selectedMember && (
+            {/* CENTER PANE (5 cols): Projection locale C.Fitness OS (HeitzSystem reste la référence) */}
+            {!selectedMember ? (
+              <div className="lg:col-span-5 bg-white border border-slate-200/80 rounded-2xl p-6 flex flex-col items-center justify-center text-center text-xs text-slate-500 shadow-2xs">
+                <UserCheck className="w-8 h-8 text-slate-300 mb-2" />
+                <div className="font-bold text-slate-700">Aucun dossier adhérent dans le filtre actuel</div>
+                <p className="mt-1">
+                  Modifiez votre recherche ou le filtre de statut pour afficher une fiche autorisée de votre club.
+                </p>
+              </div>
+            ) : (
               <div className="lg:col-span-5 bg-white border border-slate-200/80 rounded-2xl overflow-hidden flex flex-col justify-between shadow-2xs">
                 <div>
                   <div className="bg-slate-50 border-b border-slate-200 px-3.5 py-2.5 text-xs font-bold text-slate-900 flex items-center justify-between">
@@ -1149,17 +1251,17 @@ export function DevicesHeitzView() {
                       {!selectedMember.activeSubscription ? (
                         <>
                           <PauseCircle className="w-5 h-5" />
-                          CONTRAT SUSPENDU / GEL MÉDICAL
+                          PROJECTION LOCALE : ABONNEMENT SUSPENDU / GEL MÉDICAL
                         </>
                       ) : selectedMember.finBalanceEur < 0 ? (
                         <>
                           <ShieldAlert className="w-5 h-5" />
-                          PASSAGE BLOQUÉ — IMPAYÉ SEPA ({selectedMember.finBalanceEur.toFixed(2)} €)
+                          PROJECTION LOCALE : SOLDE DÉBITEUR ({selectedMember.finBalanceEur.toFixed(2)} € — Vérifier dans HeitzSystem)
                         </>
                       ) : (
                         <>
                           <ShieldCheck className="w-5 h-5" />
-                          PASSAGE AUTORISÉ — SOLDE SEPA À JOUR
+                          PROJECTION LOCALE : DOSSIER À JOUR (Référence : HeitzSystem)
                         </>
                       )}
                     </span>
@@ -1348,18 +1450,20 @@ export function DevicesHeitzView() {
                         Simuler Passage RFID/BT Heitz ({selectedClubGate === 'carre-de-soie' ? 'CDS' : 'BEY'})
                       </button>
 
-                      {selectedMember.finBalanceEur < 0 && (
+                      {selectedMember.finBalanceEur < 0 && canRegularizeFinancialBalance && (
                         <button
-                          onClick={() => regularizeMemberSepa(selectedMember.id)}
+                          type="button"
+                          onClick={() => void regularizeMemberSepa(selectedMember.id)}
                           className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                         >
                           <CreditCard className="w-4 h-4" />
-                          Régulariser CB/SEPA ({Math.abs(selectedMember.finBalanceEur).toFixed(2)} €)
+                          Régulariser solde local ({Math.abs(selectedMember.finBalanceEur).toFixed(2)} €)
                         </button>
                       )}
 
                       <button
-                        onClick={() => toggleMemberSubscriptionStatus(selectedMember.id)}
+                        type="button"
+                        onClick={() => void toggleMemberSubscriptionStatus(selectedMember.id)}
                         className="py-2.5 px-3 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs flex items-center gap-1 cursor-pointer"
                       >
                         {selectedMember.activeSubscription ? (

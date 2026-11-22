@@ -422,7 +422,7 @@ interface CfosContextValue extends PersistedState {
     email?: string;
     homeClubId: ClubId;
     subscriptionName: string;
-  }) => HeitzMember;
+  }) => Promise<{ ok: boolean; member?: HeitzMember; error?: string }>;
   importHeitzMembers: (params: {
     source: 'HEITZ_CSV' | 'MYWELLNESS_CSV' | 'HEITZ_API' | 'MYWELLNESS_API';
     members: Array<{
@@ -437,15 +437,15 @@ interface CfosContextValue extends PersistedState {
       finBalanceEur?: number;
       mywellnessMemberId?: string;
     }>;
-  }) => { added: number; skippedDuplicates: number; totalProcessed: number };
+  }) => Promise<{ ok: boolean; added: number; skippedDuplicates: number; totalProcessed: number; error?: string }>;
   simulateMemberGateScan: (memberId: string, clubId: ClubId) => AccessEvent | null;
   triggerManualTurnstileOpen: (
     clubId: ClubId,
     gateLabel: string,
     reasonLabel: string
   ) => AccessEvent;
-  regularizeMemberSepa: (memberId: string) => void;
-  toggleMemberSubscriptionStatus: (memberId: string) => void;
+  regularizeMemberSepa: (memberId: string) => Promise<boolean>;
+  toggleMemberSubscriptionStatus: (memberId: string) => Promise<boolean>;
   rewardMemberLoyaltyOrReferral: (
     memberId: string,
     rewardType: 'parrainage' | 'anniversaire',
@@ -2302,28 +2302,13 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     return event;
   };
 
-  const regularizeMemberSepa = (memberId: string) => {
-    setState((prev) => {
-      const target = prev.heitzMembers.find((m) => m.id === memberId);
-      return {
-        ...prev,
-        heitzMembers: prev.heitzMembers.map((m) =>
-          m.id === memberId ? { ...m, finBalanceEur: 0, finBalanceState: 1 } : m
-        ),
-        auditLogs: appendAudit(prev.auditLogs, {
-          clubId: target?.homeClubId ?? 'global',
-          action: 'REGULARISATION_IMPAYE_SEPA_HEITZ',
-          target: target ? `${target.firstName} ${target.lastName}` : memberId,
-          beforeState: `Solde débiteur ${target?.finBalanceEur.toFixed(2)} €`,
-          afterState: 'Solde 0.00 € (finBalanceState=1) — accès portillon rétabli',
-        }),
-      };
-    });
+  const regularizeMemberSepa = async (memberId: string): Promise<boolean> => {
+    const target = state.heitzMembers.find((m) => m.id === memberId);
+    const targetClub = target?.homeClubId ?? primaryAuthorizedClub;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'x-cfitness-actor-id': currentUserId,
-      'x-cfitness-site-id':
-        primaryAuthorizedClub === 'beynost' ? 'club-beynost' : 'club-carre-soie',
+      'x-cfitness-site-id': targetClub === 'beynost' ? 'club-beynost' : 'club-carre-soie',
     };
     try {
       const token = window.sessionStorage.getItem('cfos_bearer_token');
@@ -2331,14 +2316,39 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // ignore
     }
-    void fetch(`/api/heitz/members/${encodeURIComponent(memberId)}`, {
-      method: 'PATCH',
-      headers,
-      body: JSON.stringify({ finBalanceEur: 0 }),
-    }).catch(() => {
-      // fallback local
-    });
-    notify('success', 'Impayé SEPA régularisé : accès portillons Heitz immédiatement rétabli.');
+    try {
+      const res = await fetch(`/api/heitz/members/${encodeURIComponent(memberId)}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ finBalanceEur: 0 }),
+      });
+      if (!res.ok) {
+        const errPayload = (await res.json().catch(() => null)) as { error?: string } | null;
+        notify(
+          'error',
+          errPayload?.error ||
+            `Régularisation refusée par le serveur (HTTP ${res.status}). Aucune modification appliquée.`
+        );
+        return false;
+      }
+      const saved = (await res.json()) as HeitzMember;
+      setState((prev) => ({
+        ...prev,
+        heitzMembers: prev.heitzMembers.map((m) => (m.id === memberId ? { ...m, ...saved } : m)),
+        auditLogs: appendAudit(prev.auditLogs, {
+          clubId: targetClub,
+          action: 'REGULARISATION_IMPAYE_SEPA_LOCAL',
+          target: target ? `${target.firstName} ${target.lastName}` : memberId,
+          beforeState: `Solde débiteur ${target?.finBalanceEur.toFixed(2)} €`,
+          afterState: 'Solde projection locale 0.00 € (confirmé serveur · référence HeitzSystem à vérifier)',
+        }),
+      }));
+      notify('success', 'Solde local mis à jour sur le serveur (pensez à confirmer dans HeitzSystem).');
+      return true;
+    } catch {
+      notify('error', 'Erreur réseau : impossible d’enregistrer la régularisation sur le serveur.');
+      return false;
+    }
   };
 
   const triggerManualTurnstileOpen: CfosContextValue['triggerManualTurnstileOpen'] = (
@@ -2379,33 +2389,68 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     return manualEvent;
   };
 
-  const toggleMemberSubscriptionStatus = (memberId: string) => {
-    setState((prev) => {
-      const target = prev.heitzMembers.find((m) => m.id === memberId);
-      if (!target) return prev;
-      const nextActive = !target.activeSubscription;
-      return {
+  const toggleMemberSubscriptionStatus = async (memberId: string): Promise<boolean> => {
+    const target = state.heitzMembers.find((m) => m.id === memberId);
+    if (!target) return false;
+    const nextActive = !target.activeSubscription;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'x-cfitness-actor-id': currentUserId,
+      'x-cfitness-site-id': target.homeClubId === 'beynost' ? 'club-beynost' : 'club-carre-soie',
+    };
+    try {
+      const token = window.sessionStorage.getItem('cfos_bearer_token');
+      if (token) headers.Authorization = `Bearer ${token}`;
+    } catch {
+      // ignore
+    }
+    try {
+      const res = await fetch(`/api/heitz/members/${encodeURIComponent(memberId)}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ activeSubscription: nextActive }),
+      });
+      if (!res.ok) {
+        const errPayload = (await res.json().catch(() => null)) as { error?: string } | null;
+        notify(
+          'error',
+          errPayload?.error ||
+            `Mise à jour du statut refusée par le serveur (HTTP ${res.status}). Statut précédent conservé.`
+        );
+        return false;
+      }
+      const saved = (await res.json()) as HeitzMember;
+      setState((prev) => ({
         ...prev,
-        heitzMembers: prev.heitzMembers.map((m) =>
-          m.id === memberId ? { ...m, activeSubscription: nextActive } : m
-        ),
+        heitzMembers: prev.heitzMembers.map((m) => (m.id === memberId ? { ...m, ...saved } : m)),
         auditLogs: appendAudit(prev.auditLogs, {
           clubId: target.homeClubId,
           action: nextActive
-            ? 'REACTIVATION_ABONNEMENT_HEITZ'
-            : 'GEL_MEDICAL_SUSPENSION_ABONNEMENT_HEITZ',
+            ? 'REACTIVATION_ABONNEMENT_LOCAL'
+            : 'GEL_MEDICAL_SUSPENSION_LOCAL',
           target: `${target.firstName} ${target.lastName} (${target.badgeCode})`,
-          afterState: nextActive ? 'Abonnement actif' : 'Abonnement suspendu (Gel médical / Congé)',
+          afterState: nextActive
+            ? 'Abonnement actif (projection locale confirmée serveur)'
+            : 'Abonnement suspendu / gel médical (projection locale confirmée serveur)',
         }),
-      };
-    });
-    notify('success', 'Statut de l’abonnement Heitz mis à jour (Gel médical / Réactivation).');
+      }));
+      notify(
+        'success',
+        nextActive
+          ? 'Statut local réactivé sur le serveur (vérifier dans HeitzSystem).'
+          : 'Gel médical enregistré sur le serveur (vérifier dans HeitzSystem).'
+      );
+      return true;
+    } catch {
+      notify('error', 'Erreur réseau : impossible de modifier le statut sur le serveur.');
+      return false;
+    }
   };
 
-  const createHeitzMember: CfosContextValue['createHeitzMember'] = (params) => {
+  const createHeitzMember: CfosContextValue['createHeitzMember'] = async (params) => {
     const clubPrefix = params.homeClubId === 'carre-de-soie' ? 'CDS' : 'BEY';
     const seq = String(1000 + state.heitzMembers.length + Math.floor(Date.now() % 900)).slice(-4);
-    const newMember: HeitzMember = {
+    const candidateMember: HeitzMember = {
       id: `hm-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       badgeCode: `HZ-${clubPrefix}-${seq}`,
       rfidBluetoothEnabled: true,
@@ -2424,16 +2469,6 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
       referralsCount: 0,
     };
 
-    setState((prev) => ({
-      ...prev,
-      heitzMembers: [newMember, ...prev.heitzMembers],
-      auditLogs: appendAudit(prev.auditLogs, {
-        clubId: params.homeClubId,
-        action: 'CREATION_ADHERENT_HEITZ',
-        target: `${newMember.firstName} ${newMember.lastName} (${newMember.badgeCode})`,
-        afterState: `Abonnement ${newMember.subscriptionName} actif · Badge RFID/BLE activé`,
-      }),
-    }));
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'x-cfitness-actor-id': currentUserId,
@@ -2446,24 +2481,52 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // ignore
     }
-    void fetch('/api/heitz/members/import', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        source: 'HEITZ_MANUAL',
-        members: [newMember],
-      }),
-    }).catch(() => {
-      // fallback local
-    });
-    notify(
-      'success',
-      `Nouvel adhérent créé : ${newMember.firstName} ${newMember.lastName} (${newMember.badgeCode}).`
-    );
-    return newMember;
+
+    try {
+      const res = await fetch('/api/heitz/members/import', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          source: 'HEITZ_MANUAL',
+          members: [candidateMember],
+        }),
+      });
+      if (!res.ok) {
+        const errPayload = (await res.json().catch(() => null)) as { error?: string } | null;
+        const msg =
+          errPayload?.error ||
+          `Création refusée par le serveur (HTTP ${res.status}). Aucun dossier créé.`;
+        notify('error', msg);
+        return { ok: false, error: msg };
+      }
+      const data = (await res.json()) as { items?: HeitzMember[] };
+      const saved =
+        data.items?.find((m) => m.id === candidateMember.id || m.badgeCode === candidateMember.badgeCode) ??
+        candidateMember;
+
+      setState((prev) => ({
+        ...prev,
+        heitzMembers: [saved, ...prev.heitzMembers.filter((m) => m.id !== saved.id)],
+        auditLogs: appendAudit(prev.auditLogs, {
+          clubId: params.homeClubId,
+          action: 'CREATION_ADHERENT_PROJECTION_LOCALE',
+          target: `${saved.firstName} ${saved.lastName} (${saved.badgeCode})`,
+          afterState: `Fiche locale enregistrée sur serveur (${saved.subscriptionName})`,
+        }),
+      }));
+      notify(
+        'success',
+        `Fiche locale enregistrée : ${saved.firstName} ${saved.lastName} (${saved.badgeCode}). Création officielle à confirmer dans HeitzSystem.`
+      );
+      return { ok: true, member: saved };
+    } catch {
+      const msg = 'Erreur réseau : le serveur n’a pas confirmé la création du dossier.';
+      notify('error', msg);
+      return { ok: false, error: msg };
+    }
   };
 
-  const importHeitzMembers: CfosContextValue['importHeitzMembers'] = ({ source, members }) => {
+  const importHeitzMembers: CfosContextValue['importHeitzMembers'] = async ({ source, members }) => {
     const existingBadges = new Set(
       state.heitzMembers.map((m) => m.badgeCode.trim().toLowerCase())
     );
@@ -2509,9 +2572,10 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
       if (emailNorm) existingEmails.add(emailNorm);
       existingNames.add(nameNorm);
 
-      const balance = typeof raw.finBalanceEur === 'number' && !Number.isNaN(raw.finBalanceEur)
-        ? raw.finBalanceEur
-        : 0;
+      const balance =
+        typeof raw.finBalanceEur === 'number' && !Number.isNaN(raw.finBalanceEur)
+          ? raw.finBalanceEur
+          : 0;
 
       toAdd.push({
         id: `hm-imp-${Date.now()}-${idx}`,
@@ -2534,57 +2598,95 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
       });
     });
 
-    if (toAdd.length > 0) {
-      setState((prev) => ({
-        ...prev,
-        heitzMembers: [...toAdd, ...prev.heitzMembers],
-        auditLogs: appendAudit(prev.auditLogs, {
-          clubId: 'carre-de-soie',
-          action: 'IMPORT_SYNC_ADHERENTS',
-          target: `Source ${source}`,
-          afterState: `${toAdd.length} adhérent(s) importé(s), ${skippedDuplicates} doublon(s) ignoré(s)`,
-        }),
-      }));
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'x-cfitness-actor-id': currentUserId,
-        'x-cfitness-site-id':
-          primaryAuthorizedClub === 'beynost' ? 'club-beynost' : 'club-carre-soie',
+    if (toAdd.length === 0) {
+      notify(
+        'warning',
+        `Synchronisation ${source} : aucun nouvel adhérent (${skippedDuplicates} doublon(s) déjà présent(s)).`
+      );
+      return {
+        ok: true,
+        added: 0,
+        skippedDuplicates,
+        totalProcessed: members.length,
       };
-      try {
-        const token = window.sessionStorage.getItem('cfos_bearer_token');
-        if (token) headers.Authorization = `Bearer ${token}`;
-      } catch {
-        // ignore
-      }
-      void fetch('/api/heitz/members/import', {
+    }
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'x-cfitness-actor-id': currentUserId,
+      'x-cfitness-site-id':
+        primaryAuthorizedClub === 'beynost' ? 'club-beynost' : 'club-carre-soie',
+    };
+    try {
+      const token = window.sessionStorage.getItem('cfos_bearer_token');
+      if (token) headers.Authorization = `Bearer ${token}`;
+    } catch {
+      // ignore
+    }
+
+    try {
+      const res = await fetch('/api/heitz/members/import', {
         method: 'POST',
         headers,
         body: JSON.stringify({
           source,
           members: toAdd,
         }),
-      }).catch(() => {
-        // fallback local
       });
+      if (!res.ok) {
+        const errPayload = (await res.json().catch(() => null)) as { error?: string } | null;
+        const msg =
+          errPayload?.error ||
+          `Import refusé par le serveur (HTTP ${res.status}). Aucune donnée modifiée.`;
+        notify('error', msg);
+        return {
+          ok: false,
+          added: 0,
+          skippedDuplicates,
+          totalProcessed: members.length,
+          error: msg,
+        };
+      }
+      const data = (await res.json()) as { added?: number; items?: HeitzMember[] };
+      const addedCount = data.added ?? toAdd.length;
+      setState((prev) => ({
+        ...prev,
+        heitzMembers: Array.isArray(data.items)
+          ? [
+              ...data.items,
+              ...prev.heitzMembers.filter((m) => !data.items!.some((s) => s.id === m.id)),
+            ]
+          : [...toAdd, ...prev.heitzMembers],
+        auditLogs: appendAudit(prev.auditLogs, {
+          clubId: primaryAuthorizedClub,
+          action: 'IMPORT_SYNC_ADHERENTS_LOCAL',
+          target: `Source ${source}`,
+          afterState: `${addedCount} dossier(s) persisté(s) sur serveur, ${skippedDuplicates} doublon(s) ignoré(s)`,
+        }),
+      }));
       notify(
         'success',
-        `Import ${source} terminé : ${toAdd.length} adhérent(s) ajouté(s)${
+        `Import ${source} confirmé serveur : ${addedCount} dossier(s) ajouté(s)${
           skippedDuplicates > 0 ? `, ${skippedDuplicates} doublon(s) ignoré(s)` : ''
         }.`
       );
-    } else {
-      notify(
-        'warning',
-        `Synchronisation ${source} : aucun nouvel adhérent (${skippedDuplicates} doublon(s) déjà présent(s)).`
-      );
+      return {
+        ok: true,
+        added: addedCount,
+        skippedDuplicates,
+        totalProcessed: members.length,
+      };
+    } catch {
+      const msg = 'Erreur réseau : échec de persistance de l’import sur le serveur.';
+      notify('error', msg);
+      return {
+        ok: false,
+        added: 0,
+        skippedDuplicates,
+        totalProcessed: members.length,
+        error: msg,
+      };
     }
-
-    return {
-      added: toAdd.length,
-      skippedDuplicates,
-      totalProcessed: members.length,
-    };
   };
 
   const rewardMemberLoyaltyOrReferral: CfosContextValue['rewardMemberLoyaltyOrReferral'] = (
