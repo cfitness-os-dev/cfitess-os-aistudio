@@ -14,6 +14,8 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
 type Failure = (StatusCode, Json<Value>);
+const PAIRING_TTL_SECONDS: i64 = 600;
+const MAX_PAIRING_ATTEMPTS: u32 = 5;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -23,7 +25,9 @@ pub struct ClockTerminal {
     pub room_id: String,
     pub room_label: String,
     pub label: String,
-    pub status: String, // "pending_pairing" | "active" | "revoked"
+    pub status: String, // pending_pairing | active | revoked | pairing_locked | pairing_expired
+    #[serde(default)]
+    pub failed_pairing_attempts: u32,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pairing_code: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -31,6 +35,13 @@ pub struct ClockTerminal {
     pub created_at: String,
     pub paired_at: Option<String>,
     pub last_seen_at: Option<String>,
+}
+
+fn pairing_expiry(terminal: &ClockTerminal) -> Option<chrono::DateTime<Utc>> {
+    chrono::DateTime::parse_from_rfc3339(&terminal.created_at)
+        .ok()?
+        .with_timezone(&Utc)
+        .checked_add_signed(chrono::Duration::seconds(PAIRING_TTL_SECONDS))
 }
 
 #[derive(Debug, Deserialize)]
@@ -133,6 +144,7 @@ pub async fn get_club_terminals(
                 "roomLabel": t.room_label,
                 "label": t.label,
                 "status": t.status,
+                "pairingExpiresAt": if t.status == "pending_pairing" { pairing_expiry(t) } else { None },
                 "hasSecret": t.device_secret_hash.is_some(),
                 "createdAt": t.created_at,
                 "pairedAt": t.paired_at,
@@ -203,6 +215,7 @@ pub async fn post_create_terminal(
         room_label: room_label.to_string(),
         label: label.to_string(),
         status: "pending_pairing".into(),
+        failed_pairing_attempts: 0,
         pairing_code: Some(pairing_code.clone()),
         device_secret_hash: None,
         created_at: now,
@@ -243,6 +256,7 @@ pub async fn post_create_terminal(
         "label": new_term.label,
         "status": new_term.status,
         "pairingCode": pairing_code,
+        "pairingExpiresAt": pairing_expiry(&new_term),
         "createdAt": new_term.created_at
     })))
 }
@@ -255,7 +269,11 @@ pub async fn post_pair_terminal(
     let terminal_id = payload.terminal_id.trim();
     let pairing_code = payload.pairing_code.trim();
 
-    if terminal_id.is_empty() || pairing_code.is_empty() {
+    if terminal_id.is_empty()
+        || terminal_id.len() > 128
+        || pairing_code.len() != 6
+        || !pairing_code.bytes().all(|byte| byte.is_ascii_digit())
+    {
         return Err(err_resp(
             StatusCode::BAD_REQUEST,
             "Identifiant de terminal et code d'appairage requis.",
@@ -275,10 +293,95 @@ pub async fn post_pair_terminal(
         ));
     }
 
-    if terminal.pairing_code.as_deref() != Some(pairing_code) {
+    if terminal.status == "pairing_locked"
+        || terminal.failed_pairing_attempts >= MAX_PAIRING_ATTEMPTS
+    {
+        return Err(err_resp(StatusCode::TOO_MANY_REQUESTS,"Appairage bloqué après trop d’essais. Faites enregistrer de nouveau cet appareil par une personne habilitée."));
+    }
+    if terminal.status != "pending_pairing" {
         return Err(err_resp(
-            StatusCode::UNAUTHORIZED,
-            "Code d'appairage invalide ou expiré.",
+            StatusCode::CONFLICT,
+            "Cet appareil n’est plus en attente d’appairage.",
+        ));
+    }
+    let now = Utc::now();
+    let expired = pairing_expiry(terminal)
+        .map(|expiry| {
+            now >= expiry || now < expiry - chrono::Duration::seconds(PAIRING_TTL_SECONDS)
+        })
+        .unwrap_or(true);
+    if expired {
+        let mut next = db.clone();
+        let row = &mut next.clock_terminals[idx];
+        row.status = "pairing_expired".into();
+        row.pairing_code = None;
+        let site = row.site_id.clone();
+        append_audit(
+            &mut next,
+            "SYSTEM_TERMINAL",
+            "TERMINAL_PAIRING_EXPIRED",
+            "Code d’appairage expiré".into(),
+            &site,
+            terminal_id,
+            Some("pending_pairing".into()),
+            Some("pairing_expired".into()),
+        );
+        persist_state(&state.data_dir, &next).map_err(|_| {
+            err_resp(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Expiration non enregistrée. Aucun appairage confirmé.",
+            )
+        })?;
+        *db = next;
+        return Err(err_resp(StatusCode::UNAUTHORIZED,"Le code d’appairage a expiré. Faites enregistrer de nouveau cet appareil par une personne habilitée."));
+    }
+
+    if terminal.pairing_code.as_deref() != Some(pairing_code) {
+        let mut next = db.clone();
+        let row = &mut next.clock_terminals[idx];
+        row.failed_pairing_attempts = row.failed_pairing_attempts.saturating_add(1);
+        let locked = row.failed_pairing_attempts >= MAX_PAIRING_ATTEMPTS;
+        if locked {
+            row.status = "pairing_locked".into();
+            row.pairing_code = None;
+        }
+        let site = row.site_id.clone();
+        let attempts = row.failed_pairing_attempts;
+        append_audit(
+            &mut next,
+            "SYSTEM_TERMINAL",
+            "TERMINAL_PAIRING_REFUSED",
+            format!("Essai d’appairage refusé ({attempts}/{MAX_PAIRING_ATTEMPTS})"),
+            &site,
+            terminal_id,
+            None,
+            Some(
+                if locked {
+                    "pairing_locked"
+                } else {
+                    "pending_pairing"
+                }
+                .into(),
+            ),
+        );
+        persist_state(&state.data_dir, &next).map_err(|_| {
+            err_resp(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Essai non enregistré. Aucun appairage confirmé.",
+            )
+        })?;
+        *db = next;
+        return Err(err_resp(
+            if locked {
+                StatusCode::TOO_MANY_REQUESTS
+            } else {
+                StatusCode::UNAUTHORIZED
+            },
+            if locked {
+                "Appairage bloqué après trop d’essais. Contactez une personne habilitée."
+            } else {
+                "Code d’appairage invalide."
+            },
         ));
     }
 
@@ -293,6 +396,7 @@ pub async fn post_pair_terminal(
     let mut next = db.clone();
     let term = &mut next.clock_terminals[idx];
     term.status = "active".into();
+    term.failed_pairing_attempts = 0;
     term.pairing_code = None; // Invalidation du code d'appairage une fois utilisé
     term.device_secret_hash = Some(secret_hash);
     term.paired_at = Some(now.clone());
@@ -640,6 +744,131 @@ mod tests {
         headers
     }
 
+    async fn pending(state: &SharedState) -> (String, String) {
+        let h = admin_headers(state).await;
+        let row = post_create_terminal(
+            State(state.clone()),
+            Path("beynost".into()),
+            h,
+            Json(CreateTerminalPayload {
+                room_id: "fixture-room".into(),
+                room_label: "Salle fictive".into(),
+                label: "Appareil fictif".into(),
+            }),
+        )
+        .await
+        .unwrap()
+        .0;
+        assert!(row["pairingExpiresAt"].is_string());
+        (
+            row["terminalId"].as_str().unwrap().into(),
+            row["pairingCode"].as_str().unwrap().into(),
+        )
+    }
+    async fn pair(state: &SharedState, id: &str, code: &str) -> Result<Json<Value>, Failure> {
+        post_pair_terminal(
+            State(state.clone()),
+            Json(PairTerminalPayload {
+                terminal_id: id.into(),
+                pairing_code: code.into(),
+            }),
+        )
+        .await
+    }
+    #[tokio::test]
+    async fn pairing_attempt_limit_survives_storage_reload_and_blocks_even_correct_code() {
+        let state = test_state();
+        let (id, code) = pending(&state).await;
+        let wrong = if code == "000000" { "000001" } else { "000000" };
+        for attempt in 1..=MAX_PAIRING_ATTEMPTS {
+            let status = pair(&state, &id, wrong).await.unwrap_err().0;
+            assert_eq!(
+                status,
+                if attempt == MAX_PAIRING_ATTEMPTS {
+                    StatusCode::TOO_MANY_REQUESTS
+                } else {
+                    StatusCode::UNAUTHORIZED
+                }
+            );
+            let loaded = load_or_init_state(&state.data_dir);
+            let term = loaded.clock_terminals.iter().find(|t| t.id == id).unwrap();
+            assert_eq!(term.failed_pairing_attempts, attempt);
+            assert!(term.device_secret_hash.is_none());
+            *state.db.write().await = loaded;
+        }
+        assert_eq!(
+            pair(&state, &id, &code).await.unwrap_err().0,
+            StatusCode::TOO_MANY_REQUESTS
+        );
+        let db = state.db.read().await;
+        let row = db.clock_terminals.iter().find(|t| t.id == id).unwrap();
+        assert_eq!(row.status, "pairing_locked");
+        assert!(row.pairing_code.is_none());
+        drop(db);
+        std::fs::remove_dir_all(&state.data_dir).unwrap();
+    }
+    #[tokio::test]
+    async fn pairing_expires_and_refuses_invalid_or_future_server_creation_time() {
+        let state = test_state();
+        for created in [
+            (Utc::now() - chrono::Duration::seconds(PAIRING_TTL_SECONDS + 1)).to_rfc3339(),
+            (Utc::now() + chrono::Duration::minutes(1)).to_rfc3339(),
+            "invalid-time".into(),
+        ] {
+            let (id, code) = pending(&state).await;
+            state
+                .db
+                .write()
+                .await
+                .clock_terminals
+                .iter_mut()
+                .find(|t| t.id == id)
+                .unwrap()
+                .created_at = created;
+            assert_eq!(
+                pair(&state, &id, &code).await.unwrap_err().0,
+                StatusCode::UNAUTHORIZED
+            );
+            let db = load_or_init_state(&state.data_dir);
+            let row = db.clock_terminals.iter().find(|t| t.id == id).unwrap();
+            assert_eq!(row.status, "pairing_expired");
+            assert!(row.pairing_code.is_none());
+            assert!(row.device_secret_hash.is_none());
+        }
+        std::fs::remove_dir_all(&state.data_dir).unwrap();
+    }
+    #[tokio::test]
+    async fn pairing_failure_counter_and_device_secret_are_not_published_on_disk_failure() {
+        let state = test_state();
+        let (id, code) = pending(&state).await;
+        let before = serde_json::to_value(&*state.db.read().await).unwrap();
+        let disk = std::fs::read(state.data_dir.join("cfitness_state.json")).unwrap();
+        std::fs::create_dir(state.data_dir.join("cfitness_state.json.tmp")).unwrap();
+        for candidate in ["000000", code.as_str()] {
+            assert_eq!(
+                pair(&state, &id, candidate).await.unwrap_err().0,
+                StatusCode::INTERNAL_SERVER_ERROR
+            );
+            assert_eq!(
+                serde_json::to_value(&*state.db.read().await).unwrap(),
+                before
+            );
+            assert_eq!(
+                std::fs::read(state.data_dir.join("cfitness_state.json")).unwrap(),
+                disk
+            );
+        }
+        std::fs::remove_dir(state.data_dir.join("cfitness_state.json.tmp")).unwrap();
+        let result = pair(&state, &id, &code).await.unwrap().0;
+        assert_eq!(result["status"], "active");
+        assert!(result["deviceToken"].is_string());
+        assert_eq!(
+            pair(&state, &id, &code).await.unwrap_err().0,
+            StatusCode::CONFLICT
+        );
+        std::fs::remove_dir_all(&state.data_dir).unwrap();
+    }
+
     #[tokio::test]
     async fn terminal_lifecycle_create_pair_whoami_and_revoke() {
         let state = test_state();
@@ -814,6 +1043,7 @@ mod tests {
             room_label: "Accueil & Banque".into(),
             label: "Tablette Accueil CS".into(),
             status: "active".into(),
+            failed_pairing_attempts: 0,
             pairing_code: None,
             device_secret_hash: Some(hash_terminal_token(token)),
             created_at: Utc::now().to_rfc3339(),

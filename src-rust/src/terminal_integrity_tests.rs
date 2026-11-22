@@ -20,6 +20,7 @@ fn state() -> SharedState {
         room_label: "Salle de cours fictive".into(),
         label: "Tablette fictive".into(),
         status: "active".into(),
+        failed_pairing_attempts: 0,
         pairing_code: None,
         device_secret_hash: Some(hash_terminal_token("fixture-device")),
         created_at: chrono::Utc::now().to_rfc3339(),
