@@ -37,11 +37,17 @@ import {
 } from '../../domain/terminals';
 
 const OFFICIAL_CHECKLIST = [
-  { id: 'chk-sono', label: 'Sonorisation & micro coach opérationnels' },
-  { id: 'chk-securite', label: 'Sécurité, propreté et issues de secours dégagées' },
-  { id: 'chk-materiel', label: 'Matériel rangé et vérifié avant la séance' },
-  { id: 'chk-climatisation', label: 'Ventilation, éclairage et température adaptés' },
+  { id: 'chk-sono', label: 'Sonorisation, micro et playlist vérifiés' },
+  { id: 'chk-securite', label: 'Sécurité de la salle et issues de secours dégagées' },
+  { id: 'chk-materiel', label: 'Matériel vérifié, propre et mis à disposition' },
+  { id: 'chk-climatisation', label: 'Aération ou climatisation réglée' },
 ];
+
+const hhmm = (iso: string) => {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+};
 
 export function KioskTabletShell() {
   const {
@@ -223,7 +229,7 @@ export function KioskTabletShell() {
       const list = await fetchRoomOccurrences(deviceToken);
       setOccurrences(list);
       if (list.length > 0 && !selectedOccurrenceId) {
-        setSelectedOccurrenceId(list[0].occurrenceId);
+        setSelectedOccurrenceId(list[0].id);
       }
     } catch (err) {
       setStatusMessage({
@@ -297,7 +303,7 @@ export function KioskTabletShell() {
       );
       setStatusMessage({
         type: 'ok',
-        text: `Pointage « ${formatPointageType(pointageType)} » confirmé pour ${currentUser.firstName} ${currentUser.lastName} sur ${res.roomLabel}${capturedPhoto ? ' (avec preuve photo)' : ''}.`,
+        text: `Pointage « ${formatPointageType(pointageType)} » confirmé pour ${currentUser.firstName} ${currentUser.lastName} sur ${res.entry.roomLabel}${capturedPhoto ? ' (avec preuve photo)' : ''}.`,
       });
       setCapturedPhoto(null);
       setCapturedPreviewUrl(null);
@@ -318,8 +324,8 @@ export function KioskTabletShell() {
     setStatusMessage(null);
     setCourseBusy(true);
     try {
-      const checklistItems = OFFICIAL_CHECKLIST.map((item) => ({
-        id: item.id,
+      const checklistAnswers = OFFICIAL_CHECKLIST.map((item) => ({
+        itemId: item.id,
         label: item.label,
         checked: Boolean(checkedItems[item.id]),
       }));
@@ -327,12 +333,12 @@ export function KioskTabletShell() {
         occurrenceId: selectedOccurrenceId,
         coachId: currentUser.id,
         idempotencyKey: `kiosk-${selectedOccurrenceId}-${currentUser.id}-${Date.now()}`,
-        checklistItems,
+        checklistAnswers,
         note: courseNote.trim() || undefined,
       });
       setStatusMessage({
         type: 'ok',
-        text: res.checklistCompleted
+        text: res.attendance?.checklistCompleted
           ? 'Présence coach et checklist d’avant-cours validées avec succès.'
           : 'Présence coach enregistrée (checklist partielle).',
       });
@@ -825,9 +831,9 @@ export function KioskTabletShell() {
                       }`}
                     >
                       {occurrences.map((occ) => (
-                        <option key={occ.occurrenceId} value={occ.occurrenceId}>
-                          {occ.startTime}–{occ.endTime} · {occ.courseTitle} ({occ.coachName})
-                          {occ.attendanceVerified ? ' ✓ Validé' : ''}
+                        <option key={occ.id} value={occ.id}>
+                          {hhmm(occ.startTime)}–{hhmm(occ.endTime)} · {occ.courseTitle} ({occ.assignedCoachName})
+                          {occ.isVerified ? ' ✓ Validé' : ''}
                         </option>
                       ))}
                     </select>

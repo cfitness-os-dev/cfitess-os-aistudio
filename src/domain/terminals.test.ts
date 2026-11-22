@@ -4,6 +4,8 @@ import {
   fetchClubTerminals,
   createTerminal,
   revokeTerminal,
+  submitCoursePresence,
+  submitTerminalPunch,
   TerminalAccessDenied,
 } from "./terminals";
 
@@ -131,6 +133,82 @@ test("terminals: revokeTerminal posts reason correctly", async () => {
   try {
     await revokeTerminal("emp-mario", "beynost", "term-1", "Tablette cassée");
     assert.equal(calledReason, "Tablette cassée");
+  } finally {
+    globalThis.fetch = originalFetch;
+    delete (globalThis as any).__cfos_bearer_token;
+  }
+});
+
+test("terminals: submitCoursePresence sends checklistAnswers with itemId and no checklistItems key", async () => {
+  (globalThis as any).__cfos_bearer_token = "fake-token";
+
+  let sentBody: Record<string, unknown> | undefined;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    assert.match(String(url), /\/api\/courses\/verify-presence/);
+    sentBody = JSON.parse(String(init?.body));
+    return new Response(
+      JSON.stringify({
+        status: "verified",
+        attendance: { checklistCompleted: true, completedBeforeStart: true },
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  };
+
+  try {
+    const res = await submitCoursePresence("dev-tok", {
+      occurrenceId: "occ-1",
+      coachId: "emp-chloe",
+      idempotencyKey: "kiosk-1",
+      checklistAnswers: [
+        { itemId: "chk-sono", label: "Sonorisation, micro et playlist vérifiés", checked: true },
+      ],
+    });
+    assert.equal(res.status, "verified");
+    assert.equal(res.attendance?.checklistCompleted, true);
+    const body = sentBody as Record<string, unknown> | undefined;
+    assert.ok(body);
+    assert.equal("checklistItems" in body, false);
+    assert.ok(Array.isArray(body.checklistAnswers));
+    assert.equal((body.checklistAnswers as any[])[0].itemId, "chk-sono");
+  } finally {
+    globalThis.fetch = originalFetch;
+    delete (globalThis as any).__cfos_bearer_token;
+  }
+});
+
+test("terminals: submitTerminalPunch sends photoProof only when provided", async () => {
+  (globalThis as any).__cfos_bearer_token = "fake-token";
+
+  const bodies: Record<string, unknown>[] = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    assert.match(String(url), /\/api\/terminals\/punch/);
+    bodies.push(JSON.parse(String(init?.body)));
+    return new Response(
+      JSON.stringify({
+        status: "recorded",
+        entry: {
+          id: "p-1",
+          type: "arrivee",
+          roomLabel: "Accueil",
+          photoProofPresent: Boolean(bodies[bodies.length - 1].photoProof),
+          timestamp: "2026-11-22T21:00:00Z",
+        },
+        photoCaptureAvailable: false,
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  };
+
+  try {
+    const resWithout = await submitTerminalPunch("dev-tok", "emp-karim", "arrivee");
+    const resWith = await submitTerminalPunch("dev-tok", "emp-karim", "arrivee", "photo-123");
+    assert.equal(resWithout.entry.roomLabel, "Accueil");
+    assert.equal(resWith.entry.photoProofPresent, true);
+    assert.equal("photoProof" in bodies[0], false);
+    assert.equal(bodies[1].photoProof, "photo-123");
   } finally {
     globalThis.fetch = originalFetch;
     delete (globalThis as any).__cfos_bearer_token;

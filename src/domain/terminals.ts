@@ -58,12 +58,15 @@ export interface TerminalWhoAmI {
 }
 
 export interface TerminalPunchResponse {
-  id: string;
-  employeeId: string;
-  type: string;
-  recordedAt: string;
-  terminalId: string;
-  roomLabel: string;
+  status: string;
+  entry: {
+    id: string;
+    type: string;
+    roomLabel: string;
+    photoProofPresent: boolean;
+    timestamp: string;
+  };
+  photoCaptureAvailable: boolean;
 }
 
 export interface CapturedPhotoProof {
@@ -76,23 +79,23 @@ export interface CapturedPhotoProof {
 }
 
 export interface RoomCourseOccurrence {
-  occurrenceId: string;
-  templateId: string;
+  id: string;
+  siteId: string;
+  roomId: string;
   courseTitle: string;
-  date: string;
+  assignedCoachId: string;
+  assignedCoachName: string;
+  substituteCoachId: string | null;
   startTime: string;
   endTime: string;
-  coachId: string;
-  coachName: string;
-  roomId: string;
-  roomLabel: string;
   status: string;
-  attendanceVerified: boolean;
-  checklistCompleted: boolean;
+  isVerified: boolean;
+  isPrepared: boolean;
+  preparedBeforeStart: boolean;
 }
 
 export interface CourseChecklistItemPayload {
-  id: string;
+  itemId: string;
   label: string;
   checked: boolean;
 }
@@ -101,7 +104,7 @@ export interface VerifyCoursePresenceInput {
   occurrenceId: string;
   coachId: string;
   idempotencyKey: string;
-  checklistItems: CourseChecklistItemPayload[];
+  checklistAnswers: CourseChecklistItemPayload[];
   note?: string;
 }
 
@@ -364,7 +367,10 @@ export async function fetchRoomOccurrences(
 export async function submitCoursePresence(
   deviceToken: string,
   input: VerifyCoursePresenceInput
-): Promise<{ alreadyVerified?: boolean; checklistCompleted: boolean; message?: string }> {
+): Promise<{
+  status: string;
+  attendance?: { checklistCompleted: boolean; completedBeforeStart?: boolean };
+}> {
   const token = getSessionToken();
   if (!token) {
     throw new Error("Connectez-vous avec votre session coach pour valider votre présence.");
