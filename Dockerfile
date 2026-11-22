@@ -20,6 +20,7 @@ WORKDIR /app
 
 RUN apk add --no-cache musl-dev
 COPY Cargo.toml ./
+COPY contracts ./contracts
 COPY src-rust ./src-rust
 RUN cargo build --release
 
