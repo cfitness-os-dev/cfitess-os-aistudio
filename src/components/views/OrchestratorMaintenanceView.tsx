@@ -742,7 +742,17 @@ export function OrchestratorMaintenanceView() {
   const [newStockName, setNewStockName] = useState('');
   const [newStockCategory, setNewStockCategory] =
     useState<StockConsumableItem['category']>('Nutrition / Bar');
-  const [newStockClub, setNewStockClub] = useState<ClubId>('carre-de-soie');
+  const [newStockClub, setNewStockClub] = useState<ClubId>(
+    clubFilter === 'beynost' ? 'beynost' : 'carre-de-soie'
+  );
+  const [serverActionError, setServerActionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (clubFilter === 'beynost' || clubFilter === 'carre-de-soie') {
+      setNewStockClub(clubFilter);
+      setNewClubId(clubFilter);
+    }
+  }, [clubFilter]);
   const [suppliers, setSuppliers] = useState<string[]>(() => {
     const defaults = [
       'FitSupply Pro Lyon',
@@ -841,8 +851,9 @@ export function OrchestratorMaintenanceView() {
     if (!code) return;
     const match = stocks.find(
       (s) =>
-        (s.barcode && s.barcode.toLowerCase() === code.toLowerCase()) ||
-        s.id.toLowerCase() === code.toLowerCase()
+        (clubFilter === 'all' || s.clubId === clubFilter) &&
+        ((s.barcode && s.barcode.toLowerCase() === code.toLowerCase()) ||
+          s.id.toLowerCase() === code.toLowerCase())
     );
     if (!match) {
       setNewStockBarcode(code);
@@ -905,7 +916,10 @@ export function OrchestratorMaintenanceView() {
 
   const handleExportStocksCsv = () => {
     const header = 'nom;code_barre;categorie;club;fournisseur;quantite;seuil;prix_ht\n';
-    const rows = stocks
+    const clubOnlyStocks = stocks.filter(
+      (s) => clubFilter === 'all' || s.clubId === clubFilter
+    );
+    const rows = clubOnlyStocks
       .map(
         (s) =>
           `${s.name};${s.barcode || ''};${s.category};${s.clubId};${s.supplier};${s.currentQty};${s.minThreshold};${s.unitPriceht.toFixed(2)}`
@@ -1155,6 +1169,7 @@ export function OrchestratorMaintenanceView() {
         'Vérification Orchestrateur OK : Aucun appel sortant en doublon sur les 24 dernières heures.',
       requiresHumanApproval: true,
     };
+    setServerActionError(null);
     void stocksFetchJson<OrchestratorDecisionItem>(
       '/api/orchestrator/decisions',
       currentUser.id,
@@ -1167,14 +1182,10 @@ export function OrchestratorMaintenanceView() {
       .then((created) => {
         setDecisions((prev) => [created, ...prev.filter((d) => d.id !== created.id)]);
       })
-      .catch(() => {
-        const newDecision: OrchestratorDecisionItem = {
-          id: `orch-${Date.now()}`,
-          timestamp: new Date().toLocaleTimeString('fr-FR'),
-          ...payload,
-          status: 'en_attente_validation',
-        };
-        setDecisions((prev) => [newDecision, ...prev]);
+      .catch((err) => {
+        setServerActionError(
+          `Création de décision refusée par le serveur : ${err instanceof Error ? err.message : String(err)}`
+        );
       });
   };
 
@@ -1203,6 +1214,7 @@ export function OrchestratorMaintenanceView() {
       usedPartName: usedPart ? usedPart.name : undefined,
     };
 
+    setServerActionError(null);
     void stocksFetchJson<MaintenanceTicket>(
       '/api/maintenance/tickets',
       currentUser.id,
@@ -1227,43 +1239,17 @@ export function OrchestratorMaintenanceView() {
             })
           );
         }
+        setNewEquipment('');
+        setNewIssue('');
+        setNewSupplierName('');
+        setNewEstimatedCost('0');
+        setNewUsedStockId('');
       })
-      .catch(() => {
-        // Fallback local en mode démo / hors-ligne
-        const created: MaintenanceTicket = {
-          id: `mnt-${Date.now()}`,
-          clubId: newClubId,
-          equipmentName: payload.equipmentName,
-          category: payload.category,
-          issueDescription: payload.issueDescription,
-          priority: payload.priority,
-          status: 'Signalé (Agent Maintenance)',
-          supplierName: payload.supplierName,
-          estimatedCostEur: payload.estimatedCostEur,
-          usedPartName: payload.usedPartName,
-          createdAt: new Date().toISOString().slice(0, 10),
-        };
-        setTickets((prev) => [created, ...prev]);
-        if (usedPart) {
-          setStocks((prev) =>
-            prev.map((s) => {
-              if (s.id !== usedPart.id) return s;
-              const nextQty = Math.max(0, s.currentQty - 1);
-              return {
-                ...s,
-                currentQty: nextQty,
-                autoOrderPrepared: nextQty < s.minThreshold,
-              };
-            })
-          );
-        }
+      .catch((err) => {
+        setServerActionError(
+          `Création du ticket SAV refusée par le serveur : ${err instanceof Error ? err.message : String(err)}`
+        );
       });
-
-    setNewEquipment('');
-    setNewIssue('');
-    setNewSupplierName('');
-    setNewEstimatedCost('0');
-    setNewUsedStockId('');
   };
 
   const handleOrderPartFromTicket = (ticket: MaintenanceTicket) => {
@@ -1295,6 +1281,7 @@ export function OrchestratorMaintenanceView() {
   };
 
   const handleAdvanceTicketStatus = (id: string) => {
+    setServerActionError(null);
     void stocksFetchJson<MaintenanceTicket>(
       `/api/maintenance/tickets/${encodeURIComponent(id)}/status`,
       currentUser.id,
@@ -1307,26 +1294,15 @@ export function OrchestratorMaintenanceView() {
       .then((updated) => {
         setTickets((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
       })
-      .catch(() => {
-        // Fallback local
-        setTickets((prev) =>
-          prev.map((t) => {
-            if (t.id !== id) return t;
-            const nextStatus: MaintenanceTicket['status'] =
-              t.status === 'Signalé (Agent Maintenance)'
-                ? 'Pièce commandée'
-                : t.status === 'Pièce commandée'
-                ? 'Technicien planifié'
-                : t.status === 'Technicien planifié'
-                ? 'Résolu'
-                : 'Signalé (Agent Maintenance)';
-            return { ...t, status: nextStatus };
-          })
+      .catch((err) => {
+        setServerActionError(
+          `Mise à jour du ticket SAV refusée : ${err instanceof Error ? err.message : String(err)}`
         );
       });
   };
 
   const handleDeleteTicket = (id: string) => {
+    setServerActionError(null);
     void stocksFetchJson<{ deleted: boolean }>(
       `/api/maintenance/tickets/${encodeURIComponent(id)}`,
       currentUser.id,
@@ -1338,12 +1314,15 @@ export function OrchestratorMaintenanceView() {
       .then(() => {
         setTickets((prev) => prev.filter((t) => t.id !== id));
       })
-      .catch(() => {
-        setTickets((prev) => prev.filter((t) => t.id !== id));
+      .catch((err) => {
+        setServerActionError(
+          `Suppression du ticket SAV refusée : ${err instanceof Error ? err.message : String(err)}`
+        );
       });
   };
 
   const handleResetDecision = (id: string) => {
+    setServerActionError(null);
     void stocksFetchJson<OrchestratorDecisionItem>(
       `/api/orchestrator/decisions/${encodeURIComponent(id)}/status`,
       currentUser.id,
@@ -1358,11 +1337,9 @@ export function OrchestratorMaintenanceView() {
           prev.map((d) => (d.id === updated.id ? updated : d))
         );
       })
-      .catch(() => {
-        setDecisions((prev) =>
-          prev.map((d) =>
-            d.id === id ? { ...d, status: 'en_attente_validation' } : d
-          )
+      .catch((err) => {
+        setServerActionError(
+          `Réinitialisation de la décision refusée : ${err instanceof Error ? err.message : String(err)}`
         );
       });
   };
@@ -1464,25 +1441,14 @@ export function OrchestratorMaintenanceView() {
         `Bon de commande (${createdPo.reference}) et fiche stock créés côté serveur : ${created.name}.`
       );
     } catch (err) {
-      const fallbackPo: PurchaseOrderItem = {
-        id: `po-${Date.now()}`,
-        reference,
-        clubId: newStockClub,
-        supplier: newStockSupplier,
-        itemsSummary,
-        amountHtEur: totalHt,
-        date: "Aujourd'hui",
-        status: 'Commande envoyée',
-        orderedQty: newStockQty,
-      };
-      setPurchaseOrders((prev) => [fallbackPo, ...prev]);
-      setScanFeedback(
-        `Échec création article commande : ${err instanceof Error ? err.message : String(err)}`
-      );
+      const msg = `Échec création article / commande serveur : ${err instanceof Error ? err.message : String(err)}`;
+      setServerActionError(msg);
+      setScanFeedback(msg);
     }
   };
 
   const handleAdvancePoStatus = (id: string) => {
+    setServerActionError(null);
     void stocksFetchJson<PurchaseOrderItem>(
       `/api/stocks/orders/${encodeURIComponent(id)}/status`,
       currentUser.id,
@@ -1518,17 +1484,10 @@ export function OrchestratorMaintenanceView() {
           );
         }
       })
-      .catch(() => {
-        setPurchaseOrders((prev) =>
-          prev.map((po) => {
-            if (po.id !== id) return po;
-            const next: PurchaseOrderItem['status'] =
-              po.status === 'Brouillon IA'
-                ? 'Commande envoyée'
-                : 'Livré & Réceptionné';
-            return { ...po, status: next };
-          })
-        );
+      .catch((err) => {
+        const msg = `Mise à jour de la commande fournisseur refusée : ${err instanceof Error ? err.message : String(err)}`;
+        setServerActionError(msg);
+        setScanFeedback(msg);
       });
   };
 
@@ -1555,6 +1514,22 @@ export function OrchestratorMaintenanceView() {
 
   return (
     <div className="space-y-6">
+      {serverActionError && (
+        <div
+          role="alert"
+          className="p-3.5 rounded-xl border bg-rose-50 border-rose-300 text-rose-800 text-xs font-semibold flex flex-wrap items-center justify-between gap-2"
+        >
+          <span>{serverActionError}</span>
+          <button
+            type="button"
+            onClick={() => setServerActionError(null)}
+            className="px-2.5 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-900 cursor-pointer"
+          >
+            Fermer
+          </button>
+        </div>
+      )}
+
       {/* Dynamic Context Header matching the selected Left Sidebar Item */}
       <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-2xs space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-200/80 pb-4">
