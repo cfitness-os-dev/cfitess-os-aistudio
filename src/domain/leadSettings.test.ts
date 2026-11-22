@@ -3,6 +3,7 @@ import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { parseLeadSettings, type LeadSettings } from './leadSettings';
 import { LeadSettingsEditor, type LeadSettingsReply } from './leadSettingsEditor';
+import { SERVICE_ALERT_IDS, setLeadAlertEnabled } from './leadNotificationSettings';
 
 const fixture = JSON.parse(readFileSync(new URL('../../contracts/lead-settings-cases.json', import.meta.url), 'utf8')) as {
   base: LeadSettings; cases: Array<{ name: string; field: string; value: unknown; valid: boolean }>;
@@ -96,4 +97,27 @@ test('Lead settings: failed saves keep draft, reject invalid input, prevent doub
   assert.equal(writes, 2);
   assert.equal(editor.getSnapshot().saved, true);
   assert.equal(editor.getSnapshot().dirty, false);
+});
+
+test('Service message activation shares notification rules and survives a failed save', async () => {
+  let fail = true;
+  const editor = new LeadSettingsEditor('carre-de-soie', {
+    load: async () => reply(),
+    save: async settings => { if (fail) throw new Error('Disk unavailable'); return reply(settings); },
+  });
+  await editor.load();
+  assert.equal(editor.getSnapshot().settings!.enabledAlertIds.includes(SERVICE_ALERT_IDS['srv-modif-sms']), false);
+  editor.update(settings => ({ ...settings, enabledAlertIds: setLeadAlertEnabled(
+    settings.enabledAlertIds, SERVICE_ALERT_IDS['srv-modif-sms'], true) }));
+  assert.equal(await editor.save(), false);
+  assert.equal(editor.getSnapshot().saved, false);
+  assert.equal(editor.getSnapshot().dirty, true);
+  assert.ok(editor.getSnapshot().settings!.enabledAlertIds.includes('LEAD-0546'));
+  fail = false;
+  assert.equal(await editor.save(), true);
+  assert.equal(editor.getSnapshot().dirty, false);
+  assert.ok(editor.getSnapshot().settings!.enabledAlertIds.includes('LEAD-0546'));
+  const selection = ['LEAD-0546'];
+  assert.deepEqual(setLeadAlertEnabled(selection, 'LEAD-0546', true), selection);
+  assert.deepEqual(setLeadAlertEnabled(selection, 'LEAD-0546', false), []);
 });

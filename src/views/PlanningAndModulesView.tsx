@@ -34,7 +34,7 @@ import {
   X,
   ZoomIn,
 } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useCfos } from '../context/CfosContext';
 import { cleanUiTree } from '../domain/cleanModeSanitizer';
 import type { DashboardPayload } from '../domain/apiEngine';
@@ -908,6 +908,43 @@ export function PlanningAndModulesView({
   const [siteSettingsOverrides, setSiteSettingsOverrides] = useState<
     Record<string, Partial<SiteHrSettings>>
   >({});
+  const [savingTimeclock, setSavingTimeclock] = useState(false);
+  const timeclockWrite = useRef(false);
+  const timeclockActorGeneration = useRef(0);
+  useEffect(() => {
+    ++timeclockActorGeneration.current;
+    setSiteSettingsOverrides({});
+    setModuleFeedback(null);
+    return () => { ++timeclockActorGeneration.current; };
+  }, [auth.actorId]);
+
+  async function saveTimeclockSettings(siteId: string, settings: SiteHrSettings) {
+    if (timeclockWrite.current) return;
+    timeclockWrite.current = true;
+    setSavingTimeclock(true);
+    setModuleFeedback(null);
+    const generation = timeclockActorGeneration.current;
+    try {
+      const updated = await clientApi.updateTimeclockSettings(auth, siteId, {
+        badgeFrequency: settings.badgeFrequency,
+        tabletBreakBadging: settings.tabletBreakBadging,
+      });
+      if (generation !== timeclockActorGeneration.current) return;
+      if (updated.id !== siteId) throw new Error('La réponse ne correspond pas au club sélectionné.');
+      setSiteSettingsOverrides(previous => ({ ...previous, [siteId]: {
+        badgeFrequency: updated.settings.badgeFrequency,
+        tabletBreakBadging: updated.settings.tabletBreakBadging,
+      } }));
+      setModuleFeedback({ kind: 'ok', text: `Règles de badgeage enregistrées pour ${updated.name}.` });
+    } catch (error) {
+      if (generation === timeclockActorGeneration.current) {
+        setModuleFeedback({ kind: 'err', text: error instanceof Error ? error.message : 'Enregistrement impossible. Les règles précédentes sont conservées.' });
+      }
+    } finally {
+      timeclockWrite.current = false;
+      setSavingTimeclock(false);
+    }
+  }
   const [extraPositions, setExtraPositions] = useState<
     Array<{ id: string; siteId: string; label: string; breakMin: number }>
   >([]);
@@ -5410,7 +5447,7 @@ export function PlanningAndModulesView({
   // MC10 — Paramètres RH par établissement (PAR01-18, EXT-PAR02-01..08)
   // =========================================================================
   const renderMc10 = () => {
-    const canEditRules = can('ORG04-29') || can('ORG04-30') || can('ORG04-37');
+    const canEditRules = can('ORG04-29') && can('ORG04-37');
     const canCreatePos = can('ORG04-27');
     const baseSite =
       dashboard.sites.find((s) => s.id === paramSiteId) ?? dashboard.sites[0];
@@ -5446,7 +5483,8 @@ export function PlanningAndModulesView({
               <button
                 key={s.id}
                 type="button"
-                onClick={() => setParamSiteId(s.id)}
+                disabled={savingTimeclock}
+                onClick={() => { setParamSiteId(s.id); setModuleFeedback(null); }}
                 className={`px-3 py-1.5 rounded-btn flex items-center gap-1.5 ${
                   baseSite?.id === s.id
                     ? 'cf-brand-gradient text-white font-semibold'
@@ -5463,14 +5501,16 @@ export function PlanningAndModulesView({
         {renderFeedbackBanner()}
 
         {/* Sous-onglets V1.16 : Règles de base / Compteurs 42 options / 66 Motifs / 19 Alertes & 14 Smart Planner */}
+        {savingTimeclock && <p role="status" className="text-xs cf-muted">Enregistrement des règles de badgeage…</p>}
+        {baseSite && baseSite.id !== auth.siteId && <p className="text-xs cf-muted">Pour modifier ce club, sélectionnez-le comme établissement actif dans le menu principal.</p>}
         <div className="flex flex-wrap gap-2 text-xs">
           {[
-            { id: 'base' as const, label: 'Règles de base, Besoins & UUID (PAR01/PAR17)' },
-            { id: 'counters' as const, label: 'Compteurs, CP & 42 Annualisation (PAR02)' },
-            { id: 'absences' as const, label: '66 Motifs d’absence (PAR12)' },
+            { id: 'base' as const, label: 'Règles de base et besoins' },
+            { id: 'counters' as const, label: 'Compteurs, congés et annualisation' },
+            { id: 'absences' as const, label: 'Motifs d’absence' },
             {
               id: 'alerts_planner' as const,
-              label: '19 Alertes, 14 Smart Planner & 7 Groupes Rapport',
+              label: 'Alertes, planification et rapports',
             },
           ].map((tab) => (
             <button
@@ -5557,19 +5597,13 @@ export function PlanningAndModulesView({
                           <span>Fréquence de badgeage (PAR16)</span>
                           <button
                             type="button"
-                            disabled={!canEditRules}
-                            onClick={() =>
-                              setSiteSettingsOverrides((p) => ({
-                                ...p,
-                                [baseSite.id]: {
-                                  ...p[baseSite.id],
-                                  badgeFrequency:
-                                    effectiveSettings.badgeFrequency === 'each_shift'
-                                      ? 'consecutive_shift_series'
-                                      : 'each_shift',
-                                },
-                              }))
-                            }
+                            disabled={!canEditRules || savingTimeclock || baseSite.id !== auth.siteId}
+                            aria-label="Fréquence de badgeage"
+                            onClick={() => void saveTimeclockSettings(baseSite.id, {
+                              ...effectiveSettings,
+                              badgeFrequency: effectiveSettings.badgeFrequency === 'each_shift'
+                                ? 'consecutive_shift_series' : 'each_shift',
+                            })}
                             className="cf-input px-2.5 py-1 cf-mono"
                           >
                             {effectiveSettings.badgeFrequency === 'each_shift'
@@ -5582,16 +5616,13 @@ export function PlanningAndModulesView({
                           <span>Badgeage de pause sur tablette (PAR16)</span>
                           <button
                             type="button"
-                            disabled={!canEditRules}
-                            onClick={() =>
-                              setSiteSettingsOverrides((p) => ({
-                                ...p,
-                                [baseSite.id]: {
-                                  ...p[baseSite.id],
-                                  tabletBreakBadging: !effectiveSettings.tabletBreakBadging,
-                                },
-                              }))
-                            }
+                            disabled={!canEditRules || savingTimeclock || baseSite.id !== auth.siteId}
+                            aria-label="Badgeage des pauses sur tablette"
+                            aria-pressed={effectiveSettings.tabletBreakBadging}
+                            onClick={() => void saveTimeclockSettings(baseSite.id, {
+                              ...effectiveSettings,
+                              tabletBreakBadging: !effectiveSettings.tabletBreakBadging,
+                            })}
                             className="cf-input px-2.5 py-1 cf-mono"
                           >
                             {effectiveSettings.tabletBreakBadging ? 'Activé' : 'Désactivé'}

@@ -42,6 +42,55 @@ pub struct UpdateSiteKpisPayload {
     pub monthly_target_eur: Option<f64>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BadgeFrequency {
+    EachShift,
+    ConsecutiveShiftSeries,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct UpdateTimeclockSettingsPayload {
+    pub badge_frequency: BadgeFrequency,
+    pub tablet_break_badging: bool,
+}
+
+pub async fn put_site_timeclock_settings(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Path(raw_site_id): Path<String>,
+    Json(patch): Json<UpdateTimeclockSettingsPayload>,
+) -> Result<Json<Site>, (StatusCode, Json<Value>)> {
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let target = normalize_site_id(&raw_site_id);
+    let mut db = state.db.write().await;
+    let index = db.sites.iter().position(|s| s.id == target)
+        .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Établissement introuvable."))?;
+    // Reading timeclock settings alone must not grant permission to edit them.
+    if !is_admin_employee(&db, &actor_id)
+        && !(evaluate_permission(&db, &actor_id, &target, "ORG04-29", None).allowed
+            && evaluate_permission(&db, &actor_id, &target, "ORG04-37", None).allowed) {
+        return Err(err_resp(StatusCode::FORBIDDEN,
+            "La modification des règles de badgeage de ce club n’est pas autorisée."));
+    }
+    let mut next = db.clone();
+    next.sites[index].settings.badge_frequency = match patch.badge_frequency {
+        BadgeFrequency::EachShift => "each_shift",
+        BadgeFrequency::ConsecutiveShiftSeries => "consecutive_shift_series",
+    }.into();
+    next.sites[index].settings.tablet_break_badging = patch.tablet_break_badging;
+    let updated = next.sites[index].clone();
+    append_audit(&mut next, &actor_id, "Règles de badgeage",
+        format!("Mise à jour des règles de badgeage de {}", updated.name),
+        &target, &target, None, None);
+    persist_state(&state.data_dir, &next).map_err(|_| err_resp(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "Les règles de badgeage n’ont pas été enregistrées. Réessayez."))?;
+    *db = next;
+    Ok(Json(updated))
+}
+
 fn is_valid_hhmm(value: &str) -> bool {
     let parts: Vec<&str> = value.trim().split(':').collect();
     if parts.len() != 2 {
@@ -512,6 +561,84 @@ mod tests {
             HeaderValue::from_str(site_id).unwrap(),
         );
         headers
+    }
+
+    #[tokio::test]
+    async fn timeclock_settings_persist_by_club_and_rollback_on_disk_failure() {
+        let state = test_state();
+        let headers = session_headers(&state, "emp-mario", "club-carre-soie").await;
+        let before = serde_json::to_value(&*state.db.read().await).unwrap();
+        let payload = || UpdateTimeclockSettingsPayload {
+            badge_frequency: BadgeFrequency::ConsecutiveShiftSeries,
+            tablet_break_badging: true,
+        };
+        let Json(saved) = put_site_timeclock_settings(State(state.clone()), headers.clone(),
+            Path("carre-de-soie".into()), Json(payload())).await.unwrap();
+        assert_eq!(saved.settings.badge_frequency, "consecutive_shift_series");
+        assert!(saved.settings.tablet_break_badging);
+        let reloaded = load_or_init_state(&state.data_dir);
+        let cds = reloaded.sites.iter().find(|site| site.id == "club-carre-soie").unwrap();
+        assert!(cds.settings.tablet_break_badging);
+        assert_eq!(serde_json::to_value(reloaded.sites.iter().find(|s| s.id == "club-beynost").unwrap()).unwrap(),
+            before["sites"].as_array().unwrap().iter().find(|s| s["id"] == "club-beynost").unwrap().clone());
+        let saved_memory = serde_json::to_value(&*state.db.read().await).unwrap();
+        let saved_disk = std::fs::read(state.data_dir.join("cfitness_state.json")).unwrap();
+        std::fs::create_dir(state.data_dir.join("cfitness_state.json.tmp")).unwrap();
+        let error = put_site_timeclock_settings(State(state.clone()), headers,
+            Path("beynost".into()), Json(payload())).await.unwrap_err();
+        assert_eq!(error.0, StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(serde_json::to_value(&*state.db.read().await).unwrap(), saved_memory);
+        assert_eq!(std::fs::read(state.data_dir.join("cfitness_state.json")).unwrap(), saved_disk);
+        let _ = std::fs::remove_dir_all(&state.data_dir);
+    }
+
+    #[tokio::test]
+    async fn timeclock_permissions_follow_the_target_club_not_the_active_club() {
+        let state = test_state();
+        // Master at CDS, read-only at Beynost in the reference fixture.
+        let headers = session_headers(&state, "emp-master", "club-carre-soie").await;
+        let payload = || UpdateTimeclockSettingsPayload {
+            badge_frequency: BadgeFrequency::EachShift,
+            tablet_break_badging: true,
+        };
+        put_site_timeclock_settings(State(state.clone()), headers.clone(),
+            Path("club-carre-soie".into()), Json(payload())).await.unwrap();
+        let before = serde_json::to_value(&*state.db.read().await).unwrap();
+        assert_eq!(put_site_timeclock_settings(State(state.clone()), headers,
+            Path("club-beynost".into()), Json(payload())).await.unwrap_err().0, StatusCode::FORBIDDEN);
+        assert_eq!(serde_json::to_value(&*state.db.read().await).unwrap(), before);
+        let _ = std::fs::remove_dir_all(&state.data_dir);
+    }
+
+    #[tokio::test]
+    async fn timeclock_settings_reject_read_only_and_cross_club_edits() {
+        let state = test_state();
+        let payload = || UpdateTimeclockSettingsPayload {
+            badge_frequency: BadgeFrequency::EachShift,
+            tablet_break_badging: false,
+        };
+        let before = serde_json::to_value(&*state.db.read().await).unwrap();
+        for actor in ["emp-maxime", "emp-chloe"] {
+            let headers = session_headers(&state, actor, "club-carre-soie").await;
+            for club in ["club-carre-soie", "club-beynost"] {
+                assert_eq!(put_site_timeclock_settings(State(state.clone()), headers.clone(),
+                    Path(club.into()), Json(payload())).await.unwrap_err().0, StatusCode::FORBIDDEN);
+            }
+        }
+        let headers = session_headers(&state, "emp-mario", "club-carre-soie").await;
+        assert_eq!(put_site_timeclock_settings(State(state.clone()), headers,
+            Path("inconnu".into()), Json(payload())).await.unwrap_err().0, StatusCode::NOT_FOUND);
+        assert_eq!(serde_json::to_value(&*state.db.read().await).unwrap(), before);
+        assert!(serde_json::from_value::<UpdateTimeclockSettingsPayload>(serde_json::json!({
+            "badgeFrequency": "invalid", "tabletBreakBadging": true
+        })).is_err());
+        assert!(serde_json::from_value::<UpdateTimeclockSettingsPayload>(serde_json::json!({
+            "badgeFrequency": "each_shift", "tabletBreakBadging": "true"
+        })).is_err());
+        assert!(serde_json::from_value::<UpdateTimeclockSettingsPayload>(serde_json::json!({
+            "badgeFrequency": "each_shift", "tabletBreakBadging": true, "name": "ignored?"
+        })).is_err());
+        let _ = std::fs::remove_dir_all(&state.data_dir);
     }
 
     #[tokio::test]

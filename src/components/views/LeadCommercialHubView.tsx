@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import { useCfos } from '../../context/CfosContext';
 import { clientApi } from '../../domain/clientApi';
+import { SERVICE_ALERT_IDS, setLeadAlertEnabled } from '../../domain/leadNotificationSettings';
+import { LEAD_SETTINGS_PRESENTATION } from '../../domain/leadSettingsPresentation';
 import type { Prospect } from '../../types/cfos';
 import { cleanUiTree } from '../../domain/cleanModeSanitizer';
 import {
@@ -447,7 +449,7 @@ export function LeadCommercialHubView({
     };
   });
   const clubProfileForm = clubProfilesByClub[selectedProfileClubId];
-  const [clubProfileSavedNotice, setClubProfileSavedNotice] = useState<string | null>(null);
+  const [clubProfileSavedNotice, setClubProfileSavedNotice] = useState<{ text: string; error: boolean } | null>(null);
 
   const [activeTab, setActiveTab] = useState<LeadHubTab>(() =>
     subTarget === 'lead-traceability' ? 'traceability' : 'prospects'
@@ -671,6 +673,10 @@ export function LeadCommercialHubView({
   const crmSettings = settingsState.settings;
   const setCrmSettings = settingsEditor.update;
   const [testAlertNotice, setTestAlertNotice] = useState<string | null>(null);
+  useEffect(() => {
+    setTestAlertNotice(null);
+    setClubProfileSavedNotice(null);
+  }, [selectedProfileClubId, currentUser.id]);
   const [rdvRequiresStripe, setRdvRequiresStripe] = useState(false);
   const [rdvStripePaid, setRdvStripePaid] = useState(false);
 
@@ -2562,6 +2568,15 @@ export function LeadCommercialHubView({
           {activeTab === 'communication' && (
             <div className="space-y-4">
               <div className="cf-card p-3 flex flex-wrap gap-1.5">
+                <label className="w-full sm:hidden">Rubrique des réglages
+                  <select aria-label="Rubrique des réglages" value={selectedSettingsTab}
+                    onChange={event => setSelectedSettingsTab(event.target.value)}
+                    className="w-full mt-2 p-3 rounded-lg bg-slate-900 border border-slate-700">
+                    {LEAD_SETTINGS_TABS_14.map(tab => <option key={tab.id} value={tab.id}>
+                      {LEAD_SETTINGS_PRESENTATION[tab.id]?.label ?? tab.label}
+                    </option>)}
+                  </select>
+                </label>
                 {[
                   { id: 'models', label: '1. Modèles (12 blocs / 18 polices)' },
                   { id: 'campaigns', label: '2. Campagnes (Email 4 étapes & SMS)' },
@@ -3927,13 +3942,13 @@ export function LeadCommercialHubView({
                     key={tab.id}
                     type="button"
                     onClick={() => setSelectedSettingsTab(tab.id)}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border ${
+                    className={`hidden sm:inline-flex px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border ${
                       selectedSettingsTab === tab.id
                         ? 'bg-emerald-600 text-white border-emerald-400'
                         : 'bg-slate-900 border-slate-700 text-slate-300'
                     }`}
                   >
-                    {tab.label}
+                    {isTechnicalMode ? tab.label : LEAD_SETTINGS_PRESENTATION[tab.id]?.label ?? tab.label}
                   </button>
                 ))}
               </div>
@@ -3946,12 +3961,12 @@ export function LeadCommercialHubView({
                   return (
                     <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800">
                       <div>
-                        <h3 className="text-sm font-extrabold">{activeSetting.label}</h3>
-                        <p className="cf-muted">{activeSetting.summary}</p>
+                        <h3 className="text-sm font-extrabold">{isTechnicalMode ? activeSetting.label : LEAD_SETTINGS_PRESENTATION[activeSetting.id]?.label ?? activeSetting.label}</h3>
+                        <p className="cf-muted">{isTechnicalMode ? activeSetting.summary : LEAD_SETTINGS_PRESENTATION[activeSetting.id]?.summary ?? activeSetting.summary}</p>
                       </div>
-                      <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-slate-900 border border-slate-700">
+                      {isTechnicalMode && <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-slate-900 border border-slate-700">
                         Route Lead : {activeSetting.path}
-                      </span>
+                      </span>}
                     </div>
                   );
                 })()}
@@ -4028,7 +4043,7 @@ export function LeadCommercialHubView({
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       {clubProfileSavedNotice ? (
-                        <span className="text-[11px] font-bold text-emerald-400">{clubProfileSavedNotice}</span>
+                        <span role={clubProfileSavedNotice.error ? 'alert' : 'status'} className={`text-[11px] font-bold ${clubProfileSavedNotice.error ? 'text-rose-400' : 'text-emerald-400'}`}>{clubProfileSavedNotice.text}</span>
                       ) : (
                         <span className="text-[10px] cf-muted">
                           Profil actif pour {selectedProfileClubId} : <strong>{clubProfileForm.name}</strong> ({clubProfileForm.logoBadge})
@@ -4040,16 +4055,18 @@ export function LeadCommercialHubView({
                           try {
                             localStorage.setItem('cfos_lead_club_profiles_v1', JSON.stringify(clubProfilesByClub));
                           } catch {
-                            // ignore
+                            setClubProfileSavedNotice({ text: 'Enregistrement impossible sur cet appareil. Réessayez.', error: true });
+                            return;
                           }
-                          setClubProfileSavedNotice(`Profil du club ${selectedProfileClubId} enregistré et persisté.`);
+                          setClubProfileSavedNotice({ text: 'Profil enregistré sur cet appareil uniquement.', error: false });
                           setTimeout(() => setClubProfileSavedNotice(null), 3500);
                         }}
                         className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer"
                       >
-                        Enregistrer le profil
+                        Enregistrer sur cet appareil
                       </button>
                     </div>
+                    <p className="cf-muted">Ce profil est conservé sur cet appareil uniquement ; il n’est pas encore partagé avec les autres collaborateurs.</p>
                   </div>
                 )}
 
@@ -4058,9 +4075,9 @@ export function LeadCommercialHubView({
                   <div className="space-y-4">
                     <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
                       <div className="font-bold text-emerald-300 flex items-center justify-between">
-                        <span>Langue d’interface (LEAD-0111)</span>
+                        <span>Langue d’interface</span>
                         <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 text-[10px] font-bold">
-                          IDCC 2511 · Conforme
+                          Configuration française
                         </span>
                       </div>
                       <div>
@@ -4073,11 +4090,11 @@ export function LeadCommercialHubView({
                           }}
                           className="w-full px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-sm font-medium"
                         >
-                          <option value="fr">Français (Officiel France — IDCC 2511 / Métropole &amp; Auvergne-Rhône-Alpes)</option>
-                          <option value="en">English (International — Extension future)</option>
+                          <option value="fr">Français</option>
+                          <option value="en" disabled>English (à venir)</option>
                         </select>
                         <p className="text-[11px] cf-muted mt-1">
-                          L’affichage, les règles de repos 11h, coupures 20 min et les exports Silae sont verrouillés en standard français.
+                          L’interface est actuellement disponible en français.
                         </p>
                       </div>
                     </div>
@@ -4103,6 +4120,7 @@ export function LeadCommercialHubView({
                         />
                         <span className="text-sm">Autoriser le profil Commercial à consulter le module Statistiques</span>
                       </label>
+                      <p className="cf-muted">Cette préférence agit uniquement sur l’affichage de cet appareil. Les droits d’accès sont gérés dans Collaborateurs et RH.</p>
                     </div>
                   </div>
                 )}
@@ -4112,8 +4130,8 @@ export function LeadCommercialHubView({
                     {/* LEAD-0488 / LEAD-0489 : Assignation */}
                     <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-emerald-300">Assignation commerciale automatique (LEAD-0488 / 0489)</span>
-                        <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[10px] font-bold">Round-Robin par club</span>
+                        <span className="font-bold text-emerald-300">Attribution automatique des prospects</span>
+                        <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[10px] font-bold">Tour de rôle par club</span>
                       </div>
                       <div className="space-y-2">
                         <label className="flex items-center gap-2 cursor-pointer text-xs">
@@ -4138,7 +4156,7 @@ export function LeadCommercialHubView({
                     {/* LEAD-0490 / LEAD-0491 / LEAD-0492 : Décrochage sportif */}
                     <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-emerald-300">Détection du décrochage sportif (LEAD-0490 / 0491 / 0492)</span>
+                        <span className="font-bold text-emerald-300">Détection de l’inactivité sportive</span>
                         <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold">Passerelle Heitz</span>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
@@ -4152,7 +4170,7 @@ export function LeadCommercialHubView({
                             onChange={(e) => setCrmSettings((s) => ({ ...s, dropoutThresholdDays: Number(e.target.value) }))}
                             className="w-full mt-1 px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700 text-sm font-semibold"
                           />
-                          <span className="text-[10px] cf-muted">Valeur de référence auditée : 21 jours d&apos;absence</span>
+                          <span className="text-[10px] cf-muted">Nombre de jours sans visite avant signalement</span>
                         </label>
                         <div className="space-y-2">
                           <label className="flex items-center gap-2 cursor-pointer text-xs">
@@ -4163,9 +4181,9 @@ export function LeadCommercialHubView({
                             />
                             <span>Remise à zéro automatique du compteur d&apos;inactivité dès détection d&apos;un badgeage borne</span>
                           </label>
-                          <div className="text-[10px] text-cyan-400 font-mono">
+                          {isTechnicalMode && <div className="text-[10px] text-cyan-400 font-mono">
                             Interrogation temps réel : http://10.10.0.20:8080/api/heitz-ws (Centres 5052 &amp; 5053)
-                          </div>
+                          </div>}
                         </div>
                       </div>
                     </div>
@@ -4173,7 +4191,7 @@ export function LeadCommercialHubView({
                     {/* LEAD-0493 à 0498 : Archivage automatisé */}
                     <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-emerald-300">Archivage automatisé sans réponse entrante (LEAD-0493 à 0498)</span>
+                        <span className="font-bold text-emerald-300">Archivage des prospects sans réponse</span>
                         <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[10px] font-bold">Règle stricte</span>
                       </div>
                       <div className="space-y-3 text-xs">
@@ -4214,9 +4232,10 @@ export function LeadCommercialHubView({
                           </div>
 
                           <div>
-                            <label className="block text-xs cf-muted mb-1">Délai avant archivage (jours) :</label>
+                            <label htmlFor="lead-archive-days" className="block text-xs cf-muted mb-1">Délai avant archivage (jours) :</label>
                             <div className="flex items-center gap-2">
                               <input
+                                id="lead-archive-days"
                                 type="number"
                                 min={1}
                                 max={730}
@@ -4229,21 +4248,21 @@ export function LeadCommercialHubView({
                                 onClick={() => setCrmSettings((s) => ({ ...s, archiveThresholdDays: 30 }))}
                                 className="px-2 py-0.5 rounded text-[11px] bg-slate-800 hover:bg-slate-700 cursor-pointer"
                               >
-                                30j (démo)
+                                30 jours
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setCrmSettings((s) => ({ ...s, archiveThresholdDays: 365 }))}
                                 className="px-2 py-0.5 rounded text-[11px] bg-slate-800 hover:bg-slate-700 cursor-pointer"
                               >
-                                365j (prod)
+                                365 jours
                               </button>
                             </div>
                           </div>
                         </div>
 
                         <div className="p-2.5 rounded-lg bg-emerald-950/40 border border-emerald-500/30 text-[11px] text-emerald-200">
-                          <strong>Règle d&apos;archivage inviolable (LEAD-0498) :</strong> Seule une réponse entrante du prospect (SMS reçu, WhatsApp entrant, appel entrant tracé) réinitialise le compteur. Les emails, SMS et appels sortants émis par le club ne repoussent jamais le délai d&apos;archivage.
+                          <strong>Règle d&apos;archivage :</strong> Seule une réponse entrante du prospect (SMS reçu, WhatsApp entrant, appel entrant tracé) réinitialise le compteur. Les emails, SMS et appels sortants émis par le club ne repoussent jamais le délai d&apos;archivage.
                         </div>
                       </div>
                     </div>
@@ -4271,14 +4290,14 @@ export function LeadCommercialHubView({
                     {/* Matrice des 8 alertes avec interrupteurs individuels */}
                     <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-emerald-300">Événements déclencheurs &amp; Canaux (8 alertes auditées)</span>
+                        <span className="font-bold text-emerald-300">Notifications à activer</span>
                         <span className="text-[10px] cf-muted">Sélection individuelle des notifications</span>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                         {CANONICAL_LEAD_ALERTS.map((alert) => {
                           const isChecked = crmSettings.enabledAlertIds.includes(alert.id);
                           return (
-                            <div
+                            <label
                               key={alert.id}
                               className={`p-2.5 rounded-lg border text-xs transition flex items-start gap-2.5 ${
                                 isChecked
@@ -4294,9 +4313,7 @@ export function LeadCommercialHubView({
                                   const checked = e.target.checked;
                                   setCrmSettings((s) => ({
                                     ...s,
-                                    enabledAlertIds: checked
-                                      ? [...s.enabledAlertIds, alert.id]
-                                      : s.enabledAlertIds.filter((id) => id !== alert.id),
+                                    enabledAlertIds: setLeadAlertEnabled(s.enabledAlertIds, alert.id, checked),
                                   }));
                                 }}
                                 className="mt-0.5 cursor-pointer"
@@ -4318,7 +4335,7 @@ export function LeadCommercialHubView({
                                 </div>
                                 <div className="text-[10px] cf-muted mt-0.5">{alert.description}</div>
                               </div>
-                            </div>
+                            </label>
                           );
                         })}
                       </div>
@@ -4329,16 +4346,16 @@ export function LeadCommercialHubView({
                           type="button"
                           onClick={() => {
                             setTestAlertNotice(
-                              `Test d'alerte validé avec succès à ${new Date().toLocaleTimeString()} pour le destinataire ${crmSettings.notifEmail}.`
+                              `${crmSettings.enabledAlertIds.length} règle(s) sélectionnée(s) pour ${selectedProfileClubId === 'beynost' ? 'Beynost' : 'Carré de Soie'}. ${settingsState.dirty ? 'Les modifications ne sont pas encore enregistrées. ' : ''}Aperçu local uniquement : aucun envoi ni test serveur effectué.`
                             );
                             setTimeout(() => setTestAlertNotice(null), 5000);
                           }}
                           className="px-3 py-1.5 rounded-lg bg-cyan-700/80 hover:bg-cyan-600 text-cyan-100 text-xs font-semibold cursor-pointer"
                         >
-                          Tester la distribution des alertes
+                          Aperçu des règles sélectionnées
                         </button>
                         {testAlertNotice && (
-                          <span className="text-[11px] text-cyan-300 font-medium">{testAlertNotice}</span>
+                          <span role="status" className="text-[11px] text-cyan-300 font-medium">{testAlertNotice}</span>
                         )}
                       </div>
                     </div>
@@ -4349,8 +4366,8 @@ export function LeadCommercialHubView({
                   <div className="space-y-4">
                     <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-emerald-300">Offres Heitz déclenchant le passage Client (LEAD-0553 / 0554)</span>
-                        <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">Mapping Heitz-WS</span>
+                        <span className="font-bold text-emerald-300">Offres déclenchant le passage au statut client</span>
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">Offres Heitz</span>
                       </div>
                       <p className="text-xs cf-muted">
                         Cochez les formules et abonnements importés de la base Heitz dont la validation convertit automatiquement le prospect en Adhérent / Client officiel :
@@ -4360,7 +4377,7 @@ export function LeadCommercialHubView({
                         {/* Carré de Soie */}
                         {selectedProfileClubId === 'carre-de-soie' && <div>
                           <div className="text-xs font-bold text-cyan-300 mb-1.5 flex items-center gap-1.5">
-                            <span>Carré de Soie (ID Center 5052)</span>
+                            <span>Carré de Soie</span>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             {CANONICAL_HEITZ_PASS_OFFERS.filter((o) => o.clubId === 'carre-de-soie').map((offer) => {
@@ -4400,7 +4417,7 @@ export function LeadCommercialHubView({
                         {/* Beynost */}
                         {selectedProfileClubId === 'beynost' && <div>
                           <div className="text-xs font-bold text-amber-300 mb-1.5 flex items-center gap-1.5">
-                            <span>Beynost (ID Center 5053)</span>
+                            <span>Beynost</span>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             {CANONICAL_HEITZ_PASS_OFFERS.filter((o) => o.clubId === 'beynost').map((offer) => {
@@ -4485,7 +4502,7 @@ export function LeadCommercialHubView({
                 ) && (
                   <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-emerald-300">Configuration {selectedSettingsTab}</span>
+                      <span className="font-bold text-emerald-300">{LEAD_SETTINGS_PRESENTATION[selectedSettingsTab]?.label ?? 'Réglages du club'}</span>
                       <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px] font-bold">
                         Réglages du club
                       </span>
@@ -4498,6 +4515,7 @@ export function LeadCommercialHubView({
                     )}
                     {selectedSettingsTab === 'script' && (
                       <textarea
+                        aria-label="Script de vente du club"
                         rows={4}
                         value={crmSettings.salesScript}
                         onChange={(e) => setCrmSettings((s) => ({ ...s, salesScript: e.target.value }))}
@@ -4514,16 +4532,41 @@ export function LeadCommercialHubView({
                     {(selectedSettingsTab === 'meetings' || selectedSettingsTab === 'users') && (
                       <div className="text-[11px] cf-muted">
                         {selectedSettingsTab === 'meetings'
-                          ? 'Les paramètres de capacité, délai minimum et anti-collision RDV-01 sont pilotés dans l’onglet Planning RDV.'
-                          : 'Les rôles et permissions utilisateurs sont gérés dans Droits d’accès (RBAC) et le backend Rust.'}
+                          ? 'Les règles de réservation sont gérées dans Rendez-vous découverte.'
+                          : 'Les droits sont attribués dans Collaborateurs et RH, selon le club et les responsabilités.'}
                       </div>
                     )}
                   </div>
                 )}
 
-                {['app-settings', 'prospects', 'notifications', 'exclusions', 'sms', 'script', 'whatsapp'].includes(selectedSettingsTab) && (
+                {selectedSettingsTab === 'automation' && crmSettings && (
+                  <fieldset disabled={settingsState.saving} className="grid grid-cols-1 md:grid-cols-2 gap-2.5 min-w-0">
+                    {LEAD_SERVICE_AUTOMATIONS_6.map((s) => (
+                      <label key={s.id} className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex justify-between items-center gap-3 cursor-pointer">
+                        <div>
+                          <div className="font-bold">
+                            {s.event} ({s.channel})
+                          </div>
+                          <div className="text-[10px] cf-muted font-mono">
+                            Variables : {s.variables.join(' · ')}
+                          </div>
+                        </div>
+                        <input type="checkbox"
+                          aria-label={`${s.event} (${s.channel})`}
+                          checked={crmSettings.enabledAlertIds.includes(SERVICE_ALERT_IDS[s.id])}
+                          onChange={event => setCrmSettings(settings => ({ ...settings,
+                            enabledAlertIds: setLeadAlertEnabled(settings.enabledAlertIds, SERVICE_ALERT_IDS[s.id], event.target.checked),
+                          }))}
+                        />
+                      </label>
+                    ))}
+                  </fieldset>
+                )}
+
+                {['app-settings', 'prospects', 'notifications', 'automation', 'exclusions', 'sms', 'script', 'whatsapp'].includes(selectedSettingsTab) && (
                   <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
                     <div aria-live="polite">
+                      {settingsState.dirty && <p className="text-amber-300">Modifications non enregistrées.</p>}
                       {settingsState.saved && <p role="status" className="text-emerald-400">Réglages enregistrés pour {selectedProfileClubId === 'beynost' ? 'Beynost' : 'Carré de Soie'}.</p>}
                       {settingsState.error && <div role="alert" className="space-y-2 text-rose-400">
                         <p>{settingsState.error} Les modifications restent à enregistrer.</p>
@@ -4540,26 +4583,6 @@ export function LeadCommercialHubView({
                   </div>
                 )}
                 </fieldset>}
-
-                {selectedSettingsTab === 'automation' && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                    {LEAD_SERVICE_AUTOMATIONS_6.map((s) => (
-                      <div key={s.id} className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex justify-between items-center">
-                        <div>
-                          <div className="font-bold">
-                            {s.event} ({s.channel})
-                          </div>
-                          <div className="text-[10px] cf-muted font-mono">
-                            Variables : {s.variables.join(' · ')}
-                          </div>
-                        </div>
-                        <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-bold">
-                          {s.activeByDefault ? 'Actif' : 'Inactif'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
 
                 {selectedSettingsTab === 'segments' && (
                   <div className="space-y-2">
@@ -4590,6 +4613,7 @@ export function LeadCommercialHubView({
 
                 {selectedSettingsTab === 'partners' && (
                   <div className="space-y-4">
+                    {!isTechnicalMode && <p className="cf-muted">Les configurations présentées sont des exemples de démonstration. La connexion réelle de chaque service reste à vérifier.</p>}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                       {LEAD_PARTNERS_9.map((p) => (
                         <div key={p.id} className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
@@ -4604,17 +4628,19 @@ export function LeadCommercialHubView({
                                   : 'bg-slate-800 text-slate-400'
                               }`}
                             >
-                              {p.status}
+                              {isTechnicalMode ? p.status : p.status === 'sandbox_prete' ? 'Mode test' : p.status === 'connecte_lan' ? 'Connexion locale à vérifier' : 'Non connecté'}
                             </span>
                           </div>
-                          <div className="text-[11px] cf-muted">{p.direction}</div>
-                          <div className="text-[10px] text-slate-300">{p.note}</div>
+                          {isTechnicalMode && <>
+                            <div className="text-[11px] cf-muted break-words [overflow-wrap:anywhere]">{p.direction}</div>
+                            <div className="text-[10px] text-slate-300 break-words">{p.note}</div>
+                          </>}
                         </div>
                       ))}
                     </div>
 
                     {/* Testeur direct Webhook POST /api/lead/webhooks/clubEntry */}
-                    <div className="p-3 rounded-xl bg-slate-950/70 border border-emerald-500/30 space-y-2">
+                    {isTechnicalMode && <div className="p-3 rounded-xl bg-slate-950/70 border border-emerald-500/30 space-y-2">
                       <div className="font-bold flex items-center gap-2 text-emerald-300">
                         <Webhook className="w-4 h-4" />
                         Testeur Sandbox — POST /api/lead/webhooks/clubEntry (API-01)
@@ -4647,7 +4673,7 @@ export function LeadCommercialHubView({
                           {webhookResultText}
                         </div>
                       )}
-                    </div>
+                    </div>}
                   </div>
                 )}
               </div>
