@@ -4,6 +4,8 @@ Exigence complémentaire à développer : [pointeuse sur appareils autorisés et
 
 Premier lot applicatif de cette exigence : [droits par salarié et club — P0](DROITS_POINTAGE_P0.md). L'annexe de la spécification ajoute la photo au badgeage, encore à développer.
 
+Suite : [recontrôle serveur des terminaux et de l'intégrité photo](TERMINAUX_INTEGRITE.md), avec défauts reproduits, correctifs et limites du parcours matériel.
+
 Lot du 22 novembre 2026, dépendant de la PR #29 (approuvée par pinto1230766 et fusionnée le 22 novembre à 13:23 UTC). Aucun déploiement réalisé par Codex.
 
 ## Comportement livré
