@@ -3,6 +3,11 @@ import assert from "node:assert/strict";
 import { validatePersonalResponse } from "./personalWorkspace";
 
 const payload = {
+  clockingPolicy: {
+    personalAllowed: false,
+    terminalAllowed: false,
+    terminalReady: false,
+  },
   punchAvailability: { allowedTypes: ["arrivee"], openClubId: null },
   employeeId: "employee-a",
   clubId: "beynost",

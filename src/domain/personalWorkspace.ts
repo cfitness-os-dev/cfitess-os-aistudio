@@ -9,6 +9,11 @@ import type {
 } from "../types/cfos";
 
 export interface PersonalWorkspace {
+  clockingPolicy: {
+    personalAllowed: boolean;
+    terminalAllowed: boolean;
+    terminalReady: boolean;
+  };
   punchAvailability: {
     allowedTypes: Array<"arrivee" | "debut_pause" | "fin_pause" | "depart">;
     openClubId: ClubId | null;
@@ -90,6 +95,18 @@ export function validatePersonalResponse(
     if (!(key in value) || !Array.isArray(Reflect.get(value, key)))
       throw new Error("Les données reçues sont incomplètes.");
   const clock = Reflect.get(value, "punchAvailability");
+  const policy = Reflect.get(value, "clockingPolicy");
+  if (
+    !policy ||
+    typeof policy !== "object" ||
+    typeof policy.personalAllowed !== "boolean" ||
+    typeof policy.terminalAllowed !== "boolean" ||
+    policy.terminalReady !== false
+  ) {
+    throw new Error(
+      "Les autorisations de pointage n’ont pas pu être vérifiées. Actualisez votre espace.",
+    );
+  }
   if (
     !clock ||
     typeof clock !== "object" ||

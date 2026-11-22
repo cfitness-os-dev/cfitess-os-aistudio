@@ -182,6 +182,8 @@ pub struct RestoreBackupPayload {
 pub fn api_router(state: SharedState) -> Router {
     Router::new()
         .route("/api/health", get(health))
+        .route("/api/hr/clock-policies/:club_id", get(crate::clock_policy::get_policies))
+        .route("/api/hr/clock-policies/:club_id/:employee_id", put(crate::clock_policy::put_policy))
         .route("/api/hr/workspace/:club_id", get(crate::hr_manager::get_workspace))
         .route("/api/hr/workspace/:club_id/requests/:request_id", post(crate::hr_manager::decide_request))
         .route("/api/hr/workspace/:club_id/time-entries/:entry_id", post(crate::hr_manager::review_entry))

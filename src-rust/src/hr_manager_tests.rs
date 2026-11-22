@@ -45,6 +45,22 @@ async fn leave(state: &SharedState, id: &str, employee: &str, site: &str) {
     });
 }
 async fn punch(state: &SharedState, employee: &str, club: &str) -> Value {
+    // This fixture tests review rights; pointage requires a separate explicit grant.
+    state
+        .db
+        .write()
+        .await
+        .personal_workspace
+        .clock_policies
+        .entry(employee.into())
+        .or_default()
+        .insert(
+            club.into(),
+            crate::clock_policy::ClockPolicy {
+                personal_allowed: true,
+                ..Default::default()
+            },
+        );
     let h = headers(state, employee).await;
     crate::personal_workspace::post_workspace_action(
         State(state.clone()),

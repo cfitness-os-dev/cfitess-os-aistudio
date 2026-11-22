@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "lint": "tsc --noEmit",
-    "test": "tsx --test src/domain/rules.test.ts src/domain/leadSettings.test.ts src/domain/heitzCrm.test.ts src/domain/personalWorkspace.test.ts src/domain/hrWorkflow.test.ts",
+    "test": "tsx --test src/domain/rules.test.ts src/domain/leadSettings.test.ts src/domain/heitzCrm.test.ts src/domain/personalWorkspace.test.ts src/domain/hrWorkflow.test.ts src/domain/clockPolicy.test.ts",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview"
   },

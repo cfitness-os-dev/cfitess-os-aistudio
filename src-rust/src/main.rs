@@ -3,6 +3,9 @@ mod employee_import;
 mod employee_lifecycle;
 mod heitz_members;
 mod hr_manager;
+mod clock_policy;
+#[cfg(test)]
+mod clock_policy_tests;
 #[cfg(test)]
 mod hr_manager_tests;
 mod lead_automations;

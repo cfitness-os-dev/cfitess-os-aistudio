@@ -690,16 +690,20 @@ function PersonalWorkspaceContent({
                 connecté.
               </p>
               <p role="status" className="cf-muted">
-                {data.punchAvailability.openClubId &&
-                data.punchAvailability.openClubId !== club
-                  ? `Une prise de service est ouverte à ${data.punchAvailability.openClubId === "beynost" ? "Beynost" : "Carré de Soie"}. Revenez sur ce club pour poursuivre vos pointages.`
-                  : data.punchAvailability.allowedTypes.includes("fin_pause")
-                    ? "Pause en cours. Enregistrez la fin de pause pour reprendre votre service."
-                    : data.punchAvailability.allowedTypes.includes("depart")
-                      ? "Service en cours. Vous pouvez commencer une pause ou enregistrer votre départ."
-                      : data.punchAvailability.allowedTypes.includes("arrivee")
-                        ? "Aucun service en cours. Vous pouvez enregistrer votre arrivée."
-                        : "Votre situation de pointage nécessite une vérification par le responsable."}
+                {!data.clockingPolicy.personalAllowed
+                  ? "Le pointage depuis votre compte n’est pas autorisé dans ce club. Votre historique reste consultable. Contactez votre responsable pour les modalités de pointage."
+                  : data.punchAvailability.openClubId &&
+                      data.punchAvailability.openClubId !== club
+                    ? `Une prise de service est ouverte à ${data.punchAvailability.openClubId === "beynost" ? "Beynost" : "Carré de Soie"}. Revenez sur ce club pour poursuivre vos pointages.`
+                    : data.punchAvailability.allowedTypes.includes("fin_pause")
+                      ? "Pause en cours. Enregistrez la fin de pause pour reprendre votre service."
+                      : data.punchAvailability.allowedTypes.includes("depart")
+                        ? "Service en cours. Vous pouvez commencer une pause ou enregistrer votre départ."
+                        : data.punchAvailability.allowedTypes.includes(
+                              "arrivee",
+                            )
+                          ? "Aucun service en cours. Vous pouvez enregistrer votre arrivée."
+                          : "Votre situation de pointage nécessite une vérification par le responsable."}
               </p>
               <div className="flex flex-wrap gap-2">
                 {[
@@ -713,6 +717,7 @@ function PersonalWorkspaceContent({
                     className={button}
                     disabled={
                       busy ||
+                      !data.clockingPolicy.personalAllowed ||
                       !data.punchAvailability.allowedTypes.some(
                         (allowed) => allowed === type,
                       )
