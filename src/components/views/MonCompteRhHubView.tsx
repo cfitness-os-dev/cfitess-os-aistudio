@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, useEffect, useState } from 'react';
 import {
   AlertTriangle,
   Building2,
@@ -24,8 +24,13 @@ import { DashboardView } from '../../views/DashboardView';
 import { PlanningAndModulesView } from '../../views/PlanningAndModulesView';
 import { PreferencesView } from '../../views/PreferencesView';
 import { MyDayCollaboratorView } from './MyDayCollaboratorView';
-import { PlanningHrView } from './PlanningHrView';
-import { AtsView } from './AtsView';
+
+const PlanningHrView = lazy(() =>
+  import('./PlanningHrView').then((m) => ({ default: m.PlanningHrView }))
+);
+const AtsView = lazy(() =>
+  import('./AtsView').then((m) => ({ default: m.AtsView }))
+);
 
 export type MonCompteHubTab =
   | 'mon-compte'

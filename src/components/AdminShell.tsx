@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import { useCfos } from '../context/CfosContext';
 import {
   Users,
@@ -38,19 +38,44 @@ import {
 } from 'lucide-react';
 import { AdminSection } from '../types/cfos';
 import { isNavItemAllowedForRole, isSectionAllowedForRole } from '../domain/rules';
-import { DashboardView } from './views/DashboardView';
-import { OrchestratorMaintenanceView } from './views/OrchestratorMaintenanceView';
-import { MonCompteRhHubView } from './views/MonCompteRhHubView';
-import { TelephonyView } from './views/TelephonyView';
-import { CrmView } from './views/CrmView';
-import { PlanningHrView } from './views/PlanningHrView';
-import { AcademyView } from './views/AcademyView';
-import { AtsView } from './views/AtsView';
-import { DevicesHeitzView } from './views/DevicesHeitzView';
-import { GovernanceView } from './views/GovernanceView';
-import { RecoveryView } from './views/RecoveryView';
 import { AuthSwitchModal } from './AuthSwitchModal';
 import { MywellnessQuickConnect } from './MywellnessQuickConnect';
+
+const DashboardView = lazy(() =>
+  import('./views/DashboardView').then((m) => ({ default: m.DashboardView }))
+);
+const OrchestratorMaintenanceView = lazy(() =>
+  import('./views/OrchestratorMaintenanceView').then((m) => ({
+    default: m.OrchestratorMaintenanceView,
+  }))
+);
+const MonCompteRhHubView = lazy(() =>
+  import('./views/MonCompteRhHubView').then((m) => ({ default: m.MonCompteRhHubView }))
+);
+const TelephonyView = lazy(() =>
+  import('./views/TelephonyView').then((m) => ({ default: m.TelephonyView }))
+);
+const CrmView = lazy(() =>
+  import('./views/CrmView').then((m) => ({ default: m.CrmView }))
+);
+const PlanningHrView = lazy(() =>
+  import('./views/PlanningHrView').then((m) => ({ default: m.PlanningHrView }))
+);
+const AcademyView = lazy(() =>
+  import('./views/AcademyView').then((m) => ({ default: m.AcademyView }))
+);
+const AtsView = lazy(() =>
+  import('./views/AtsView').then((m) => ({ default: m.AtsView }))
+);
+const DevicesHeitzView = lazy(() =>
+  import('./views/DevicesHeitzView').then((m) => ({ default: m.DevicesHeitzView }))
+);
+const GovernanceView = lazy(() =>
+  import('./views/GovernanceView').then((m) => ({ default: m.GovernanceView }))
+);
+const RecoveryView = lazy(() =>
+  import('./views/RecoveryView').then((m) => ({ default: m.RecoveryView }))
+);
 
 interface VisualNavItem {
   id: string;
@@ -1080,6 +1105,13 @@ export function AdminShell() {
 
         {/* Active View Content (Réservation d'espace inférieur pb-32 sm:pb-36 anti-chevauchement barre mobile #20) */}
         <main className="flex-1 px-3 pt-3 pb-32 sm:px-6 sm:pt-6 sm:pb-36 lg:p-6 max-w-[1440px] w-full mx-auto min-w-0 overflow-x-clip">
+          <Suspense
+            fallback={
+              <div className="cf-card p-6 text-xs cf-muted flex items-center gap-2">
+                <span>Chargement du module…</span>
+              </div>
+            }
+          >
           {activeSection === 'my-day' && (
             <MonCompteRhHubView subTarget={navSubTarget} />
           )}
@@ -1193,6 +1225,7 @@ export function AdminShell() {
             </div>
           )}
           {activeSection === 'governance' && <GovernanceView />}
+          </Suspense>
 
           {/* Spacer garanti anti-chevauchement avec la barre fixe mobile (< lg) - Défaut #20 */}
           <div className="h-8 sm:h-12 lg:hidden pointer-events-none" aria-hidden="true" />

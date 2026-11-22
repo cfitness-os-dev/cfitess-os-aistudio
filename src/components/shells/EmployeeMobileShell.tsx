@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { lazy, useState } from 'react';
 import { useCfos } from '../../context/CfosContext';
 import {
   Calendar,
@@ -42,17 +42,40 @@ import { formatLeaveStatus } from '../../domain/rules';
 import { AdminSection, ClubId, LeaveRequest, PointageType } from '../../types/cfos';
 import { EmployeeDashboardGrid } from '../views/EmployeeDashboardGrid';
 import { ThemeColorControl } from '../ThemeColorControl';
-import { DashboardView } from '../views/DashboardView';
-import { DevicesHeitzView } from '../views/DevicesHeitzView';
-import { CrmView } from '../views/CrmView';
-import { PlanningHrView } from '../views/PlanningHrView';
 import { MyDayCollaboratorView } from '../views/MyDayCollaboratorView';
-import { OrchestratorMaintenanceView } from '../views/OrchestratorMaintenanceView';
-import { TelephonyView } from '../views/TelephonyView';
-import { AtsView } from '../views/AtsView';
-import { AcademyView } from '../views/AcademyView';
-import { GovernanceView } from '../views/GovernanceView';
-import { RecoveryView } from '../views/RecoveryView';
+
+const DashboardView = lazy(() =>
+  import('../views/DashboardView').then((m) => ({ default: m.DashboardView }))
+);
+const DevicesHeitzView = lazy(() =>
+  import('../views/DevicesHeitzView').then((m) => ({ default: m.DevicesHeitzView }))
+);
+const CrmView = lazy(() =>
+  import('../views/CrmView').then((m) => ({ default: m.CrmView }))
+);
+const PlanningHrView = lazy(() =>
+  import('../views/PlanningHrView').then((m) => ({ default: m.PlanningHrView }))
+);
+const OrchestratorMaintenanceView = lazy(() =>
+  import('../views/OrchestratorMaintenanceView').then((m) => ({
+    default: m.OrchestratorMaintenanceView,
+  }))
+);
+const TelephonyView = lazy(() =>
+  import('../views/TelephonyView').then((m) => ({ default: m.TelephonyView }))
+);
+const AtsView = lazy(() =>
+  import('../views/AtsView').then((m) => ({ default: m.AtsView }))
+);
+const AcademyView = lazy(() =>
+  import('../views/AcademyView').then((m) => ({ default: m.AcademyView }))
+);
+const GovernanceView = lazy(() =>
+  import('../views/GovernanceView').then((m) => ({ default: m.GovernanceView }))
+);
+const RecoveryView = lazy(() =>
+  import('../views/RecoveryView').then((m) => ({ default: m.RecoveryView }))
+);
 
 interface MobileCourseSlot {
   id: string;

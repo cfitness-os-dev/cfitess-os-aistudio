@@ -1,12 +1,35 @@
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { CfosProvider, useCfos } from './context/CfosContext';
 import { AdminShell } from './components/AdminShell';
-import { EmployeeMobileShell } from './components/shells/EmployeeMobileShell';
-import { KioskTabletShell } from './components/shells/KioskTabletShell';
-import { SoftphoneShell } from './components/shells/SoftphoneShell';
 import { LocalLoginGate } from './components/LocalLoginGate';
 import { MywellnessSportSheetModal } from './components/MywellnessSportSheetModal';
-import { PublicLeadPortalView } from './components/PublicLeadPortalView';
+
+const EmployeeMobileShell = lazy(() =>
+  import('./components/shells/EmployeeMobileShell').then((m) => ({
+    default: m.EmployeeMobileShell,
+  }))
+);
+const KioskTabletShell = lazy(() =>
+  import('./components/shells/KioskTabletShell').then((m) => ({
+    default: m.KioskTabletShell,
+  }))
+);
+const SoftphoneShell = lazy(() =>
+  import('./components/shells/SoftphoneShell').then((m) => ({
+    default: m.SoftphoneShell,
+  }))
+);
+const PublicLeadPortalView = lazy(() =>
+  import('./components/PublicLeadPortalView').then((m) => ({
+    default: m.PublicLeadPortalView,
+  }))
+);
+
+const ShellFallback = (
+  <div className="min-h-screen flex items-center justify-center text-xs opacity-70">
+    Chargement de C.Fitness OS…
+  </div>
+);
 
 function CfosRouter() {
   const { shellMode, themeMode, accentColor } = useCfos();
@@ -22,18 +45,34 @@ function CfosRouter() {
   }, [themeMode, accentColor]);
 
   if (isPublicPortal) {
-    return <PublicLeadPortalView pathname={pathname} />;
+    return (
+      <Suspense fallback={ShellFallback}>
+        <PublicLeadPortalView pathname={pathname} />
+      </Suspense>
+    );
   }
 
   const renderShell = () => {
     if (shellMode === 'employe') {
-      return <EmployeeMobileShell />;
+      return (
+        <Suspense fallback={ShellFallback}>
+          <EmployeeMobileShell />
+        </Suspense>
+      );
     }
     if (shellMode === 'tablette') {
-      return <KioskTabletShell />;
+      return (
+        <Suspense fallback={ShellFallback}>
+          <KioskTabletShell />
+        </Suspense>
+      );
     }
     if (shellMode === 'telephone') {
-      return <SoftphoneShell />;
+      return (
+        <Suspense fallback={ShellFallback}>
+          <SoftphoneShell />
+        </Suspense>
+      );
     }
     return <AdminShell />;
   };
