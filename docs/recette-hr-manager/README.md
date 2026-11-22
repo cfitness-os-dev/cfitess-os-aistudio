@@ -1,5 +1,7 @@
 # Liaison espace personnel / responsable RH
 
+Exigence complémentaire à développer : [pointeuse sur appareils autorisés et présence avant cours](POINTEUSE_TERMINAUX_ET_AVANT_COURS.md). Ne pas confondre cette cible avec les fonctions déjà testées ci-dessous.
+
 Lot du 22 novembre 2026, dépendant de la PR #29 (approuvée par pinto1230766 et fusionnée le 22 novembre à 13:23 UTC). Aucun déploiement réalisé par Codex.
 
 ## Comportement livré

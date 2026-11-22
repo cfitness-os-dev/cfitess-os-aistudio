@@ -3722,24 +3722,62 @@ export function PlanningAndModulesView({
                           key={action.decision}
                           type="button"
                           onClick={async () => {
+                            let note = '';
+                            if (action.decision === 'rejected') {
+                              const input = window.prompt("Motif obligatoire du refus de la demande d'absence :", "");
+                              if (input === null) return;
+                              note = input.trim();
+                              if (!note) {
+                                setModuleFeedback({
+                                  kind: 'err',
+                                  text: "Un motif est obligatoire pour refuser une demande d'absence.",
+                                });
+                                return;
+                              }
+                            }
+
                             const headers: Record<string, string> = {
                               'Content-Type': 'application/json',
                               'x-cfitness-actor-id': dashboard.session.employee.id,
                               'x-cfitness-site-id': r.siteId,
                             };
+                            let token: string | null = null;
                             try {
-                              const token = window.sessionStorage.getItem('cfos_bearer_token');
-                              if (token) headers.Authorization = `Bearer ${token}`;
+                              token = window.sessionStorage.getItem('cfos_bearer_token') || (window as unknown as { __cfos_bearer_token?: string }).__cfos_bearer_token || null;
                             } catch {
                               // ignore
                             }
+                            if (token) {
+                              headers.Authorization = `Bearer ${token}`;
+                            } else {
+                              setModuleFeedback({
+                                kind: 'err',
+                                text: "Session non authentifiée (jeton Bearer manquant). Veuillez vous reconnecter pour valider cette décision.",
+                              });
+                              return;
+                            }
+
+                            const payload: {
+                              status: string;
+                              expectedStatus: string;
+                              comment?: string;
+                              note?: string;
+                            } = {
+                              status: action.decision,
+                              expectedStatus: r.status,
+                            };
+                            if (note) {
+                              payload.note = note;
+                              payload.comment = note;
+                            }
+
                             try {
                               const res = await fetch(
                                 `/api/leave-requests/${encodeURIComponent(r.id)}/decision`,
                                 {
                                   method: 'PATCH',
                                   headers,
-                                  body: JSON.stringify({ status: action.decision }),
+                                  body: JSON.stringify(payload),
                                 }
                               );
                               if (!res.ok) {
