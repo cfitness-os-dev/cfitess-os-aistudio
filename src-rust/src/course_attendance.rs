@@ -86,6 +86,8 @@ pub struct CourseAttendanceRecord {
     pub verified_at: String,
     pub checklist_version: String,
     pub checklist_completed: bool,
+    #[serde(default)]
+    pub completed_before_start: bool,
     pub checklist_answers: Vec<ChecklistItemAnswer>,
     pub note: Option<String>,
     pub idempotency_key: String,
@@ -238,7 +240,8 @@ pub async fn get_room_occurrences(
                 "endTime": o.end_time,
                 "status": o.status,
                 "isVerified": attendance.is_some(),
-                "isPrepared": attendance.map(|a| a.checklist_completed).unwrap_or(false)
+                "isPrepared": attendance.map(|a| a.checklist_completed).unwrap_or(false),
+                "preparedBeforeStart": attendance.map(|a| a.completed_before_start).unwrap_or(false)
             })
         })
         .collect();
@@ -310,7 +313,7 @@ pub async fn post_verify_course_presence(
         ));
     }
 
-    // 3. Recherche et validation de l'occurrence
+    // 3. Recherche de l'occurrence (le contrôle de statut cancelled/completed s'applique après le rejeu idempotent)
     let Some(occurrence) = db
         .course_occurrences
         .iter()
@@ -319,13 +322,6 @@ pub async fn post_verify_course_presence(
     else {
         return Err(err_resp(StatusCode::NOT_FOUND, "Séance de cours introuvable."));
     };
-
-    if occurrence.status == "cancelled" || occurrence.status == "completed" {
-        return Err(err_resp(
-            StatusCode::CONFLICT,
-            "Cette séance de cours est annulée ou déjà terminée.",
-        ));
-    }
 
     // 4. Contrôle de localisation stricte : terminal de la salle exacte
     if occurrence.site_id != terminal.site_id || occurrence.room_id != terminal.room_id {
@@ -349,11 +345,8 @@ pub async fn post_verify_course_presence(
         ));
     }
 
-    // 6. Contrôle de la fenêtre horaire (de -45min à +30min)
-    let now = Utc::now();
-    validate_time_window(&occurrence, now)?;
-
-    // 7. Validation de la checklist et calcul de l'empreinte canonique de l'opération
+    // 6. Validation de la checklist et contrôle d'idempotence AVANT la fenêtre horaire
+    // (permet de retrouver un succès déjà enregistré même après expiration de la fenêtre ou passage en completed)
     let idemp = payload.idempotency_key.trim();
     if idemp.is_empty() {
         return Err(err_resp(
@@ -375,7 +368,6 @@ pub async fn post_verify_course_presence(
     let op_fingerprint = format!("{:x}", Sha256::digest(fingerprint_input.as_bytes()));
     let scoped_idempotency_key = format!("{}:{}:{}", occurrence.id, coach_id, idemp);
 
-    // Contrôle d'idempotence strict : même clé + même empreinte -> already_verified ; même clé + contenu différent -> 409
     if let Some(existing) = db.course_attendances.iter().find(|a| {
         a.idempotency_key == scoped_idempotency_key
             || a.operation_fingerprints
@@ -394,6 +386,20 @@ pub async fn post_verify_course_presence(
             "attendance": existing
         })));
     }
+
+    // 7. Contrôle du statut et de la fenêtre horaire (de -45min à +30min) pour toute nouvelle écriture
+    if occurrence.status == "cancelled" || occurrence.status == "completed" {
+        return Err(err_resp(
+            StatusCode::CONFLICT,
+            "Cette séance de cours est annulée ou déjà terminée.",
+        ));
+    }
+    let now = Utc::now();
+    validate_time_window(&occurrence, now)?;
+    let course_start = DateTime::parse_from_rfc3339(&occurrence.start_time)
+        .map(|dt| dt.with_timezone(&Utc))
+        .unwrap_or(now);
+    let completed_before_start = checklist_completed && now <= course_start;
 
     let now_iso = now.to_rfc3339();
     let mut next = db.clone();
@@ -419,6 +425,7 @@ pub async fn post_verify_course_presence(
         updated.checklist_updated_terminal_id = Some(terminal.id.clone());
         updated.checklist_version = OFFICIAL_CHECKLIST_VERSION.into();
         updated.checklist_completed = checklist_completed;
+        updated.completed_before_start = completed_before_start;
         updated.checklist_answers = canonical_answers;
         if payload.note.is_some() {
             updated.note = payload.note;
@@ -475,6 +482,7 @@ pub async fn post_verify_course_presence(
         verified_at: now_iso,
         checklist_version: OFFICIAL_CHECKLIST_VERSION.into(),
         checklist_completed,
+        completed_before_start,
         checklist_answers: canonical_answers,
         note: payload.note,
         idempotency_key: scoped_idempotency_key,
