@@ -275,6 +275,10 @@ pub fn api_router(state: SharedState) -> Router {
             put(crate::site_settings::put_admin_site_settings),
         )
         .route(
+            "/api/admin/sites/:site_id/timeclock-settings",
+            put(crate::site_settings::put_site_timeclock_settings),
+        )
+        .route(
             "/api/admin/kpis",
             get(crate::site_settings::get_admin_kpis),
         )

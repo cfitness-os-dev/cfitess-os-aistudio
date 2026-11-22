@@ -19,6 +19,8 @@ import type {
   Scope,
   SessionContext,
   Shift,
+  Site,
+  SiteHrSettings,
   UserPreferences,
 } from './types';
 
@@ -110,6 +112,16 @@ async function requestJson<T>(
 }
 
 export const clientApi = {
+  updateTimeclockSettings(
+    auth: ApiAuthContext,
+    siteId: string,
+    settings: Pick<SiteHrSettings, 'badgeFrequency' | 'tabletBreakBadging'>
+  ): Promise<Site> {
+    return requestJson(`/api/admin/sites/${encodeURIComponent(siteId)}/timeclock-settings`, auth, {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+  },
   getHealth(): Promise<HealthPayload> {
     return requestJson<HealthPayload>('/api/health', {
       actorId: 'emp-employe-multi',
