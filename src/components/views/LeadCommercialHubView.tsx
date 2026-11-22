@@ -2568,15 +2568,6 @@ export function LeadCommercialHubView({
           {activeTab === 'communication' && (
             <div className="space-y-4">
               <div className="cf-card p-3 flex flex-wrap gap-1.5">
-                <label className="w-full sm:hidden">Rubrique des réglages
-                  <select aria-label="Rubrique des réglages" value={selectedSettingsTab}
-                    onChange={event => setSelectedSettingsTab(event.target.value)}
-                    className="w-full mt-2 p-3 rounded-lg bg-slate-900 border border-slate-700">
-                    {LEAD_SETTINGS_TABS_14.map(tab => <option key={tab.id} value={tab.id}>
-                      {LEAD_SETTINGS_PRESENTATION[tab.id]?.label ?? tab.label}
-                    </option>)}
-                  </select>
-                </label>
                 {[
                   { id: 'models', label: '1. Modèles (12 blocs / 18 polices)' },
                   { id: 'campaigns', label: '2. Campagnes (Email 4 étapes & SMS)' },
@@ -3937,6 +3928,15 @@ export function LeadCommercialHubView({
                 <button type="button" onClick={() => void settingsEditor.load()} className="px-3 py-2 rounded bg-emerald-700 text-white">Réessayer le chargement</button>
               </div>}
               <div className="cf-card p-3 flex flex-wrap gap-1.5">
+                <label className="w-full sm:hidden">Rubrique des réglages
+                  <select aria-label="Rubrique des réglages" value={selectedSettingsTab}
+                    onChange={event => setSelectedSettingsTab(event.target.value)}
+                    className="w-full mt-2 p-3 rounded-lg bg-slate-900 border border-slate-700">
+                    {LEAD_SETTINGS_TABS_14.map(tab => <option key={tab.id} value={tab.id}>
+                      {LEAD_SETTINGS_PRESENTATION[tab.id]?.label ?? tab.label}
+                    </option>)}
+                  </select>
+                </label>
                 {LEAD_SETTINGS_TABS_14.map((tab) => (
                   <button
                     key={tab.id}

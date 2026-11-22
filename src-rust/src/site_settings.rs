@@ -601,7 +601,7 @@ mod tests {
             badge_frequency: BadgeFrequency::EachShift,
             tablet_break_badging: true,
         };
-        put_site_timeclock_settings(State(state.clone()), headers.clone(),
+        let _ = put_site_timeclock_settings(State(state.clone()), headers.clone(),
             Path("club-carre-soie".into()), Json(payload())).await.unwrap();
         let before = serde_json::to_value(&*state.db.read().await).unwrap();
         assert_eq!(put_site_timeclock_settings(State(state.clone()), headers,
