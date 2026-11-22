@@ -80,19 +80,31 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [clubId, setClubId] = useState<ClubId>(
-    clubFilter === 'beynost' ? 'beynost' : 'carre-de-soie'
-  );
-  const [source, setSource] = useState<Prospect['source']>('Tablette accueil');
-  const [goal, setGoal] = useState('Remise en forme & Biocircuit Technogym');
-  const [rgpdConsent, setRgpdConsent] = useState(false);
-
   const allowedClubIds: ClubId[] =
     currentUser.role === 'admin'
       ? ['carre-de-soie', 'beynost']
       : currentUser.siteAssignments?.length
       ? currentUser.siteAssignments.map((sa) => sa.clubId)
       : [currentUser.clubId];
+
+  const [clubId, setClubId] = useState<ClubId>(() => {
+    if (clubFilter !== 'all' && allowedClubIds.includes(clubFilter)) {
+      return clubFilter;
+    }
+    return allowedClubIds[0] || 'carre-de-soie';
+  });
+
+  React.useEffect(() => {
+    if (clubFilter !== 'all' && allowedClubIds.includes(clubFilter)) {
+      setClubId(clubFilter);
+    } else if (!allowedClubIds.includes(clubId) && allowedClubIds[0]) {
+      setClubId(allowedClubIds[0]);
+    }
+  }, [clubFilter, allowedClubIds, clubId]);
+
+  const [source, setSource] = useState<Prospect['source']>('Tablette accueil');
+  const [goal, setGoal] = useState('Remise en forme & Biocircuit Technogym');
+  const [rgpdConsent, setRgpdConsent] = useState(false);
 
   const filteredProspects = prospects.filter((p) => {
     if (!allowedClubIds.includes(p.clubId)) return false;
@@ -111,7 +123,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
   const selectedHubspotProspect =
     filteredProspects.find((p) => p.id === selectedHubspotProspectId) ||
     filteredProspects[0] ||
-    prospects[0];
+    null;
 
   const commercials = employees.filter((e) => e.role === 'commercial');
 
@@ -530,6 +542,11 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
         {/* ===================================================================== */}
         {/* VIEW 2: AUTHENTIC HUBSPOT 3-PANE CONTACT RECORD VIEW                  */}
         {/* ===================================================================== */}
+        {viewMode === 'HUBSPOT_360' && !selectedHubspotProspect && (
+          <div className="bg-[#F5F8FA] p-6 text-center text-xs text-slate-500">
+            Aucun prospect ne correspond aux filtres sélectionnés sur ce club.
+          </div>
+        )}
         {viewMode === 'HUBSPOT_360' && selectedHubspotProspect && (
           <div className="bg-[#F5F8FA] p-4 space-y-4">
             {/* Prospect Selector Strip */}
