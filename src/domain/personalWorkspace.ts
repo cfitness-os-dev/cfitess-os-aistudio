@@ -20,7 +20,7 @@ export interface PersonalWorkspace {
   training: Array<Omit<TrainingModule, "quizCorrectIndex">>;
   progress: ModuleProgress[];
   checklists: ClubChecklistItem[];
-  timeEntries: Array<{ id: string; timestamp: string; type: string }>;
+  timeEntries: Array<{ id: string; timestamp: string; type: string; review?:{note:string;actorId:string;at:string;version:string} }>;
   leaves: Array<{
     id: string;
     motive: string;

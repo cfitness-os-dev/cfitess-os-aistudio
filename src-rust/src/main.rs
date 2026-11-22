@@ -2,6 +2,9 @@ mod auth_passwords;
 mod employee_import;
 mod employee_lifecycle;
 mod heitz_members;
+mod hr_manager;
+#[cfg(test)]
+mod hr_manager_tests;
 mod lead_automations;
 mod lead_settings;
 mod maintenance;
