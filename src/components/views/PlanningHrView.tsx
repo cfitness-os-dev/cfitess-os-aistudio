@@ -608,7 +608,7 @@ export function PlanningHrView({
 
   const handleToggleWeekLock = async () => {
     if (!canLockPlanning || weekServerShifts.length === 0) {
-      setFeedbackBanner('Verrouillage refusé : aucun shift serveur ou permission ORG04-05 manquante.');
+      setFeedbackBanner('Verrouillage refusé : aucun créneau ou droit de verrouillage insuffisant.');
       return;
     }
     const lockState = isCurrentWeekLocked ? 'none' : 'red';
@@ -1013,7 +1013,7 @@ export function PlanningHrView({
   );
   const silaeCsvText = canViewSalaries
     ? generateSilaeCsv(payrollRows, silaePeriod)
-    : 'ACCÈS RESTREINT — Droit ORG04-10 requis pour consulter ou exporter les montants de paie.';
+    : 'ACCÈS RESTREINT — Habilitation paie requise pour consulter ou exporter les montants.';
   const silaeApiPayload = canViewSalaries
     ? buildSilaeApiPayload(payrollRows, silaePeriod, 'API_REST_SILAE')
     : { status: 'REDACTED_ORG04_10', message: 'Salaires masqués pour ce profil.' };
@@ -1078,7 +1078,7 @@ export function PlanningHrView({
     e.preventDefault();
     const targetEmployeeId = empId === 'UNASSIGNED' ? null : empId;
     if (!canUseForClub(shiftClub, 'ORG04-01', targetEmployeeId)) {
-      setFeedbackBanner('Création refusée : la permission ORG04-01 ou le périmètre cible manque.');
+      setFeedbackBanner('Création refusée : vous n’êtes pas habilité à créer un créneau sur ce périmètre.');
       return;
     }
     if (isBreakInvalid || isNetDurationInvalid) {
@@ -3017,7 +3017,7 @@ export function PlanningHrView({
                   disabled={!canViewSalaries || isReadOnly}
                   title={
                     !canViewSalaries
-                      ? 'Accès paie masqué (ORG04-10)'
+                      ? 'Accès paie restreint selon votre profil'
                       : isReadOnly
                       ? 'Lecture seule : export désactivé'
                       : 'Télécharger le fichier CSV Silae'
@@ -3036,7 +3036,7 @@ export function PlanningHrView({
 
             {!canViewSalaries && (
               <div className="p-3 rounded-lg bg-amber-50 border border-amber-300 text-amber-950 text-xs font-semibold">
-                Mode Lecture seule / Périmètre restreint : les bruts estimés et bulletins individuels sont masqués (ORG04-10).
+                Périmètre restreint : les montants bruts estimés et bulletins individuels sont masqués selon vos droits.
                 {forcedClubScope && ` Périmètre affiché : ${forcedClubScope === 'beynost' ? 'Beynost' : 'Carré de Soie'}.`}
               </div>
             )}

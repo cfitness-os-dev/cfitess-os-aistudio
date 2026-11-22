@@ -463,7 +463,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                   >
                     {effectiveSitesForCanSelect.map((s) => (
                       <option key={s.id} value={s.id}>
-                        {s.name}
+                        {isTechnicalMode ? s.name : s.name.replace(/\s*\(Fictif\)/gi, '')}
                       </option>
                     ))}
                   </select>
@@ -593,12 +593,16 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
         <>
           {loading && !dashboard ? (
             <div className="cf-card p-8 text-center text-sm cf-muted">
-              Chargement du module RH « Mon compte » V1.16...
+              {isTechnicalMode
+                ? 'Chargement du module RH « Mon compte » V1.16...'
+                : 'Chargement de votre espace…'}
             </div>
           ) : fatalError || !dashboard || !registry ? (
             <div className="cf-card p-6 space-y-3 border-red-500/40">
               <div className="font-bold text-sm text-red-400">
-                Erreur de chargement API RH CFitness OS
+                {isTechnicalMode
+                  ? 'Erreur de chargement API RH CFitness OS'
+                  : 'Impossible de charger votre espace'}
               </div>
               <p className="text-xs cf-muted">{fatalError ?? 'Données absentes.'}</p>
               <button
