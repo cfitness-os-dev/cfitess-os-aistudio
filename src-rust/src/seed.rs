@@ -1964,6 +1964,7 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
                 crate::social_web::default_social_channels("beynost"),
             ),
         ]),
+        personal_workspace: Default::default(),
         social_posts: vec![
             crate::models::SocialPostRecord {
                 id: "soc-demo-01".into(),
@@ -2125,6 +2126,7 @@ pub fn create_production_initial_state() -> AppDatabaseState {
                 crate::social_web::default_social_channels("beynost"),
             ),
         ]),
+        personal_workspace: Default::default(),
         social_posts: vec![],
     }
 }

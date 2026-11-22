@@ -182,6 +182,7 @@ pub struct RestoreBackupPayload {
 pub fn api_router(state: SharedState) -> Router {
     Router::new()
         .route("/api/health", get(health))
+        .route("/api/me/workspace/:club_id", get(crate::personal_workspace::get_workspace).post(crate::personal_workspace::post_workspace_action))
         .route("/api/lead/registry", get(get_lead_registry))
         .route("/api/lead/webhooks/clubEntry", post(post_lead_webhook_club_entry))
         .route("/api/public/forms/:club_id/:form_id", get(get_public_lead_form))

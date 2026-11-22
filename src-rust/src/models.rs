@@ -759,6 +759,8 @@ pub struct SocialPostRecord {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppDatabaseState {
+    #[serde(default)]
+    pub personal_workspace: crate::personal_workspace::WorkspaceStore,
     pub version: String,
     pub organization: Organization,
     pub sites: Vec<Site>,
