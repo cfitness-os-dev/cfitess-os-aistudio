@@ -1,7 +1,7 @@
 use crate::clock_terminals::{authenticate_terminal, authenticated_employee, ClockTerminal};
 use crate::models::AppDatabaseState;
-use crate::rbac::can_access_site_scope;
-use crate::routes::{append_audit, err_resp, resolve_session_actor, SharedState};
+use crate::rbac::{can_access_site_scope, evaluate_permission, PermissionTarget};
+use crate::routes::{append_audit, err_resp, SharedState};
 use crate::seed::persist_state;
 use axum::{
     extract::{Path, State},
@@ -117,13 +117,16 @@ fn coach_name(db: &AppDatabaseState, coach_id: &str) -> String {
         .unwrap_or_else(|| coach_id.to_string())
 }
 
-/// Valide la checklist contre le référentiel officiel serveur.
-fn validate_checklist_against_spec(answers: &[ChecklistItemAnswer]) -> Result<bool, Failure> {
+/// Valide la checklist contre le référentiel officiel serveur et normalise les libellés canoniques.
+fn validate_checklist_against_spec(
+    answers: &[ChecklistItemAnswer],
+) -> Result<(bool, Vec<ChecklistItemAnswer>), Failure> {
     if answers.is_empty() {
-        return Ok(false);
+        return Ok((false, vec![]));
     }
     let official = official_checklist_items();
     let mut seen_ids = std::collections::HashSet::new();
+    let mut canonical_answers = Vec::with_capacity(answers.len());
 
     for a in answers {
         if !seen_ids.insert(&a.item_id) {
@@ -132,27 +135,33 @@ fn validate_checklist_against_spec(answers: &[ChecklistItemAnswer]) -> Result<bo
                 format!("Élément de checklist en double : {}", a.item_id),
             ));
         }
-        if !official.iter().any(|item| item.id == a.item_id) {
+        let Some(def) = official.iter().find(|item| item.id == a.item_id) else {
             return Err(err_resp(
                 StatusCode::BAD_REQUEST,
                 format!("Élément de checklist non reconnu : {}", a.item_id),
             ));
-        }
+        };
+        canonical_answers.push(ChecklistItemAnswer {
+            item_id: def.id.clone(),
+            label: def.label.clone(),
+            checked: a.checked,
+        });
     }
 
     // Vérifier que tous les items obligatoires sont bien fournis
+    let mut all_checked = true;
     for req in official.iter().filter(|i| i.required) {
-        let Some(ans) = answers.iter().find(|a| a.item_id == req.id) else {
+        let Some(ans) = canonical_answers.iter().find(|a| a.item_id == req.id) else {
             return Err(err_resp(
                 StatusCode::UNPROCESSABLE_ENTITY,
                 format!("Élément obligatoire manquant dans la checklist : {}", req.label),
             ));
         };
         if !ans.checked {
-            return Ok(false);
+            all_checked = false;
         }
     }
-    Ok(true)
+    Ok((all_checked, canonical_answers))
 }
 
 /// Contrôle que la validation se produit dans la fenêtre horaire autorisée :
@@ -251,6 +260,37 @@ pub async fn post_verify_course_presence(
         ));
     }
 
+    // 2b. Contrôle d'activité, d'affectation au club et de politique terminal (P0)
+    let short_club = match terminal.site_id.as_str() {
+        "club-carre-soie" => "carre-de-soie",
+        "club-beynost" => "beynost",
+        _ => {
+            return Err(err_resp(
+                StatusCode::FORBIDDEN,
+                "L'établissement de cet appareil n'est pas reconnu.",
+            ))
+        }
+    };
+    let Some(employee) = db.employees.iter().find(|e| e.id == coach_id) else {
+        return Err(err_resp(
+            StatusCode::NOT_FOUND,
+            "Collaborateur introuvable.",
+        ));
+    };
+    if !employee.active || !can_access_site_scope(&db, coach_id, &terminal.site_id) {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Vous n'avez pas d'affectation active dans ce club.",
+        ));
+    }
+    let pol = crate::clock_policy::policy(&db, coach_id, short_club);
+    if !pol.terminal_allowed {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Votre profil ne dispose pas du droit de pointage sur les terminaux de ce club.",
+        ));
+    }
+
     // 3. Recherche et validation de l'occurrence
     let Some(occurrence) = db
         .course_occurrences
@@ -294,7 +334,7 @@ pub async fn post_verify_course_presence(
     let now = Utc::now();
     validate_time_window(&occurrence, now)?;
 
-    // 7. Contrôle d'idempotence borné à l'acteur, l'occurrence et la clé
+    // 7. Contrôle d'idempotence borné et évaluation de la checklist contre le référentiel serveur
     let idemp = payload.idempotency_key.trim();
     if idemp.is_empty() {
         return Err(err_resp(
@@ -306,7 +346,7 @@ pub async fn post_verify_course_presence(
     if let Some(existing) = db
         .course_attendances
         .iter()
-        .find(|a| a.occurrence_id == occurrence.id || a.idempotency_key == scoped_idempotency_key)
+        .find(|a| a.idempotency_key == scoped_idempotency_key)
     {
         return Ok(Json(json!({
             "status": "already_verified",
@@ -314,11 +354,72 @@ pub async fn post_verify_course_presence(
         })));
     }
 
-    // 8. Évaluation de la checklist contre le référentiel serveur officiel
-    let checklist_completed = validate_checklist_against_spec(&payload.checklist_answers)?;
+    let (checklist_completed, canonical_answers) =
+        validate_checklist_against_spec(&payload.checklist_answers)?;
+
+    let now_iso = now.to_rfc3339();
+    let mut next = db.clone();
+
+    // Si l'occurrence a déjà une présence enregistrée :
+    // - si la checklist était déjà complète -> retour idempotent sans doublon
+    // - si la checklist était incomplète -> mise à jour de la préparation existante (complétion)
+    if let Some(existing_idx) = next
+        .course_attendances
+        .iter()
+        .position(|a| a.occurrence_id == occurrence.id)
+    {
+        if next.course_attendances[existing_idx].checklist_completed {
+            let existing = next.course_attendances[existing_idx].clone();
+            return Ok(Json(json!({
+                "status": "already_verified",
+                "attendance": existing
+            })));
+        }
+
+        let updated = &mut next.course_attendances[existing_idx];
+        updated.terminal_id = terminal.id.clone();
+        updated.verified_at = now_iso;
+        updated.checklist_version = OFFICIAL_CHECKLIST_VERSION.into();
+        updated.checklist_completed = checklist_completed;
+        updated.checklist_answers = canonical_answers;
+        if payload.note.is_some() {
+            updated.note = payload.note;
+        }
+        updated.idempotency_key = scoped_idempotency_key;
+        let updated_clone = updated.clone();
+
+        append_audit(
+            &mut next,
+            coach_id,
+            "COURSE_CHECKLIST_UPDATED",
+            format!(
+                "Checklist mise à jour pour {} ({}) sur terminal {} - checklist : {}",
+                occurrence.course_title,
+                occurrence.id,
+                terminal.label,
+                if checklist_completed { "complète" } else { "incomplète" }
+            ),
+            &occurrence.site_id,
+            &updated_clone.id,
+            Some("incomplete".into()),
+            Some(if checklist_completed { "completed" } else { "incomplete" }.into()),
+        );
+
+        persist_state(&state.data_dir, &next).map_err(|err| {
+            err_resp(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Échec de persistance de la mise à jour checklist : {err}"),
+            )
+        })?;
+        *db = next;
+
+        return Ok(Json(json!({
+            "status": "checklist_updated",
+            "attendance": updated_clone
+        })));
+    }
 
     let attendance_id = format!("att-{}", rand::random::<u128>());
-    let now_iso = now.to_rfc3339();
     let coach_display_name = coach_name(&db, coach_id);
 
     let attendance = CourseAttendanceRecord {
@@ -332,12 +433,11 @@ pub async fn post_verify_course_presence(
         verified_at: now_iso,
         checklist_version: OFFICIAL_CHECKLIST_VERSION.into(),
         checklist_completed,
-        checklist_answers: payload.checklist_answers,
+        checklist_answers: canonical_answers,
         note: payload.note,
         idempotency_key: scoped_idempotency_key,
     };
 
-    let mut next = db.clone();
     next.course_attendances.push(attendance.clone());
 
     // Audit immuable sans toucher aux heures travaillées RH (zéro double comptage)
@@ -372,14 +472,16 @@ pub async fn post_verify_course_presence(
     })))
 }
 
-/// Consultation des présences de cours par club (responsables RH / planning)
+/// Consultation des présences de cours par club :
+/// - Responsables RH/planning habilités (ORG04-37) : toutes les présences du club
+/// - Autres collaborateurs du club : uniquement leurs propres présences
 pub async fn get_club_course_attendances(
     State(state): State<SharedState>,
     Path(raw_club): Path<String>,
     headers: HeaderMap,
 ) -> Result<Json<Value>, Failure> {
     let (_, site_id) = club_site(&raw_club)?;
-    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let actor_id = authenticated_employee(&state, &headers).await?;
     let db = state.db.read().await;
 
     if !can_access_site_scope(&db, &actor_id, site_id) {
@@ -389,14 +491,29 @@ pub async fn get_club_course_attendances(
         ));
     }
 
+    let can_view_all = evaluate_permission(
+        &db,
+        &actor_id,
+        site_id,
+        "ORG04-37",
+        Some(PermissionTarget {
+            site_id: Some(site_id),
+            target_employee_id: Some(&actor_id),
+            target_team_ids: &[],
+            lock_state: None,
+        }),
+    )
+    .allowed;
+
     let records: Vec<&CourseAttendanceRecord> = db
         .course_attendances
         .iter()
-        .filter(|a| a.site_id == site_id)
+        .filter(|a| a.site_id == site_id && (can_view_all || a.coach_id == actor_id))
         .collect();
 
     Ok(Json(json!({
         "siteId": site_id,
+        "scope": if can_view_all { "club" } else { "self" },
         "attendances": records
     })))
 }
@@ -547,6 +664,42 @@ mod tests {
         .expect_err("unassigned coach must return 403");
         assert_eq!(err_wrong_coach.0, StatusCode::FORBIDDEN);
 
+        // 5b. Test échec P0 : Chloé n'a pas encore terminal_allowed=true sur Beynost -> 403 Forbidden
+        let headers_chloe_salle_a = auth_headers(&state, "emp-chloe", token_salle_a).await;
+        let err_p0_denied = post_verify_course_presence(
+            State(state.clone()),
+            headers_chloe_salle_a.clone(),
+            Json(VerifyPresencePayload {
+                occurrence_id: occurrence_id.clone(),
+                coach_id: "emp-chloe".into(),
+                checklist_answers: vec![],
+                note: None,
+                idempotency_key: "idemp-p0-denied".into(),
+            }),
+        )
+        .await
+        .expect_err("P0 terminal_allowed=false must return 403");
+        assert_eq!(err_p0_denied.0, StatusCode::FORBIDDEN);
+
+        // Activation de la politique P0 terminal_allowed=true pour Chloé sur Beynost
+        {
+            let mut db = state.db.write().await;
+            db.personal_workspace
+                .clock_policies
+                .entry("emp-chloe".into())
+                .or_default()
+                .insert(
+                    "beynost".into(),
+                    crate::clock_policy::ClockPolicy {
+                        personal_allowed: false,
+                        terminal_allowed: true,
+                        revision: "1".into(),
+                        updated_at: Utc::now().to_rfc3339(),
+                        updated_by: "emp-daniel".into(),
+                    },
+                );
+        }
+
         // 6. Test échec : mauvaise salle (Chloé badge sur la tablette Salle B au lieu de Salle A) -> 409 Conflict
         let headers_chloe_salle_b = auth_headers(&state, "emp-chloe", token_salle_b).await;
         let err_bad_room = post_verify_course_presence(
@@ -563,9 +716,6 @@ mod tests {
         .await
         .expect_err("bad room terminal must return 409");
         assert_eq!(err_bad_room.0, StatusCode::CONFLICT);
-
-        // Headers corrects : Chloé sur la tablette de la Salle A
-        let headers_chloe_salle_a = auth_headers(&state, "emp-chloe", token_salle_a).await;
 
         // 7. Test échec : checklist avec item inventé / non reconnu -> 400 Bad Request
         let err_unknown_item = post_verify_course_presence(
@@ -607,26 +757,43 @@ mod tests {
         .expect_err("missing required checklist items must return 422");
         assert_eq!(err_missing_item.0, StatusCode::UNPROCESSABLE_ENTITY);
 
-        // 9. Test succès : Chloé valide avec la checklist officielle complète
+        // 9a. Test succès initial : Chloé badge sa présence avec checklist vide (incomplète)
+        let Json(res_partial) = post_verify_course_presence(
+            State(state.clone()),
+            headers_chloe_salle_a.clone(),
+            Json(VerifyPresencePayload {
+                occurrence_id: occurrence_id.clone(),
+                coach_id: "emp-chloe".into(),
+                checklist_answers: vec![],
+                note: Some("Arrivée en salle, préparation en cours".into()),
+                idempotency_key: "idemp-07-init".into(),
+            }),
+        )
+        .await
+        .expect("initial presence with empty checklist must succeed");
+        assert_eq!(res_partial["status"], "verified");
+        assert_eq!(res_partial["attendance"]["checklistCompleted"], false);
+
+        // 9b. Test complétion : Chloé complète la checklist officielle (avec un libellé client altéré pour vérifier la normalisation serveur)
         let valid_answers = vec![
             ChecklistItemAnswer {
                 item_id: "chk-sono".into(),
-                label: "Sonorisation, micro et playlist vérifiés".into(),
+                label: "Libellé client modifié".into(),
                 checked: true,
             },
             ChecklistItemAnswer {
                 item_id: "chk-securite".into(),
-                label: "Sécurité de la salle et issues de secours dégagées".into(),
+                label: "Sécurité".into(),
                 checked: true,
             },
             ChecklistItemAnswer {
                 item_id: "chk-materiel".into(),
-                label: "Matériel vérifié, propre et mis à disposition".into(),
+                label: "Matériel".into(),
                 checked: true,
             },
             ChecklistItemAnswer {
                 item_id: "chk-climatisation".into(),
-                label: "Aération ou climatisation réglée".into(),
+                label: "Clim".into(),
                 checked: true,
             },
         ];
@@ -639,15 +806,19 @@ mod tests {
                 coach_id: "emp-chloe".into(),
                 checklist_answers: valid_answers.clone(),
                 note: Some("Séance prête, adhérents en attente".into()),
-                idempotency_key: "idemp-07".into(),
+                idempotency_key: "idemp-07-complete".into(),
             }),
         )
         .await
-        .expect("presence verification must succeed");
+        .expect("checklist completion must succeed");
 
-        assert_eq!(res_ok["status"], "verified");
+        assert_eq!(res_ok["status"], "checklist_updated");
         assert_eq!(res_ok["attendance"]["checklistCompleted"], true);
         assert_eq!(res_ok["attendance"]["checklistVersion"], OFFICIAL_CHECKLIST_VERSION);
+        assert_eq!(
+            res_ok["attendance"]["checklistAnswers"][0]["label"],
+            "Sonorisation, micro et playlist vérifiés"
+        );
 
         // 10. Idempotence : un rejeu avec la même clé renvoie already_verified
         let Json(res_idemp) = post_verify_course_presence(
@@ -658,13 +829,48 @@ mod tests {
                 coach_id: "emp-chloe".into(),
                 checklist_answers: valid_answers,
                 note: None,
-                idempotency_key: "idemp-07".into(),
+                idempotency_key: "idemp-07-complete".into(),
             }),
         )
         .await
         .expect("replay must return already_verified");
 
         assert_eq!(res_idemp["status"], "already_verified");
+
+        // 11. Cloisonnement lecture :
+        // - Un collaborateur d'un autre club (Karim) est refusé (403)
+        let headers_karim = auth_headers(&state, "emp-karim", token_salle_a).await;
+        let err_karim = get_club_course_attendances(
+            State(state.clone()),
+            Path("beynost".into()),
+            headers_karim,
+        )
+        .await
+        .expect_err("other-club employee must be forbidden");
+        assert_eq!(err_karim.0, StatusCode::FORBIDDEN);
+
+        // - La coach elle-même (Chloé, non manager) lit en scope "self" et voit uniquement sa présence
+        let Json(chloe_view) = get_club_course_attendances(
+            State(state.clone()),
+            Path("beynost".into()),
+            headers_chloe_salle_a.clone(),
+        )
+        .await
+        .expect("chloe self read must succeed");
+        assert_eq!(chloe_view["scope"], "self");
+        assert_eq!(chloe_view["attendances"].as_array().unwrap().len(), 1);
+
+        // - Un responsable habilité (Daniel) lit en scope "club" et voit l'ensemble du club
+        let headers_daniel = auth_headers(&state, "emp-daniel", token_salle_a).await;
+        let Json(daniel_view) = get_club_course_attendances(
+            State(state.clone()),
+            Path("beynost".into()),
+            headers_daniel,
+        )
+        .await
+        .expect("daniel club read must succeed");
+        assert_eq!(daniel_view["scope"], "club");
+        assert_eq!(daniel_view["attendances"].as_array().unwrap().len(), 1);
 
         let db = state.db.read().await;
         assert_eq!(db.course_attendances.len(), 1);
