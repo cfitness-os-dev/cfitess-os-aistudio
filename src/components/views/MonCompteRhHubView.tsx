@@ -24,6 +24,7 @@ import { DashboardView } from '../../views/DashboardView';
 import { PlanningAndModulesView } from '../../views/PlanningAndModulesView';
 import { PreferencesView } from '../../views/PreferencesView';
 import { MyDayCollaboratorView } from './MyDayCollaboratorView';
+import { PersonalWorkspaceView } from './PersonalWorkspaceView';
 
 const PlanningHrView = lazy(() =>
   import('./PlanningHrView').then((m) => ({ default: m.PlanningHrView }))
@@ -65,7 +66,7 @@ function parseInitialTarget(subTarget?: string | null): {
   }
   const normalized = subTarget.trim();
   if (normalized.toLowerCase() === 'personal') {
-    return { tab: 'mon-compte', section: 'MC01', isPersonalSpace: true };
+    return { tab: 'github-my-day', section: 'MC01', isPersonalSpace: true };
   }
   if (normalized === 'traceability') {
     return { tab: 'traceability', section: 'MC01', isPersonalSpace: false };
@@ -259,7 +260,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
       await clientApi.assertSectionAccess(auth, sectionId);
       setHubTab('mon-compte');
       setActiveSection(sectionId);
-      syncUrl(sectionId === 'MC01' ? '/mon-compte' : `/mon-compte/${sectionId}`);
+      syncUrl(isPersonalSpace ? '/mon-compte/personal' : sectionId === 'MC01' ? '/mon-compte' : `/mon-compte/${sectionId}`);
     } catch (err) {
       if (err instanceof ApiClientError && err.status === 403) {
         setForbiddenBanner(err.message);
@@ -313,7 +314,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
               onClick={() => {
                 setHubTab('mon-compte');
                 syncUrl(
-                  activeSection === 'MC01'
+                  isPersonalSpace ? '/mon-compte/personal' : activeSection === 'MC01'
                     ? '/mon-compte'
                     : `/mon-compte/${activeSection}`
                 );
@@ -362,7 +363,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
               <span>
                 {isTechnicalMode
                   ? 'Ma Journée & Tâches Terrain (Vue GitHub CFOS)'
-                  : 'Ma Journée & Tâches'}
+                  : isPersonalSpace ? 'Ma journée & outils' : 'Ma Journée & Tâches'}
               </span>
             </button>
 
@@ -580,7 +581,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
       )}
 
       {/* Contenu selon onglet */}
-      {hubTab === 'github-my-day' && <MyDayCollaboratorView />}
+      {hubTab === 'github-my-day' && (isPersonalSpace ? <PersonalWorkspaceView /> : <MyDayCollaboratorView />)}
       {hubTab === 'github-planning' && (
         <PlanningHrView
           personalScopeOnly={!isShellAdmin}
@@ -639,8 +640,8 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                 <div className="space-y-4">
                   <PlanningHrView
                     forcedSubTab="CONGES"
-                    personalScopeOnly={!isShellAdmin}
-                    scopedEmployeeId={!isShellAdmin ? currentUser.id : undefined}
+                    personalScopeOnly={isPersonalSpace || !isShellAdmin}
+                    scopedEmployeeId={isPersonalSpace || !isShellAdmin ? currentUser.id : undefined}
                     forcedClubScope={currentUser.clubId}
                   />
                 </div>
@@ -650,8 +651,8 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                 <div className="space-y-4">
                   <PlanningHrView
                     forcedSubTab="POINTAGES"
-                    personalScopeOnly={!isShellAdmin}
-                    scopedEmployeeId={!isShellAdmin ? currentUser.id : undefined}
+                    personalScopeOnly={isPersonalSpace || !isShellAdmin}
+                    scopedEmployeeId={isPersonalSpace || !isShellAdmin ? currentUser.id : undefined}
                     forcedClubScope={currentUser.clubId}
                   />
                 </div>
@@ -661,9 +662,9 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                 <div className="space-y-4">
                   <AtsView
                     initialTab="YOUSIGN_PARAPHEUR"
-                    personalScopeOnly={!isShellAdmin}
-                    scopedEmployeeId={!isShellAdmin ? currentUser.id : undefined}
-                    canManageRecruitment={isShellAdmin}
+                    personalScopeOnly={isPersonalSpace || !isShellAdmin}
+                    scopedEmployeeId={isPersonalSpace || !isShellAdmin ? currentUser.id : undefined}
+                    canManageRecruitment={!isPersonalSpace && isShellAdmin}
                   />
                 </div>
               )}

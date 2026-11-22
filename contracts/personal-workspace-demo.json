@@ -1,0 +1,461 @@
+{
+  "training": [
+    {
+      "id": "mod-m1",
+      "code": "M1",
+      "title": "Accueil & Posture Club — Méthode 3S",
+      "authors": "Mario & Daniel Carvalho",
+      "durationMin": 35,
+      "mandatoryFor": [
+        "admin",
+        "manager",
+        "commercial",
+        "coach",
+        "apprenti"
+      ],
+      "summary": "Standard d’excellence C.Fitness dès le franchissement des portillons : Sourire, Saluer par le prénom (écran FMI Heitz), Servir proactivement.",
+      "keyPoints": [
+        "Reconnaissance visuelle immédiate à l’entrée et au départ de chaque adhérent",
+        "Traitement discret et courtois des alertes portillons SEPA en aparté à l’accueil",
+        "Tenue irréprochable du comptoir d’accueil et de la zone café"
+      ],
+      "quizQuestion": "Quelle est la réaction standard lors d’une alerte discrète impayé SEPA au portillon ?",
+      "quizOptions": [
+        "Inviter calmement l’adhérent au bureau conseil pour régulariser sans l’exposer en public",
+        "Bloquer bruyamment la file d’attente devant le tourniquet",
+        "Désactiver définitivement le contrôle Heitz du club"
+      ],
+      "quizCorrectIndex": 0
+    },
+    {
+      "id": "mod-m2",
+      "code": "M2",
+      "title": "Maîtrise Technogym & Parcours Biocircuit",
+      "authors": "Mario & Daniel Carvalho",
+      "durationMin": 50,
+      "mandatoryFor": [
+        "manager",
+        "coach",
+        "apprenti"
+      ],
+      "summary": "Paramétrage initial biométrique du Biocircuit, suivi des MOVEs Mywellness et relance bienveillante dès 15 jours d’inactivité.",
+      "keyPoints": [
+        "Calibration anthropométrique précise lors de la 1re séance guidée",
+        "Lecture des MOVEs pour valoriser la progression mensuelle",
+        "Protocole d’appel coach bienveillant pour les adhérents absents > 15 jours"
+      ],
+      "quizQuestion": "À partir de quel délai sans passage déclenche-t-on une relance prévention décrochage ?",
+      "quizOptions": [
+        "15 jours d’inactivité",
+        "90 jours d’inactivité",
+        "3 jours d’inactivité"
+      ],
+      "quizCorrectIndex": 0
+    },
+    {
+      "id": "mod-m3",
+      "code": "M3",
+      "title": "Protocole Bilan Technogym Checkup (Balance Révolutionnaire Mywellness) & RGPD Santé",
+      "authors": "Mario & Daniel Carvalho",
+      "durationMin": 40,
+      "mandatoryFor": [
+        "manager",
+        "commercial",
+        "coach",
+        "apprenti"
+      ],
+      "summary": "Maîtrise de la station Technogym Checkup (balance BIA multifréquence + capteurs 3D intégrés à Mywellness), lecture du Wellness Age™ et cloisonnement strict des données de santé.",
+      "keyPoints": [
+        "Recueil explicite du consentement avant synchronisation du bilan Technogym Checkup dans Mywellness",
+        "Pédagogie autour du Wellness Age™, de la composition corporelle BIA, de la mobilité et de l’équilibre",
+        "Interdiction absolue de partage des bilans biométriques hors personnel habilité"
+      ],
+      "quizQuestion": "Sous quel régime juridique RGPD sont classées les mesures Technogym Checkup ?",
+      "quizOptions": [
+        "Données sensibles relatives à la santé nécessitant consentement et accès restreint",
+        "Données publiques affichables sur la borne kiosque",
+        "Données comptables exportées vers Silae"
+      ],
+      "quizCorrectIndex": 0
+    },
+    {
+      "id": "mod-m4",
+      "code": "M4",
+      "title": "Vente Bienveillante & Méthode Découverte C.Fitness",
+      "authors": "Mario & Daniel Carvalho",
+      "durationMin": 60,
+      "mandatoryFor": [
+        "admin",
+        "manager",
+        "commercial"
+      ],
+      "summary": "Écoute active des motivations profondes, visite expérientielle du club, présentation transparente de l’accès bi-clubs Carré de Soie + Beynost.",
+      "keyPoints": [
+        "Qualification téléphonique en moins de 4 minutes orientée rendez-vous club",
+        "Mise en valeur de la circulation libre entre Beynost et Carré de Soie",
+        "Respect strict des horaires légaux, de Bloctel et du droit d’opposition SMS STOP"
+      ],
+      "quizQuestion": "Quel avantage inter-clubs est garanti aux adhérents C.Fitness (Décision D9) ?",
+      "quizOptions": [
+        "Circulation fluide entre Beynost et Carré de Soie sans surcoût tarifaire aux portillons",
+        "Facturation d’un supplément à chaque passage dans l’autre club",
+        "Blocage automatique hors club d’origine le week-end"
+      ],
+      "quizCorrectIndex": 0
+    },
+    {
+      "id": "mod-m5",
+      "code": "M5",
+      "title": "Sécurité ERP, Évacuation Incendie & Défibrillateur DAE",
+      "authors": "Mario & Daniel Carvalho",
+      "durationMin": 45,
+      "mandatoryFor": [
+        "admin",
+        "manager",
+        "commercial",
+        "coach",
+        "apprenti"
+      ],
+      "summary": "Emplacement du DAE dans les 2 clubs, gestes d’urgence PSC1, mise en sécurité incendie prioritaire des portillons Heitz et checklists quotidiennes.",
+      "keyPoints": [
+        "Vérification visuelle quotidienne du voyant vert du défibrillateur DAE à l’ouverture",
+        "Ouverture libre immédiate des tourniquets en cas d’alarme incendie",
+        "Ronde complète vestiaires, sauna/douches et issues de secours à la fermeture"
+      ],
+      "quizQuestion": "Quelle règle prime sur tout contrôle informatique aux portillons en cas d’alarme incendie ?",
+      "quizOptions": [
+        "L’ouverture libre d’évacuation 100 % prioritaire et autonome",
+        "La vérification préalable du solde SEPA Heitz",
+        "L’attente d’une validation VPN depuis l’autre club"
+      ],
+      "quizCorrectIndex": 0
+    }
+  ],
+  "progress": [
+    {
+      "employeeId": "emp-lea",
+      "moduleId": "mod-m1",
+      "completed": true,
+      "scorePct": 100,
+      "completedAt": "2026-09-10"
+    },
+    {
+      "employeeId": "emp-lea",
+      "moduleId": "mod-m2",
+      "completed": true,
+      "scorePct": 100,
+      "completedAt": "2026-09-24"
+    },
+    {
+      "employeeId": "emp-lea",
+      "moduleId": "mod-m3",
+      "completed": false,
+      "scorePct": 0
+    },
+    {
+      "employeeId": "emp-lea",
+      "moduleId": "mod-m5",
+      "completed": true,
+      "scorePct": 100,
+      "completedAt": "2026-09-05"
+    },
+    {
+      "employeeId": "emp-maxime",
+      "moduleId": "mod-m1",
+      "completed": true,
+      "scorePct": 100,
+      "completedAt": "2026-03-12"
+    },
+    {
+      "employeeId": "emp-maxime",
+      "moduleId": "mod-m4",
+      "completed": true,
+      "scorePct": 100,
+      "completedAt": "2026-03-19"
+    },
+    {
+      "employeeId": "emp-maxime",
+      "moduleId": "mod-m5",
+      "completed": true,
+      "scorePct": 100,
+      "completedAt": "2026-03-20"
+    },
+    {
+      "employeeId": "emp-karim",
+      "moduleId": "mod-m1",
+      "completed": true,
+      "scorePct": 100,
+      "completedAt": "2026-02-10"
+    },
+    {
+      "employeeId": "emp-karim",
+      "moduleId": "mod-m2",
+      "completed": true,
+      "scorePct": 100,
+      "completedAt": "2026-02-14"
+    },
+    {
+      "employeeId": "emp-karim",
+      "moduleId": "mod-m3",
+      "completed": true,
+      "scorePct": 100,
+      "completedAt": "2026-02-22"
+    },
+    {
+      "employeeId": "emp-karim",
+      "moduleId": "mod-m5",
+      "completed": true,
+      "scorePct": 100,
+      "completedAt": "2026-02-05"
+    }
+  ],
+  "checklists": [
+    {
+      "id": "chk-1",
+      "clubId": "carre-de-soie",
+      "shiftType": "ouverture",
+      "label": "Contrôle voyant vert Défibrillateur DAE + trousse secours accueil",
+      "checkedBy": "Karim Haddad",
+      "checkedAt": "08:58"
+    },
+    {
+      "id": "chk-2",
+      "clubId": "carre-de-soie",
+      "shiftType": "ouverture",
+      "label": "Test passage portillons Heitz + tablette kiosque accueil opérationnelle",
+      "checkedBy": "Sarah Bensaid",
+      "checkedAt": "09:02"
+    },
+    {
+      "id": "chk-3",
+      "clubId": "carre-de-soie",
+      "shiftType": "fermeture",
+      "label": "Ronde vestiaires, douches, issues de secours et extinction audio plateau"
+    },
+    {
+      "id": "chk-4",
+      "clubId": "beynost",
+      "shiftType": "ouverture",
+      "label": "Contrôle voyant vert Défibrillateur DAE + propreté zone Biocircuit",
+      "checkedBy": "Chloé Morel",
+      "checkedAt": "09:28"
+    },
+    {
+      "id": "chk-5",
+      "clubId": "beynost",
+      "shiftType": "fermeture",
+      "label": "Vérification verrouillage accès ZAC des Baterses & mise sous alarme"
+    }
+  ],
+  "documents": [
+    {
+      "id": "doc-1",
+      "employeeId": "emp-maxime",
+      "title": "Contrat CDI Temps Plein — IDCC 2511",
+      "category": "Contrat",
+      "uploadedAt": "2023-09-11",
+      "encryptedAtRest": false,
+      "signedStatus": "Signé horodaté",
+      "contractBodyText": "Contrat CDI Temps Plein — IDCC 2511\n\nDocument fictif de recette C.Fitness OS. Aucun engagement réel. La confirmation de simulation ne constitue pas une signature réelle ou qualifiée."
+    },
+    {
+      "id": "doc-2",
+      "employeeId": "emp-maxime",
+      "title": "Bulletin de paie Silae — Septembre 2026",
+      "category": "Bulletin Silae",
+      "uploadedAt": "2026-09-30",
+      "encryptedAtRest": false,
+      "signedStatus": "Archivé coffre-fort",
+      "period": "2026-09",
+      "contractBodyText": "Bulletin de paie Silae — Septembre 2026\n\nDocument fictif de recette C.Fitness OS. Aucun engagement réel. La confirmation de simulation ne constitue pas une signature réelle ou qualifiée."
+    },
+    {
+      "id": "doc-3",
+      "employeeId": "emp-karim",
+      "title": "Carte Professionnelle Éducateur Sportif",
+      "category": "Carte Pro",
+      "uploadedAt": "2025-11-05",
+      "encryptedAtRest": false,
+      "signedStatus": "Archivé coffre-fort",
+      "contractBodyText": "Carte Professionnelle Éducateur Sportif\n\nDocument fictif de recette C.Fitness OS. Aucun engagement réel. La confirmation de simulation ne constitue pas une signature réelle ou qualifiée."
+    },
+    {
+      "id": "doc-4",
+      "employeeId": "emp-lea",
+      "title": "Contrat d’Apprentissage CERFA FA13 — BPJEPS AF",
+      "category": "Contrat",
+      "uploadedAt": "2025-09-01",
+      "encryptedAtRest": false,
+      "signedStatus": "Signé horodaté",
+      "contractBodyText": "Contrat d’Apprentissage CERFA FA13 — BPJEPS AF\n\nDocument fictif de recette C.Fitness OS. Aucun engagement réel. La confirmation de simulation ne constitue pas une signature réelle ou qualifiée."
+    },
+    {
+      "id": "doc-5",
+      "employeeId": "emp-lea",
+      "title": "Bulletin de paie Silae — Septembre 2026",
+      "category": "Bulletin Silae",
+      "uploadedAt": "2026-09-30",
+      "encryptedAtRest": false,
+      "signedStatus": "Archivé coffre-fort",
+      "period": "2026-09",
+      "contractBodyText": "Bulletin de paie Silae — Septembre 2026\n\nDocument fictif de recette C.Fitness OS. Aucun engagement réel. La confirmation de simulation ne constitue pas une signature réelle ou qualifiée."
+    },
+    {
+      "id": "doc-6",
+      "employeeId": "emp-maxime",
+      "title": "Avenant Objectifs CRM Acquisition (Remplacement LEADS) — IDCC 2511",
+      "category": "Avenant",
+      "uploadedAt": "2026-10-23",
+      "encryptedAtRest": false,
+      "signedStatus": "En attente signature",
+      "contractBodyText": "Avenant Objectifs CRM Acquisition (Remplacement LEADS) — IDCC 2511\n\nDocument fictif de recette C.Fitness OS. Aucun engagement réel. La confirmation de simulation ne constitue pas une signature réelle ou qualifiée."
+    },
+    {
+      "id": "doc-7",
+      "employeeId": "emp-chloe",
+      "title": "Contrat CDI Temps Plein (1 823,03 € brut) & Charte Téléphonie OVH/07 — Chloé Morel",
+      "category": "Contrat",
+      "uploadedAt": "2026-10-18",
+      "encryptedAtRest": false,
+      "signedStatus": "En attente signature",
+      "contractBodyText": "Contrat CDI Temps Plein (1 823,03 € brut) & Charte Téléphonie OVH/07 — Chloé Morel\n\nDocument fictif de recette C.Fitness OS. Aucun engagement réel. La confirmation de simulation ne constitue pas une signature réelle ou qualifiée."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "tsk-1",
+      "employeeId": "emp-maxime",
+      "clubId": "carre-de-soie",
+      "date": "2026-10-23",
+      "dueTime": "11:00",
+      "title": "Rappeler Amélie Garnier (Lead web 21h15) via ligne 07 et fixer RDV Heitz",
+      "category": "Relance CRM (ex-LEADS)",
+      "priority": "Haute",
+      "completed": false,
+      "linkedSection": "crm"
+    },
+    {
+      "id": "tsk-2",
+      "employeeId": "emp-maxime",
+      "clubId": "carre-de-soie",
+      "date": "2026-10-23",
+      "dueTime": "14:00",
+      "title": "Signer mon Avenant Objectifs CRM dans mon espace personnel (Signature interne 0 €)",
+      "category": "RH & Administratif",
+      "priority": "Haute",
+      "completed": false,
+      "linkedSection": "my-day"
+    },
+    {
+      "id": "tsk-3",
+      "employeeId": "emp-karim",
+      "clubId": "carre-de-soie",
+      "date": "2026-10-23",
+      "dueTime": "14:00",
+      "title": "Réaliser le bilan Technogym Checkup de Claire Dubois et ouvrir sa fiche Mywellness",
+      "category": "Suivi Mywellness",
+      "priority": "Haute",
+      "completed": false,
+      "linkedSection": "devices"
+    },
+    {
+      "id": "tsk-4",
+      "employeeId": "emp-karim",
+      "clubId": "carre-de-soie",
+      "date": "2026-10-23",
+      "dueTime": "16:30",
+      "title": "Relancer Nadia Mansouri (20j sans passage RFID/Bluetooth Heitz) depuis Mywellness",
+      "category": "Suivi Mywellness",
+      "priority": "Normale",
+      "completed": false,
+      "linkedSection": "devices"
+    },
+    {
+      "id": "tsk-5",
+      "employeeId": "emp-chloe",
+      "clubId": "beynost",
+      "date": "2026-10-23",
+      "dueTime": "11:30",
+      "title": "Confirmer par SMS le bilan Technogym Checkup Beynost de Sonia Khelifi (samedi 11h)",
+      "category": "Relance CRM (ex-LEADS)",
+      "priority": "Haute",
+      "completed": false,
+      "linkedSection": "crm"
+    },
+    {
+      "id": "tsk-6",
+      "employeeId": "emp-lea",
+      "clubId": "beynost",
+      "date": "2026-10-23",
+      "dueTime": "15:00",
+      "title": "Préparer la station Technogym Checkup Beynost (balance BIA & capteurs 3D) pour les bilans du week-end",
+      "category": "Suivi Mywellness",
+      "priority": "Normale",
+      "completed": true,
+      "completedAt": "10:15",
+      "linkedSection": "devices"
+    },
+    {
+      "id": "tsk-7",
+      "employeeId": "emp-sarah",
+      "clubId": "carre-de-soie",
+      "date": "2026-10-23",
+      "dueTime": "17:00",
+      "title": "Vérifier l’export CSV / API des variables de paie Silae (Octobre 2026)",
+      "category": "RH & Administratif",
+      "priority": "Haute",
+      "completed": false,
+      "linkedSection": "planning-hr"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "notif-1",
+      "employeeId": "emp-maxime",
+      "clubId": "carre-de-soie",
+      "createdAt": "2026-10-23 09:15",
+      "title": "Document RH en attente de signature électronique interne",
+      "message": "Votre Avenant Objectifs CRM Acquisition est prêt à être signé avec code OTP SMS et scellement SHA-256.",
+      "type": "signature_requise",
+      "read": false,
+      "actionLabel": "Signer maintenant",
+      "targetSection": "my-day"
+    },
+    {
+      "id": "notif-2",
+      "employeeId": "emp-maxime",
+      "clubId": "carre-de-soie",
+      "createdAt": "2026-10-23 10:18",
+      "title": "Alerte API Heitz Passages — Impayé SEPA détecté à l’accueil",
+      "message": "Romain Vasseur (RFID-BT-2089) s’est présenté au lecteur RFID/Bluetooth CDS avec un solde SEPA de -39,90 €.",
+      "type": "passage_club",
+      "read": false,
+      "actionLabel": "Voir fiche Heitz / CRM",
+      "targetSection": "devices"
+    },
+    {
+      "id": "notif-3",
+      "employeeId": "emp-karim",
+      "clubId": "carre-de-soie",
+      "createdAt": "2026-10-23 10:12",
+      "title": "Passage Adhérent Bi-Club (API Heitz) — Claire Dubois",
+      "message": "Claire Dubois vient de badger en Bluetooth à Carré de Soie. Son RDV Technogym Checkup est prévu à 14h00.",
+      "type": "mywellness_checkup",
+      "read": false,
+      "actionLabel": "Ouvrir fiche Mywellness",
+      "targetSection": "devices"
+    },
+    {
+      "id": "notif-4",
+      "employeeId": "emp-chloe",
+      "clubId": "beynost",
+      "createdAt": "2026-10-23 09:42",
+      "title": "Nouveau RDV Heitz synchronisé depuis le CRM C.Fitness",
+      "message": "Séance d’essai + Bilan Technogym Checkup (Mywellness) de Sonia Khelifi planifiés samedi 24/10 à 11h00 à Beynost.",
+      "type": "rdv_heitz",
+      "read": false,
+      "actionLabel": "Voir dans le planning",
+      "targetSection": "planning-hr"
+    }
+  ]
+}

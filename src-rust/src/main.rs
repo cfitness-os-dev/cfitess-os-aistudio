@@ -8,6 +8,7 @@ mod maintenance;
 mod missions;
 mod models;
 mod orchestrator;
+mod personal_workspace;
 mod rbac;
 mod recovery;
 mod routes;
