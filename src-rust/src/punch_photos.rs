@@ -11,10 +11,12 @@ use axum::{
     Json,
 };
 use chrono::{DateTime, Duration, Utc};
+use image::{ImageFormat, ImageReader, Limits};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::fs;
+use std::io::Cursor;
 use std::path::{Path as FsPath, PathBuf};
 
 type Failure = (StatusCode, Json<Value>);
@@ -126,146 +128,53 @@ fn decode_base64_strict(input: &str) -> Result<Vec<u8>, Failure> {
     Ok(out)
 }
 
-/// Validation structurelle approfondie de l'image (dimensions bornées + flux de données image réels).
-/// Rejette les octets nuls encadrés par SOI/EOI ou RIFF/WEBP sans segments image valides.
+/// Décode réellement les pixels de l'image avec limites strictes (dimensions 1..=4096, mémoire <= 32 Mo),
+/// puis réencode proprement sans métadonnées annexes (EXIF/GPS/chunks inconnus).
+fn decode_and_sanitize_image(bytes: &[u8]) -> Option<(&'static str, &'static str, Vec<u8>)> {
+    let mut reader = ImageReader::new(Cursor::new(bytes))
+        .with_guessed_format()
+        .ok()?;
+    let format = reader.format()?;
+    let (content_type, ext, out_format) = match format {
+        ImageFormat::Jpeg => ("image/jpeg", "jpg", ImageFormat::Jpeg),
+        ImageFormat::Png => ("image/png", "png", ImageFormat::Png),
+        ImageFormat::WebP => ("image/png", "png", ImageFormat::Png),
+        _ => return None,
+    };
+
+    let mut limits = Limits::default();
+    limits.max_image_width = Some(4096);
+    limits.max_image_height = Some(4096);
+    limits.max_alloc = Some(32 * 1024 * 1024);
+    reader.limits(limits);
+
+    let img = reader.decode().ok()?;
+    let (w, h) = (img.width(), img.height());
+    if w == 0 || h == 0 || w > 4096 || h > 4096 {
+        return None;
+    }
+
+    let mut sanitized = Vec::new();
+    let mut cursor = Cursor::new(&mut sanitized);
+    match out_format {
+        ImageFormat::Jpeg => {
+            let rgb = img.to_rgb8();
+            rgb.write_to(&mut cursor, ImageFormat::Jpeg).ok()?;
+        }
+        _ => {
+            img.write_to(&mut cursor, ImageFormat::Png).ok()?;
+        }
+    }
+
+    if sanitized.is_empty() || sanitized.len() > MAX_PHOTO_BYTES {
+        return None;
+    }
+    Some((content_type, ext, sanitized))
+}
+
+/// Vérifie qu'un flux d'octets est une vraie image décodable (JPEG, PNG ou WebP).
 fn detect_image_format(bytes: &[u8]) -> Option<(&'static str, &'static str)> {
-    // 1. JPEG : SOI (FF D8), au moins un segment SOF (dimensions 1..=4096), un segment SOS (FF DA) avec données, et EOI (FF D9)
-    if bytes.len() >= 24
-        && bytes[0] == 0xFF
-        && bytes[1] == 0xD8
-        && bytes[bytes.len() - 2] == 0xFF
-        && bytes[bytes.len() - 1] == 0xD9
-    {
-        let mut i = 2usize;
-        let mut has_valid_sof = false;
-        let mut has_sos = false;
-        while i + 1 < bytes.len() - 2 {
-            if bytes[i] != 0xFF {
-                break;
-            }
-            while i < bytes.len() && bytes[i] == 0xFF {
-                i += 1;
-            }
-            if i >= bytes.len() {
-                break;
-            }
-            let marker = bytes[i];
-            i += 1;
-            if marker == 0xD9 {
-                break;
-            }
-            if marker == 0x00 || (0xD0..=0xD8).contains(&marker) {
-                continue;
-            }
-            if i + 2 > bytes.len() {
-                return None;
-            }
-            let seg_len = u16::from_be_bytes([bytes[i], bytes[i + 1]]) as usize;
-            if seg_len < 2 || i + seg_len > bytes.len() {
-                return None;
-            }
-            // SOF0..SOF3 (baseline / extended / progressive / lossless)
-            if matches!(marker, 0xC0..=0xC3) {
-                if seg_len < 8 {
-                    return None;
-                }
-                let height = u16::from_be_bytes([bytes[i + 3], bytes[i + 4]]);
-                let width = u16::from_be_bytes([bytes[i + 5], bytes[i + 6]]);
-                let components = bytes[i + 7];
-                if (1..=4096).contains(&width)
-                    && (1..=4096).contains(&height)
-                    && (1..=4).contains(&components)
-                {
-                    has_valid_sof = true;
-                } else {
-                    return None;
-                }
-            } else if marker == 0xDA {
-                // Start of Scan : doit précéder des données compressées avant EOI
-                let scan_data_start = i + seg_len;
-                if scan_data_start < bytes.len() - 2 {
-                    has_sos = true;
-                }
-                break;
-            }
-            i += seg_len;
-        }
-        if has_valid_sof && has_sos {
-            return Some(("image/jpeg", "jpg"));
-        }
-        return None;
-    }
-
-    // 2. PNG : signature 8 octets + IHDR (13 octets, dimensions 1..=4096) + au moins un IDAT non vide + IEND
-    if bytes.len() >= 33
-        && bytes[0..8] == [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
-        && bytes[bytes.len() - 12..]
-            == [0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82]
-    {
-        let mut i = 8usize;
-        let mut has_ihdr = false;
-        let mut has_idat = false;
-        while i + 12 <= bytes.len() {
-            let chunk_len =
-                u32::from_be_bytes([bytes[i], bytes[i + 1], bytes[i + 2], bytes[i + 3]]) as usize;
-            let chunk_type = &bytes[i + 4..i + 8];
-            let data_start = i + 8;
-            let next_i = data_start.checked_add(chunk_len)?.checked_add(4)?;
-            if next_i > bytes.len() {
-                return None;
-            }
-            if chunk_type == b"IHDR" {
-                if chunk_len != 13 {
-                    return None;
-                }
-                let width = u32::from_be_bytes([
-                    bytes[data_start],
-                    bytes[data_start + 1],
-                    bytes[data_start + 2],
-                    bytes[data_start + 3],
-                ]);
-                let height = u32::from_be_bytes([
-                    bytes[data_start + 4],
-                    bytes[data_start + 5],
-                    bytes[data_start + 6],
-                    bytes[data_start + 7],
-                ]);
-                if (1..=4096).contains(&width) && (1..=4096).contains(&height) {
-                    has_ihdr = true;
-                } else {
-                    return None;
-                }
-            } else if chunk_type == b"IDAT" && chunk_len > 0 {
-                has_idat = true;
-            } else if chunk_type == b"IEND" {
-                break;
-            }
-            i = next_i;
-        }
-        if has_ihdr && has_idat {
-            return Some(("image/png", "png"));
-        }
-        return None;
-    }
-
-    // 3. WebP : RIFF + taille concordante + WEBP + chunk VP8 / VP8L / VP8X valide non vide
-    if bytes.len() >= 20 && &bytes[0..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
-        let declared = u32::from_le_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]) as usize;
-        if declared + 8 != bytes.len() {
-            return None;
-        }
-        let fourcc = &bytes[12..16];
-        let chunk_len = u32::from_le_bytes([bytes[16], bytes[17], bytes[18], bytes[19]]) as usize;
-        if matches!(fourcc, b"VP8 " | b"VP8L" | b"VP8X")
-            && chunk_len >= 10
-            && 20 + chunk_len <= bytes.len()
-        {
-            return Some(("image/webp", "webp"));
-        }
-        return None;
-    }
-
-    None
+    decode_and_sanitize_image(bytes).map(|(ct, ext, _)| (ct, ext))
 }
 
 /// Retourne la liste des fichiers disque expirés à supprimer APRÈS succès de persist_state.
@@ -351,10 +260,10 @@ pub async fn post_capture_punch_photo(
         ));
     }
 
-    let Some((content_type, ext)) = detect_image_format(&bytes) else {
+    let Some((content_type, ext, bytes)) = decode_and_sanitize_image(&bytes) else {
         return Err(err_resp(
             StatusCode::BAD_REQUEST,
-            "Format image non supporté : seules les captures JPEG, PNG ou WebP valides sont acceptées.",
+            "Image invalide ou non décodable : seules les captures JPEG, PNG ou WebP complètes sont acceptées.",
         ));
     };
 
@@ -713,11 +622,30 @@ mod tests {
         .expect_err("truncated JPEG without EOI must be rejected");
         assert_eq!(truncated_jpeg.0, StatusCode::BAD_REQUEST);
 
-        // 1c. Rejet des contre-exemples d'octets nuls encadrés par SOI/EOI ou RIFF/WEBP
+        // 1c. Rejet des contre-exemples d'octets nuls / CRC invalides / VP8X sans pixels
         let fake_jpeg = [0xff, 0xd8, 0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xd9];
         assert!(detect_image_format(&fake_jpeg).is_none());
         let fake_webp = [b'R', b'I', b'F', b'F', 8, 0, 0, 0, b'W', b'E', b'B', b'P', 0, 0, 0, 0];
         assert!(detect_image_format(&fake_webp).is_none());
+        let mut fake_vp8x = b"RIFF".to_vec();
+        fake_vp8x.extend_from_slice(&22u32.to_le_bytes());
+        fake_vp8x.extend_from_slice(b"WEBPVP8X");
+        fake_vp8x.extend_from_slice(&10u32.to_le_bytes());
+        fake_vp8x.extend_from_slice(&[0; 10]);
+        assert!(detect_image_format(&fake_vp8x).is_none());
+        let mut fake_png = vec![0x89, b'P', b'N', b'G', 13, 10, 26, 10];
+        fake_png.extend_from_slice(&13u32.to_be_bytes());
+        fake_png.extend_from_slice(b"IHDR");
+        fake_png.extend_from_slice(&1u32.to_be_bytes());
+        fake_png.extend_from_slice(&1u32.to_be_bytes());
+        fake_png.extend_from_slice(&[8, 2, 0, 0, 0]);
+        fake_png.extend_from_slice(&[0; 4]);
+        fake_png.extend_from_slice(&1u32.to_be_bytes());
+        fake_png.extend_from_slice(b"IDAT");
+        fake_png.push(0);
+        fake_png.extend_from_slice(&[0; 4]);
+        fake_png.extend_from_slice(&[0, 0, 0, 0, b'I', b'E', b'N', b'D', 0xae, 0x42, 0x60, 0x82]);
+        assert!(detect_image_format(&fake_png).is_none());
 
         // 2. Capture d'une vraie image PNG 1x1 complète et décodable (IHDR + IDAT + IEND)
         let valid_png_b64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
