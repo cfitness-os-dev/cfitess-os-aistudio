@@ -191,6 +191,7 @@ pub fn api_router(state: SharedState) -> Router {
         .route("/api/leave-requests/:request_id/decision", patch(crate::leave_requests::patch_leave_request_decision))
         .route("/api/terminals/whoami", get(crate::clock_terminals::get_terminal_whoami))
         .route("/api/terminals/pair", post(crate::clock_terminals::post_pair_terminal))
+        .route("/api/terminals/punch", post(crate::clock_terminals::post_terminal_punch))
         .route("/api/terminals/:club_id", get(crate::clock_terminals::get_club_terminals).post(crate::clock_terminals::post_create_terminal))
         .route("/api/terminals/:club_id/:terminal_id/revoke", post(crate::clock_terminals::post_revoke_terminal))
         .route("/api/lead/registry", get(get_lead_registry))

@@ -444,6 +444,131 @@ pub async fn get_terminal_whoami(
     })))
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TerminalPunchPayload {
+    pub employee_id: String,
+    pub punch_type: String,
+    #[serde(default)]
+    pub photo_proof: Option<String>,
+}
+
+/// Pointage certifié depuis un terminal physique authentifié
+pub async fn post_terminal_punch(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Json(payload): Json<TerminalPunchPayload>,
+) -> Result<Json<Value>, Failure> {
+    let mut db = state.db.write().await;
+    let term = authenticate_terminal(&db, &headers).await?;
+
+    let short_club = match term.site_id.as_str() {
+        "club-carre-soie" => "carre-de-soie",
+        "club-beynost" => "beynost",
+        _ => "carre-de-soie",
+    };
+
+    let Some(employee) = db.employees.iter().find(|e| e.id == payload.employee_id) else {
+        return Err(err_resp(StatusCode::NOT_FOUND, "Collaborateur introuvable."));
+    };
+
+    if !employee.active || !can_access_site_scope(&db, &payload.employee_id, &term.site_id) {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Vous n'avez pas d'affectation active dans ce club.",
+        ));
+    }
+
+    // Contrôle du droit terminal_allowed issu de la politique P0
+    let pol = crate::clock_policy::policy(&db, &payload.employee_id, short_club);
+    if !pol.terminal_allowed {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Votre profil ne dispose pas du droit de pointage sur les terminaux de ce club.",
+        ));
+    }
+
+    let mut person = db
+        .personal_workspace
+        .people
+        .get(&payload.employee_id)
+        .cloned()
+        .unwrap_or_else(|| json!({"timeEntries": []}));
+
+    let mut rows = person["timeEntries"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    let last = rows.last();
+    let previous = last.and_then(|r| r["type"].as_str()).map(ToString::to_string);
+    let same_club = last.map(|r| r["clubId"] == short_club).unwrap_or(true);
+    let allowed: &[&str] = match previous.as_deref() {
+        None | Some("depart") => &["arrivee"],
+        Some("arrivee") | Some("fin_pause") if same_club => &["debut_pause", "depart"],
+        Some("debut_pause") if same_club => &["fin_pause"],
+        _ => &[],
+    };
+
+    if !allowed.contains(&payload.punch_type.as_str()) {
+        return Err(err_resp(
+            StatusCode::CONFLICT,
+            "Ce pointage ne suit pas le précédent. Vérifiez votre historique.",
+        ));
+    }
+
+    let punch_id = format!("terminal-punch-{}", rand::random::<u128>());
+    let now = Utc::now().to_rfc3339();
+    let entry = json!({
+        "id": punch_id,
+        "employeeId": payload.employee_id,
+        "clubId": short_club,
+        "timestamp": now,
+        "type": payload.punch_type,
+        "source": "terminal",
+        "terminalId": term.id,
+        "roomLabel": term.room_label,
+        "photoProofPresent": payload.photo_proof.is_some()
+    });
+
+    rows.push(entry.clone());
+    person["timeEntries"] = Value::Array(rows);
+
+    let mut next = db.clone();
+    next.personal_workspace
+        .people
+        .insert(payload.employee_id.clone(), person);
+
+    append_audit(
+        &mut next,
+        &payload.employee_id,
+        "TERMINAL_PUNCH",
+        format!(
+            "Pointage {} enregistré depuis terminal {} ({}) - photo : {}",
+            payload.punch_type,
+            term.id,
+            term.room_label,
+            if payload.photo_proof.is_some() { "présente" } else { "non fournie" }
+        ),
+        &term.site_id,
+        &payload.employee_id,
+        previous,
+        Some(payload.punch_type.clone()),
+    );
+
+    persist_state(&state.data_dir, &next).map_err(|err| {
+        err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec de persistance du pointage : {err}"),
+        )
+    })?;
+    *db = next;
+
+    Ok(Json(json!({
+        "status": "recorded",
+        "entry": entry
+    })))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -623,6 +748,96 @@ mod tests {
         .await
         .expect_err("cross-club revocation must return 404");
         assert_eq!(err_cross_revoke.0, StatusCode::NOT_FOUND);
+
+        let _ = std::fs::remove_dir_all(&state.data_dir);
+    }
+
+    #[tokio::test]
+    async fn terminal_punch_enforces_terminal_allowed_policy_and_transitions() {
+        let state = test_state();
+
+        // 1. Créer et activer un terminal pour Carré de Soie
+        let token = "term-token-cs-01";
+        let term = ClockTerminal {
+            id: "term-cs-accueil".into(),
+            site_id: "club-carre-soie".into(),
+            room_id: "room-accueil".into(),
+            room_label: "Accueil & Banque".into(),
+            label: "Tablette Accueil CS".into(),
+            status: "active".into(),
+            pairing_code: None,
+            device_secret_hash: Some(hash_terminal_token(token)),
+            created_at: Utc::now().to_rfc3339(),
+            paired_at: Some(Utc::now().to_rfc3339()),
+            last_seen_at: Some(Utc::now().to_rfc3339()),
+        };
+        {
+            let mut db = state.db.write().await;
+            db.clock_terminals.push(term);
+        }
+
+        let mut term_headers = HeaderMap::new();
+        term_headers.insert("x-cfitness-terminal-token", HeaderValue::from_str(token).unwrap());
+
+        // 2. Par défaut en P0, terminal_allowed == false -> pointage refusé (403)
+        let err_not_allowed = post_terminal_punch(
+            State(state.clone()),
+            term_headers.clone(),
+            Json(TerminalPunchPayload {
+                employee_id: "emp-mario".into(),
+                punch_type: "arrivee".into(),
+                photo_proof: None,
+            }),
+        )
+        .await
+        .expect_err("terminal punch without terminal_allowed must fail 403");
+        assert_eq!(err_not_allowed.0, StatusCode::FORBIDDEN);
+
+        // 3. Attribution explicite de la politique terminal_allowed pour Mario sur Carré de Soie
+        {
+            let mut db = state.db.write().await;
+            let mut policies = db.personal_workspace.clock_policies.get("emp-mario").cloned().unwrap_or_default();
+            policies.insert("carre-de-soie".into(), crate::clock_policy::ClockPolicy {
+                personal_allowed: false,
+                terminal_allowed: true,
+                revision: "rev-test".into(),
+                updated_at: Utc::now().to_rfc3339(),
+                updated_by: "emp-admin".into(),
+            });
+            db.personal_workspace.clock_policies.insert("emp-mario".into(), policies);
+        }
+
+        // 4. Pointage d'arrivée réussi
+        let Json(res_ok) = post_terminal_punch(
+            State(state.clone()),
+            term_headers.clone(),
+            Json(TerminalPunchPayload {
+                employee_id: "emp-mario".into(),
+                punch_type: "arrivee".into(),
+                photo_proof: Some("data:image/jpeg;base64,simulated_camera_proof".into()),
+            }),
+        )
+        .await
+        .expect("terminal punch arrivee OK");
+
+        assert_eq!(res_ok["status"], "recorded");
+        assert_eq!(res_ok["entry"]["source"], "terminal");
+        assert_eq!(res_ok["entry"]["terminalId"], "term-cs-accueil");
+        assert_eq!(res_ok["entry"]["photoProofPresent"], true);
+
+        // 5. Deuxième arrivée consécutive refusée par le contrôle de transition (409 Conflict)
+        let err_double = post_terminal_punch(
+            State(state.clone()),
+            term_headers,
+            Json(TerminalPunchPayload {
+                employee_id: "emp-mario".into(),
+                punch_type: "arrivee".into(),
+                photo_proof: None,
+            }),
+        )
+        .await
+        .expect_err("consecutive arrivee must return 409");
+        assert_eq!(err_double.0, StatusCode::CONFLICT);
 
         let _ = std::fs::remove_dir_all(&state.data_dir);
     }
