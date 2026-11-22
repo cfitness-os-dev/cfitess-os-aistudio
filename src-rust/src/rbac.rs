@@ -312,6 +312,19 @@ pub fn redact_employee_for_actor(
     })
 }
 
+/// Autorité explicite propriétaire / super administrateur (`profile_id == "admin_systeme"` actif sur le club).
+/// Non auto-attribuable et distincte d'un profil manager `Sites` ou `Teams` portant `ORG04-37`.
+pub fn is_owner_or_super_admin(db: &AppDatabaseState, actor_id: &str, site_id: &str) -> bool {
+    let Some(emp) = db.employees.iter().find(|e| e.id == actor_id) else {
+        return false;
+    };
+    emp.active
+        && emp
+            .site_accesses
+            .iter()
+            .any(|a| a.site_id == site_id && a.profile_id == "admin_systeme")
+}
+
 pub fn filter_shifts_for_actor(
     state: &AppDatabaseState,
     actor_id: &str,

@@ -1,6 +1,6 @@
 use crate::clock_terminals::{authenticate_terminal, authenticated_employee};
 use crate::models::AppDatabaseState;
-use crate::rbac::can_access_site_scope;
+use crate::rbac::{can_access_site_scope, is_owner_or_super_admin};
 use crate::routes::{append_audit, err_resp, SharedState};
 use crate::seed::persist_state;
 use axum::{
@@ -68,21 +68,6 @@ pub(crate) fn club_photo_policy(db: &AppDatabaseState, site_id: &str) -> &'stati
         // Fail-closed sur "disabled" ou toute valeur inconnue/corrompue
         Some(_) => "disabled",
     }
-}
-
-/// Autorité explicite propriétaire / super administrateur (`profile_id == "admin_systeme"`),
-/// non déductible d'un profil manager `Sites` ou `Teams`.
-pub(crate) fn is_owner_or_super_admin(db: &AppDatabaseState, actor_id: &str, site_id: &str) -> bool {
-    db.employees
-        .iter()
-        .find(|e| e.id == actor_id)
-        .map(|e| {
-            e.active
-                && e.site_accesses
-                    .iter()
-                    .any(|a| a.site_id == site_id && a.profile_id == "admin_systeme")
-        })
-        .unwrap_or(false)
 }
 
 pub async fn get_photo_policy(

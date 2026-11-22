@@ -1,5 +1,5 @@
 use crate::models::AppDatabaseState;
-use crate::rbac::{can_access_site_scope, evaluate_permission, PermissionTarget};
+use crate::rbac::can_access_site_scope;
 use crate::routes::{append_audit, err_resp, resolve_session_actor, SharedState};
 use crate::seed::persist_state;
 use axum::{
@@ -79,19 +79,7 @@ pub fn hash_terminal_token(token: &str) -> String {
 }
 
 fn can_manage_terminals(db: &AppDatabaseState, actor_id: &str, site_id: &str) -> bool {
-    evaluate_permission(
-        db,
-        actor_id,
-        site_id,
-        "ORG04-37",
-        Some(PermissionTarget {
-            site_id: Some(site_id),
-            target_employee_id: Some(actor_id),
-            target_team_ids: &[],
-            lock_state: None,
-        }),
-    )
-    .allowed
+    crate::rbac::is_owner_or_super_admin(db, actor_id, site_id)
 }
 
 /// A shared device identity never replaces the employee's authenticated session.
