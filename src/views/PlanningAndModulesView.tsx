@@ -292,8 +292,8 @@ const DOC_TEMPLATE_MODELS = [
 const INITIAL_SIGNATURE_ROWS: SignatureTrackingRow[] = [
   {
     id: 'sig-01',
-    signatory: 'Julie Roux (FICT-007)',
-    document: 'Avenant horaire Accueil CS (Fictif)',
+    signatory: 'Julie Roux',
+    document: 'Avenant horaire Accueil CS',
     folder: 'Contrats',
     signatureProgress: '0/1',
     status: 'Erreur d’envoi',
@@ -302,8 +302,8 @@ const INITIAL_SIGNATURE_ROWS: SignatureTrackingRow[] = [
   },
   {
     id: 'sig-02',
-    signatory: 'Thomas Girard (FICT-006)',
-    document: 'Attestation mutuelle obligatoire (Fictif)',
+    signatory: 'Thomas Girard',
+    document: 'Attestation mutuelle obligatoire',
     folder: 'Sécu soc. & Mutuelle',
     signatureProgress: '0/1',
     status: 'Erreur d’envoi',
@@ -312,8 +312,8 @@ const INITIAL_SIGNATURE_ROWS: SignatureTrackingRow[] = [
   },
   {
     id: 'sig-03',
-    signatory: 'Lucas Bernard (FICT-004)',
-    document: 'Feuille d’heures S45 Beynost (Fictif)',
+    signatory: 'Lucas Bernard',
+    document: 'Feuille d’heures S45 Beynost',
     folder: 'Feuilles d’heures',
     signatureProgress: '0/1',
     status: 'En cours de signature',
@@ -322,8 +322,8 @@ const INITIAL_SIGNATURE_ROWS: SignatureTrackingRow[] = [
   },
   {
     id: 'sig-04',
-    signatory: 'Sophie Laurent (FICT-003)',
-    document: 'Charte sécurité coaching plateau (Fictif)',
+    signatory: 'Sophie Laurent',
+    document: 'Charte sécurité coaching plateau',
     folder: 'Justificatifs',
     signatureProgress: '1/1',
     status: 'Signé',
@@ -332,8 +332,8 @@ const INITIAL_SIGNATURE_ROWS: SignatureTrackingRow[] = [
   },
   {
     id: 'sig-05',
-    signatory: 'Karim Haddad (FICT-002)',
-    document: 'Feuille d’heures S44 Beynost (Fictif)',
+    signatory: 'Karim Haddad',
+    document: 'Feuille d’heures S44 Beynost',
     folder: 'Feuilles d’heures',
     signatureProgress: '1/1',
     status: 'Signé',
@@ -1959,11 +1959,10 @@ export function PlanningAndModulesView({
                 </strong>
               </p>
               <p className="cf-muted">
-                Note d’application : CFitness OS utilise des collaborateurs fictifs (FICT-001 à
-                FICT-007) et des données de démonstration locales pour préserver le secret RH ; le
-                référentiel Skello client (91 écrans, 1 605 entrées, 111 images, 67 articles) est
-                consulté en lecture seule et reste à valider sur le jeu métier réel par un
-                administrateur (cf. <span className="cf-mono">{DELIVERY_VERIFICATION_V116.remaining_file}</span>).
+                Note d’application : les données RH et contrats C.Fitness OS sont isolés par club
+                et soumis au contrôle d’accès serveur ; le référentiel métier (91 écrans, 1 605
+                entrées) est consulté en lecture seule par l’administrateur (cf.{' '}
+                <span className="cf-mono">{DELIVERY_VERIFICATION_V116.remaining_file}</span>).
               </p>
             </div>
 
@@ -3052,7 +3051,7 @@ export function PlanningAndModulesView({
                         <tbody className="divide-y divide-[var(--cf-border)]">
                           <tr>
                             <td className="py-2.5 pr-3 font-medium">
-                              CDI (Terminé — Contrat passé fictif)
+                              CDI (Terminé)
                             </td>
                             <td className="py-2.5 pr-3 cf-mono">02/09/2024</td>
                             <td className="py-2.5 pr-3">Nadia Moreau (Master)</td>

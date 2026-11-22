@@ -429,7 +429,7 @@ export function AdminRightsView({
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = 'cfitness_journal_activite_fictif.csv';
+      link.download = 'cfitness_journal_activite.csv';
       link.click();
       URL.revokeObjectURL(url);
       setStatusMsg({
@@ -1199,7 +1199,7 @@ export function AdminRightsView({
                   />
                 </div>
                 <div>
-                  <label className="cf-muted block mb-1">SIREN fictif</label>
+                  <label className="cf-muted block mb-1">SIREN</label>
                   <input
                     type="text"
                     value={orgForm.siren}
@@ -1736,7 +1736,7 @@ export function AdminRightsView({
               <div className="cf-card-secondary p-3 text-[11px] cf-muted flex items-start gap-2">
                 <Lock className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
                 <span>
-                  Dès la validation, le code PIN de démonstration éventuel ne
+                  Dès la validation, l’ancien code PIN éventuel ne
                   permet plus de se connecter sur ce compte ; seul le mot de
                   passe défini ici est accepté.
                 </span>
@@ -2287,8 +2287,8 @@ export function AdminRightsView({
                 Sauvegarde & Restauration complète (TST28)
               </h2>
               <p className="text-xs cf-muted">
-                Exporte et restaure l’état complet (profils, sites, salariés
-                fictifs, shifts, audit) sous contrôle serveur ORG04-31.
+                Exporte et restaure l’état complet (profils, sites, salariés,
+                shifts, audit) sous contrôle serveur ORG04-31.
               </p>
             </div>
             <div className="flex gap-2">

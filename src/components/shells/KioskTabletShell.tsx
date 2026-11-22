@@ -282,7 +282,7 @@ export function KioskTabletShell() {
                     .filter((e) => e.role !== 'kiosque')
                     .map((e) => (
                       <option key={e.id} value={e.id}>
-                        {e.firstName} {e.lastName} (PIN démo : {e.pinCode})
+                        {e.firstName} {e.lastName} (Code borne : {e.pinCode})
                       </option>
                     ))}
                 </select>

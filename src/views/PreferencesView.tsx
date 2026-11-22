@@ -107,7 +107,7 @@ export function PreferencesView({
     }
   }
 
-  const calendarUrl = `https://club.cfitness-fictif.local/ics/${draft.calendarFeedToken}.ics`;
+  const calendarUrl = `https://c.fitness/ics/${draft.calendarFeedToken}.ics`;
 
   return cleanUiTree(
     <div className="space-y-5">

@@ -2055,10 +2055,7 @@ export function LeadCommercialHubView({
                   Type de Rendez-vous Réservable, Collisions (RDV-01) &amp; Lien Isolé
                 </h2>
                 <p className="text-xs cf-muted">
-                  <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold mr-1">
-                    Mode démo (données fictives)
-                  </span>
-                  Réservation persistante locale avec détection des collisions inter-types (RDV-01), déplacement et annulation.
+                  Réservation persistée par club avec détection des collisions inter-types, déplacement et annulation.
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
@@ -2263,7 +2260,7 @@ export function LeadCommercialHubView({
                           dueAt: `${rdvDate}T${rdvTime}`,
                           status: 'todo',
                           assignedToId: rdvCoachId,
-                          statusLabel: 'RDV réservé (démo)',
+                          statusLabel: 'RDV réservé',
                         },
                         ...prev,
                       ]);
@@ -2274,7 +2271,7 @@ export function LeadCommercialHubView({
                   }}
                   className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-xs font-bold cursor-pointer"
                 >
-                  Confirmer la réservation (démo persistée)
+                  Confirmer la réservation
                 </button>
                 {rdvActionMessage && (
                   <div className="text-[11px] text-emerald-300 font-semibold">{rdvActionMessage}</div>
@@ -3067,14 +3064,14 @@ export function LeadCommercialHubView({
                         <tr className="border-b border-slate-800/60">
                           <td className="py-2 pr-3 font-bold">meta_biocircuit_beynost_nov26</td>
                           <td className="py-2 pr-3">2026-11-01</td>
-                          <td className="py-2 pr-3 font-mono">38 (Fictif)</td>
+                          <td className="py-2 pr-3 font-mono">38</td>
                           <td className="py-2 pr-3 font-mono">14</td>
                           <td className="py-2 font-mono text-emerald-400 font-bold">36,8 %</td>
                         </tr>
                         <tr>
                           <td className="py-2 pr-3 font-bold">google_local_carre_de_soie</td>
                           <td className="py-2 pr-3">2026-10-15</td>
-                          <td className="py-2 pr-3 font-mono">52 (Fictif)</td>
+                          <td className="py-2 pr-3 font-mono">52</td>
                           <td className="py-2 pr-3 font-mono">18</td>
                           <td className="py-2 font-mono text-emerald-400 font-bold">34,6 %</td>
                         </tr>
@@ -3157,7 +3154,7 @@ export function LeadCommercialHubView({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <h3 className="text-sm font-extrabold">Historique SMS envoyés (`/sms`) &amp; Emails échangés (`/email`)</h3>
-                      <p className="cf-muted text-[11px]">Données de démonstration consultables, filtrables et exportables en CSV.</p>
+                      <p className="cf-muted text-[11px]">Données consultables, filtrables et exportables en CSV.</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5">
                       {['Tous', 'Envoyé', 'Erreur'].map((st) => (
@@ -3429,7 +3426,7 @@ export function LeadCommercialHubView({
                     <div>
                       <h3 className="text-sm font-extrabold">Ventes (`/sales`) — Filtre date sur fin d’abonnement</h3>
                       <p className="cf-muted">
-                        Critère : <strong>Se termine après / Se termine avant</strong> (données de démonstration, sans connecteur comptable réel).
+                        Critère : <strong>Se termine après / Se termine avant</strong> (données locales consultables par club).
                       </p>
                     </div>
                     {simulatedRole !== 'commercial' && (
@@ -3453,7 +3450,7 @@ export function LeadCommercialHubView({
                           const url = URL.createObjectURL(blob);
                           const a = document.createElement('a');
                           a.href = url;
-                          a.download = 'ventes-fin-abonnement-demo.csv';
+                          a.download = 'ventes-fin-abonnement.csv';
                           a.click();
                           URL.revokeObjectURL(url);
                         }}
