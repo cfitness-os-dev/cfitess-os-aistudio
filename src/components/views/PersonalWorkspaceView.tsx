@@ -26,7 +26,12 @@ const tabs = [
   ["time", "Mes pointages", Clock],
 ] as const;
 type Tab = (typeof tabs)[number][0];
-const punchLabels: Record<string,string>={arrivee:'Arrivée',debut_pause:'Début de pause',fin_pause:'Fin de pause',depart:'Départ'};
+const punchLabels: Record<string, string> = {
+  arrivee: "Arrivée",
+  debut_pause: "Début de pause",
+  fin_pause: "Fin de pause",
+  depart: "Départ",
+};
 
 export function PersonalWorkspaceView() {
   const { currentUser, clubFilter, authorizedClubIds } = useCfos();
@@ -137,9 +142,6 @@ function PersonalWorkspaceContent({
           {currentUser.firstName} {currentUser.lastName} ·{" "}
           {club === "beynost" ? "Beynost" : "Carré de Soie"}
         </p>
-        <p className="cf-muted text-sm">
-          Vos tâches, demandes, documents, formations et contrôles.
-        </p>
         {data?.demoMode && (
           <p className="text-sm text-amber-500">
             Espace de test · données fictives
@@ -172,14 +174,19 @@ function PersonalWorkspaceContent({
             URL.revokeObjectURL(url);
           }}
         >
-          Télécharger mes données
+          Exporter mon espace
         </button>
       </div>
-      <p className="cf-muted text-sm">
-        Mywellness ouvre sa page de connexion sans transmettre d’identifiant.
-        L’export contient votre espace du club actif ; la sauvegarde générale
-        reste réservée aux responsables.
-      </p>
+      <details className="cf-muted text-sm">
+        <summary className="cursor-pointer">
+          À propos des accès et de l’export
+        </summary>
+        <p>
+          Mywellness ouvre sa page de connexion sans transmettre d’identifiant.
+          L’export contient votre espace du club actif ; la sauvegarde générale
+          reste réservée aux responsables.
+        </p>
+      </details>
       <nav
         aria-label="Rubriques de mon espace personnel"
         className="flex flex-wrap gap-2"
@@ -705,7 +712,7 @@ function PersonalWorkspaceContent({
               {data.timeEntries.map((row) => (
                 <p key={row.id}>
                   {new Date(row.timestamp).toLocaleString("fr-FR")} ·{" "}
-                  {punchLabels[row.type] || 'Pointage'}
+                  {punchLabels[row.type] || "Pointage"}
                 </p>
               ))}
             </section>

@@ -328,7 +328,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
               <Users className="w-4 h-4 shrink-0" />
               <span>
                 {isPersonalSpace
-                  ? 'Mon compte personnel'
+                  ? 'Mon dossier'
                   : isTechnicalMode
                   ? 'Espace Mon compte RH V1.16 (MC01–MC13)'
                   : 'Collaborateurs et RH'}

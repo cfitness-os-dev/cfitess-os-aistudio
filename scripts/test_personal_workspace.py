@@ -30,8 +30,10 @@ def main():
                'CFITNESS_STRICT_SESSION': '1', 'CFITNESS_AUTOMATION_SCHEDULER': '0',
                'CFITNESS_ALLOWED_ORIGINS': base}
 
-        def call(method, path, token=None, body=None):
+        def call(method, path, token=None, body=None, site=None):
             headers = {'Content-Type': 'application/json'}
+            if site:
+                headers['x-cfitness-site-id'] = site
             if token:
                 headers['Authorization'] = 'Bearer ' + token
             req = urllib.request.Request(base+path, method=method, headers=headers,
@@ -106,6 +108,9 @@ def main():
             statefile = folder / 'cfitness_state.json'
             state = json.loads(statefile.read_text())
             assert any(row['employeeId'] == 'emp-chloe' and row['startDate'] == '2027-03-01' for row in state['leaveRequests'])
+            status, dashboard = call('GET', '/api/dashboard', admin, site='club-beynost')
+            assert status == 200
+            assert any(row['employeeId'] == 'emp-chloe' and row['startDate'] == '2027-03-01' for row in dashboard['teamRequests'])
             checks.append('leave validates dates, refuses duplicate, writes canonical RH table')
             item = initial['checklists'][0]
             assert call('POST', path, chloe, {'action': 'set_checklist', 'id': item['id'], 'completed': True})[0] == 200
