@@ -11,6 +11,8 @@ use axum::{
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
+use std::collections::HashMap;
 
 type Failure = (StatusCode, Json<Value>);
 
@@ -87,6 +89,14 @@ pub struct CourseAttendanceRecord {
     pub checklist_answers: Vec<ChecklistItemAnswer>,
     pub note: Option<String>,
     pub idempotency_key: String,
+    #[serde(default)]
+    pub checklist_updated_at: Option<String>,
+    #[serde(default)]
+    pub checklist_updated_by: Option<String>,
+    #[serde(default)]
+    pub checklist_updated_terminal_id: Option<String>,
+    #[serde(default)]
+    pub operation_fingerprints: HashMap<String, String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -191,17 +201,26 @@ fn validate_time_window(occurrence: &CourseOccurrence, now: DateTime<Utc>) -> Re
 }
 
 /// Lister les occurrences du jour pour la salle exacte du terminal authentifié
+/// (écran partagé de salle : n'expose pas les notes privées ni les clés d'idempotence)
 pub async fn get_room_occurrences(
     State(state): State<SharedState>,
     headers: HeaderMap,
 ) -> Result<Json<Value>, Failure> {
     let db = state.db.read().await;
     let terminal: ClockTerminal = authenticate_terminal(&db, &headers).await?;
+    let today = Utc::now().date_naive();
 
     let occurrences: Vec<Value> = db
         .course_occurrences
         .iter()
-        .filter(|o| o.site_id == terminal.site_id && o.room_id == terminal.room_id)
+        .filter(|o| {
+            if o.site_id != terminal.site_id || o.room_id != terminal.room_id {
+                return false;
+            }
+            DateTime::parse_from_rfc3339(&o.start_time)
+                .map(|dt| dt.with_timezone(&Utc).date_naive() == today)
+                .unwrap_or(false)
+        })
         .map(|o| {
             let attendance = db
                 .course_attendances
@@ -218,8 +237,8 @@ pub async fn get_room_occurrences(
                 "startTime": o.start_time,
                 "endTime": o.end_time,
                 "status": o.status,
-                "isPrepared": attendance.map(|a| a.checklist_completed).unwrap_or(false),
-                "attendance": attendance
+                "isVerified": attendance.is_some(),
+                "isPrepared": attendance.map(|a| a.checklist_completed).unwrap_or(false)
             })
         })
         .collect();
@@ -301,10 +320,10 @@ pub async fn post_verify_course_presence(
         return Err(err_resp(StatusCode::NOT_FOUND, "Séance de cours introuvable."));
     };
 
-    if occurrence.status == "cancelled" {
+    if occurrence.status == "cancelled" || occurrence.status == "completed" {
         return Err(err_resp(
             StatusCode::CONFLICT,
-            "Cette séance de cours a été annulée.",
+            "Cette séance de cours est annulée ou déjà terminée.",
         ));
     }
 
@@ -334,7 +353,7 @@ pub async fn post_verify_course_presence(
     let now = Utc::now();
     validate_time_window(&occurrence, now)?;
 
-    // 7. Contrôle d'idempotence borné et évaluation de la checklist contre le référentiel serveur
+    // 7. Validation de la checklist et calcul de l'empreinte canonique de l'opération
     let idemp = payload.idempotency_key.trim();
     if idemp.is_empty() {
         return Err(err_resp(
@@ -342,50 +361,71 @@ pub async fn post_verify_course_presence(
             "Clé d'idempotence requise.",
         ));
     }
+    let (checklist_completed, canonical_answers) =
+        validate_checklist_against_spec(&payload.checklist_answers)?;
+
+    let fingerprint_input = json!({
+        "occurrenceId": occurrence.id,
+        "coachId": coach_id,
+        "terminalId": terminal.id,
+        "checklistAnswers": canonical_answers,
+        "note": payload.note
+    })
+    .to_string();
+    let op_fingerprint = format!("{:x}", Sha256::digest(fingerprint_input.as_bytes()));
     let scoped_idempotency_key = format!("{}:{}:{}", occurrence.id, coach_id, idemp);
-    if let Some(existing) = db
-        .course_attendances
-        .iter()
-        .find(|a| a.idempotency_key == scoped_idempotency_key)
-    {
+
+    // Contrôle d'idempotence strict : même clé + même empreinte -> already_verified ; même clé + contenu différent -> 409
+    if let Some(existing) = db.course_attendances.iter().find(|a| {
+        a.idempotency_key == scoped_idempotency_key
+            || a.operation_fingerprints
+                .contains_key(&scoped_idempotency_key)
+    }) {
+        if let Some(stored_fp) = existing.operation_fingerprints.get(&scoped_idempotency_key) {
+            if stored_fp != &op_fingerprint {
+                return Err(err_resp(
+                    StatusCode::CONFLICT,
+                    "Clé d'idempotence déjà utilisée pour un contenu ou un terminal différent.",
+                ));
+            }
+        }
         return Ok(Json(json!({
             "status": "already_verified",
             "attendance": existing
         })));
     }
 
-    let (checklist_completed, canonical_answers) =
-        validate_checklist_against_spec(&payload.checklist_answers)?;
-
     let now_iso = now.to_rfc3339();
     let mut next = db.clone();
 
     // Si l'occurrence a déjà une présence enregistrée :
-    // - si la checklist était déjà complète -> retour idempotent sans doublon
-    // - si la checklist était incomplète -> mise à jour de la préparation existante (complétion)
+    // - si la checklist était déjà complète -> 409 (évite d'accepter silencieusement une nouvelle clé différente)
+    // - si la checklist était incomplète -> mise à jour tracée séparément sans écraser verified_at/terminal_id initiaux
     if let Some(existing_idx) = next
         .course_attendances
         .iter()
         .position(|a| a.occurrence_id == occurrence.id)
     {
         if next.course_attendances[existing_idx].checklist_completed {
-            let existing = next.course_attendances[existing_idx].clone();
-            return Ok(Json(json!({
-                "status": "already_verified",
-                "attendance": existing
-            })));
+            return Err(err_resp(
+                StatusCode::CONFLICT,
+                "La présence et la checklist de cette séance sont déjà définitivement validées.",
+            ));
         }
 
         let updated = &mut next.course_attendances[existing_idx];
-        updated.terminal_id = terminal.id.clone();
-        updated.verified_at = now_iso;
+        updated.checklist_updated_at = Some(now_iso);
+        updated.checklist_updated_by = Some(coach_id.to_string());
+        updated.checklist_updated_terminal_id = Some(terminal.id.clone());
         updated.checklist_version = OFFICIAL_CHECKLIST_VERSION.into();
         updated.checklist_completed = checklist_completed;
         updated.checklist_answers = canonical_answers;
         if payload.note.is_some() {
             updated.note = payload.note;
         }
-        updated.idempotency_key = scoped_idempotency_key;
+        updated
+            .operation_fingerprints
+            .insert(scoped_idempotency_key, op_fingerprint);
         let updated_clone = updated.clone();
 
         append_audit(
@@ -421,6 +461,8 @@ pub async fn post_verify_course_presence(
 
     let attendance_id = format!("att-{}", rand::random::<u128>());
     let coach_display_name = coach_name(&db, coach_id);
+    let mut operation_fingerprints = HashMap::new();
+    operation_fingerprints.insert(scoped_idempotency_key.clone(), op_fingerprint);
 
     let attendance = CourseAttendanceRecord {
         id: attendance_id.clone(),
@@ -436,6 +478,10 @@ pub async fn post_verify_course_presence(
         checklist_answers: canonical_answers,
         note: payload.note,
         idempotency_key: scoped_idempotency_key,
+        checklist_updated_at: None,
+        checklist_updated_by: None,
+        checklist_updated_terminal_id: None,
+        operation_fingerprints,
     };
 
     next.course_attendances.push(attendance.clone());
@@ -473,8 +519,8 @@ pub async fn post_verify_course_presence(
 }
 
 /// Consultation des présences de cours par club :
-/// - Responsables RH/planning habilités (ORG04-37) : toutes les présences du club
-/// - Autres collaborateurs du club : uniquement leurs propres présences
+/// - Chaque présence est filtrée via ORG04-37 sur le coach cible et ses vraies équipes dans le club
+/// - Un collaborateur voit toujours ses propres présences dans son club
 pub async fn get_club_course_attendances(
     State(state): State<SharedState>,
     Path(raw_club): Path<String>,
@@ -491,29 +537,47 @@ pub async fn get_club_course_attendances(
         ));
     }
 
-    let can_view_all = evaluate_permission(
-        &db,
-        &actor_id,
-        site_id,
-        "ORG04-37",
-        Some(PermissionTarget {
-            site_id: Some(site_id),
-            target_employee_id: Some(&actor_id),
-            target_team_ids: &[],
-            lock_state: None,
-        }),
-    )
-    .allowed;
-
+    let mut has_elevated_scope = false;
     let records: Vec<&CourseAttendanceRecord> = db
         .course_attendances
         .iter()
-        .filter(|a| a.site_id == site_id && (can_view_all || a.coach_id == actor_id))
+        .filter(|a| {
+            if a.site_id != site_id {
+                return false;
+            }
+            if a.coach_id == actor_id {
+                return true;
+            }
+            let target_teams: Vec<String> = db
+                .employees
+                .iter()
+                .find(|e| e.id == a.coach_id)
+                .and_then(|e| e.site_accesses.iter().find(|s| s.site_id == site_id))
+                .map(|s| s.team_ids.clone())
+                .unwrap_or_default();
+            let allowed = evaluate_permission(
+                &db,
+                &actor_id,
+                site_id,
+                "ORG04-37",
+                Some(PermissionTarget {
+                    site_id: Some(site_id),
+                    target_employee_id: Some(&a.coach_id),
+                    target_team_ids: &target_teams,
+                    lock_state: None,
+                }),
+            )
+            .allowed;
+            if allowed {
+                has_elevated_scope = true;
+            }
+            allowed
+        })
         .collect();
 
     Ok(Json(json!({
         "siteId": site_id,
-        "scope": if can_view_all { "club" } else { "self" },
+        "scope": if has_elevated_scope { "club" } else { "self" },
         "attendances": records
     })))
 }
@@ -820,22 +884,38 @@ mod tests {
             "Sonorisation, micro et playlist vérifiés"
         );
 
-        // 10. Idempotence : un rejeu avec la même clé renvoie already_verified
+        // 10a. Idempotence : un rejeu strictement identique avec la même clé renvoie already_verified
         let Json(res_idemp) = post_verify_course_presence(
             State(state.clone()),
             headers_chloe_salle_a.clone(),
             Json(VerifyPresencePayload {
                 occurrence_id: occurrence_id.clone(),
                 coach_id: "emp-chloe".into(),
-                checklist_answers: valid_answers,
-                note: None,
+                checklist_answers: valid_answers.clone(),
+                note: Some("Séance prête, adhérents en attente".into()),
                 idempotency_key: "idemp-07-complete".into(),
             }),
         )
         .await
-        .expect("replay must return already_verified");
+        .expect("identical replay must return already_verified");
 
         assert_eq!(res_idemp["status"], "already_verified");
+
+        // 10b. Conflit d'idempotence : même clé avec un contenu différent -> 409 Conflict
+        let err_idemp_conflict = post_verify_course_presence(
+            State(state.clone()),
+            headers_chloe_salle_a.clone(),
+            Json(VerifyPresencePayload {
+                occurrence_id: occurrence_id.clone(),
+                coach_id: "emp-chloe".into(),
+                checklist_answers: valid_answers,
+                note: Some("Contenu modifié sur même clé".into()),
+                idempotency_key: "idemp-07-complete".into(),
+            }),
+        )
+        .await
+        .expect_err("same idempotency key with different payload must return 409");
+        assert_eq!(err_idemp_conflict.0, StatusCode::CONFLICT);
 
         // 11. Cloisonnement lecture :
         // - Un collaborateur d'un autre club (Karim) est refusé (403)
