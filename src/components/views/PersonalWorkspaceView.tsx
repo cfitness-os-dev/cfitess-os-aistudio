@@ -689,6 +689,18 @@ function PersonalWorkspaceContent({
                 Les horaires sont enregistrés par le serveur pour votre compte
                 connecté.
               </p>
+              <p role="status" className="cf-muted">
+                {data.punchAvailability.openClubId &&
+                data.punchAvailability.openClubId !== club
+                  ? `Une prise de service est ouverte à ${data.punchAvailability.openClubId === "beynost" ? "Beynost" : "Carré de Soie"}. Revenez sur ce club pour poursuivre vos pointages.`
+                  : data.punchAvailability.allowedTypes.includes("fin_pause")
+                    ? "Pause en cours. Enregistrez la fin de pause pour reprendre votre service."
+                    : data.punchAvailability.allowedTypes.includes("depart")
+                      ? "Service en cours. Vous pouvez commencer une pause ou enregistrer votre départ."
+                      : data.punchAvailability.allowedTypes.includes("arrivee")
+                        ? "Aucun service en cours. Vous pouvez enregistrer votre arrivée."
+                        : "Votre situation de pointage nécessite une vérification par le responsable."}
+              </p>
               <div className="flex flex-wrap gap-2">
                 {[
                   ["arrivee", "Arrivée"],
@@ -699,7 +711,12 @@ function PersonalWorkspaceContent({
                   <button
                     key={type}
                     className={button}
-                    disabled={busy}
+                    disabled={
+                      busy ||
+                      !data.punchAvailability.allowedTypes.some(
+                        (allowed) => allowed === type,
+                      )
+                    }
                     onClick={() =>
                       void save(
                         { action: "punch", punchType: type },

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { validatePersonalResponse } from "./personalWorkspace";
 
 const payload = {
+  punchAvailability: { allowedTypes: ["arrivee"], openClubId: null },
   employeeId: "employee-a",
   clubId: "beynost",
   tasks: [],
@@ -30,6 +31,23 @@ test("personal workspace rejects another actor or club before rendering", () => 
       "beynost",
     ),
   );
+});
+test("personal clock rejects unavailable or forged command contracts", () => {
+  for (const punchAvailability of [
+    undefined,
+    { allowedTypes: ["rewrite_timestamp"], openClubId: null },
+    { allowedTypes: ["arrivee"], openClubId: "other-club" },
+  ]) {
+    assert.throws(
+      () =>
+        validatePersonalResponse(
+          { ...payload, punchAvailability },
+          "employee-a",
+          "beynost",
+        ),
+      /pointage/,
+    );
+  }
 });
 test("personal workspace rejects missing collections instead of rendering cached rows", () => {
   assert.throws(() =>
