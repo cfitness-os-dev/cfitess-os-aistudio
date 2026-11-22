@@ -722,7 +722,7 @@ export function AdminShell() {
                 }`}
               >
                 <RotateCcw className="w-3 h-3" />
-                <span>Reset démo</span>
+                <span>Réinitialiser</span>
               </button>
             )}
           </div>
@@ -1586,7 +1586,7 @@ export function AdminShell() {
                       className="py-2 px-2 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1 bg-slate-100 dark:bg-slate-800 cursor-pointer"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
-                      <span>Reset démo</span>
+                      <span>Réinitialiser</span>
                     </button>
                   )}
                 </div>

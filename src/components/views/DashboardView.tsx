@@ -2289,7 +2289,7 @@ export function DashboardView() {
                                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
                                 : 'bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200'
                             }`}
-                            title="Cliquer pour activer ou mettre en pause ce module en démonstration"
+                            title="Cliquer pour activer ou mettre en pause ce module"
                           >
                             <Power className="w-3 h-3" />
                             <span>{isModEnabled ? 'Actif' : 'En pause'}</span>
@@ -2308,7 +2308,7 @@ export function DashboardView() {
 
                       <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
                         <span className="text-[11px] text-slate-500 font-medium">
-                          Accès direct pour démonstration :
+                          Accès direct au module :
                         </span>
                         <button
                           type="button"
@@ -2571,7 +2571,7 @@ export function DashboardView() {
                     <th className="py-2.5 px-3">Limite de l&apos;ancien outil</th>
                     <th className="py-2.5 px-3">Module C.Fitness OS</th>
                     <th className="py-2.5 px-3">Nouveau Coût</th>
-                    <th className="py-2.5 px-3 text-right">Démonstration</th>
+                    <th className="py-2.5 px-3 text-right">Accès</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
