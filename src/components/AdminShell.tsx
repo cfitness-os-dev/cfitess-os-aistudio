@@ -1049,7 +1049,7 @@ export function AdminShell() {
                 </button>
               )}
 
-              {/* User Profile Pill (Thomas CLAUDE / Active User) */}
+              {/* Identité du collaborateur connecté */}
               <button
                 type="button"
                 onClick={() => {
@@ -1067,18 +1067,14 @@ export function AdminShell() {
                 }`}
               >
                 <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-500 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                  {currentUser.id === 'emp-mario'
-                    ? 'TC'
-                    : `${currentUser.firstName[0]}${currentUser.lastName[0]}`}
+                  {`${currentUser.firstName[0] || ''}${currentUser.lastName[0] || ''}`.toUpperCase()}
                 </div>
                 <div className="hidden sm:block text-left leading-tight">
                   <div className="text-xs font-bold">
-                    {currentUser.id === 'emp-mario'
-                      ? 'Thomas CLAUDE'
-                      : `${currentUser.firstName} ${currentUser.lastName}`}
+                    {`${currentUser.firstName} ${currentUser.lastName}`}
                   </div>
                   <div className="text-[10px] text-slate-400">
-                    {currentUser.id === 'emp-mario' ? 'Directeur Général' : currentUser.jobTitle}
+                    {currentUser.jobTitle}
                   </div>
                 </div>
                 <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden sm:block" />

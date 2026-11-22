@@ -494,7 +494,7 @@ export function EmployeeMobileShell() {
                 title="Profil & Tous les modules"
                 className="w-7 h-7 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-500 text-white text-[10px] font-bold flex items-center justify-center cursor-pointer"
               >
-                TC
+                {`${currentUser.firstName[0] || ''}${currentUser.lastName[0] || ''}`.toUpperCase()}
               </button>
             </div>
           </div>
@@ -2109,18 +2109,14 @@ export function EmployeeMobileShell() {
 
               <div className="hidden md:flex pt-3 border-t border-slate-200 dark:border-slate-800 items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-violet-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                  {currentUser.id === 'emp-mario'
-                    ? 'TC'
-                    : `${currentUser.firstName[0] || ''}${currentUser.lastName[0] || ''}`.toUpperCase()}
+                  {`${currentUser.firstName[0] || ''}${currentUser.lastName[0] || ''}`.toUpperCase()}
                 </div>
                 <div className="min-w-0">
                   <div className="text-xs font-bold truncate">
-                    {currentUser.id === 'emp-mario'
-                      ? 'Thomas CLAUDE'
-                      : `${currentUser.firstName} ${currentUser.lastName}`}
+                    {`${currentUser.firstName} ${currentUser.lastName}`}
                   </div>
                   <div className="text-[10px] text-slate-400 truncate">
-                    {currentUser.id === 'emp-mario' ? 'Directeur Général' : currentUser.jobTitle}
+                    {currentUser.jobTitle}
                   </div>
                 </div>
               </div>

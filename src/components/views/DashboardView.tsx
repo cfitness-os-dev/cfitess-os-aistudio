@@ -634,7 +634,7 @@ export function DashboardView() {
 
       {/* =====================================================================
           VOLET 0 (PAR DÉFAUT) : TABLEAU DE BORD VISUEL C.FITNESS OS
-          ("Bonjour Thomas ! 👋 — Voici la vue d'ensemble de vos deux clubs aujourd'hui.")
+          Accueil personnalisé pour le collaborateur connecté.
          ===================================================================== */}
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
@@ -650,7 +650,7 @@ export function DashboardView() {
                 >
                   <span>
                     Bonjour{' '}
-                    {currentUser.id === 'emp-mario' ? 'Thomas' : currentUser.firstName} !
+                    {currentUser.firstName} !
                   </span>
                   <span aria-hidden="true">👋</span>
                 </h1>
