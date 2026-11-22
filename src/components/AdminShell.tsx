@@ -323,6 +323,46 @@ export function AdminShell() {
   } = useCfos();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileMenuRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const drawer = mobileMenuRef.current;
+    const focusable = () => Array.from(drawer?.querySelectorAll<HTMLElement>(
+      'button:not(:disabled), select:not(:disabled), a[href], [tabindex="0"]'
+    ) ?? []).filter(element => element.getClientRects().length > 0);
+    focusable()[0]?.focus();
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setMobileMenuOpen(false);
+      } else if (event.key === 'Tab') {
+        const elements = focusable();
+        const first = elements[0];
+        const last = elements[elements.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }
+    };
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) setMobileMenuOpen(false);
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', handleKey);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleKey);
+      window.removeEventListener('resize', handleResize);
+      previousFocus?.focus();
+    };
+  }, [mobileMenuOpen]);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [numberedPlanExpanded, setNumberedPlanExpanded] = useState(false);
   const [selectedNavId, setSelectedNavId] = useState<string>('nav-dashboard');
@@ -369,6 +409,8 @@ export function AdminShell() {
       else setSelectedNavId('nav-agents-ia');
     } else if (activeSection === 'telephony') {
       setSelectedNavId('nav-marketing');
+    } else if (activeSection === 'social-web') {
+      setSelectedNavId('nav-social-web');
     } else if (activeSection === 'ats') {
       setSelectedNavId('nav-documents');
     } else if (activeSection === 'academy') {
@@ -467,6 +509,7 @@ export function AdminShell() {
           {/* Primary Active Item: Tableau de bord */}
           <button
             type="button"
+            aria-current={activeSection === 'dashboard' ? 'page' : undefined}
             onClick={() => {
               setSelectedNavId('nav-dashboard');
               setActiveSection('dashboard');
@@ -729,6 +772,8 @@ export function AdminShell() {
                 type="button"
                 onClick={() => setMobileMenuOpen(true)}
                 aria-label="Ouvrir le menu de navigation"
+                aria-expanded={mobileMenuOpen}
+                aria-controls="mobile-navigation-menu"
                 className={`lg:hidden min-h-[44px] min-w-[44px] rounded-xl border flex items-center justify-center cursor-pointer shrink-0 ${
                   isDark
                     ? 'border-slate-700 text-slate-200 hover:bg-slate-800'
@@ -878,21 +923,6 @@ export function AdminShell() {
                 }`}
               >
                 {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4 text-slate-600" />}
-              </button>
-
-              {/* Quick Mobile / Tablet App Preview Button (Image 2) */}
-              <button
-                type="button"
-                onClick={() => setShellMode('employe')}
-                title="Ouvrir la vue Mobile & Tablette (Accueil & Planning)"
-                className={`hidden sm:flex min-h-[38px] px-3 py-1.5 rounded-xl border text-xs font-semibold items-center gap-1.5 cursor-pointer transition-colors ${
-                  isDark
-                    ? 'bg-[#1A2033] border-slate-700 text-slate-200 hover:bg-slate-800'
-                    : 'bg-violet-50 border-violet-200 text-violet-700 hover:bg-violet-100'
-                }`}
-              >
-                <Smartphone className="w-3.5 h-3.5 text-violet-500" />
-                <span className="hidden lg:inline">Vue Mobile &amp; Tablette</span>
               </button>
 
               {/* Mode Épuré / Vue Technique Toggle (visible uniquement quand Mon Espace 0766 est déverrouillé) */}
@@ -1269,31 +1299,33 @@ export function AdminShell() {
 
           <button
             type="button"
+            aria-current={activeSection === 'devices' && navSubTarget !== 'finances' ? 'page' : undefined}
             onClick={() => {
               const canAdherents = isSectionAllowedForRole('devices', currentUser.role) && currentUser.role !== 'coach' && currentUser.role !== 'apprenti';
               setSelectedNavId(canAdherents ? 'nav-adherents' : 'nav-checkup');
               setActiveSection('devices', canAdherents ? 'adherents' : 'checkup');
             }}
             className={`min-h-[48px] rounded-xl flex flex-col items-center justify-center gap-0.5 text-[10px] font-bold cursor-pointer ${
-              activeSection === 'devices'
+              activeSection === 'devices' && navSubTarget !== 'finances'
                 ? 'text-violet-500 bg-violet-500/10'
                 : 'opacity-75 hover:opacity-100'
             }`}
           >
             <Users className="w-4 h-4" />
-            <span className="truncate">
+            <span className="max-w-full text-center leading-tight">
               {currentUser.role === 'coach' || currentUser.role === 'apprenti' ? 'Bilans' : 'Adhérents – CRM'}
             </span>
           </button>
 
           <button
             type="button"
+            aria-current={activeSection === 'planning-hr' && navSubTarget !== 'cours-collectifs' ? 'page' : undefined}
             onClick={() => {
               setSelectedNavId('nav-planning');
               setActiveSection('planning-hr', 'planning');
             }}
             className={`min-h-[48px] rounded-xl flex flex-col items-center justify-center gap-0.5 text-[10px] font-bold cursor-pointer ${
-              activeSection === 'planning-hr'
+              activeSection === 'planning-hr' && navSubTarget !== 'cours-collectifs'
                 ? 'text-violet-500 bg-violet-500/10'
                 : 'opacity-75 hover:opacity-100'
             }`}
@@ -1304,12 +1336,13 @@ export function AdminShell() {
 
           <button
             type="button"
+            aria-current={activeSection === 'my-day' && navSubTarget === 'personal' ? 'page' : undefined}
             onClick={() => {
               setSelectedNavId('nav-mon-compte');
               setActiveSection('my-day', 'personal');
             }}
             className={`min-h-[48px] rounded-xl flex flex-col items-center justify-center gap-0.5 text-[10px] font-bold cursor-pointer ${
-              activeSection === 'my-day'
+              activeSection === 'my-day' && navSubTarget === 'personal'
                 ? 'text-violet-500 bg-violet-500/10'
                 : 'opacity-75 hover:opacity-100'
             }`}
@@ -1321,6 +1354,8 @@ export function AdminShell() {
           <button
             type="button"
             onClick={() => setMobileMenuOpen(true)}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-navigation-menu"
             className={`min-h-[48px] rounded-xl flex flex-col items-center justify-center gap-0.5 text-[10px] font-bold cursor-pointer ${
               mobileMenuOpen
                 ? 'text-violet-500 bg-violet-500/10'
@@ -1341,6 +1376,11 @@ export function AdminShell() {
             onClick={() => setMobileMenuOpen(false)}
           />
           <div
+            id="mobile-navigation-menu"
+            ref={mobileMenuRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu de navigation"
             className={`relative w-72 max-w-[85vw] h-full flex flex-col justify-between p-4 z-10 overflow-y-auto ${
               isDark ? 'bg-[#111522] text-white' : 'bg-white text-slate-900'
             }`}
@@ -1449,6 +1489,7 @@ export function AdminShell() {
                   return (
                     <button
                       key={item.id}
+                      aria-current={selectedNavId === item.id ? 'page' : undefined}
                       onClick={() => {
                         handleVisualItemClick(item);
                         setMobileMenuOpen(false);
@@ -1460,7 +1501,7 @@ export function AdminShell() {
                       }`}
                     >
                       <Icon className={`w-4 h-4 shrink-0 ${item.iconColor}`} />
-                      <span className="truncate">{item.label}</span>
+                      <span className="text-left leading-snug">{item.label}</span>
                     </button>
                   );
                 })}

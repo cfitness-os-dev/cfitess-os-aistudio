@@ -157,7 +157,7 @@ export function TelephonyView() {
       screenPopProspect &&
       m.firstName.toLowerCase() === screenPopProspect.firstName.toLowerCase() &&
       m.lastName.toLowerCase() === screenPopProspect.lastName.toLowerCase()
-  ) || heitzMembers[0];
+  );
 
   const canSupervise = currentUser.role === 'admin' || currentUser.role === 'manager';
 
@@ -1113,7 +1113,7 @@ export function TelephonyView() {
                 <div className="flex items-center justify-between text-violet-600 font-bold">
                   <span>CTI Screen-Pop (CRM &amp; Heitz)</span>
                   <span className="font-mono text-[10px]">
-                    {screenPopProspect ? `Stage : ${screenPopProspect.stage}` : 'Adhérent Heitz'}
+                    {screenPopProspect ? `Stage : ${screenPopProspect.stage}` : screenPopHeitzMember ? 'Adhérent Heitz importé' : 'Aucune correspondance'}
                   </span>
                 </div>
                 {screenPopProspect ? (
@@ -1128,7 +1128,7 @@ export function TelephonyView() {
                       </span>
                     )}
                   </div>
-                ) : (
+                ) : screenPopHeitzMember ? (
                   <div className="text-slate-600">
                     <span className="font-bold text-slate-900">
                       {screenPopHeitzMember.firstName} {screenPopHeitzMember.lastName}
@@ -1145,6 +1145,8 @@ export function TelephonyView() {
                       {screenPopHeitzMember.finBalanceEur.toFixed(2)} €
                     </span>
                   </div>
+                ) : (
+                  <p className="text-slate-600">Aucun dossier correspondant disponible. Consultez le CRM ou HeitzSystem.</p>
                 )}
               </div>
 
