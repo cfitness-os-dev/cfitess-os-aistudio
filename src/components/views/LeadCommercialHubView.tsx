@@ -1,3 +1,4 @@
+import { LeadScenariosView } from "./LeadScenariosView";
 import { useLeadSettings } from '../useLeadSettings';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -694,10 +695,6 @@ export function LeadCommercialHubView({
   const [smsDraftText, setSmsDraftText] = useState(
     'Bonjour %prenom%, C.Fitness %club% vous rappelle votre séance le %rdv-date% à %rdv-heure%. STOP au 36xxx.'
   );
-  const [scenarioMode, setScenarioMode] = useState<'Automatique' | 'Manuel'>('Automatique');
-  const [scenarioState, setScenarioState] = useState<'Actif' | 'Verrouillé' | 'Inactif'>('Actif');
-  const [scenarioStepUnit, setScenarioStepUnit] = useState<'Minutes' | 'Heures' | 'Jours'>('Minutes');
-  const [scenarioStepDelay, setScenarioStepDelay] = useState(5);
 
   // Tab 7 : Statistiques, Ventes & Formulaires
   const [analyticsSubTab, setAnalyticsSubTab] = useState<'stats' | 'sales' | 'forms'>('stats');
@@ -2566,11 +2563,11 @@ export function LeadCommercialHubView({
             <div className="space-y-4">
               <div className="cf-card p-3 flex flex-wrap gap-1.5">
                 {[
-                  { id: 'models', label: '1. Modèles (12 blocs / 18 polices)' },
-                  { id: 'campaigns', label: '2. Campagnes (Email 4 étapes & SMS)' },
-                  { id: 'utm', label: '3. Campagnes UTM' },
-                  { id: 'scenarios', label: '4. Scénarios (SC-01/02 & WA-01)' },
-                  { id: 'logs', label: '5-6. SMS envoyés & Emails échangés' },
+                  { id: 'models', label: 'Modèles de messages' },
+                  { id: 'campaigns', label: 'Campagnes' },
+                  { id: 'utm', label: 'Suivi des campagnes' },
+                  { id: 'scenarios', label: 'Scénarios' },
+                  { id: 'logs', label: 'Historique des échanges' },
                 ].map((sub) => (
                   <button
                     key={sub.id}
@@ -3082,71 +3079,7 @@ export function LeadCommercialHubView({
               )}
 
               {commSubTab === 'scenarios' && (
-                <div className="cf-card p-4 space-y-3 text-xs">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-sm font-extrabold flex items-center gap-2">
-                      <GitBranch className="w-4 h-4 text-emerald-400" />
-                      Scénarios Automatique / Manuel · Étapes SC-01 / SC-02 &amp; Verrouillage
-                    </h3>
-                    <div className="flex gap-1.5">
-                      {(['Actif', 'Verrouillé', 'Inactif'] as const).map((st) => (
-                        <button
-                          key={st}
-                          type="button"
-                          onClick={() => setScenarioState(st)}
-                          className={`px-2.5 py-1 rounded-lg font-bold cursor-pointer ${
-                            scenarioState === st ? 'bg-violet-600 text-white' : 'bg-slate-800 text-slate-300'
-                          }`}
-                        >
-                          {st}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-                    <label>
-                      Mode d&apos;entrée
-                      <select
-                        value={scenarioMode}
-                        onChange={(e) => setScenarioMode(e.target.value as 'Automatique' | 'Manuel')}
-                        className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700"
-                      >
-                        <option value="Automatique">Automatique (Source + Commercial)</option>
-                        <option value="Manuel">Manuel (Conditions source masquées)</option>
-                      </select>
-                    </label>
-                    <label>
-                      Délai nouvelle étape (SC-02)
-                      <input
-                        type="number"
-                        min={1}
-                        value={scenarioStepDelay}
-                        onChange={(e) => setScenarioStepDelay(Number(e.target.value) || 1)}
-                        className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700"
-                      />
-                    </label>
-                    <label>
-                      Unité de délai (SC-02)
-                      <select
-                        value={scenarioStepUnit}
-                        onChange={(e) =>
-                          setScenarioStepUnit(e.target.value as 'Minutes' | 'Heures' | 'Jours')
-                        }
-                        className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700"
-                      >
-                        <option value="Minutes">Minutes</option>
-                        <option value="Heures">Heures</option>
-                        <option value="Jours">Jours</option>
-                      </select>
-                    </label>
-                  </div>
-                  <div className="p-2.5 rounded-lg bg-slate-900/70 border border-slate-800">
-                    État actuel : <strong>{scenarioState}</strong>{' '}
-                    {scenarioState === 'Verrouillé' &&
-                      '— Aucune nouvelle entrée autorisée, les contacts déjà engagés terminent leur parcours.'}
-                    {' · '}Étape existante (SC-01) : type et délai grisés en édition, contenu email éditable séparément.
-                  </div>
-                </div>
+                <LeadScenariosView key={`${currentUser.id}:${clubFilter}`} actorId={currentUser.id} clubId={clubFilter === 'all' ? null : clubFilter} onActivitiesChanged={syncLeadWorkspaceFromServer} />
               )}
 
               {commSubTab === 'logs' && (

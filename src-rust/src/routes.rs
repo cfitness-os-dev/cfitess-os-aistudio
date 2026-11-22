@@ -181,6 +181,7 @@ pub struct RestoreBackupPayload {
 
 pub fn api_router(state: SharedState) -> Router {
     Router::new()
+        .merge(crate::lead_scenarios::router())
         .route("/api/health", get(health))
         .route("/api/hr/clock-policies/:club_id", get(crate::clock_policy::get_policies))
         .route("/api/hr/clock-policies/:club_id/:employee_id", put(crate::clock_policy::put_policy))

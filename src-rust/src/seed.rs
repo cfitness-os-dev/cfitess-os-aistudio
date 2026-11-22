@@ -714,6 +714,7 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
     }
 
     AppDatabaseState {
+        lead_scenarios: Default::default(),
         version: "0.2.0-lot2-fictif".into(),
         org02_billing_policy: "exclude_skello_saas".into(),
         organization: Organization {
@@ -2014,6 +2015,7 @@ pub fn create_production_initial_state() -> AppDatabaseState {
     preferences_by_employee.insert(admin_id.clone(), prod_prefs);
 
     AppDatabaseState {
+        lead_scenarios: Default::default(),
         version: "1.0.0-production".into(),
         org02_billing_policy: "exclude_skello_saas".into(),
         organization: Organization {

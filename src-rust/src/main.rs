@@ -12,6 +12,7 @@ mod clock_policy_tests;
 #[cfg(test)]
 mod hr_manager_tests;
 mod lead_automations;
+mod lead_scenarios;
 mod lead_settings;
 mod leave_requests;
 mod maintenance;
@@ -128,6 +129,7 @@ async fn main() {
         .fallback(ServeFile::new(index_file));
 
     lead_automations::spawn_lead_automation_scheduler(shared.clone());
+    lead_scenarios::spawn_worker(shared.clone());
 
     let app: Router = api_router(shared)
         .fallback_service(spa_service)

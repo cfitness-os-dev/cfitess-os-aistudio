@@ -1,0 +1,116 @@
+import { useEffect, useRef, useState } from 'react';
+import { Plus, Save, ArrowUp, ArrowDown, Trash2, GitBranch, RefreshCw } from 'lucide-react';
+import { validateScenarioDefinition, type ScenarioClubId, type ScenarioDefinition, type ScenarioStep, type ScenarioStepType } from '../../domain/leadScenarioDefinitions';
+import { newScenarioOperationId, scenarioRequest, type LeadScenario, type ScenarioCommand, type ScenarioWorkspace } from '../../domain/leadScenariosApi';
+
+const labels: Record<ScenarioStepType, string> = { email: 'Envoyer un email', sms: 'Envoyer un SMS', whatsapp: 'Envoyer un WhatsApp', email_task: 'Tâche : envoyer un email', sms_task: 'Tâche : envoyer un SMS', call_task: 'Tâche : appeler le contact' };
+const inputClass = 'w-full rounded-lg border border-slate-500/40 bg-transparent px-3 py-2 min-h-[44px]';
+const buttonClass = 'rounded-lg border border-slate-500/40 px-3 py-2 min-h-[44px] disabled:opacity-40 text-sm';
+const date = (value: string) => new Date(value).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });
+const nameOfClub = (club: ScenarioClubId) => club === 'beynost' ? 'Beynost' : 'Carré de Soie';
+function emptyDefinition(clubId: ScenarioClubId): ScenarioDefinition {
+  return { schemaVersion: 1, clubId, name: '', mode: 'manual', active: false, enrollmentLocked: false, conditions: null, steps: [{ id: newScenarioOperationId(), type: 'email', enabled: true, delay: { amount: 0, unit: 'minutes' }, templateId: null, content: '', comment: '' }] };
+}
+export function LeadScenariosView({ actorId, clubId, onActivitiesChanged }: { actorId: string; clubId: ScenarioClubId | null; onActivitiesChanged?: () => Promise<void> }) {
+  const [workspace, setWorkspace] = useState<ScenarioWorkspace | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<ScenarioDefinition | null>(null);
+  const [revision, setRevision] = useState<number | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [contactId, setContactId] = useState('');
+  const [historyId, setHistoryId] = useState('');
+  const [stopReason, setStopReason] = useState('');
+  const [copyClub, setCopyClub] = useState<ScenarioClubId>('beynost');
+  const seq = useRef(0);
+  const request = useRef<AbortController | null>(null);
+  const retry = useRef<{ body: string; id: string } | null>(null);
+  useEffect(() => {
+    const ticket = ++seq.current; request.current?.abort(); const controller = new AbortController(); request.current = controller;
+    setWorkspace(null); setDraft(null); setSelectedId(null); setDirty(false); setRevision(null); retry.current = null; setError(null); setNotice(null);
+    if (!clubId) return;
+    setCopyClub(clubId === 'beynost' ? 'carre-de-soie' : 'beynost'); setBusy(true);
+    void scenarioRequest(actorId, clubId, undefined, undefined, controller.signal).then(data => { if (ticket === seq.current) setWorkspace(data); }).catch(err => { if (!controller.signal.aborted && ticket === seq.current) setError(err.message); }).finally(() => { if (ticket === seq.current) setBusy(false); });
+    return () => { seq.current++; controller.abort(); };
+  }, [actorId, clubId]);
+  const selected = workspace?.scenarios.find(s => s.id === selectedId);
+  const enrollments = workspace?.enrollments.filter(e => e.scenarioId === selectedId) ?? [];
+  const history = enrollments.find(e => e.id === historyId);
+  const select = (scenario: LeadScenario | null) => {
+    if (dirty && !window.confirm('Abandonner les modifications non enregistrées ?')) return;
+    setSelectedId(scenario?.id ?? null); setDraft(scenario ? structuredClone(scenario.draft) : clubId ? emptyDefinition(clubId) : null); setRevision(scenario?.revision ?? null); setDirty(false); setError(null); setNotice(null); setHistoryId(''); setContactId(''); retry.current = null;
+  };
+  const edit = (patch: Partial<ScenarioDefinition>) => { setDraft(value => value ? { ...value, ...patch } : value); setDirty(true); setNotice(null); };
+  const stepEdit = (index: number, patch: Partial<ScenarioStep>) => { if (draft) edit({ steps: draft.steps.map((s, i) => i === index ? { ...s, ...patch } : s) }); };
+  const act = async (command?: ScenarioCommand) => {
+    if (!clubId || busy) return;
+    const ticket = ++seq.current; const controller = new AbortController(); request.current?.abort(); request.current = controller; setBusy(true); setError(null); setNotice(null);
+    const body = command ? JSON.stringify(command) : '';
+    if (command && retry.current?.body !== body) retry.current = { body, id: newScenarioOperationId() };
+    try {
+      const data = await scenarioRequest(actorId, clubId, command, retry.current?.id, controller.signal);
+      if (ticket !== seq.current) return;
+      setWorkspace(data); retry.current = null;
+      if (command?.action === 'save') {
+        const saved = command.scenarioId ? data.scenarios.find(s => s.id === command.scenarioId) : data.scenarios[data.scenarios.length - 1];
+        if (saved) { setSelectedId(saved.id); setDraft(structuredClone(saved.draft)); setRevision(saved.revision); setDirty(false); }
+      } else if (selectedId) {
+        const updated = data.scenarios.find(s => s.id === selectedId); if (updated) { setRevision(updated.revision); if (!dirty) setDraft(structuredClone(updated.draft)); }
+      }
+      if (command) setNotice(command.action === 'run' ? 'Vérification terminée. Les messages sont simulés ; les tâches sont enregistrées dans les Activités.' : command.action === 'copy' ? 'Copie créée en brouillon dans le club choisi, sans activation. Vérifiez son ciblage avant publication.' : 'Modification enregistrée sur le serveur.');
+      if (!command || command.action === 'run') {
+        try { await onActivitiesChanged?.(); }
+        catch { setError('Le scénario est confirmé sur le serveur. L’actualisation des Activités a échoué : ouvrez cette rubrique pour les recharger.'); }
+      }
+    } catch (err) { if (!controller.signal.aborted && ticket === seq.current) setError(err instanceof Error ? err.message : 'Enregistrement non confirmé. Votre saisie est conservée.'); }
+    finally { if (ticket === seq.current) setBusy(false); }
+  };
+  const save = () => {
+    if (!draft || !workspace) return;
+    const result = validateScenarioDefinition(draft, { clubId: workspace.clubId, statusIds: workspace.statusIds, sourceIds: workspace.sources, templates: [] });
+    if (!result.ok) { setError(result.issues.map(i => i.message).filter((v, i, all) => all.indexOf(v) === i).join(' ')); return; }
+    void act({ action: 'save', scenarioId: selectedId, expectedRevision: revision, definition: result.value });
+  };
+  const stateAction = (active: boolean, enrollmentLocked: boolean) => { if (selected) void act({ action: 'status', scenarioId: selected.id, expectedRevision: selected.revision, active, enrollmentLocked }); };
+  if (!clubId) return <div className="cf-card p-5">Sélectionnez un club dans le menu de l’application pour gérer ses scénarios.</div>;
+  const shown = workspace?.scenarios.filter(s => s.draft.name.toLowerCase().includes(search.toLowerCase()) && (filter === 'all' || (filter === 'active' && s.active && !s.archived) || (filter === 'draft' && !s.versions.length) || (filter === 'archived' && s.archived))) ?? [];
+  return <section className="space-y-4" aria-label="Scénarios commerciaux" aria-busy={busy}>
+    <header className="cf-card p-4 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-bold flex gap-2 items-center"><GitBranch aria-hidden="true" size={20} />Scénarios</h2><p className="text-sm cf-muted">{nameOfClub(clubId)} · Automatisez le suivi, les messages et les tâches de votre équipe.</p></div><div className="flex flex-wrap gap-2"><button className={buttonClass} disabled={busy} onClick={() => void act()}><RefreshCw className="inline mr-2" size={16} />Actualiser</button><button className={buttonClass} disabled={busy || !workspace} onClick={() => select(null)}><Plus className="inline mr-2" size={16} />Créer un scénario</button></div></header>
+    <p className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm">{workspace?.simulationAvailable ? 'Démonstration : les messages ne sont pas envoyés. Les tâches créées et la progression sont enregistrées sur le serveur.' : 'L’exécution simulée est désactivée dans cet environnement. Aucun envoi fournisseur n’est raccordé.'}</p>
+    {error && <div role="alert" className="p-3 border border-rose-500 rounded-lg text-rose-400">{error}</div>}{notice && <div role="status" className="p-3 border border-emerald-500 rounded-lg text-emerald-400">{notice}</div>}
+    {!workspace && !busy && <button className={buttonClass} onClick={() => void act()}>Réessayer le chargement</button>}
+    {workspace && <div className="grid xl:grid-cols-[minmax(220px,1fr)_minmax(0,3fr)] gap-4">
+      <aside className="cf-card p-4 space-y-3"><label className="block text-sm">Rechercher un scénario<input className={inputClass} value={search} onChange={e => setSearch(e.target.value)} /></label><label className="block text-sm">Afficher<select className={inputClass} value={filter} onChange={e => setFilter(e.target.value)}><option value="all">Tous</option><option value="active">Actifs</option><option value="draft">Brouillons</option><option value="archived">Archivés</option></select></label>
+        {!shown.length && <p className="text-sm cf-muted">Aucun scénario dans cette vue.</p>}{shown.map(s => <button key={s.id} className={`w-full text-left p-3 rounded-xl border ${selectedId === s.id ? 'border-violet-500 bg-violet-500/10' : 'border-slate-500/30'}`} disabled={busy} onClick={() => select(s)}><strong className="block break-words">{s.draft.name}</strong><span className="text-xs cf-muted">{s.draft.mode === 'manual' ? 'Manuel' : 'Automatique'} · {s.archived ? 'Archivé' : s.active ? 'Actif' : 'Inactif'}{s.enrollmentLocked ? ' · Nouvelles inscriptions verrouillées' : ''}<br />{s.versions.length ? `Version publiée ${s.versions.length}` : 'Brouillon'} · {workspace.enrollments.filter(e => e.scenarioId === s.id && e.status === 'running').length} contact(s) en cours</span></button>)}
+      </aside>
+      <div className="min-w-0 space-y-4">{!draft ? <div className="cf-card p-6">Ouvrez un scénario ou créez votre premier parcours.</div> : <>
+        <div className="cf-card p-4 space-y-4"><div className="flex flex-wrap justify-between gap-2"><h3 className="font-bold">{selected ? 'Modifier le brouillon' : 'Nouveau scénario'}</h3><span className="text-xs cf-muted">{dirty ? 'Modifications non enregistrées' : selected ? 'Brouillon enregistré' : 'Non enregistré'}</span></div>
+          <fieldset disabled={busy || selected?.archived} className="space-y-4"><label className="block text-sm">Nom du scénario<input className={inputClass} maxLength={120} value={draft.name} onChange={e => edit({ name: e.target.value })} /></label>
+            <label className="block text-sm">Mode d’inscription<select className={inputClass} value={draft.mode} onChange={e => edit({ mode: e.target.value as 'automatic' | 'manual', conditions: e.target.value === 'manual' ? null : { statusIds: [workspace.statusIds[0]], sourceIds: [], requireAssignedCommercial: true } })}><option value="manual">Manuel — inscrire un contact depuis la liste</option><option value="automatic">Automatique — quand les conditions sont réunies</option></select></label>
+            {draft.mode === 'automatic' && draft.conditions && <div className="rounded-xl border border-slate-500/30 p-3 space-y-3"><h4 className="font-semibold">Conditions d’entrée</h4><p className="text-xs cf-muted">Le contact doit correspondre à un statut sélectionné et à une source sélectionnée. Sans source cochée, toutes les sources du club sont acceptées.</p><fieldset><legend className="text-sm">Statuts de ciblage</legend><div className="grid sm:grid-cols-2 gap-2 mt-2">{Array.from(new Set([...workspace.statusIds, ...draft.conditions!.statusIds])).map(status => <label key={status} className="flex gap-2 text-sm items-center"><input type="checkbox" checked={draft.conditions!.statusIds.includes(status)} onChange={e => edit({ conditions: { ...draft.conditions!, statusIds: e.target.checked ? [...draft.conditions!.statusIds, status] : draft.conditions!.statusIds.filter(v => v !== status) } })} />{status}</label>)}</div></fieldset><fieldset><legend className="text-sm">Sources</legend><div className="flex flex-wrap gap-2 mt-2">{Array.from(new Set([...workspace.sources, ...draft.conditions!.sourceIds])).map(source => <label key={source} className="flex gap-2 text-sm items-center"><input type="checkbox" checked={draft.conditions!.sourceIds.includes(source)} onChange={e => edit({ conditions: { ...draft.conditions!, sourceIds: e.target.checked ? [...draft.conditions!.sourceIds, source] : draft.conditions!.sourceIds.filter(v => v !== source) } })} />{source}</label>)}</div></fieldset><label className="flex gap-2 text-sm items-center"><input type="checkbox" checked={draft.conditions.requireAssignedCommercial} onChange={e => edit({ conditions: { ...draft.conditions!, requireAssignedCommercial: e.target.checked } })} />Démarrer lorsqu’un commercial actif du club est assigné</label></div>}
+            <div className="space-y-3"><h4 className="font-semibold">Étapes du parcours</h4>{draft.steps.map((step, index) => <article key={step.id} className="rounded-xl border border-slate-500/30 p-3 space-y-3"><div className="flex flex-wrap justify-between gap-2"><strong>Étape {index + 1}</strong><div className="flex gap-1"><button type="button" className={buttonClass} aria-label={`Monter l’étape ${index + 1}`} disabled={index === 0} onClick={() => { const steps = [...draft.steps]; [steps[index - 1], steps[index]] = [steps[index], steps[index - 1]]; edit({ steps }); }}><ArrowUp size={16} /></button><button type="button" className={buttonClass} aria-label={`Descendre l’étape ${index + 1}`} disabled={index === draft.steps.length - 1} onClick={() => { const steps = [...draft.steps]; [steps[index + 1], steps[index]] = [steps[index], steps[index + 1]]; edit({ steps }); }}><ArrowDown size={16} /></button><button type="button" className={buttonClass} aria-label={`Supprimer l’étape ${index + 1}`} onClick={() => edit({ steps: draft.steps.filter((_, i) => i !== index) })}><Trash2 size={16} /></button></div></div>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={step.enabled} onChange={e => stepEdit(index, { enabled: e.target.checked })} />Étape activée</label><label className="block text-sm">Action<select className={inputClass} value={step.type} onChange={e => { const type = e.target.value as ScenarioStepType; stepEdit(index, { type, templateId: null, content: type.endsWith('_task') ? null : '', comment: type.endsWith('_task') ? step.comment || 'Contacter le prospect' : step.comment }); }}>{Object.entries(labels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+              <div className="grid sm:grid-cols-2 gap-3"><label className="block text-sm">{index === 0 ? 'Délai après inscription' : 'Délai après l’étape précédente'}<input type="number" min={0} max={525600} step={1} className={inputClass} value={step.delay.amount} onChange={e => stepEdit(index, { delay: { ...step.delay, amount: Number(e.target.value) } })} /></label><label className="block text-sm">Unité<select className={inputClass} value={step.delay.unit} onChange={e => stepEdit(index, { delay: { ...step.delay, unit: e.target.value as ScenarioStep['delay']['unit'] } })}><option value="minutes">Minutes</option><option value="hours">Heures</option><option value="days">Jours</option></select></label></div>
+              {!step.type.endsWith('_task') && <label className="block text-sm">Message<textarea className={inputClass} rows={3} value={step.content ?? ''} maxLength={20000} onChange={e => stepEdit(index, { content: e.target.value })} /></label>}<label className="block text-sm">{step.type.endsWith('_task') ? 'Consigne pour le commercial' : 'Commentaire interne'}<textarea className={inputClass} rows={2} maxLength={2000} value={step.comment} onChange={e => stepEdit(index, { comment: e.target.value })} /></label>
+              {step.type === 'whatsapp' && <p className="text-xs text-amber-500">L’étape est configurable, mais ne sera pas exécutée tant que le compte, les modèles et la conversation WhatsApp ne sont pas vérifiés.</p>}
+            </article>)}<button type="button" className={buttonClass} disabled={draft.steps.length >= 100} onClick={() => edit({ steps: [...draft.steps, { id: newScenarioOperationId(), type: 'call_task', enabled: true, delay: { amount: 0, unit: 'minutes' }, templateId: null, content: null, comment: 'Appeler le contact' }] })}><Plus className="inline mr-2" size={16} />Ajouter une étape</button></div>
+            <button type="button" className={`${buttonClass} bg-violet-600 text-white`} onClick={save}><Save className="inline mr-2" size={16} />Enregistrer le brouillon</button>
+          </fieldset>
+        </div>
+        {selected && <div className="cf-card p-4 space-y-3"><h3 className="font-bold">Publication et inscriptions</h3><p className="text-sm cf-muted">Publier fige une version. Les contacts déjà inscrits conservent leur version ; une modification du brouillon ne change pas leur parcours.</p><div className="flex flex-wrap gap-2"><button className={buttonClass} disabled={busy || dirty || selected.archived} onClick={() => void act({ action: 'publish', scenarioId: selected.id, expectedRevision: selected.revision })}>Publier une nouvelle version</button><button className={buttonClass} disabled={busy || !selected.versions.length || selected.archived} onClick={() => stateAction(!selected.active, selected.enrollmentLocked)}>{selected.active ? 'Désactiver et suspendre les parcours' : 'Activer le scénario'}</button><button className={buttonClass} disabled={busy || selected.archived} onClick={() => stateAction(selected.active, !selected.enrollmentLocked)}>{selected.enrollmentLocked ? 'Déverrouiller les nouvelles inscriptions' : 'Verrouiller les nouvelles inscriptions'}</button><button className={buttonClass} disabled={busy || selected.archived} onClick={() => { if (window.confirm('Archiver ce scénario ? Aucune nouvelle inscription ; les parcours actifs continuent.')) void act({ action: 'archive', scenarioId: selected.id, expectedRevision: selected.revision }); }}>Archiver</button></div><p className="text-xs cf-muted">Un scénario actif et verrouillé laisse finir les contacts engagés. Un scénario désactivé suspend les étapes en attente.</p>
+          <div className="flex flex-wrap gap-2 items-end"><label className="text-sm">Copier vers<select className={inputClass} value={copyClub} onChange={e => setCopyClub(e.target.value as ScenarioClubId)}><option value="carre-de-soie">Carré de Soie</option><option value="beynost">Beynost</option></select></label><button className={buttonClass} disabled={busy || dirty} onClick={() => void act({ action: 'copy', scenarioId: selected.id, expectedRevision: selected.revision, destinationClubId: copyClub })}>Copier en brouillon</button></div><p className="text-xs cf-muted">L’accès au club destinataire est vérifié. Les références sont conservées dans le brouillon. Remplacez celles qui ne sont pas disponibles dans le club destinataire avant publication.</p>
+          {selected.versions.at(-1)?.definition.mode === 'manual' && <div className="flex flex-wrap gap-2 items-end"><label className="text-sm flex-1 min-w-0">Inscrire un contact<select className={inputClass} value={contactId} onChange={e => setContactId(e.target.value)}><option value="">Choisir un contact du club</option>{workspace.prospects.map(p => <option key={p.id} value={p.id}>{p.name} · {p.status}</option>)}</select></label><button className={buttonClass} disabled={busy || !contactId || !selected.active || selected.enrollmentLocked || selected.archived} onClick={() => void act({ action: 'enroll', scenarioId: selected.id, prospectId: contactId })}>Inscrire</button></div>}
+          {selected.versions.at(-1)?.definition.mode === 'automatic' && <p className="text-sm">Les contacts admissibles sont inscrits par le serveur lors de la vérification des scénarios. Une seule inscription par contact et scénario.</p>}
+          <button className={buttonClass} disabled={busy || !workspace.simulationAvailable} onClick={() => void act({ action: 'run' })}>Vérifier les inscriptions et étapes à échéance</button>
+        </div>}
+        <div className="cf-card p-4 space-y-3"><h3 className="font-bold">Contacts engagés et historique</h3>{!enrollments.length && <p className="text-sm cf-muted">Aucun contact inscrit dans ce scénario.</p>}{enrollments.map(e => <button key={e.id} className={`${buttonClass} block w-full text-left`} onClick={() => { setHistoryId(e.id); setStopReason(''); }}><strong>{e.prospectName}</strong> · Version {e.version} · {e.status === 'running' ? 'En cours' : e.status === 'completed' ? 'Terminé' : 'Arrêté'}{e.status === 'running' && <span className="block text-xs">Prochaine échéance : {date(e.nextAt)}</span>}</button>)}
+          {history && <div className="space-y-3 border-t border-slate-500/30 pt-3"><h4 className="font-semibold">Parcours de {history.prospectName}</h4>{history.history.map((entry, i) => <div key={`${entry.stepId}-${i}`} className="rounded-lg p-3 bg-slate-500/10 text-sm"><span className="text-xs cf-muted">{date(entry.at)}</span><p>{entry.detail}</p>{entry.activityId && <span className="text-xs">Disponible dans les Activités du commercial.</span>}</div>)}{!history.history.length && <p className="text-sm">Première étape en attente.</p>}{history.status === 'running' && <div><label className="text-sm">Motif d’arrêt<input className={inputClass} value={stopReason} maxLength={2000} onChange={e => setStopReason(e.target.value)} /></label><button className={`${buttonClass} mt-2`} disabled={busy || !stopReason.trim()} onClick={() => void act({ action: 'stop', enrollmentId: history.id, reason: stopReason })}>Arrêter ce parcours</button></div>}</div>}
+        </div>
+      </> }</div>
+    </div>}
+  </section>;
+}
