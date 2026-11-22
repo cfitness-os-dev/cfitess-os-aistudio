@@ -72,7 +72,7 @@ fn can_manage_terminals(db: &AppDatabaseState, actor_id: &str, site_id: &str) ->
         db,
         actor_id,
         site_id,
-        "ORG04-29",
+        "ORG04-37",
         Some(PermissionTarget {
             site_id: Some(site_id),
             target_employee_id: Some(actor_id),
@@ -81,19 +81,25 @@ fn can_manage_terminals(db: &AppDatabaseState, actor_id: &str, site_id: &str) ->
         }),
     )
     .allowed
-        || evaluate_permission(
-            db,
-            actor_id,
-            site_id,
-            "ORG04-37",
-            Some(PermissionTarget {
-                site_id: Some(site_id),
-                target_employee_id: Some(actor_id),
-                target_team_ids: &[],
-                lock_state: None,
-            }),
-        )
-        .allowed
+}
+
+/// A shared device identity never replaces the employee's authenticated session.
+pub(crate) async fn authenticated_employee(
+    state: &SharedState,
+    headers: &HeaderMap,
+) -> Result<String, Failure> {
+    if !headers
+        .get("authorization")
+        .and_then(|v| v.to_str().ok())
+        .map(|v| v.starts_with("Bearer "))
+        .unwrap_or(false)
+    {
+        return Err(err_resp(
+            StatusCode::UNAUTHORIZED,
+            "Connectez-vous avec votre compte personnel pour cette action.",
+        ));
+    }
+    Ok(resolve_session_actor(state, headers).await?.0)
 }
 
 /// Lister les terminaux d'un club (réservé aux managers/admins habilités)
@@ -103,7 +109,7 @@ pub async fn get_club_terminals(
     headers: HeaderMap,
 ) -> Result<Json<Value>, Failure> {
     let (_, site_id) = club_site(&raw_club)?;
-    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let actor_id = authenticated_employee(&state, &headers).await?;
     let db = state.db.read().await;
 
     if !can_access_site_scope(&db, &actor_id, site_id)
@@ -111,7 +117,7 @@ pub async fn get_club_terminals(
     {
         return Err(err_resp(
             StatusCode::FORBIDDEN,
-            "Droits insuffisants pour administrer les terminaux de ce club (ORG04-29/37 requis).",
+            "Vos droits ne permettent pas d’administrer les appareils de pointage de ce club.",
         ));
     }
 
@@ -127,7 +133,6 @@ pub async fn get_club_terminals(
                 "roomLabel": t.room_label,
                 "label": t.label,
                 "status": t.status,
-                "pairingCode": t.pairing_code,
                 "hasSecret": t.device_secret_hash.is_some(),
                 "createdAt": t.created_at,
                 "pairedAt": t.paired_at,
@@ -147,7 +152,7 @@ pub async fn post_create_terminal(
     Json(payload): Json<CreateTerminalPayload>,
 ) -> Result<Json<Value>, Failure> {
     let (_, site_id) = club_site(&raw_club)?;
-    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let actor_id = authenticated_employee(&state, &headers).await?;
     let mut db = state.db.write().await;
 
     if !can_access_site_scope(&db, &actor_id, site_id)
@@ -171,6 +176,13 @@ pub async fn post_create_terminal(
         return Err(err_resp(
             StatusCode::BAD_REQUEST,
             "Indiquez une salle valide (1 à 100 caractères).",
+        ));
+    }
+    let room_id = payload.room_id.trim();
+    if room_id.is_empty() || room_id.chars().count() > 100 {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            "Indiquez un identifiant de salle valide (1 à 100 caractères).",
         ));
     }
 
@@ -295,7 +307,9 @@ pub async fn post_pair_terminal(
         &mut next,
         "SYSTEM_TERMINAL",
         "TERMINAL_PAIRED",
-        format!("Terminal {terminal_id} ({label}) appairé avec succès sur {site_id} / {room_label}"),
+        format!(
+            "Terminal {terminal_id} ({label}) appairé avec succès sur {site_id} / {room_label}"
+        ),
         &site_id,
         terminal_id,
         Some("pending_pairing".into()),
@@ -329,7 +343,7 @@ pub async fn post_revoke_terminal(
     Json(payload): Json<RevokeTerminalPayload>,
 ) -> Result<Json<Value>, Failure> {
     let (_, site_id) = club_site(&raw_club)?;
-    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let actor_id = authenticated_employee(&state, &headers).await?;
     let mut db = state.db.write().await;
 
     if !can_access_site_scope(&db, &actor_id, site_id)
@@ -358,7 +372,9 @@ pub async fn post_revoke_terminal(
     term.status = "revoked".into();
     term.pairing_code = None;
 
-    let reason = payload.reason.unwrap_or_else(|| "Révocation manuelle".into());
+    let reason = payload
+        .reason
+        .unwrap_or_else(|| "Révocation manuelle".into());
 
     append_audit(
         &mut next,
@@ -440,7 +456,8 @@ pub async fn get_terminal_whoami(
         "roomLabel": term.room_label,
         "label": term.label,
         "status": term.status,
-        "pairedAt": term.paired_at
+        "pairedAt": term.paired_at,
+        "photoCaptureAvailable": false
     })))
 }
 
@@ -453,23 +470,42 @@ pub struct TerminalPunchPayload {
     pub photo_proof: Option<String>,
 }
 
-/// Pointage certifié depuis un terminal physique authentifié
+/// Pointage serveur avec identité du terminal ET du salarié.
 pub async fn post_terminal_punch(
     State(state): State<SharedState>,
     headers: HeaderMap,
     Json(payload): Json<TerminalPunchPayload>,
 ) -> Result<Json<Value>, Failure> {
+    let actor_id = authenticated_employee(&state, &headers).await?;
+    if actor_id != payload.employee_id {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Vous ne pouvez pointer que pour votre propre compte.",
+        ));
+    }
     let mut db = state.db.write().await;
     let term = authenticate_terminal(&db, &headers).await?;
 
     let short_club = match term.site_id.as_str() {
         "club-carre-soie" => "carre-de-soie",
         "club-beynost" => "beynost",
-        _ => "carre-de-soie",
+        _ => {
+            return Err(err_resp(
+                StatusCode::FORBIDDEN,
+                "L’établissement de cet appareil n’est pas reconnu.",
+            ))
+        }
     };
 
+    if payload.photo_proof.is_some() {
+        return Err(err_resp(StatusCode::CONFLICT,"La capture et la conservation des photos ne sont pas encore disponibles. Aucun pointage avec photo n’a été confirmé."));
+    }
+
     let Some(employee) = db.employees.iter().find(|e| e.id == payload.employee_id) else {
-        return Err(err_resp(StatusCode::NOT_FOUND, "Collaborateur introuvable."));
+        return Err(err_resp(
+            StatusCode::NOT_FOUND,
+            "Collaborateur introuvable.",
+        ));
     };
 
     if !employee.active || !can_access_site_scope(&db, &payload.employee_id, &term.site_id) {
@@ -488,28 +524,23 @@ pub async fn post_terminal_punch(
         ));
     }
 
-    let mut person = db
-        .personal_workspace
-        .people
-        .get(&payload.employee_id)
-        .cloned()
-        .unwrap_or_else(|| json!({"timeEntries": []}));
+    let mut person = crate::personal_workspace::person(&db, &actor_id);
 
     let mut rows = person["timeEntries"]
         .as_array()
         .cloned()
         .unwrap_or_default();
     let last = rows.last();
-    let previous = last.and_then(|r| r["type"].as_str()).map(ToString::to_string);
-    let same_club = last.map(|r| r["clubId"] == short_club).unwrap_or(true);
-    let allowed: &[&str] = match previous.as_deref() {
-        None | Some("depart") => &["arrivee"],
-        Some("arrivee") | Some("fin_pause") if same_club => &["debut_pause", "depart"],
-        Some("debut_pause") if same_club => &["fin_pause"],
-        _ => &[],
-    };
-
-    if !allowed.contains(&payload.punch_type.as_str()) {
+    let previous = last
+        .and_then(|r| r["type"].as_str())
+        .map(ToString::to_string);
+    let availability = crate::personal_workspace::punch_availability(&person, short_club);
+    if !availability["allowedTypes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|value| value == &payload.punch_type)
+    {
         return Err(err_resp(
             StatusCode::CONFLICT,
             "Ce pointage ne suit pas le précédent. Vérifiez votre historique.",
@@ -527,7 +558,7 @@ pub async fn post_terminal_punch(
         "source": "terminal",
         "terminalId": term.id,
         "roomLabel": term.room_label,
-        "photoProofPresent": payload.photo_proof.is_some()
+        "photoProofPresent": false
     });
 
     rows.push(entry.clone());
@@ -544,10 +575,7 @@ pub async fn post_terminal_punch(
         "TERMINAL_PUNCH",
         format!(
             "Pointage {} enregistré depuis terminal {} ({}) - photo : {}",
-            payload.punch_type,
-            term.id,
-            term.room_label,
-            if payload.photo_proof.is_some() { "présente" } else { "non fournie" }
+            payload.punch_type, term.id, term.room_label, "non fournie"
         ),
         &term.site_id,
         &payload.employee_id,
@@ -565,7 +593,8 @@ pub async fn post_terminal_punch(
 
     Ok(Json(json!({
         "status": "recorded",
-        "entry": entry
+        "entry": entry,
+        "photoCaptureAvailable": false
     })))
 }
 
@@ -591,15 +620,23 @@ mod tests {
 
     async fn admin_headers(state: &SharedState) -> HeaderMap {
         let token = format!("admin-{}", rand::random::<u64>());
-        state
-            .sessions
-            .write()
-            .await
-            .insert(token.clone(), ("emp-mario".into(), Utc::now().timestamp() + 3600));
+        state.sessions.write().await.insert(
+            token.clone(),
+            ("emp-mario".into(), Utc::now().timestamp() + 3600),
+        );
         let mut headers = HeaderMap::new();
-        headers.insert(header::AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {token}")).unwrap());
-        headers.insert("x-cfitness-actor-id", HeaderValue::from_str("emp-mario").unwrap());
-        headers.insert("x-cfitness-site-id", HeaderValue::from_str("club-carre-soie").unwrap());
+        headers.insert(
+            header::AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {token}")).unwrap(),
+        );
+        headers.insert(
+            "x-cfitness-actor-id",
+            HeaderValue::from_str("emp-mario").unwrap(),
+        );
+        headers.insert(
+            "x-cfitness-site-id",
+            HeaderValue::from_str("club-carre-soie").unwrap(),
+        );
         headers
     }
 
@@ -656,7 +693,10 @@ mod tests {
 
         // 4. WhoAmI avec le jeton matériel authentifié
         let mut term_headers = HeaderMap::new();
-        term_headers.insert("x-cfitness-terminal-token", HeaderValue::from_str(&device_token).unwrap());
+        term_headers.insert(
+            "x-cfitness-terminal-token",
+            HeaderValue::from_str(&device_token).unwrap(),
+        );
         let Json(me) = get_terminal_whoami(State(state.clone()), term_headers.clone())
             .await
             .expect("whoami OK");
@@ -704,9 +744,18 @@ mod tests {
             ("emp-chloe".into(), Utc::now().timestamp() + 3600),
         );
         let mut coach_headers = HeaderMap::new();
-        coach_headers.insert(header::AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {coach_token}")).unwrap());
-        coach_headers.insert("x-cfitness-actor-id", HeaderValue::from_str("emp-chloe").unwrap());
-        coach_headers.insert("x-cfitness-site-id", HeaderValue::from_str("club-beynost").unwrap());
+        coach_headers.insert(
+            header::AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {coach_token}")).unwrap(),
+        );
+        coach_headers.insert(
+            "x-cfitness-actor-id",
+            HeaderValue::from_str("emp-chloe").unwrap(),
+        );
+        coach_headers.insert(
+            "x-cfitness-site-id",
+            HeaderValue::from_str("club-beynost").unwrap(),
+        );
 
         let err_coach = post_create_terminal(
             State(state.clone()),
@@ -776,8 +825,11 @@ mod tests {
             db.clock_terminals.push(term);
         }
 
-        let mut term_headers = HeaderMap::new();
-        term_headers.insert("x-cfitness-terminal-token", HeaderValue::from_str(token).unwrap());
+        let mut term_headers = admin_headers(&state).await;
+        term_headers.insert(
+            "x-cfitness-terminal-token",
+            HeaderValue::from_str(token).unwrap(),
+        );
 
         // 2. Par défaut en P0, terminal_allowed == false -> pointage refusé (403)
         let err_not_allowed = post_terminal_punch(
@@ -796,15 +848,25 @@ mod tests {
         // 3. Attribution explicite de la politique terminal_allowed pour Mario sur Carré de Soie
         {
             let mut db = state.db.write().await;
-            let mut policies = db.personal_workspace.clock_policies.get("emp-mario").cloned().unwrap_or_default();
-            policies.insert("carre-de-soie".into(), crate::clock_policy::ClockPolicy {
-                personal_allowed: false,
-                terminal_allowed: true,
-                revision: "rev-test".into(),
-                updated_at: Utc::now().to_rfc3339(),
-                updated_by: "emp-admin".into(),
-            });
-            db.personal_workspace.clock_policies.insert("emp-mario".into(), policies);
+            let mut policies = db
+                .personal_workspace
+                .clock_policies
+                .get("emp-mario")
+                .cloned()
+                .unwrap_or_default();
+            policies.insert(
+                "carre-de-soie".into(),
+                crate::clock_policy::ClockPolicy {
+                    personal_allowed: false,
+                    terminal_allowed: true,
+                    revision: "rev-test".into(),
+                    updated_at: Utc::now().to_rfc3339(),
+                    updated_by: "emp-admin".into(),
+                },
+            );
+            db.personal_workspace
+                .clock_policies
+                .insert("emp-mario".into(), policies);
         }
 
         // 4. Pointage d'arrivée réussi
@@ -814,7 +876,7 @@ mod tests {
             Json(TerminalPunchPayload {
                 employee_id: "emp-mario".into(),
                 punch_type: "arrivee".into(),
-                photo_proof: Some("data:image/jpeg;base64,simulated_camera_proof".into()),
+                photo_proof: None,
             }),
         )
         .await
@@ -823,7 +885,7 @@ mod tests {
         assert_eq!(res_ok["status"], "recorded");
         assert_eq!(res_ok["entry"]["source"], "terminal");
         assert_eq!(res_ok["entry"]["terminalId"], "term-cs-accueil");
-        assert_eq!(res_ok["entry"]["photoProofPresent"], true);
+        assert_eq!(res_ok["entry"]["photoProofPresent"], false);
 
         // 5. Deuxième arrivée consécutive refusée par le contrôle de transition (409 Conflict)
         let err_double = post_terminal_punch(

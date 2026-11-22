@@ -1,5 +1,7 @@
 mod auth_passwords;
 mod clock_terminals;
+#[cfg(test)]
+mod terminal_integrity_tests;
 mod employee_import;
 mod employee_lifecycle;
 mod heitz_members;

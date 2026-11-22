@@ -72,7 +72,7 @@ fn club(raw: &str) -> Result<(&'static str, &'static str), Failure> {
         _ => Err(bad("Club inconnu.")),
     }
 }
-fn person(db: &AppDatabaseState, actor: &str) -> Value {
+pub(crate) fn person(db: &AppDatabaseState, actor: &str) -> Value {
     db.personal_workspace.people.get(actor).cloned().unwrap_or_else(|| {
         let seed = fixture();
         let own = |key: &str| items(&seed, key).into_iter().filter(|row| row["employeeId"] == actor).collect::<Vec<_>>();
@@ -97,7 +97,7 @@ fn scoped_rows(person: &Value, key: &str, club_id: &str) -> Vec<Value> {
         .filter(|row| row["clubId"].is_null() || row["clubId"] == club_id)
         .collect()
 }
-fn punch_availability(data: &Value, club_id: &str) -> Value {
+pub(crate) fn punch_availability(data: &Value, club_id: &str) -> Value {
     let rows = items(data, "timeEntries");
     let last = rows.last();
     let previous = last.and_then(|r| r["type"].as_str());
