@@ -1,5 +1,5 @@
 use crate::models::AppDatabaseState;
-use crate::rbac::{can_access_site_scope, evaluate_permission, PermissionTarget};
+use crate::rbac::{can_access_site_scope, is_owner_or_super_admin};
 use crate::routes::{append_audit, err_resp, resolve_session_actor, SharedState};
 use crate::seed::persist_state;
 use axum::{
@@ -36,31 +36,7 @@ pub(crate) fn policy(db: &AppDatabaseState, employee: &str, club: &str) -> Clock
         .unwrap_or_default()
 }
 fn permitted(db: &AppDatabaseState, actor: &str, employee: &str, site: &str) -> bool {
-    if !can_access_site_scope(db, actor, site) || !can_access_site_scope(db, employee, site) {
-        return false;
-    }
-    let access = db
-        .employees
-        .iter()
-        .find(|e| e.id == employee)
-        .unwrap()
-        .site_accesses
-        .iter()
-        .find(|a| a.site_id == site)
-        .unwrap();
-    evaluate_permission(
-        db,
-        actor,
-        site,
-        "ORG04-37",
-        Some(PermissionTarget {
-            site_id: Some(site),
-            target_employee_id: Some(employee),
-            target_team_ids: &access.team_ids,
-            lock_state: None,
-        }),
-    )
-    .allowed
+    can_access_site_scope(db, employee, site) && is_owner_or_super_admin(db, actor, site)
 }
 async fn actor(state: &SharedState, headers: &HeaderMap) -> Result<String, Failure> {
     if !headers
