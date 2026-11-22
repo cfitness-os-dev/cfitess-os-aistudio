@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { parseLeadSettings } from './src/domain/leadSettings';
 import path from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig, type Connect, type Plugin } from 'vite';
@@ -136,15 +137,28 @@ function registerApiRoutes(middlewares: Connect.Server, engine: CFitnessApiEngin
 
       if (method === 'GET' && path.startsWith('/api/lead/settings/')) {
         const clubId = path.replace('/api/lead/settings/', '').trim();
-        const settings = mockLeadSettingsByClub[clubId] ?? mockLeadSettingsByClub['carre-de-soie'];
+        if (clubId !== 'carre-de-soie' && clubId !== 'beynost') {
+          sendJson(res, 404, { error: 'Club inconnu.' }); return;
+        }
+        const settings = mockLeadSettingsByClub[clubId];
         sendJson(res, 200, { ok: true, clubId, settings });
         return;
       }
 
       if (method === 'PUT' && path.startsWith('/api/lead/settings/')) {
         const clubId = path.replace('/api/lead/settings/', '').trim();
-        const body = (await readJsonBody(req)) as Record<string, unknown>;
-        mockLeadSettingsByClub[clubId] = { ...(mockLeadSettingsByClub[clubId] ?? {}), ...body };
+        if (clubId !== 'carre-de-soie' && clubId !== 'beynost') {
+          sendJson(res, 404, { error: 'Club inconnu.' }); return;
+        }
+        try {
+          const settings = parseLeadSettings(await readJsonBody(req), clubId);
+          if (settings.smsCredits !== mockLeadSettingsByClub[clubId].smsCredits) {
+            sendJson(res, 400, { error: 'Le solde SMS est en lecture seule.' }); return;
+          }
+          mockLeadSettingsByClub[clubId] = { ...settings };
+        } catch (error) {
+          sendJson(res, 400, { error: error instanceof Error ? error.message : 'Réglages invalides.' }); return;
+        }
         sendJson(res, 200, { ok: true, clubId, settings: mockLeadSettingsByClub[clubId] });
         return;
       }

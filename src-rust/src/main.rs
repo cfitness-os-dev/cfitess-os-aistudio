@@ -3,6 +3,7 @@ mod employee_import;
 mod employee_lifecycle;
 mod heitz_members;
 mod lead_automations;
+mod lead_settings;
 mod maintenance;
 mod missions;
 mod models;

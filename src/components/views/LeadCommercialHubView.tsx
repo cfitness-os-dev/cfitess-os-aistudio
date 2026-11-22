@@ -1,3 +1,4 @@
+import { useLeadSettings } from '../useLeadSettings';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Activity as ActivityIcon,
@@ -411,9 +412,13 @@ export function LeadCommercialHubView({
   });
   const [emailSavedNotice, setEmailSavedNotice] = useState<string | null>(null);
 
-  const [selectedProfileClubId, setSelectedProfileClubId] = useState<'carre-de-soie' | 'beynost'>(() =>
+  const [requestedProfileClubId, setSelectedProfileClubId] = useState<'carre-de-soie' | 'beynost'>(() =>
     clubFilter === 'beynost' ? 'beynost' : 'carre-de-soie'
   );
+  const settingsClubChoices = clubFilter !== 'all' && allowedClubIds.includes(clubFilter)
+    ? [clubFilter] : [...new Set(allowedClubIds)];
+  const selectedProfileClubId = settingsClubChoices.includes(requestedProfileClubId)
+    ? requestedProfileClubId : settingsClubChoices[0];
   const [clubProfilesByClub, setClubProfilesByClub] = useState<
     Record<
       'carre-de-soie' | 'beynost',
@@ -661,94 +666,11 @@ export function LeadCommercialHubView({
     }
   }, [commLogs]);
 
-  // Tab 8 : Réglages CRM persistés (CFOS-005)
-  const defaultCrmSettings = {
-    smsCreditsCds: 1420,
-    smsCreditsBeynost: 980,
-    salesScript: '1. Accueil & objectif forme\n2. Découverte Biocircuit / Checkup\n3. Proposition créneau essai',
-    archiveThresholdDays: 30,
-    notifEmail: 'direction@c.fitness',
-    notifEmailBeynost: 'direction.beynost@c.fitness',
-    notifMobileCds: '07 82 00 00 01',
-    notifMobileBeynost: '07 82 00 00 02',
-    whatsappNumberCds: '+33 4 78 00 00 01',
-    whatsappNumberBeynost: '+33 4 78 00 00 02',
-    clientPassOffer: 'Pass Liberté + Biocircuit 12 mois',
-    autoAssignEnabled: true,
-    autoUnassignOnLeave: true,
-    dropoutThresholdDays: 21,
-    dropoutResetOnBadge: true,
-    autoArchiveEnabled: true,
-    archiveTargetStage: 'Archivé' as const,
-    enabledAlertIds: ['LEAD-0545', 'LEAD-0548', 'LEAD-0551', 'LEAD-0552'],
-    selectedPassOfferIds: ['HZ-CDS-ABO-PASS', 'HZ-CDS-ABO-SOLO', 'HZ-BEY-ABO-PASS', 'HZ-BEY-ABO-SOLO'],
-    clientPassTargetScope: 'enseigne' as const,
-    uiLanguage: 'fr',
-  };
-
-  const [crmSettings, setCrmSettings] = useState<{
-    smsCreditsCds: number;
-    smsCreditsBeynost: number;
-    salesScript: string;
-    archiveThresholdDays: number;
-    notifEmail: string;
-    notifEmailBeynost: string;
-    notifMobileCds: string;
-    notifMobileBeynost: string;
-    whatsappNumberCds: string;
-    whatsappNumberBeynost: string;
-    clientPassOffer: string;
-    autoAssignEnabled: boolean;
-    autoUnassignOnLeave: boolean;
-    dropoutThresholdDays: number;
-    dropoutResetOnBadge: boolean;
-    autoArchiveEnabled: boolean;
-    archiveTargetStage: 'Archivé' | 'Froid';
-    enabledAlertIds: string[];
-    selectedPassOfferIds: string[];
-    clientPassTargetScope: 'club' | 'enseigne';
-    uiLanguage: string;
-  }>(() => {
-    try {
-      const raw = localStorage.getItem('cfos_lead_crm_settings_v1');
-      if (raw) return { ...defaultCrmSettings, ...JSON.parse(raw) };
-    } catch {
-      // ignore
-    }
-    return defaultCrmSettings;
-  });
-  const [crmSettingsSavedNotice, setCrmSettingsSavedNotice] = useState<string | null>(null);
-  const [crmSettingsErrorNotice, setCrmSettingsErrorNotice] = useState<string | null>(null);
-  const [isSavingCrmSettings, setIsSavingCrmSettings] = useState<boolean>(false);
+  // A separate editor for each actor/club prevents stale responses and shared-cache leaks.
+  const { editor: settingsEditor, state: settingsState } = useLeadSettings(currentUser.id, selectedProfileClubId);
+  const crmSettings = settingsState.settings;
+  const setCrmSettings = settingsEditor.update;
   const [testAlertNotice, setTestAlertNotice] = useState<string | null>(null);
-
-  // Synchronisation serveur des paramètres CRM par club (persistance réelle et partagée)
-  useEffect(() => {
-    let cancelled = false;
-    const loadSettings = async () => {
-      try {
-        const res = await clientApi.getLeadSettings(
-          {
-            actorId: currentUser.id,
-            siteId: selectedProfileClubId === 'beynost' ? 'site_beynost' : 'site_cds',
-          },
-          selectedProfileClubId
-        );
-        if (!cancelled && res.ok && res.settings) {
-          setCrmSettings((prev) => ({
-            ...prev,
-            ...(res.settings as unknown as Partial<typeof defaultCrmSettings>),
-          }));
-        }
-      } catch {
-        // En cas d'indisponibilité temporaire, conserve l'état local sans fausse confirmation
-      }
-    };
-    void loadSettings();
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedProfileClubId, currentUser.id]);
   const [rdvRequiresStripe, setRdvRequiresStripe] = useState(false);
   const [rdvStripePaid, setRdvStripePaid] = useState(false);
 
@@ -879,13 +801,13 @@ export function LeadCommercialHubView({
 
   const archiveDecision = useMemo(
     () =>
-      evaluateProspectAutoArchive(
+      crmSettings ? evaluateProspectAutoArchive(
         archiveDaysInbound,
         archiveDaysOutbound,
         crmSettings.archiveThresholdDays,
         false
-      ),
-    [archiveDaysInbound, archiveDaysOutbound, crmSettings.archiveThresholdDays]
+      ) : { shouldArchive: false, reason: "Réglages du club indisponibles : simulation suspendue." },
+    [archiveDaysInbound, archiveDaysOutbound, crmSettings?.archiveThresholdDays]
   );
 
   const rdvBookingDecision = useMemo(
@@ -3973,6 +3895,32 @@ export function LeadCommercialHubView({
           {/* ================================================================= */}
           {activeTab === 'settings' && (
             <div className="space-y-4">
+              <div className="cf-card p-3 flex flex-wrap items-center justify-between gap-3">
+                <label className="text-sm font-semibold">
+                  Club à configurer
+                  <select
+                    aria-label="Club à configurer"
+                    value={selectedProfileClubId}
+                    disabled={settingsState.saving}
+                    onChange={event => {
+                      if (settingsState.dirty && !window.confirm('Abandonner les modifications non enregistrées de ce club ?')) return;
+                      setTestAlertNotice(null);
+                      setSelectedProfileClubId(event.target.value as 'carre-de-soie' | 'beynost');
+                    }}
+                    className="ml-3 px-3 py-2 rounded-lg bg-slate-950 border border-slate-700"
+                  >
+                    {settingsClubChoices.map(club => <option key={club} value={club}>
+                      {club === 'beynost' ? 'Beynost' : 'Carré de Soie'}
+                    </option>)}
+                  </select>
+                </label>
+                <span className="text-xs cf-muted">Les réglages ci-dessous concernent uniquement ce club.</span>
+              </div>
+              {settingsState.status === 'loading' && <p role="status" className="cf-card p-3">Chargement des réglages du club…</p>}
+              {settingsState.status === 'error' && <div role="alert" className="cf-card p-3 space-y-2">
+                <p>Impossible de charger les réglages : {settingsState.error}</p>
+                <button type="button" onClick={() => void settingsEditor.load()} className="px-3 py-2 rounded bg-emerald-700 text-white">Réessayer le chargement</button>
+              </div>}
               <div className="cf-card p-3 flex flex-wrap gap-1.5">
                 {LEAD_SETTINGS_TABS_14.map((tab) => (
                   <button
@@ -4014,15 +3962,7 @@ export function LeadCommercialHubView({
                       <div className="font-bold text-emerald-300">
                         Profil du Club (Nom officiel, Adresse, Couleurs &amp; Sigle)
                       </div>
-                      <select
-                        value={selectedProfileClubId}
-                        onChange={(e) => setSelectedProfileClubId(e.target.value as 'carre-de-soie' | 'beynost')}
-                        aria-label="Club à configurer"
-                        className="px-2.5 py-1 rounded bg-slate-950 border border-slate-700 text-xs font-bold"
-                      >
-                        <option value="carre-de-soie">Carré de Soie</option>
-                        <option value="beynost">Beynost</option>
-                      </select>
+
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       <label className="block">
@@ -4113,6 +4053,7 @@ export function LeadCommercialHubView({
                   </div>
                 )}
 
+                {crmSettings && <fieldset disabled={settingsState.saving} className="space-y-4 min-w-0">
                 {selectedSettingsTab === 'app-settings' && (
                   <div className="space-y-4">
                     <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
@@ -4127,7 +4068,7 @@ export function LeadCommercialHubView({
                         <select
                           value={crmSettings.uiLanguage}
                           onChange={(e) => {
-                            const val = e.target.value;
+                            const val = e.target.value === "en" ? "en" : "fr";
                             setCrmSettings((s) => ({ ...s, uiLanguage: val }));
                           }}
                           className="w-full px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-sm font-medium"
@@ -4158,7 +4099,6 @@ export function LeadCommercialHubView({
                             } catch {
                               // ignore
                             }
-                            setCrmSettingsSavedNotice('Préférence d\'accès aux Statistiques enregistrée.');
                           }}
                         />
                         <span className="text-sm">Autoriser le profil Commercial à consulter le module Statistiques</span>
@@ -4209,7 +4149,7 @@ export function LeadCommercialHubView({
                             min={1}
                             max={180}
                             value={crmSettings.dropoutThresholdDays}
-                            onChange={(e) => setCrmSettings((s) => ({ ...s, dropoutThresholdDays: Number(e.target.value) || 21 }))}
+                            onChange={(e) => setCrmSettings((s) => ({ ...s, dropoutThresholdDays: Number(e.target.value) }))}
                             className="w-full mt-1 px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700 text-sm font-semibold"
                           />
                           <span className="text-[10px] cf-muted">Valeur de référence auditée : 21 jours d&apos;absence</span>
@@ -4281,7 +4221,7 @@ export function LeadCommercialHubView({
                                 min={1}
                                 max={730}
                                 value={crmSettings.archiveThresholdDays}
-                                onChange={(e) => setCrmSettings((s) => ({ ...s, archiveThresholdDays: Number(e.target.value) || 30 }))}
+                                onChange={(e) => setCrmSettings((s) => ({ ...s, archiveThresholdDays: Number(e.target.value) }))}
                                 className="w-24 px-2.5 py-1 rounded bg-slate-950 border border-slate-700 font-bold"
                               />
                               <button
@@ -4312,55 +4252,19 @@ export function LeadCommercialHubView({
 
                 {selectedSettingsTab === 'notifications' && (
                   <div className="space-y-4">
-                    {/* Destinataires par club */}
                     <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-emerald-300">Destinataires des alertes par club (LEAD-0545..0552)</span>
-                        <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">2 clubs configurés</span>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                        <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
-                          <div className="font-bold text-cyan-300">Carré de Soie (Vaulx-en-Velin)</div>
-                          <label className="block">
-                            Email responsable :
-                            <input
-                              type="email"
-                              value={crmSettings.notifEmail}
-                              onChange={(e) => setCrmSettings((s) => ({ ...s, notifEmail: e.target.value }))}
-                              className="w-full mt-1 px-2 py-1 rounded bg-slate-900 border border-slate-700"
-                            />
-                          </label>
-                          <label className="block">
-                            Mobile alerte SMS urgent (GSM-7) :
-                            <input
-                              type="text"
-                              value={crmSettings.notifMobileCds}
-                              onChange={(e) => setCrmSettings((s) => ({ ...s, notifMobileCds: e.target.value }))}
-                              className="w-full mt-1 px-2 py-1 rounded bg-slate-900 border border-slate-700 font-mono"
-                            />
-                          </label>
-                        </div>
-                        <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
-                          <div className="font-bold text-amber-300">Beynost (Côtière)</div>
-                          <label className="block">
-                            Email responsable :
-                            <input
-                              type="email"
-                              value={crmSettings.notifEmailBeynost}
-                              onChange={(e) => setCrmSettings((s) => ({ ...s, notifEmailBeynost: e.target.value }))}
-                              className="w-full mt-1 px-2 py-1 rounded bg-slate-900 border border-slate-700"
-                            />
-                          </label>
-                          <label className="block">
-                            Mobile alerte SMS urgent (GSM-7) :
-                            <input
-                              type="text"
-                              value={crmSettings.notifMobileBeynost}
-                              onChange={(e) => setCrmSettings((s) => ({ ...s, notifMobileBeynost: e.target.value }))}
-                              className="w-full mt-1 px-2 py-1 rounded bg-slate-900 border border-slate-700 font-mono"
-                            />
-                          </label>
-                        </div>
+                      <h4 className="font-bold">Destinataires des alertes — {selectedProfileClubId === 'beynost' ? 'Beynost' : 'Carré de Soie'}</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <label>Email de notification
+                          <input type="email" value={crmSettings.notifEmail}
+                            onChange={e => setCrmSettings(s => ({ ...s, notifEmail: e.target.value }))}
+                            className="w-full mt-1 px-3 py-2 rounded bg-slate-950 border border-slate-700" />
+                        </label>
+                        <label>Mobile de notification
+                          <input type="tel" value={crmSettings.notifMobile}
+                            onChange={e => setCrmSettings(s => ({ ...s, notifMobile: e.target.value }))}
+                            className="w-full mt-1 px-3 py-2 rounded bg-slate-950 border border-slate-700" />
+                        </label>
                       </div>
                     </div>
 
@@ -4454,7 +4358,7 @@ export function LeadCommercialHubView({
 
                       <div className="space-y-3">
                         {/* Carré de Soie */}
-                        <div>
+                        {selectedProfileClubId === 'carre-de-soie' && <div>
                           <div className="text-xs font-bold text-cyan-300 mb-1.5 flex items-center gap-1.5">
                             <span>Carré de Soie (ID Center 5052)</span>
                           </div>
@@ -4491,10 +4395,10 @@ export function LeadCommercialHubView({
                               );
                             })}
                           </div>
-                        </div>
+                        </div>}
 
                         {/* Beynost */}
-                        <div>
+                        {selectedProfileClubId === 'beynost' && <div>
                           <div className="text-xs font-bold text-amber-300 mb-1.5 flex items-center gap-1.5">
                             <span>Beynost (ID Center 5053)</span>
                           </div>
@@ -4531,7 +4435,7 @@ export function LeadCommercialHubView({
                               );
                             })}
                           </div>
-                        </div>
+                        </div>}
                       </div>
 
                       <div className="pt-2 border-t border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
@@ -4587,30 +4491,10 @@ export function LeadCommercialHubView({
                       </span>
                     </div>
                     {selectedSettingsTab === 'sms' && (
-                      <div className="grid grid-cols-2 gap-2">
-                        <label>
-                          Crédits SMS Carré de Soie
-                          <input
-                            type="number"
-                            value={crmSettings.smsCreditsCds}
-                            onChange={(e) =>
-                              setCrmSettings((s) => ({ ...s, smsCreditsCds: Number(e.target.value) || 0 }))
-                            }
-                            className="w-full mt-1 px-2 py-1 rounded bg-slate-950 border border-slate-700"
-                          />
-                        </label>
-                        <label>
-                          Crédits SMS Beynost
-                          <input
-                            type="number"
-                            value={crmSettings.smsCreditsBeynost}
-                            onChange={(e) =>
-                              setCrmSettings((s) => ({ ...s, smsCreditsBeynost: Number(e.target.value) || 0 }))
-                            }
-                            className="w-full mt-1 px-2 py-1 rounded bg-slate-950 border border-slate-700"
-                          />
-                        </label>
-                      </div>
+                      <label className="block">Crédits SMS du club (lecture seule)
+                        <input type="number" value={crmSettings.smsCredits} readOnly
+                          className="w-full mt-1 px-3 py-2 rounded bg-slate-950 border border-slate-700" />
+                      </label>
                     )}
                     {selectedSettingsTab === 'script' && (
                       <textarea
@@ -4621,26 +4505,11 @@ export function LeadCommercialHubView({
                       />
                     )}
                     {selectedSettingsTab === 'whatsapp' && (
-                      <div className="grid grid-cols-2 gap-2">
-                        <label>
-                          Numéro Meta Carré de Soie
-                          <input
-                            type="text"
-                            value={crmSettings.whatsappNumberCds}
-                            onChange={(e) => setCrmSettings((s) => ({ ...s, whatsappNumberCds: e.target.value }))}
-                            className="w-full mt-1 px-2 py-1 rounded bg-slate-950 border border-slate-700"
-                          />
-                        </label>
-                        <label>
-                          Numéro Meta Beynost
-                          <input
-                            type="text"
-                            value={crmSettings.whatsappNumberBeynost}
-                            onChange={(e) => setCrmSettings((s) => ({ ...s, whatsappNumberBeynost: e.target.value }))}
-                            className="w-full mt-1 px-2 py-1 rounded bg-slate-950 border border-slate-700"
-                          />
-                        </label>
-                      </div>
+                      <label className="block">Numéro WhatsApp du club
+                        <input type="tel" value={crmSettings.whatsappNumber}
+                          onChange={e => setCrmSettings(s => ({ ...s, whatsappNumber: e.target.value }))}
+                          className="w-full mt-1 px-3 py-2 rounded bg-slate-950 border border-slate-700" />
+                      </label>
                     )}
                     {(selectedSettingsTab === 'meetings' || selectedSettingsTab === 'users') && (
                       <div className="text-[11px] cf-muted">
@@ -4652,82 +4521,25 @@ export function LeadCommercialHubView({
                   </div>
                 )}
 
-                {/* Barre d'enregistrement commune pour tous les onglets paramètres */}
-                <div className="flex flex-col gap-2 pt-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex flex-col">
-                      {crmSettingsSavedNotice && (
-                        <span className="text-[11px] text-emerald-400 font-bold">{crmSettingsSavedNotice}</span>
-                      )}
-                      {crmSettingsErrorNotice && (
-                        <span className="text-[11px] text-rose-400 font-bold bg-rose-950/40 px-2 py-1 rounded border border-rose-800/60">
-                          {crmSettingsErrorNotice}
-                        </span>
-                      )}
-                      {!crmSettingsSavedNotice && !crmSettingsErrorNotice && (
-                        <span className="text-[10px] cf-muted">
-                          Club cible : <strong>{selectedProfileClubId === 'beynost' ? 'Beynost' : 'Carré de Soie'}</strong> · Sauvegarde serveur persistante
-                        </span>
-                      )}
+                {['app-settings', 'prospects', 'notifications', 'exclusions', 'sms', 'script', 'whatsapp'].includes(selectedSettingsTab) && (
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                    <div aria-live="polite">
+                      {settingsState.saved && <p role="status" className="text-emerald-400">Réglages enregistrés pour {selectedProfileClubId === 'beynost' ? 'Beynost' : 'Carré de Soie'}.</p>}
+                      {settingsState.error && <div role="alert" className="space-y-2 text-rose-400">
+                        <p>{settingsState.error} Les modifications restent à enregistrer.</p>
+                        <button type="button" className="underline" onClick={() => {
+                          if (!settingsState.dirty || window.confirm('Abandonner les modifications non enregistrées et recharger ce club ?')) void settingsEditor.load();
+                        }}>Recharger les réglages du club</button>
+                      </div>}
                     </div>
-                    <button
-                      type="button"
-                      disabled={isSavingCrmSettings}
-                      onClick={async () => {
-                        setIsSavingCrmSettings(true);
-                        setCrmSettingsSavedNotice(null);
-                        setCrmSettingsErrorNotice(null);
-                        try {
-                          const res = await clientApi.putLeadSettings(
-                            {
-                              actorId: currentUser.id,
-                              siteId: selectedProfileClubId === 'beynost' ? 'site_beynost' : 'site_cds',
-                            },
-                            selectedProfileClubId,
-                            crmSettings as unknown as Record<string, unknown>
-                          );
-                          if (res.ok) {
-                            try {
-                              localStorage.setItem('cfos_lead_crm_settings_v1', JSON.stringify(crmSettings));
-                            } catch {
-                              // ignore
-                            }
-                            setCrmSettingsSavedNotice(
-                              `✅ Paramètres « ${selectedSettingsTab} » synchronisés et persistés sur le serveur (${
-                                selectedProfileClubId === 'beynost' ? 'Beynost' : 'Carré de Soie'
-                              }).`
-                            );
-                            setTimeout(() => setCrmSettingsSavedNotice(null), 4000);
-                          } else {
-                            setCrmSettingsErrorNotice(
-                              `❌ Rejet serveur : impossible d'enregistrer les paramètres du club ${selectedProfileClubId}.`
-                            );
-                          }
-                        } catch (err) {
-                          setCrmSettingsErrorNotice(
-                            `❌ Échec de sauvegarde serveur : ${
-                              err instanceof Error ? err.message : 'Erreur réseau/droits'
-                            }. Aucune confirmation accordée.`
-                          );
-                        } finally {
-                          setIsSavingCrmSettings(false);
-                        }
-                      }}
-                      className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold cursor-pointer transition text-xs flex items-center gap-1.5"
-                    >
-                      {isSavingCrmSettings ? (
-                        <>
-                          <span className="animate-spin text-xs">⏳</span>
-                          <span>Enregistrement serveur...</span>
-                        </>
-                      ) : (
-                        <span>
-                          Enregistrer les paramètres ({selectedProfileClubId === 'beynost' ? 'Beynost' : 'Carré de Soie'})
-                        </span>
-                      )}
+                    <button type="button" disabled={settingsState.saving}
+                      onClick={() => void settingsEditor.save()}
+                      className="px-3.5 py-2 rounded-lg bg-emerald-600 disabled:opacity-50 text-white font-bold">
+                      {settingsState.saving ? 'Enregistrement…' : 'Enregistrer les réglages du club'}
                     </button>
                   </div>
-                </div>
+                )}
+                </fieldset>}
 
                 {selectedSettingsTab === 'automation' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">

@@ -4226,28 +4226,8 @@ async fn delete_lead_appointment(
     Ok(Json(json!({ "ok": true, "slotId": slot_id })))
 }
 
-async fn get_lead_settings(
-    State(state): State<SharedState>,
-    headers: HeaderMap,
-    Path(club_id): Path<String>,
-) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
-    let db = state.db.read().await;
-    let allowed = authorized_clubs_for_actor(&db, &actor_id);
-    if !allowed.contains(&club_id) {
-        return Err(err_resp(
-            StatusCode::FORBIDDEN,
-            format!("Accès refusé (403) : non autorisé sur le club {}", club_id),
-        ));
-    }
-    if let Some(settings) = db.lead_settings_by_club.get(&club_id) {
-        return Ok(Json(json!({
-            "ok": true,
-            "clubId": club_id,
-            "settings": settings
-        })));
-    }
-    let default_val = json!({
+fn default_lead_settings(club_id: &str) -> Value {
+    json!({
         "smsCredits": if club_id == "beynost" { 980 } else { 1420 },
         "salesScript": "1. Accueil & objectif forme\n2. Découverte Biocircuit / Checkup\n3. Proposition créneau essai",
         "archiveThresholdDays": 30,
@@ -4265,12 +4245,31 @@ async fn get_lead_settings(
         "selectedPassOfferIds": if club_id == "beynost" { vec!["HZ-BEY-ABO-PASS", "HZ-BEY-ABO-SOLO"] } else { vec!["HZ-CDS-ABO-PASS", "HZ-CDS-ABO-SOLO"] },
         "clientPassTargetScope": "club",
         "uiLanguage": "fr"
-    });
-    Ok(Json(json!({
-        "ok": true,
-        "clubId": club_id,
-        "settings": default_val
-    })))
+    })
+}
+
+fn read_club_lead_settings(db: &AppDatabaseState, club_id: &str) -> Result<Value, String> {
+    crate::lead_settings::canonical_settings(
+        club_id, default_lead_settings(club_id), db.lead_settings_by_club.get(club_id),
+    )
+}
+
+async fn get_lead_settings(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Path(club_id): Path<String>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    if !crate::lead_settings::valid_club(&club_id) {
+        return Err(err_resp(StatusCode::NOT_FOUND, "Club inconnu."));
+    }
+    let db = state.db.read().await;
+    if !actor_has_lead_admin_write_on_club(&db, &actor_id, &club_id) {
+        return Err(err_resp(StatusCode::FORBIDDEN, "Consultation des réglages refusée pour ce club."));
+    }
+    let settings = read_club_lead_settings(&db, &club_id)
+        .map_err(|message| err_resp(StatusCode::INTERNAL_SERVER_ERROR, message))?;
+    Ok(Json(json!({ "ok": true, "clubId": club_id, "settings": settings })))
 }
 
 async fn put_lead_settings(
@@ -4280,6 +4279,9 @@ async fn put_lead_settings(
     Json(payload): Json<Value>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    if !crate::lead_settings::valid_club(&club_id) {
+        return Err(err_resp(StatusCode::NOT_FOUND, "Club inconnu."));
+    }
     let mut db = state.db.write().await;
     if !actor_has_lead_admin_write_on_club(&db, &actor_id, &club_id) {
         return Err(err_resp(
@@ -4288,6 +4290,17 @@ async fn put_lead_settings(
         ));
     }
 
+    let typed: crate::lead_settings::LeadSettings = serde_json::from_value(payload)
+        .map_err(|error| err_resp(StatusCode::BAD_REQUEST, format!("Réglages invalides : {}", error)))?;
+    typed.validate(&club_id).map_err(|message| err_resp(StatusCode::BAD_REQUEST, message))?;
+    let current = read_club_lead_settings(&db, &club_id)
+        .map_err(|message| err_resp(StatusCode::INTERNAL_SERVER_ERROR, message))?;
+    if current["smsCredits"].as_u64() != Some(typed.sms_credits as u64) {
+        return Err(err_resp(StatusCode::BAD_REQUEST, "Le solde SMS est en lecture seule. Rechargez les réglages."));
+    }
+    let payload = serde_json::to_value(typed)
+        .map_err(|_| err_resp(StatusCode::INTERNAL_SERVER_ERROR, "Réglages non sérialisables."))?;
+
     // Keep the live state untouched until the complete settings/audit write succeeds.
     // The write lock also prevents another request from changing the base meanwhile.
     let mut next = db.clone();
@@ -4295,7 +4308,7 @@ async fn put_lead_settings(
 
     let audit_id = format!("aud-{}", Utc::now().timestamp_millis());
     let actor_label = db.employees.iter().find(|e| e.id == actor_id).map(|e| format!("{} {}", e.first_name, e.last_name)).unwrap_or_else(|| actor_id.clone());
-    next.audit_log.push(AuditEvent {
+    next.audit_log.insert(0, AuditEvent {
         id: audit_id,
         timestamp: Utc::now().to_rfc3339(),
         actor_id: actor_id.clone(),
@@ -5482,7 +5495,7 @@ mod tests {
 
         // 2. Mise à jour des paramètres par Mario (autorisé)
         let new_settings = json!({
-            "smsCredits": 1500,
+            "smsCredits": 1420,
             "salesScript": "Script mis à jour",
             "archiveThresholdDays": 40,
             "notifEmail": "direction.cds@c.fitness",
@@ -5546,6 +5559,62 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn lead_settings_validate_contract_clubs_and_permissions_without_mutation() {
+        let state = test_state();
+        let headers = session_headers(&state, "emp-mario", "club-carre-soie").await;
+        let fixture: Value = serde_json::from_str(include_str!("../../contracts/lead-settings-cases.json")).unwrap();
+        let before = serde_json::to_value(&*state.db.read().await).unwrap();
+        let disk_before = std::fs::read(state.data_dir.join("cfitness_state.json")).unwrap();
+        let mut invalid_inputs = vec![json!(null), json!([]), json!({})];
+        for case in fixture["cases"].as_array().unwrap().iter().filter(|case| case["valid"] == false) {
+            let mut input = fixture["base"].clone();
+            input[case["field"].as_str().unwrap()] = case["value"].clone();
+            invalid_inputs.push(input);
+        }
+        let mut unknown = fixture["base"].clone();
+        unknown["notifMobileBeynost"] = json!("0612345678");
+        invalid_inputs.push(unknown);
+        let mut credits = fixture["base"].clone();
+        credits["smsCredits"] = json!(9999);
+        invalid_inputs.push(credits);
+        for input in invalid_inputs {
+            let error = put_lead_settings(
+                State(state.clone()), headers.clone(), Path("carre-de-soie".into()), Json(input),
+            ).await.unwrap_err();
+            assert_eq!(error.0, StatusCode::BAD_REQUEST);
+            assert!(serde_json::to_value(&*state.db.read().await).unwrap() == before);
+            assert_eq!(std::fs::read(state.data_dir.join("cfitness_state.json")).unwrap(), disk_before);
+        }
+        for club in ["all", "unknown", ""] {
+            assert_eq!(get_lead_settings(State(state.clone()), headers.clone(), Path(club.into()))
+                .await.unwrap_err().0, StatusCode::NOT_FOUND);
+            assert_eq!(put_lead_settings(State(state.clone()), headers.clone(), Path(club.into()), Json(fixture["base"].clone()))
+                .await.unwrap_err().0, StatusCode::NOT_FOUND);
+        }
+        let commercial = session_headers(&state, "emp-chloe", "club-beynost").await;
+        for club in ["beynost", "carre-de-soie"] {
+            assert_eq!(get_lead_settings(State(state.clone()), commercial.clone(), Path(club.into()))
+                .await.unwrap_err().0, StatusCode::FORBIDDEN);
+            assert_eq!(put_lead_settings(State(state.clone()), commercial.clone(), Path(club.into()), Json(fixture["base"].clone()))
+                .await.unwrap_err().0, StatusCode::FORBIDDEN);
+        }
+        let cds_settings = fixture["base"].clone();
+        let _ = put_lead_settings(State(state.clone()), headers.clone(), Path("carre-de-soie".into()), Json(cds_settings.clone())).await.unwrap();
+        let mut bey_settings = cds_settings.clone();
+        bey_settings["smsCredits"] = json!(980);
+        bey_settings["notifEmail"] = json!("beynost@club.fr");
+        bey_settings["notifMobile"] = json!("0698765432");
+        bey_settings["selectedPassOfferIds"] = json!(["HZ-BEY-ABO-PASS"]);
+        let _ = put_lead_settings(State(state.clone()), headers.clone(), Path("beynost".into()), Json(bey_settings.clone())).await.unwrap();
+        assert_eq!(get_lead_settings(State(state.clone()), headers.clone(), Path("carre-de-soie".into())).await.unwrap().0["settings"], cds_settings);
+        assert_eq!(get_lead_settings(State(state.clone()), headers, Path("beynost".into())).await.unwrap().0["settings"], bey_settings);
+        let reloaded = load_or_init_state(&state.data_dir);
+        assert_eq!(reloaded.lead_settings_by_club["carre-de-soie"], cds_settings);
+        assert_eq!(reloaded.lead_settings_by_club["beynost"], bey_settings);
+        std::fs::remove_dir_all(&state.data_dir).unwrap();
+    }
+
+    #[tokio::test]
     async fn lead_settings_failed_write_preserves_memory_disk_and_audit() {
         // Exercise both replacing existing settings and creating a missing entry.
         for existing_settings in [true, false] {
@@ -5571,7 +5640,7 @@ mod tests {
             std::fs::create_dir(&blocker).unwrap();
             let result = put_lead_settings(
                 State(state.clone()), headers.clone(), Path("carre-de-soie".into()),
-                Json(json!({ "archiveThresholdDays": 99, "salesScript": "failed write" })),
+                Json({ let mut settings = visible_before["settings"].clone(); settings["archiveThresholdDays"] = json!(99); settings }),
             ).await;
             assert!(matches!(result, Err((StatusCode::INTERNAL_SERVER_ERROR, _))));
             assert!(serde_json::to_value(&*state.db.read().await).unwrap() == before,
@@ -5585,9 +5654,9 @@ mod tests {
             // A later successful write for the other club must not commit the
             // rejected settings or their audit entry as a side effect.
             std::fs::remove_dir(&blocker).unwrap();
-            put_lead_settings(
+            let _ = put_lead_settings(
                 State(state.clone()), headers, Path("beynost".into()),
-                Json(json!({ "archiveThresholdDays": 45 })),
+                Json({ let mut settings = default_lead_settings("beynost"); settings["archiveThresholdDays"] = json!(45); settings }),
             ).await.unwrap();
             let reloaded: AppDatabaseState = serde_json::from_slice(
                 &std::fs::read(&state_file).unwrap(),
@@ -5597,7 +5666,7 @@ mod tests {
                 before["leadSettingsByClub"]["carre-de-soie"]);
             assert_eq!(reloaded.lead_settings_by_club["beynost"]["archiveThresholdDays"], 45);
             assert_eq!(reloaded.audit_log.len(), before["auditLog"].as_array().unwrap().len() + 1);
-            assert_eq!(reloaded.audit_log.last().unwrap().target_label, "ClubLeadSettings (beynost)");
+            assert_eq!(reloaded.audit_log.first().unwrap().target_label, "ClubLeadSettings (beynost)");
             std::fs::remove_dir_all(&state.data_dir).unwrap();
         }
     }

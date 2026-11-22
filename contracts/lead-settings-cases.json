@@ -1,0 +1,195 @@
+{
+  "base": {
+    "smsCredits": 1420,
+    "salesScript": "Accueil CDS",
+    "archiveThresholdDays": 30,
+    "notifEmail": "direction@c.fitness",
+    "notifMobile": "07 82 00 00 01",
+    "whatsappNumber": "+33 4 78 00 00 01",
+    "clientPassOffer": "Pass Liberté",
+    "autoAssignEnabled": true,
+    "autoUnassignOnLeave": true,
+    "dropoutThresholdDays": 21,
+    "dropoutResetOnBadge": true,
+    "autoArchiveEnabled": true,
+    "archiveTargetStage": "Archivé",
+    "enabledAlertIds": [
+      "LEAD-0545",
+      "LEAD-0548"
+    ],
+    "selectedPassOfferIds": [
+      "HZ-CDS-ABO-PASS"
+    ],
+    "clientPassTargetScope": "club",
+    "uiLanguage": "fr"
+  },
+  "cases": [
+    {
+      "name": "archive-min",
+      "field": "archiveThresholdDays",
+      "value": 1,
+      "valid": true
+    },
+    {
+      "name": "archive-max",
+      "field": "archiveThresholdDays",
+      "value": 730,
+      "valid": true
+    },
+    {
+      "name": "archive-zero",
+      "field": "archiveThresholdDays",
+      "value": 0,
+      "valid": false
+    },
+    {
+      "name": "archive-over",
+      "field": "archiveThresholdDays",
+      "value": 731,
+      "valid": false
+    },
+    {
+      "name": "archive-fraction",
+      "field": "archiveThresholdDays",
+      "value": 1.5,
+      "valid": false
+    },
+    {
+      "name": "archive-string",
+      "field": "archiveThresholdDays",
+      "value": "30",
+      "valid": false
+    },
+    {
+      "name": "dropout-over",
+      "field": "dropoutThresholdDays",
+      "value": 181,
+      "valid": false
+    },
+    {
+      "name": "boolean-string",
+      "field": "autoAssignEnabled",
+      "value": "true",
+      "valid": false
+    },
+    {
+      "name": "email-invalid",
+      "field": "notifEmail",
+      "value": "abc",
+      "valid": false
+    },
+    {
+      "name": "email-trailing-dot",
+      "field": "notifEmail",
+      "value": "a@club.",
+      "valid": false
+    },
+    {
+      "name": "email-empty",
+      "field": "notifEmail",
+      "value": "",
+      "valid": true
+    },
+    {
+      "name": "phone-text",
+      "field": "notifMobile",
+      "value": "abc",
+      "valid": false
+    },
+    {
+      "name": "phone-short",
+      "field": "notifMobile",
+      "value": "123",
+      "valid": false
+    },
+    {
+      "name": "phone-empty",
+      "field": "notifMobile",
+      "value": "",
+      "valid": true
+    },
+    {
+      "name": "scope-invalid",
+      "field": "clientPassTargetScope",
+      "value": "all",
+      "valid": false
+    },
+    {
+      "name": "target-invalid",
+      "field": "archiveTargetStage",
+      "value": "Client",
+      "valid": false
+    },
+    {
+      "name": "alert-unknown",
+      "field": "enabledAlertIds",
+      "value": [
+        "LEAD-9999"
+      ],
+      "valid": false
+    },
+    {
+      "name": "alert-duplicate",
+      "field": "enabledAlertIds",
+      "value": [
+        "LEAD-0545",
+        "LEAD-0545"
+      ],
+      "valid": false
+    },
+    {
+      "name": "offer-foreign-club",
+      "field": "selectedPassOfferIds",
+      "value": [
+        "HZ-BEY-ABO-PASS"
+      ],
+      "valid": false
+    },
+    {
+      "name": "offer-external-id",
+      "field": "selectedPassOfferIds",
+      "value": [
+        "heitz-live-123"
+      ],
+      "valid": true
+    },
+    {
+      "name": "offer-empty-id",
+      "field": "selectedPassOfferIds",
+      "value": [
+        ""
+      ],
+      "valid": false
+    },
+    {
+      "name": "credits-negative",
+      "field": "smsCredits",
+      "value": -1,
+      "valid": false
+    },
+    {
+      "name": "credits-overflow",
+      "field": "smsCredits",
+      "value": 4294967296,
+      "valid": false
+    },
+    {
+      "name": "credits-fraction",
+      "field": "smsCredits",
+      "value": 0.5,
+      "valid": false
+    },
+    {
+      "name": "lang-invalid",
+      "field": "uiLanguage",
+      "value": "xx",
+      "valid": false
+    },
+    {
+      "name": "phone-multiple-plus",
+      "field": "notifMobile",
+      "value": "++33612345678",
+      "valid": false
+    }
+  ]
+}
