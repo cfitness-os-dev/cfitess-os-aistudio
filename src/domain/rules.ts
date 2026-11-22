@@ -56,9 +56,13 @@ export function computeNetShiftHours(
 
 export const CFITNESS_LEGAL_IDENTITY = {
   raisonSociale: 'C.FITNESS',
-  siegeSocial: '2 Rue Jacquard (Centre Commercial Carré de Soie), 69120 Vaulx-en-Velin',
+  siegeSocial: 'Pôle de Loisirs et de Commerce Carré de Soie, 2 Rue Jacquard, 69120 Vaulx-en-Velin',
   etablissementSecondaire: 'Centre Commercial Beynost – ZAC des Baterses, 01700 Beynost',
-  siret: '818 651 317 00018',
+  siret: '818 651 317 00013',
+  siretBeynost: '852 722 529 00025',
+  tvaIntra: 'FR02818651317',
+  tvaIntraBeynost: 'FR82852722529',
+  website: 'https://c.fitness',
   codeNaf: '9313Z (Centres de culture physique)',
   urssaf: 'URSSAF Rhône-Alpes — N° cotisant 827000002188207761',
   retraiteComplementaire: 'AGIRA Salariés (APICIL), 69300 Caluire-et-Cuire',
@@ -794,10 +798,10 @@ export function canAccessFeature(role: Role, feature: RbacFeature): boolean {
 export function isSectionAllowedForRole(section: AdminSection, role: Role): boolean {
   if (role === 'admin' || role === 'manager') return true;
   if (role === 'commercial') {
-    return ['dashboard', 'orchestrator', 'my-day', 'telephony', 'crm', 'planning-hr', 'academy', 'devices', 'recovery', 'executive-dossier'].includes(section);
+    return ['dashboard', 'orchestrator', 'my-day', 'telephony', 'crm', 'social-web', 'planning-hr', 'academy', 'devices', 'recovery', 'executive-dossier'].includes(section);
   }
   if (role === 'coach' || role === 'apprenti') {
-    return ['dashboard', 'orchestrator', 'my-day', 'planning-hr', 'academy', 'devices', 'telephony', 'recovery', 'executive-dossier'].includes(section);
+    return ['dashboard', 'orchestrator', 'my-day', 'planning-hr', 'social-web', 'academy', 'devices', 'telephony', 'recovery', 'executive-dossier'].includes(section);
   }
   return true;
 }
@@ -1694,7 +1698,7 @@ export const LEGACY_SOFTWARE_PARITY_MATRIX: LegacySoftwareParityEntry[] = [
       'Gestion des Offres d’Emploi & Multiposting (Site c.fitness, Indeed, WTTJ, France Travail)',
       'Ingestion automatique IMAP recrutement@c.fitness avec extraction CV PDF et accusé RGPD',
       'Onboarding Transactionnel 1-Clic (avec test de Rollback Atomique en cas d’erreur)',
-      'Générateur du Contrat CDI Officiel C.FITNESS (SIRET 818 651 317 00018, IDCC 2511 Gr. 1, Clause CRM)',
+      'Générateur du Contrat CDI Officiel C.FITNESS (SIRET 818 651 317 00013, IDCC 2511 Gr. 1, Clause CRM)',
       'Signature électronique interne C.Fitness OS (0 € / signature — OTP, consentement, horodatage UTC & preuve SHA-256)',
       'Académie interne 5 modules (quiz 100 %), Livret d’alternance BPJEPS UC1-UC4 & Checklists 6h/23h',
     ],

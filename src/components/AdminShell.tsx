@@ -33,6 +33,7 @@ import {
   Bell,
   MessageSquare,
   Compass,
+  Globe,
   Scale,
   UserCheck,
 } from 'lucide-react';
@@ -76,6 +77,9 @@ const GovernanceView = lazy(() =>
 const RecoveryView = lazy(() =>
   import('./views/RecoveryView').then((m) => ({ default: m.RecoveryView }))
 );
+const SocialWebView = lazy(() =>
+  import('./views/SocialWebView').then((m) => ({ default: m.SocialWebView }))
+);
 
 interface VisualNavItem {
   id: string;
@@ -114,6 +118,14 @@ const VISUAL_SIDEBAR_ITEMS: VisualNavItem[] = [
     icon: Megaphone,
     iconColor: 'text-pink-500',
     sectionId: 'telephony',
+    hasChevron: true,
+  },
+  {
+    id: 'nav-social-web',
+    label: 'Site Web & Réseaux',
+    icon: Globe,
+    iconColor: 'text-cyan-400',
+    sectionId: 'social-web',
     hasChevron: true,
   },
   {
@@ -1161,6 +1173,7 @@ export function AdminShell() {
             )
           )}
           {activeSection === 'recovery' && <RecoveryView />}
+          {activeSection === 'social-web' && <SocialWebView />}
           {activeSection === 'telephony' && (
             <div className="space-y-4">
               {isTechnicalMode && (

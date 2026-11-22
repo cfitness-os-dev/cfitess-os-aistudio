@@ -398,6 +398,20 @@ pub fn api_router(state: SharedState) -> Router {
             "/api/heitz/members/:member_id",
             patch(crate::heitz_members::patch_heitz_member),
         )
+        .route(
+            "/api/social-web/channels/:club_id",
+            get(crate::social_web::get_social_channels)
+                .put(crate::social_web::put_social_channels),
+        )
+        .route(
+            "/api/social-web/posts",
+            get(crate::social_web::get_social_posts).post(crate::social_web::post_social_post),
+        )
+        .route(
+            "/api/social-web/posts/:post_id",
+            patch(crate::social_web::patch_social_post)
+                .delete(crate::social_web::delete_social_post),
+        )
         .with_state(state)
 }
 
@@ -1206,7 +1220,9 @@ async fn health() -> Json<Value> {
         "version": "1.2.0-v1.16-unified",
         "backend": "rust-axum",
         "osTarget": "Linux Debian 12 (Bookworm)",
-        "siret": "818 651 317 00018",
+        "siret": "818 651 317 00013",
+        "siretBeynost": "852 722 529 00025",
+        "website": "https://c.fitness",
         "clubs": [
             "Carré de Soie — 2 Rue Jacquard, 69120 Vaulx-en-Velin (04 26 22 55 30)",
             "Beynost — ZAC des Baterses, 01700 Beynost (04 22 91 36 82)"

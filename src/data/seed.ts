@@ -751,7 +751,7 @@ export const INITIAL_HR_DOCUMENTS: HRDocument[] = [
     uploadedAt: '2026-10-23',
     encryptedAtRest: true,
     signedStatus: 'En attente signature',
-    contractBodyText: `AVENANT AU CONTRAT DE TRAVAIL À DURÉE INDÉTERMINÉE — SAS C.FITNESS (SIRET 818 651 317 00018)
+    contractBodyText: `AVENANT AU CONTRAT DE TRAVAIL À DURÉE INDÉTERMINÉE — SAS C.FITNESS (SIRET 818 651 317 00013)
 Entre SAS C.FITNESS et M. Maxime Giraud (Conseiller Commercial Fitness — Carré de Soie).
 Objet : Remplacement de l'outil externe LEADS par le module CRM C.Fitness OS intégré et maintien de l'objectif contractuel de 20 abonnements/mois (Art. 4 CDI — 1 823,03 € brut/mois pour 151,67h).
 Signature électronique interne C.Fitness OS (0 € / signature — Code civil Art. 1366 & 1367 + eIDAS).`,
@@ -764,7 +764,7 @@ Signature électronique interne C.Fitness OS (0 € / signature — Code civil A
     uploadedAt: '2026-10-18',
     encryptedAtRest: true,
     signedStatus: 'En attente signature',
-    contractBodyText: `CONTRAT DE TRAVAIL À DURÉE INDÉTERMINÉE — SAS C.FITNESS (SIRET 818 651 317 00018)
+    contractBodyText: `CONTRAT DE TRAVAIL À DURÉE INDÉTERMINÉE — SAS C.FITNESS BEYNOST (SIRET 852 722 529 00025)
 Salariée : Mme Chloé Morel — Conseillère Commerciale Accueil & Relance (C.Fitness Beynost).
 Convention Collective Nationale du Sport (IDCC 2511) — Groupe 1 — Salaire mensuel brut : 1 823,03 € pour 151,67 h.
 Signature électronique interne C.Fitness OS avec vérification d'identité OTP, consentement explicite, horodatage UTC et empreinte SHA-256.`,

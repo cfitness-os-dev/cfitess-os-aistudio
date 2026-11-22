@@ -13,6 +13,7 @@ mod recovery;
 mod routes;
 mod seed;
 mod site_settings;
+mod social_web;
 mod stocks;
 mod timeclock;
 

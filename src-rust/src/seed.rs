@@ -168,7 +168,7 @@ fn default_sites(fictive_labels: bool) -> Vec<Site> {
             address: if fictive_labels {
                 "10 Avenue Fictive du Club".into()
             } else {
-                String::new()
+                "Pôle de Loisirs et de Commerce Carré de Soie, 2 Rue Jacquard, 69120 Vaulx-en-Velin".into()
             },
             city: if fictive_labels {
                 "Vaulx-en-Velin (Fictif)".into()
@@ -179,7 +179,7 @@ fn default_sites(fictive_labels: bool) -> Vec<Site> {
             siret: if fictive_labels {
                 "99900011100019".into()
             } else {
-                String::new()
+                "81865131700013".into()
             },
             settings: SiteHrSettings {
                 badge_frequency: "each_shift".into(),
@@ -211,7 +211,7 @@ fn default_sites(fictive_labels: bool) -> Vec<Site> {
             address: if fictive_labels {
                 "25 Rue Fictive des Sports".into()
             } else {
-                String::new()
+                "Centre Commercial Beynost, ZAC des Baterses, 01700 Beynost".into()
             },
             city: if fictive_labels {
                 "Beynost (Fictif)".into()
@@ -222,7 +222,7 @@ fn default_sites(fictive_labels: bool) -> Vec<Site> {
             siret: if fictive_labels {
                 "99900011100027".into()
             } else {
-                String::new()
+                "85272252900025".into()
             },
             settings: SiteHrSettings {
                 badge_frequency: "consecutive_shift_series".into(),
@@ -1954,6 +1954,42 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
         agent_autonomy_modes: HashMap::new(),
         missions: default_demo_missions(),
         heitz_members: vec![],
+        social_channels_by_club: HashMap::from([
+            (
+                "carre-de-soie".to_string(),
+                crate::social_web::default_social_channels("carre-de-soie"),
+            ),
+            (
+                "beynost".to_string(),
+                crate::social_web::default_social_channels("beynost"),
+            ),
+        ]),
+        social_posts: vec![
+            crate::models::SocialPostRecord {
+                id: "soc-demo-01".into(),
+                club_id: "carre-de-soie".into(),
+                platform: "Instagram".into(),
+                format: "Reel / Vidéo".into(),
+                title: "Nouveau challenge Hyrox & Plateau Fonctionnel".into(),
+                caption: "Découvrez nos nouveaux créneaux Hyrox encadrés par nos coachs à C.Fitness Carré de Soie !".into(),
+                scheduled_date: "2026-11-24".into(),
+                status: "programme".into(),
+                author_name: "Direction C.Fitness".into(),
+                created_at: "2026-11-20".into(),
+            },
+            crate::models::SocialPostRecord {
+                id: "soc-demo-02".into(),
+                club_id: "beynost".into(),
+                platform: "Facebook".into(),
+                format: "Post".into(),
+                title: "Journée Portes Ouvertes & Bilan Forme offert".into(),
+                caption: "Venez découvrir C.Fitness Beynost (ZAC des Baterses) et profitez d’une séance découverte offerte.".into(),
+                scheduled_date: "2026-11-26".into(),
+                status: "a_valider".into(),
+                author_name: "Direction C.Fitness".into(),
+                created_at: "2026-11-21".into(),
+            },
+        ],
     }
 }
 
@@ -1980,14 +2016,14 @@ pub fn create_production_initial_state() -> AppDatabaseState {
         org02_billing_policy: "exclude_skello_saas".into(),
         organization: Organization {
             id: "org-cfitness".into(),
-            name: "C.FITNESS OS".into(),
-            legal_name: "C.FITNESS CLUBS".into(),
-            siren: String::new(),
-            vat_number: String::new(),
-            sector: "Salles de remise en forme & Coaching sportif".into(),
+            name: "C.FITNESS".into(),
+            legal_name: "C.FITNESS (SAS)".into(),
+            siren: "818651317".into(),
+            vat_number: "FR02818651317".into(),
+            sector: "Activités des centres de culture physique (93.13Z — IDCC 2511)".into(),
             contact_email: admin_email.clone(),
             meal_allowance_eur: 15.5,
-            billing_notice: "Configuration production C.Fitness OS.".into(),
+            billing_notice: "Configuration officielle C.Fitness OS (Carré de Soie SIRET 818 651 317 00013 · Beynost SIRET 852 722 529 00025).".into(),
         },
         sites: default_sites(false),
         positions: default_positions(),
@@ -2079,6 +2115,17 @@ pub fn create_production_initial_state() -> AppDatabaseState {
         agent_autonomy_modes: HashMap::new(),
         missions: vec![],
         heitz_members: vec![],
+        social_channels_by_club: HashMap::from([
+            (
+                "carre-de-soie".to_string(),
+                crate::social_web::default_social_channels("carre-de-soie"),
+            ),
+            (
+                "beynost".to_string(),
+                crate::social_web::default_social_channels("beynost"),
+            ),
+        ]),
+        social_posts: vec![],
     }
 }
 

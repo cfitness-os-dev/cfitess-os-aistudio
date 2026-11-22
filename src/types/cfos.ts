@@ -17,6 +17,7 @@ export type AdminSection =
   | 'academy'
   | 'governance'
   | 'recovery'
+  | 'social-web'
   | 'executive-dossier';
 
 export type NavSection = AdminSection;

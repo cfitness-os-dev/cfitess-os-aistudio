@@ -556,6 +556,9 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
       if (path.startsWith('/marketing')) {
         return { section: 'telephony' as AdminSection, subTarget: null };
       }
+      if (path.startsWith('/reseaux-sociaux')) {
+        return { section: 'social-web' as AdminSection, subTarget: null };
+      }
       if (path.startsWith('/finances')) {
         return { section: 'devices' as AdminSection, subTarget: 'finances' as string | null };
       }
@@ -925,6 +928,8 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
         nextPath = '/crm';
       } else if (sec === 'telephony') {
         nextPath = '/marketing';
+      } else if (sec === 'social-web') {
+        nextPath = '/reseaux-sociaux';
       } else if (sec === 'devices') {
         nextPath =
           subTarget === 'finances'

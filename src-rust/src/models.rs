@@ -725,6 +725,39 @@ pub struct HeitzMemberRecord {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ClubSocialChannels {
+    pub club_id: String,
+    pub website_url: String,
+    pub club_page_url: String,
+    pub instagram_handle: String,
+    pub instagram_url: String,
+    pub facebook_url: String,
+    pub tiktok_handle: String,
+    pub tiktok_url: String,
+    pub youtube_url: String,
+    pub google_business_url: String,
+    pub google_rating: f64,
+    pub google_reviews_count: u32,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SocialPostRecord {
+    pub id: String,
+    pub club_id: String,
+    pub platform: String,
+    pub format: String,
+    pub title: String,
+    pub caption: String,
+    pub scheduled_date: String,
+    pub status: String,
+    pub author_name: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AppDatabaseState {
     pub version: String,
     pub organization: Organization,
@@ -788,6 +821,10 @@ pub struct AppDatabaseState {
     pub missions: Vec<MissionRecord>,
     #[serde(default)]
     pub heitz_members: Vec<HeitzMemberRecord>,
+    #[serde(default)]
+    pub social_channels_by_club: HashMap<String, ClubSocialChannels>,
+    #[serde(default)]
+    pub social_posts: Vec<SocialPostRecord>,
 }
 
 #[derive(Debug, Clone, Serialize)]

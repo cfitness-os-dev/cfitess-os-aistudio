@@ -728,7 +728,7 @@ test('v1.2 specifications: probation notice periods, recrutement@c.fitness parse
     clubId: 'carre-de-soie',
     startDate: '2026-10-26',
   });
-  assert.equal(contractText.includes('818 651 317 00018'), true);
+  assert.equal(contractText.includes('818 651 317 00013'), true);
   assert.equal(contractText.includes('827000002188207761'), true);
   assert.equal(contractText.includes('20 abonnements mensuels'), true);
   assert.equal(
