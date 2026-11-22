@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "lint": "tsc --noEmit",
-    "test": "tsx src/domain/rules.test.ts",
+    "test": "tsx --test src/domain/rules.test.ts src/domain/leadSettings.test.ts",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview"
   },

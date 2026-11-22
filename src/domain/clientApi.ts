@@ -1,3 +1,4 @@
+import type { LeadClubId, LeadSettings } from './leadSettings';
 import type { DashboardPayload } from './apiEngine';
 import type {
   CandidateActionRef,
@@ -502,16 +503,16 @@ export const clientApi = {
 
   getLeadSettings(
     auth: ApiAuthContext,
-    clubId: string
-  ): Promise<{ ok: boolean; clubId: string; settings: Record<string, unknown> }> {
+    clubId: LeadClubId
+  ): Promise<{ ok: boolean; clubId: string; settings: LeadSettings }> {
     return requestJson(`/api/lead/settings/${encodeURIComponent(clubId)}`, auth);
   },
 
   putLeadSettings(
     auth: ApiAuthContext,
-    clubId: string,
-    settings: Record<string, unknown>
-  ): Promise<{ ok: boolean; clubId: string; settings: Record<string, unknown> }> {
+    clubId: LeadClubId,
+    settings: LeadSettings
+  ): Promise<{ ok: boolean; clubId: string; settings: LeadSettings }> {
     return requestJson(`/api/lead/settings/${encodeURIComponent(clubId)}`, auth, {
       method: 'PUT',
       body: JSON.stringify(settings),
