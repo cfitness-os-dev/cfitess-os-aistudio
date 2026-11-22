@@ -1,4 +1,5 @@
 mod auth_passwords;
+mod clock_terminals;
 mod employee_import;
 mod employee_lifecycle;
 mod heitz_members;

@@ -827,6 +827,8 @@ pub struct AppDatabaseState {
     pub social_channels_by_club: HashMap<String, ClubSocialChannels>,
     #[serde(default)]
     pub social_posts: Vec<SocialPostRecord>,
+    #[serde(default)]
+    pub clock_terminals: Vec<crate::clock_terminals::ClockTerminal>,
 }
 
 #[derive(Debug, Clone, Serialize)]
