@@ -9,6 +9,10 @@ import type {
 } from "../types/cfos";
 
 export interface PersonalWorkspace {
+  punchAvailability: {
+    allowedTypes: Array<"arrivee" | "debut_pause" | "fin_pause" | "depart">;
+    openClubId: ClubId | null;
+  };
   canRequestLeave: boolean;
   employeeId: string;
   clubId: ClubId;
@@ -20,7 +24,12 @@ export interface PersonalWorkspace {
   training: Array<Omit<TrainingModule, "quizCorrectIndex">>;
   progress: ModuleProgress[];
   checklists: ClubChecklistItem[];
-  timeEntries: Array<{ id: string; timestamp: string; type: string; review?:{note:string;actorId:string;at:string;version:string} }>;
+  timeEntries: Array<{
+    id: string;
+    timestamp: string;
+    type: string;
+    review?: { note: string; actorId: string; at: string; version: string };
+  }>;
   leaves: Array<{
     id: string;
     motive: string;
@@ -80,6 +89,21 @@ export function validatePersonalResponse(
   ])
     if (!(key in value) || !Array.isArray(Reflect.get(value, key)))
       throw new Error("Les données reçues sont incomplètes.");
+  const clock = Reflect.get(value, "punchAvailability");
+  if (
+    !clock ||
+    typeof clock !== "object" ||
+    !Array.isArray(clock.allowedTypes) ||
+    !clock.allowedTypes.every(
+      (type: unknown) =>
+        typeof type === "string" &&
+        ["arrivee", "debut_pause", "fin_pause", "depart"].includes(type),
+    ) ||
+    ![null, "carre-de-soie", "beynost"].includes(clock.openClubId)
+  )
+    throw new Error(
+      "La situation de pointage n’a pas pu être vérifiée. Actualisez votre espace.",
+    );
   return value as PersonalWorkspace;
 }
 

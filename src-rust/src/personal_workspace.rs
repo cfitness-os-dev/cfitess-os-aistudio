@@ -95,6 +95,22 @@ fn scoped_rows(person: &Value, key: &str, club_id: &str) -> Vec<Value> {
         .filter(|row| row["clubId"].is_null() || row["clubId"] == club_id)
         .collect()
 }
+fn punch_availability(data: &Value, club_id: &str) -> Value {
+    let rows = items(data, "timeEntries");
+    let last = rows.last();
+    let previous = last.and_then(|r| r["type"].as_str());
+    let same_club = last.map(|r| r["clubId"] == club_id).unwrap_or(true);
+    let allowed: &[&str] = match previous {
+        None | Some("depart") => &["arrivee"],
+        Some("arrivee") | Some("fin_pause") if same_club => &["debut_pause", "depart"],
+        Some("debut_pause") if same_club => &["fin_pause"],
+        _ => &[],
+    };
+    let open_club = last
+        .filter(|_| previous != Some("depart"))
+        .and_then(|row| row["clubId"].as_str());
+    json!({"allowedTypes": allowed, "openClubId": open_club})
+}
 fn can_request_leave(db: &AppDatabaseState, actor: &str, site: &str) -> bool {
     evaluate_permission(
         db,
@@ -136,7 +152,7 @@ fn view(db: &AppDatabaseState, actor: &str, club_id: &str, site: &str) -> Value 
         "employeeId":actor,"clubId":club_id,"demoMode":is_demo_mode(),"signatureProviderAvailable":false,"canRequestLeave":can_request_leave(db,actor,site),
         "tasks":scoped_rows(&data,"tasks",club_id),"notifications":scoped_rows(&data,"notifications",club_id),
         "documents":items(&data,"documents"),"training":training,"progress":items(&data,"progress"),
-        "timeEntries":scoped_rows(&data,"timeEntries",club_id),"checklists":checklist(db,club_id),
+        "timeEntries":scoped_rows(&data,"timeEntries",club_id),"punchAvailability":punch_availability(&data,club_id),"checklists":checklist(db,club_id),
         "shifts":db.shifts.iter().filter(|row|row.employee_id.as_deref()==Some(actor) && row.site_id==site && row.published).collect::<Vec<_>>(),
         "leaves":db.leave_requests.iter().filter(|row|row.employee_id==actor && row.site_id==site).collect::<Vec<_>>()
     })
@@ -317,6 +333,101 @@ mod tests {
             std::fs::read(state.data_dir.join("cfitness_state.json")).unwrap(),
             bytes
         );
+        std::fs::remove_dir_all(&state.data_dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn clock_commands_match_server_transitions_across_clubs_and_restart() {
+        let state = state();
+        let mario = headers(&state, "emp-mario").await;
+        let all = ["arrivee", "debut_pause", "fin_pause", "depart"];
+        for (next, expected) in [
+            ("arrivee", vec!["arrivee"]),
+            ("debut_pause", vec!["debut_pause", "depart"]),
+            ("fin_pause", vec!["fin_pause"]),
+            ("depart", vec!["debut_pause", "depart"]),
+        ] {
+            let before = get(&state, &mario, "carre-de-soie").await;
+            assert_eq!(before["punchAvailability"]["allowedTypes"], json!(expected));
+            for invalid in all.iter().filter(|kind| !expected.contains(kind)) {
+                let disk = std::fs::read(state.data_dir.join("cfitness_state.json")).unwrap();
+                assert_eq!(
+                    action(
+                        &state,
+                        &mario,
+                        "carre-de-soie",
+                        json!({"action":"punch","punchType":invalid})
+                    )
+                    .await
+                    .unwrap_err()
+                    .0,
+                    StatusCode::CONFLICT
+                );
+                assert_eq!(
+                    std::fs::read(state.data_dir.join("cfitness_state.json")).unwrap(),
+                    disk
+                );
+            }
+            let result = action(
+                &state,
+                &mario,
+                "carre-de-soie",
+                json!({"action":"punch","punchType":next}),
+            )
+            .await
+            .unwrap()
+            .0;
+            let other = get(&state, &mario, "beynost").await;
+            if next != "depart" {
+                assert_eq!(other["punchAvailability"]["allowedTypes"], json!([]));
+                assert_eq!(other["punchAvailability"]["openClubId"], "carre-de-soie");
+                assert_eq!(
+                    action(
+                        &state,
+                        &mario,
+                        "beynost",
+                        json!({"action":"punch","punchType":"arrivee"})
+                    )
+                    .await
+                    .unwrap_err()
+                    .0,
+                    StatusCode::CONFLICT
+                );
+            } else {
+                assert_eq!(
+                    other["punchAvailability"],
+                    json!({"allowedTypes":["arrivee"],"openClubId":null})
+                );
+            }
+            let loaded = load_or_init_state(&state.data_dir);
+            assert_eq!(
+                view(&loaded, "emp-mario", "carre-de-soie", "club-carre-soie")["punchAvailability"],
+                result["punchAvailability"]
+            );
+        }
+        action(
+            &state,
+            &mario,
+            "beynost",
+            json!({"action":"punch","punchType":"arrivee"}),
+        )
+        .await
+        .unwrap();
+        let before = get(&state, &mario, "beynost").await;
+        std::fs::create_dir(state.data_dir.join("cfitness_state.json.tmp")).unwrap();
+        assert_eq!(
+            action(
+                &state,
+                &mario,
+                "beynost",
+                json!({"action":"punch","punchType":"depart"})
+            )
+            .await
+            .unwrap_err()
+            .0,
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
+        assert_eq!(get(&state, &mario, "beynost").await, before);
         std::fs::remove_dir_all(&state.data_dir).unwrap();
     }
 
@@ -564,27 +675,19 @@ pub async fn post_workspace_action(
         }
         "punch" => {
             let kind = action.punch_type.as_deref().unwrap_or("");
-            let rows = items_mut(&mut data, "timeEntries")?;
-            let last = rows.last();
-            let previous = last.and_then(|r| r["type"].as_str());
-            let same_club = last.map(|r| r["clubId"] == club_id).unwrap_or(true);
-            let valid = match kind {
-                "arrivee" => previous.is_none() || previous == Some("depart"),
-                "debut_pause" => {
-                    same_club && (previous == Some("arrivee") || previous == Some("fin_pause"))
-                }
-                "fin_pause" => same_club && previous == Some("debut_pause"),
-                "depart" => {
-                    same_club && (previous == Some("arrivee") || previous == Some("fin_pause"))
-                }
-                _ => false,
-            };
+            let available = punch_availability(&data, club_id);
+            let valid = available["allowedTypes"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|v| v == kind);
             if !valid {
                 return Err(err_resp(
                     StatusCode::CONFLICT,
                     "Ce pointage ne suit pas le précédent. Vérifiez votre historique.",
                 ));
             }
+            let rows = items_mut(&mut data, "timeEntries")?;
             rows.push(json!({"id":row_id(),"employeeId":actor,"clubId":club_id,"timestamp":now,"type":kind,"source":"authenticated_personal"}));
         }
         "acknowledge_demo_document" => {
