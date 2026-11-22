@@ -405,7 +405,7 @@ mod tests {
                 result["punchAvailability"]
             );
         }
-        action(
+        let _ = action(
             &state,
             &mario,
             "beynost",

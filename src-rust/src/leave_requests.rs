@@ -1,3 +1,4 @@
+use crate::hr_manager::request_revision;
 use crate::models::LeaveRequest;
 use crate::rbac::{evaluate_permission, PermissionTarget};
 use crate::routes::{append_audit, err_resp, resolve_session_actor, SharedState};
@@ -8,12 +9,18 @@ use axum::Json;
 use serde::Deserialize;
 use serde_json::Value;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct LeaveDecisionPayload {
     pub status: String,
     #[serde(default)]
+    pub expected_status: Option<String>,
+    #[serde(default)]
+    pub expected_revision: Option<String>,
+    #[serde(default)]
     pub comment: Option<String>,
+    #[serde(default)]
+    pub note: Option<String>,
 }
 
 fn normalize_decision_status(raw: &str) -> Option<&'static str> {
@@ -30,12 +37,45 @@ pub async fn patch_leave_request_decision(
     headers: HeaderMap,
     Json(payload): Json<LeaveDecisionPayload>,
 ) -> Result<Json<LeaveRequest>, (StatusCode, Json<Value>)> {
+    if !headers
+        .get("authorization")
+        .and_then(|h| h.to_str().ok())
+        .map(|h| h.starts_with("Bearer "))
+        .unwrap_or(false)
+    {
+        return Err(err_resp(
+            StatusCode::UNAUTHORIZED,
+            "Connectez-vous pour décider d'une absence (jeton Bearer requis).",
+        ));
+    }
+
     let Some(next_status) = normalize_decision_status(&payload.status) else {
         return Err(err_resp(
             StatusCode::BAD_REQUEST,
             "Décision invalide : utilisez 'approved' ou 'rejected'.",
         ));
     };
+
+    let effective_note = payload
+        .note
+        .as_deref()
+        .or(payload.comment.as_deref())
+        .map(str::trim)
+        .unwrap_or("");
+
+    if effective_note.chars().count() > 1000 {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            "Le motif de décision ne doit pas dépasser 1000 caractères.",
+        ));
+    }
+
+    if next_status != "approved" && effective_note.is_empty() {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            "Un motif est obligatoire pour un refus ou une remise en attente (1000 caractères maximum).",
+        ));
+    }
 
     let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
     let mut db = state.db.write().await;
@@ -86,6 +126,24 @@ pub async fn patch_leave_request_decision(
         ));
     }
 
+    if let Some(exp_status) = &payload.expected_status {
+        if &target.status != exp_status {
+            return Err(err_resp(
+                StatusCode::CONFLICT,
+                "La demande a été traitée entre-temps. Actualisez avant de décider.",
+            ));
+        }
+    }
+
+    if let Some(exp_rev) = &payload.expected_revision {
+        if request_revision(&target) != *exp_rev {
+            return Err(err_resp(
+                StatusCode::CONFLICT,
+                "La demande a été modifiée entre-temps (révision obsolète). Actualisez avant de décider.",
+            ));
+        }
+    }
+
     if target.status != "pending" {
         return Err(err_resp(
             StatusCode::CONFLICT,
@@ -96,12 +154,12 @@ pub async fn patch_leave_request_decision(
     let mut next = db.clone();
     let old_status = next.leave_requests[idx].status.clone();
     next.leave_requests[idx].status = next_status.into();
-    if let Some(note) = payload.comment.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+    if !effective_note.is_empty() {
         let base = next.leave_requests[idx].comment.trim();
         next.leave_requests[idx].comment = if base.is_empty() {
-            note.to_string()
+            effective_note.to_string()
         } else {
-            format!("{base} — Décision : {note}")
+            format!("{base} — Décision : {effective_note}")
         };
     }
     let updated = next.leave_requests[idx].clone();
@@ -197,6 +255,7 @@ mod tests {
             Json(LeaveDecisionPayload {
                 status: "approved".into(),
                 comment: Some("Validé par la Direction".into()),
+                ..Default::default()
             }),
         )
         .await
@@ -218,7 +277,8 @@ mod tests {
             admin_headers,
             Json(LeaveDecisionPayload {
                 status: "rejected".into(),
-                comment: None,
+                note: Some("Motif obligatoire de refus".into()),
+                ..Default::default()
             }),
         )
         .await
@@ -254,7 +314,7 @@ mod tests {
             self_headers,
             Json(LeaveDecisionPayload {
                 status: "approved".into(),
-                comment: None,
+                ..Default::default()
             }),
         )
         .await
@@ -269,7 +329,8 @@ mod tests {
             ro_headers,
             Json(LeaveDecisionPayload {
                 status: "rejected".into(),
-                comment: None,
+                note: Some("Refus non habilité".into()),
+                ..Default::default()
             }),
         )
         .await
@@ -306,7 +367,10 @@ mod tests {
             admin_headers.clone(),
             Json(LeaveDecisionPayload {
                 status: "maybe".into(),
+                expected_status: None,
+                expected_revision: None,
                 comment: None,
+                note: None,
             }),
         )
         .await
@@ -324,7 +388,10 @@ mod tests {
             admin_headers,
             Json(LeaveDecisionPayload {
                 status: "approved".into(),
+                expected_status: None,
+                expected_revision: None,
                 comment: None,
+                note: None,
             }),
         )
         .await
@@ -340,5 +407,180 @@ mod tests {
             .any(|r| r.id == req_id && r.status == "pending"));
 
         let _ = std::fs::remove_file(&state.data_dir);
+    }
+
+    #[tokio::test]
+    async fn leave_decision_requires_bearer_token() {
+        let state = test_state();
+        let req_id = "req-test-auth-01".to_string();
+        {
+            let mut db = state.db.write().await;
+            db.leave_requests.push(LeaveRequest {
+                id: req_id.clone(),
+                employee_id: "emp-accueil-cs".into(),
+                site_id: "club-carre-soie".into(),
+                motive: "Congés payés".into(),
+                start_date: "2026-12-20".into(),
+                end_date: "2026-12-22".into(),
+                status: "pending".into(),
+                comment: "Test auth".into(),
+            });
+        }
+
+        let mut headers = HeaderMap::new();
+        headers.insert("x-cfitness-actor-id", HeaderValue::from_str("emp-mario").unwrap());
+        headers.insert("x-cfitness-site-id", HeaderValue::from_str("club-carre-soie").unwrap());
+
+        let err = patch_leave_request_decision(
+            State(state.clone()),
+            Path(req_id),
+            headers,
+            Json(LeaveDecisionPayload {
+                status: "approved".into(),
+                expected_status: None,
+                expected_revision: None,
+                comment: None,
+                note: None,
+            }),
+        )
+        .await
+        .expect_err("missing bearer must return 401");
+        assert_eq!(err.0, StatusCode::UNAUTHORIZED);
+
+        let _ = std::fs::remove_dir_all(&state.data_dir);
+    }
+
+    #[tokio::test]
+    async fn leave_decision_rejection_requires_mandatory_motive() {
+        let state = test_state();
+        let req_id = "req-test-refusal-motive-01".to_string();
+        {
+            let mut db = state.db.write().await;
+            db.leave_requests.push(LeaveRequest {
+                id: req_id.clone(),
+                employee_id: "emp-accueil-cs".into(),
+                site_id: "club-carre-soie".into(),
+                motive: "Congés payés".into(),
+                start_date: "2026-12-20".into(),
+                end_date: "2026-12-22".into(),
+                status: "pending".into(),
+                comment: "Test motif refus".into(),
+            });
+        }
+
+        let admin_headers = session_headers(&state, "emp-mario", "club-carre-soie").await;
+
+        // Refus sans motif -> 400 Bad Request
+        let err_no_motive = patch_leave_request_decision(
+            State(state.clone()),
+            Path(req_id.clone()),
+            admin_headers.clone(),
+            Json(LeaveDecisionPayload {
+                status: "rejected".into(),
+                expected_status: None,
+                expected_revision: None,
+                comment: None,
+                note: None,
+            }),
+        )
+        .await
+        .expect_err("refusal without motive must return 400");
+        assert_eq!(err_no_motive.0, StatusCode::BAD_REQUEST);
+
+        // Refus avec motif -> 200 OK
+        let Json(updated) = patch_leave_request_decision(
+            State(state.clone()),
+            Path(req_id.clone()),
+            admin_headers,
+            Json(LeaveDecisionPayload {
+                status: "rejected".into(),
+                expected_status: None,
+                expected_revision: None,
+                comment: None,
+                note: Some("Planning de service incomplet pour cette période.".into()),
+            }),
+        )
+        .await
+        .expect("refusal with motive OK");
+        assert_eq!(updated.status, "rejected");
+        assert!(updated.comment.contains("Planning de service incomplet"));
+
+        let _ = std::fs::remove_dir_all(&state.data_dir);
+    }
+
+    #[tokio::test]
+    async fn leave_decision_enforces_revision_and_expected_status_checks() {
+        let state = test_state();
+        let req_id = "req-test-revision-01".to_string();
+        let initial_leave = LeaveRequest {
+            id: req_id.clone(),
+            employee_id: "emp-accueil-cs".into(),
+            site_id: "club-carre-soie".into(),
+            motive: "Congés payés".into(),
+            start_date: "2026-12-20".into(),
+            end_date: "2026-12-22".into(),
+            status: "pending".into(),
+            comment: "Test revision".into(),
+        };
+        let expected_rev = request_revision(&initial_leave);
+        {
+            let mut db = state.db.write().await;
+            db.leave_requests.push(initial_leave);
+        }
+
+        let admin_headers = session_headers(&state, "emp-mario", "club-carre-soie").await;
+
+        // Expected status mismatch -> 409
+        let err_status_mismatch = patch_leave_request_decision(
+            State(state.clone()),
+            Path(req_id.clone()),
+            admin_headers.clone(),
+            Json(LeaveDecisionPayload {
+                status: "approved".into(),
+                expected_status: Some("approved".into()), // DB is currently pending
+                expected_revision: Some(expected_rev.clone()),
+                comment: None,
+                note: None,
+            }),
+        )
+        .await
+        .expect_err("expected status mismatch must return 409");
+        assert_eq!(err_status_mismatch.0, StatusCode::CONFLICT);
+
+        // Revision mismatch -> 409
+        let err_rev_mismatch = patch_leave_request_decision(
+            State(state.clone()),
+            Path(req_id.clone()),
+            admin_headers.clone(),
+            Json(LeaveDecisionPayload {
+                status: "approved".into(),
+                expected_status: Some("pending".into()),
+                expected_revision: Some("bogus-revision-hash".into()),
+                comment: None,
+                note: None,
+            }),
+        )
+        .await
+        .expect_err("revision mismatch must return 409");
+        assert_eq!(err_rev_mismatch.0, StatusCode::CONFLICT);
+
+        // Good revision & status -> 200 OK
+        let Json(updated) = patch_leave_request_decision(
+            State(state.clone()),
+            Path(req_id),
+            admin_headers,
+            Json(LeaveDecisionPayload {
+                status: "approved".into(),
+                expected_status: Some("pending".into()),
+                expected_revision: Some(expected_rev),
+                comment: Some("Validé avec révision conforme.".into()),
+                note: None,
+            }),
+        )
+        .await
+        .expect("matching revision OK");
+        assert_eq!(updated.status, "approved");
+
+        let _ = std::fs::remove_dir_all(&state.data_dir);
     }
 }
