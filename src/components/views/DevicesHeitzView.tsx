@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCfos } from '../../context/CfosContext';
+import { HeitzMembersPanel } from './HeitzMembersPanel';
 import {
   QrCode,
   ShieldAlert,
@@ -238,54 +239,8 @@ export function DevicesHeitzView() {
     reader.readAsText(file, 'utf-8');
   };
 
-  const handleRunSoftwareSync = async (source: 'HEITZ_API' | 'MYWELLNESS_API') => {
-    const batch =
-      source === 'HEITZ_API'
-        ? [
-            {
-              firstName: 'Julien',
-              lastName: 'Perrin',
-              phone: '06 42 18 75 90',
-              email: 'julien.perrin@cfitness-demo.fr',
-              badgeCode: 'HZ-CDS-9104',
-              homeClubId: 'carre-de-soie' as ClubId,
-              subscriptionName: 'Liberté Bi-Club (39,90 €/mois)',
-              finBalanceEur: 0,
-            },
-            {
-              firstName: 'Amélie',
-              lastName: 'Roux',
-              phone: '06 78 33 12 04',
-              email: 'amelie.roux@cfitness-demo.fr',
-              badgeCode: 'HZ-BEY-9105',
-              homeClubId: 'beynost' as ClubId,
-              subscriptionName: 'Privilège + Biocircuit (49,90 €/mois)',
-              finBalanceEur: 0,
-            },
-          ].filter((item) => authorizedClubIds.includes(item.homeClubId))
-        : [
-            {
-              firstName: 'Mehdi',
-              lastName: 'Kaci',
-              phone: '06 51 94 20 11',
-              email: 'mehdi.kaci@cfitness-demo.fr',
-              badgeCode: 'HZ-CDS-9201',
-              mywellnessMemberId: 'MW-LYON-8842',
-              homeClubId: defaultAuthorizedClub,
-              subscriptionName: 'Privilège + Biocircuit (49,90 €/mois)',
-              finBalanceEur: 0,
-            },
-          ];
-
-    const res = await importHeitzMembers({ source, members: batch });
-    const label = source === 'HEITZ_API' ? 'Heitz System' : 'Technogym Mywellness';
-    if (!res.ok) {
-      setImportReport(`Échec synchronisation ${label} : ${res.error || 'Refus serveur.'}`);
-      return;
-    }
-    setImportReport(
-      `Synchronisation locale ${label} : ${res.added} nouveau(x) profil(s) confirmé(s) serveur, ${res.skippedDuplicates} doublon(s) ignoré(s). (Connecteur API éditeur officiel à raccorder en production.)`
-    );
+  const handleRunSoftwareSync = (_source: 'HEITZ_API' | 'MYWELLNESS_API') => {
+    setImportReport('Aucun connecteur de synchronisation vérifié n’est configuré. Aucune opération externe effectuée.');
   };
 
   useEffect(() => {
@@ -459,6 +414,8 @@ export function DevicesHeitzView() {
   };
 
   const isFinancesView = canAccessFinances && (navSubTarget === 'finances' || showTpvDrawer);
+
+  if (navSubTarget === 'adherents') return <HeitzMembersPanel />;
 
   if (navSubTarget === 'finances' && !canAccessFinances) {
     return (
