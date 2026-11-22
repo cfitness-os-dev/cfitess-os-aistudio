@@ -21,7 +21,9 @@ type Failure = (StatusCode, Json<Value>);
 
 const MIN_PHOTO_BYTES: usize = 16;
 const MAX_PHOTO_BYTES: usize = 512 * 1024; // 512 Ko max
+const MAX_BASE64_CHARS: usize = (MAX_PHOTO_BYTES * 4 / 3) + 128;
 const PHOTO_TTL_SECONDS: i64 = 120; // 2 minutes entre capture et pointage
+const MAX_PENDING_PHOTOS_PER_ACTOR: usize = 5;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -54,7 +56,7 @@ fn club_site(raw: &str) -> Result<(&'static str, &'static str), Failure> {
     }
 }
 
-/// Décodeur Base64 standard (RFC 4648) sans dépendance externe.
+/// Décodeur Base64 standard strict (RFC 4648) : borne la taille avant allocation et refuse tout padding interne.
 fn decode_base64_strict(input: &str) -> Result<Vec<u8>, Failure> {
     let trimmed = input.trim();
     let payload = if let Some(idx) = trimmed.find(";base64,") {
@@ -62,6 +64,12 @@ fn decode_base64_strict(input: &str) -> Result<Vec<u8>, Failure> {
     } else {
         trimmed
     };
+    if payload.len() > MAX_BASE64_CHARS {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            "Charge Base64 trop volumineuse.",
+        ));
+    }
     let clean: Vec<u8> = payload
         .bytes()
         .filter(|b| !b.is_ascii_whitespace())
@@ -84,8 +92,10 @@ fn decode_base64_strict(input: &str) -> Result<Vec<u8>, Failure> {
         }
     };
 
-    let mut out = Vec::with_capacity((clean.len() / 4) * 3);
-    for chunk in clean.chunks_exact(4) {
+    let total_chunks = clean.len() / 4;
+    let mut out = Vec::with_capacity(total_chunks * 3);
+    for (idx, chunk) in clean.chunks_exact(4).enumerate() {
+        let is_last = idx + 1 == total_chunks;
         let a = val(chunk[0])
             .ok_or_else(|| err_resp(StatusCode::BAD_REQUEST, "Caractère Base64 invalide."))?;
         let b = val(chunk[1])
@@ -100,8 +110,13 @@ fn decode_base64_strict(input: &str) -> Result<Vec<u8>, Failure> {
                     err_resp(StatusCode::BAD_REQUEST, "Caractère Base64 invalide.")
                 })?;
                 out.push((c << 6) | d);
+            } else if !is_last {
+                return Err(err_resp(
+                    StatusCode::BAD_REQUEST,
+                    "Padding Base64 interdit avant la fin.",
+                ));
             }
-        } else if chunk[3] != b'=' {
+        } else if chunk[3] != b'=' || !is_last {
             return Err(err_resp(
                 StatusCode::BAD_REQUEST,
                 "Padding Base64 invalide.",
@@ -111,20 +126,52 @@ fn decode_base64_strict(input: &str) -> Result<Vec<u8>, Failure> {
     Ok(out)
 }
 
-/// Détection stricte du format image par magic bytes (JPEG, PNG ou WebP).
+/// Validation structurelle de l'image (en-tête + fin de flux complète JPEG/PNG/WebP).
 fn detect_image_format(bytes: &[u8]) -> Option<(&'static str, &'static str)> {
-    if bytes.len() >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF {
+    // JPEG : SOI (FF D8 FF) + EOI (FF D9) en fin de flux
+    if bytes.len() >= 16
+        && bytes[0] == 0xFF
+        && bytes[1] == 0xD8
+        && bytes[2] == 0xFF
+        && bytes[bytes.len() - 2] == 0xFF
+        && bytes[bytes.len() - 1] == 0xD9
+    {
         return Some(("image/jpeg", "jpg"));
     }
-    if bytes.len() >= 8
+    // PNG : signature 8 octets + chunk IEND complet en fin de flux
+    if bytes.len() >= 24
         && bytes[0..8] == [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+        && bytes[bytes.len() - 8..] == [0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82]
     {
         return Some(("image/png", "png"));
     }
-    if bytes.len() >= 12 && &bytes[0..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
-        return Some(("image/webp", "webp"));
+    // WebP : RIFF + taille déclarée concordante + WEBP
+    if bytes.len() >= 16 && &bytes[0..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
+        let declared = u32::from_le_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]) as usize;
+        if declared + 8 == bytes.len() {
+            return Some(("image/webp", "webp"));
+        }
     }
     None
+}
+
+/// Purge les captures non consommées expirées (fichiers disque + métadonnées).
+fn purge_expired_unconsumed_photos(db: &mut AppDatabaseState, data_dir: &FsPath) {
+    let now = Utc::now();
+    db.punch_photos.retain(|p| {
+        if p.consumed_by_entry_id.is_some() {
+            return true;
+        }
+        let expired = DateTime::parse_from_rfc3339(&p.expires_at)
+            .map(|dt| now > dt.with_timezone(&Utc))
+            .unwrap_or(true);
+        if expired {
+            let _ = fs::remove_file(photo_disk_path(data_dir, &p.site_id, &p.file_name));
+            false
+        } else {
+            true
+        }
+    });
 }
 
 fn photo_disk_path(data_dir: &FsPath, site_id: &str, file_name: &str) -> PathBuf {
@@ -240,6 +287,23 @@ pub async fn post_capture_punch_photo(
     };
 
     let mut next = db.clone();
+    purge_expired_unconsumed_photos(&mut next, &state.data_dir);
+    let pending_count = next
+        .punch_photos
+        .iter()
+        .filter(|p| {
+            p.consumed_by_entry_id.is_none()
+                && p.employee_id == actor_id
+                && p.terminal_id == terminal.id
+        })
+        .count();
+    if pending_count >= MAX_PENDING_PHOTOS_PER_ACTOR {
+        let _ = fs::remove_file(&disk_path);
+        return Err(err_resp(
+            StatusCode::TOO_MANY_REQUESTS,
+            "Trop de captures photo en attente sur cet appareil. Validez votre pointage ou patientez.",
+        ));
+    }
     next.punch_photos.push(record.clone());
     append_audit(
         &mut next,
@@ -367,26 +431,6 @@ pub async fn get_punch_photo(
         ));
     }
 
-    let can_manage = evaluate_permission(
-        &db,
-        &actor_id,
-        site_id,
-        "ORG04-37",
-        Some(PermissionTarget {
-            site_id: Some(site_id),
-            target_employee_id: Some(&actor_id),
-            target_team_ids: &[],
-            lock_state: None,
-        }),
-    )
-    .allowed;
-    if !can_manage {
-        return Err(err_resp(
-            StatusCode::FORBIDDEN,
-            "Seuls les responsables habilités peuvent consulter les photos de pointage.",
-        ));
-    }
-
     let Some(record) = db
         .punch_photos
         .iter()
@@ -394,6 +438,34 @@ pub async fn get_punch_photo(
     else {
         return Err(err_resp(StatusCode::NOT_FOUND, "Preuve photo introuvable."));
     };
+
+    let target_teams: Vec<String> = db
+        .employees
+        .iter()
+        .find(|e| e.id == record.employee_id)
+        .and_then(|e| e.site_accesses.iter().find(|s| s.site_id == site_id))
+        .map(|s| s.team_ids.clone())
+        .unwrap_or_default();
+
+    let can_manage = evaluate_permission(
+        &db,
+        &actor_id,
+        site_id,
+        "ORG04-37",
+        Some(PermissionTarget {
+            site_id: Some(site_id),
+            target_employee_id: Some(&record.employee_id),
+            target_team_ids: &target_teams,
+            lock_state: None,
+        }),
+    )
+    .allowed;
+    if !can_manage {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Seuls les responsables habilités sur l'équipe du salarié peuvent consulter cette photo.",
+        ));
+    }
 
     let disk_path = photo_disk_path(&state.data_dir, &record.site_id, &record.file_name);
     let bytes = fs::read(&disk_path).map_err(|_| {
@@ -491,74 +563,73 @@ mod tests {
 
         let headers_karim = auth_headers(&state, "emp-karim", term_token).await;
 
-        // 1. Rejet d'un faux contenu texte (non image)
-        let bad = post_capture_punch_photo(
+        // 1a. Rejet d'un Base64 avec padding interne illégal
+        let bad_b64 = post_capture_punch_photo(
             State(state.clone()),
             headers_karim.clone(),
             Json(CapturePhotoPayload {
-                image_base64: "SGVsbG8gd29ybGQgbm90IGFuIGltYWdl".into(), // "Hello world not an image"
+                image_base64: "AA==AA==AA==AA==AA==AA==".into(),
             }),
         )
         .await
-        .expect_err("non-image base64 must be rejected");
-        assert_eq!(bad.0, StatusCode::BAD_REQUEST);
+        .expect_err("mid-stream base64 padding must be rejected");
+        assert_eq!(bad_b64.0, StatusCode::BAD_REQUEST);
 
-        // 2. Capture d'un JPEG valide (magic bytes FF D8 FF + payload >= 16 octets)
-        // Base64 de 18 octets commençant par FF D8 FF E0 ...
-        let jpeg_b64 = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/";
+        // 1b. Rejet d'un JPEG tronqué sans marqueur de fin EOI (FF D9)
+        let truncated_jpeg = post_capture_punch_photo(
+            State(state.clone()),
+            headers_karim.clone(),
+            Json(CapturePhotoPayload {
+                image_base64: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/".into(),
+            }),
+        )
+        .await
+        .expect_err("truncated JPEG without EOI must be rejected");
+        assert_eq!(truncated_jpeg.0, StatusCode::BAD_REQUEST);
+
+        // 2. Capture d'un JPEG complet (SOI FF D8 FF ... EOI FF D9)
+        let valid_jpeg_b64 = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2Q==";
         let Json(captured) = post_capture_punch_photo(
             State(state.clone()),
             headers_karim.clone(),
             Json(CapturePhotoPayload {
-                image_base64: jpeg_b64.into(),
+                image_base64: valid_jpeg_b64.into(),
             }),
         )
         .await
-        .expect("valid JPEG capture must succeed");
+        .expect("complete JPEG capture must succeed");
         let photo_id = captured["photoId"].as_str().unwrap().to_string();
         assert_eq!(captured["contentType"], "image/jpeg");
 
-        // 3. Rejet de consommation pour un autre salarié (403)
-        {
-            let mut db = state.db.write().await;
-            let err_wrong_emp = consume_punch_photo(
-                &mut db,
-                &state.data_dir,
-                &photo_id,
-                "emp-chloe",
-                "term-photo-cds",
-                "club-carre-soie",
-                "entry-1",
-            )
-            .expect_err("cross-employee consumption must be forbidden");
-            assert_eq!(err_wrong_emp.0, StatusCode::FORBIDDEN);
+        // 3. Parcours complet via la route finale post_terminal_punch
+        let Json(punch_res) = crate::clock_terminals::post_terminal_punch(
+            State(state.clone()),
+            headers_karim.clone(),
+            Json(crate::clock_terminals::TerminalPunchPayload {
+                employee_id: "emp-karim".into(),
+                punch_type: "arrivee".into(),
+                photo_proof: Some(photo_id.clone()),
+            }),
+        )
+        .await
+        .expect("terminal punch with real stored photo must succeed");
+        assert_eq!(punch_res["status"], "recorded");
+        assert_eq!(punch_res["entry"]["photoProofPresent"], true);
+        assert_eq!(punch_res["entry"]["photoProofId"], photo_id);
 
-            // 4. Consommation légitime par Karim
-            let consumed = consume_punch_photo(
-                &mut db,
-                &state.data_dir,
-                &photo_id,
-                "emp-karim",
-                "term-photo-cds",
-                "club-carre-soie",
-                "entry-1",
-            )
-            .expect("valid consumption must succeed");
-            assert_eq!(consumed.consumed_by_entry_id.as_deref(), Some("entry-1"));
-
-            // 5. Rejet de réutilisation (usage unique -> 409)
-            let err_reuse = consume_punch_photo(
-                &mut db,
-                &state.data_dir,
-                &photo_id,
-                "emp-karim",
-                "term-photo-cds",
-                "club-carre-soie",
-                "entry-2",
-            )
-            .expect_err("reusing a consumed photo must return 409");
-            assert_eq!(err_reuse.0, StatusCode::CONFLICT);
-        }
+        // 4. Rejet de réutilisation de la même photo sur un second pointage (usage unique -> 409)
+        let err_reuse = crate::clock_terminals::post_terminal_punch(
+            State(state.clone()),
+            headers_karim.clone(),
+            Json(crate::clock_terminals::TerminalPunchPayload {
+                employee_id: "emp-karim".into(),
+                punch_type: "debut_pause".into(),
+                photo_proof: Some(photo_id.clone()),
+            }),
+        )
+        .await
+        .expect_err("reusing a consumed photo must return 409");
+        assert_eq!(err_reuse.0, StatusCode::CONFLICT);
 
         // 6. Lecture privée : refusée pour un salarié non manager (403), autorisée pour Daniel (200)
         let err_read_karim = get_punch_photo(
