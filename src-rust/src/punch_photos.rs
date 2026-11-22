@@ -126,38 +126,155 @@ fn decode_base64_strict(input: &str) -> Result<Vec<u8>, Failure> {
     Ok(out)
 }
 
-/// Validation structurelle de l'image (en-tête + fin de flux complète JPEG/PNG/WebP).
+/// Validation structurelle approfondie de l'image (dimensions bornées + flux de données image réels).
+/// Rejette les octets nuls encadrés par SOI/EOI ou RIFF/WEBP sans segments image valides.
 fn detect_image_format(bytes: &[u8]) -> Option<(&'static str, &'static str)> {
-    // JPEG : SOI (FF D8 FF) + EOI (FF D9) en fin de flux
-    if bytes.len() >= 16
+    // 1. JPEG : SOI (FF D8), au moins un segment SOF (dimensions 1..=4096), un segment SOS (FF DA) avec données, et EOI (FF D9)
+    if bytes.len() >= 24
         && bytes[0] == 0xFF
         && bytes[1] == 0xD8
-        && bytes[2] == 0xFF
         && bytes[bytes.len() - 2] == 0xFF
         && bytes[bytes.len() - 1] == 0xD9
     {
-        return Some(("image/jpeg", "jpg"));
+        let mut i = 2usize;
+        let mut has_valid_sof = false;
+        let mut has_sos = false;
+        while i + 1 < bytes.len() - 2 {
+            if bytes[i] != 0xFF {
+                break;
+            }
+            while i < bytes.len() && bytes[i] == 0xFF {
+                i += 1;
+            }
+            if i >= bytes.len() {
+                break;
+            }
+            let marker = bytes[i];
+            i += 1;
+            if marker == 0xD9 {
+                break;
+            }
+            if marker == 0x00 || (0xD0..=0xD8).contains(&marker) {
+                continue;
+            }
+            if i + 2 > bytes.len() {
+                return None;
+            }
+            let seg_len = u16::from_be_bytes([bytes[i], bytes[i + 1]]) as usize;
+            if seg_len < 2 || i + seg_len > bytes.len() {
+                return None;
+            }
+            // SOF0..SOF3 (baseline / extended / progressive / lossless)
+            if matches!(marker, 0xC0..=0xC3) {
+                if seg_len < 8 {
+                    return None;
+                }
+                let height = u16::from_be_bytes([bytes[i + 3], bytes[i + 4]]);
+                let width = u16::from_be_bytes([bytes[i + 5], bytes[i + 6]]);
+                let components = bytes[i + 7];
+                if (1..=4096).contains(&width)
+                    && (1..=4096).contains(&height)
+                    && (1..=4).contains(&components)
+                {
+                    has_valid_sof = true;
+                } else {
+                    return None;
+                }
+            } else if marker == 0xDA {
+                // Start of Scan : doit précéder des données compressées avant EOI
+                let scan_data_start = i + seg_len;
+                if scan_data_start < bytes.len() - 2 {
+                    has_sos = true;
+                }
+                break;
+            }
+            i += seg_len;
+        }
+        if has_valid_sof && has_sos {
+            return Some(("image/jpeg", "jpg"));
+        }
+        return None;
     }
-    // PNG : signature 8 octets + chunk IEND complet en fin de flux
-    if bytes.len() >= 24
+
+    // 2. PNG : signature 8 octets + IHDR (13 octets, dimensions 1..=4096) + au moins un IDAT non vide + IEND
+    if bytes.len() >= 33
         && bytes[0..8] == [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
-        && bytes[bytes.len() - 8..] == [0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82]
+        && bytes[bytes.len() - 12..]
+            == [0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82]
     {
-        return Some(("image/png", "png"));
+        let mut i = 8usize;
+        let mut has_ihdr = false;
+        let mut has_idat = false;
+        while i + 12 <= bytes.len() {
+            let chunk_len =
+                u32::from_be_bytes([bytes[i], bytes[i + 1], bytes[i + 2], bytes[i + 3]]) as usize;
+            let chunk_type = &bytes[i + 4..i + 8];
+            let data_start = i + 8;
+            let next_i = data_start.checked_add(chunk_len)?.checked_add(4)?;
+            if next_i > bytes.len() {
+                return None;
+            }
+            if chunk_type == b"IHDR" {
+                if chunk_len != 13 {
+                    return None;
+                }
+                let width = u32::from_be_bytes([
+                    bytes[data_start],
+                    bytes[data_start + 1],
+                    bytes[data_start + 2],
+                    bytes[data_start + 3],
+                ]);
+                let height = u32::from_be_bytes([
+                    bytes[data_start + 4],
+                    bytes[data_start + 5],
+                    bytes[data_start + 6],
+                    bytes[data_start + 7],
+                ]);
+                if (1..=4096).contains(&width) && (1..=4096).contains(&height) {
+                    has_ihdr = true;
+                } else {
+                    return None;
+                }
+            } else if chunk_type == b"IDAT" && chunk_len > 0 {
+                has_idat = true;
+            } else if chunk_type == b"IEND" {
+                break;
+            }
+            i = next_i;
+        }
+        if has_ihdr && has_idat {
+            return Some(("image/png", "png"));
+        }
+        return None;
     }
-    // WebP : RIFF + taille déclarée concordante + WEBP
-    if bytes.len() >= 16 && &bytes[0..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
+
+    // 3. WebP : RIFF + taille concordante + WEBP + chunk VP8 / VP8L / VP8X valide non vide
+    if bytes.len() >= 20 && &bytes[0..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
         let declared = u32::from_le_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]) as usize;
-        if declared + 8 == bytes.len() {
+        if declared + 8 != bytes.len() {
+            return None;
+        }
+        let fourcc = &bytes[12..16];
+        let chunk_len = u32::from_le_bytes([bytes[16], bytes[17], bytes[18], bytes[19]]) as usize;
+        if matches!(fourcc, b"VP8 " | b"VP8L" | b"VP8X")
+            && chunk_len >= 10
+            && 20 + chunk_len <= bytes.len()
+        {
             return Some(("image/webp", "webp"));
         }
+        return None;
     }
+
     None
 }
 
-/// Purge les captures non consommées expirées (fichiers disque + métadonnées).
-fn purge_expired_unconsumed_photos(db: &mut AppDatabaseState, data_dir: &FsPath) {
+/// Retourne la liste des fichiers disque expirés à supprimer APRÈS succès de persist_state.
+fn collect_and_prune_expired_unconsumed_photos(
+    db: &mut AppDatabaseState,
+    data_dir: &FsPath,
+) -> Vec<PathBuf> {
     let now = Utc::now();
+    let mut to_delete = Vec::new();
     db.punch_photos.retain(|p| {
         if p.consumed_by_entry_id.is_some() {
             return true;
@@ -166,12 +283,13 @@ fn purge_expired_unconsumed_photos(db: &mut AppDatabaseState, data_dir: &FsPath)
             .map(|dt| now > dt.with_timezone(&Utc))
             .unwrap_or(true);
         if expired {
-            let _ = fs::remove_file(photo_disk_path(data_dir, &p.site_id, &p.file_name));
+            to_delete.push(photo_disk_path(data_dir, &p.site_id, &p.file_name));
             false
         } else {
             true
         }
     });
+    to_delete
 }
 
 fn photo_disk_path(data_dir: &FsPath, site_id: &str, file_name: &str) -> PathBuf {
@@ -287,7 +405,8 @@ pub async fn post_capture_punch_photo(
     };
 
     let mut next = db.clone();
-    purge_expired_unconsumed_photos(&mut next, &state.data_dir);
+    let expired_files_to_remove =
+        collect_and_prune_expired_unconsumed_photos(&mut next, &state.data_dir);
     let pending_count = next
         .punch_photos
         .iter()
@@ -330,6 +449,13 @@ pub async fn post_capture_punch_photo(
         ));
     }
     *db = next;
+
+    // Suppression disque des captures expirées uniquement APRÈS succès de persist_state
+    for old_path in expired_files_to_remove {
+        if let Err(err) = fs::remove_file(&old_path) {
+            tracing::warn!("Suppression fichier photo expiré {:?} échouée : {err}", old_path);
+        }
+    }
 
     Ok(Json(json!({
         "photoId": record.id,
@@ -587,19 +713,25 @@ mod tests {
         .expect_err("truncated JPEG without EOI must be rejected");
         assert_eq!(truncated_jpeg.0, StatusCode::BAD_REQUEST);
 
-        // 2. Capture d'un JPEG complet (SOI FF D8 FF ... EOI FF D9)
-        let valid_jpeg_b64 = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2Q==";
+        // 1c. Rejet des contre-exemples d'octets nuls encadrés par SOI/EOI ou RIFF/WEBP
+        let fake_jpeg = [0xff, 0xd8, 0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xd9];
+        assert!(detect_image_format(&fake_jpeg).is_none());
+        let fake_webp = [b'R', b'I', b'F', b'F', 8, 0, 0, 0, b'W', b'E', b'B', b'P', 0, 0, 0, 0];
+        assert!(detect_image_format(&fake_webp).is_none());
+
+        // 2. Capture d'une vraie image PNG 1x1 complète et décodable (IHDR + IDAT + IEND)
+        let valid_png_b64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
         let Json(captured) = post_capture_punch_photo(
             State(state.clone()),
             headers_karim.clone(),
             Json(CapturePhotoPayload {
-                image_base64: valid_jpeg_b64.into(),
+                image_base64: valid_png_b64.into(),
             }),
         )
         .await
-        .expect("complete JPEG capture must succeed");
+        .expect("complete valid PNG capture must succeed");
         let photo_id = captured["photoId"].as_str().unwrap().to_string();
-        assert_eq!(captured["contentType"], "image/jpeg");
+        assert_eq!(captured["contentType"], "image/png");
 
         // 3. Parcours complet via la route finale post_terminal_punch
         let Json(punch_res) = crate::clock_terminals::post_terminal_punch(
