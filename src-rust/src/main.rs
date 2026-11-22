@@ -4,6 +4,7 @@ mod employee_lifecycle;
 mod heitz_members;
 mod lead_automations;
 mod lead_settings;
+mod leave_requests;
 mod maintenance;
 mod missions;
 mod models;

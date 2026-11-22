@@ -3702,26 +3702,84 @@ export function PlanningAndModulesView({
                   </div>
                   {canManageRequests && r.status === 'pending' && (
                     <div className="flex gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setRequestStatusOverrides((p) => ({ ...p, [r.id]: 'accepted' }));
-                          setModuleFeedback({ kind: 'ok', text: `Demande ${r.id} acceptée.` });
-                        }}
-                        className="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                      >
-                        Accepter
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setRequestStatusOverrides((p) => ({ ...p, [r.id]: 'refused' }));
-                          setModuleFeedback({ kind: 'err', text: `Demande ${r.id} refusée.` });
-                        }}
-                        className="px-2.5 py-1 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40"
-                      >
-                        Refuser
-                      </button>
+                      {(
+                        [
+                          {
+                            decision: 'approved' as const,
+                            label: 'Accepter',
+                            cls: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40',
+                            okMsg: 'Demande acceptée et enregistrée côté serveur.',
+                          },
+                          {
+                            decision: 'rejected' as const,
+                            label: 'Refuser',
+                            cls: 'bg-rose-500/20 text-rose-300 border border-rose-500/40',
+                            okMsg: 'Demande refusée et enregistrée côté serveur.',
+                          },
+                        ] as const
+                      ).map((action) => (
+                        <button
+                          key={action.decision}
+                          type="button"
+                          onClick={async () => {
+                            const headers: Record<string, string> = {
+                              'Content-Type': 'application/json',
+                              'x-cfitness-actor-id': dashboard.session.employee.id,
+                              'x-cfitness-site-id': r.siteId,
+                            };
+                            try {
+                              const token = window.sessionStorage.getItem('cfos_bearer_token');
+                              if (token) headers.Authorization = `Bearer ${token}`;
+                            } catch {
+                              // ignore
+                            }
+                            try {
+                              const res = await fetch(
+                                `/api/leave-requests/${encodeURIComponent(r.id)}/decision`,
+                                {
+                                  method: 'PATCH',
+                                  headers,
+                                  body: JSON.stringify({ status: action.decision }),
+                                }
+                              );
+                              if (!res.ok) {
+                                const errBody = (await res.json().catch(() => null)) as {
+                                  error?: string;
+                                } | null;
+                                throw new Error(
+                                  errBody?.error ||
+                                    `Décision refusée par le serveur (${res.status}).`
+                                );
+                              }
+                              const updated = (await res.json()) as { status: string };
+                              const mappedStatus: 'accepted' | 'refused' =
+                                updated.status === 'approved' || updated.status === 'accepted'
+                                  ? 'accepted'
+                                  : 'refused';
+                              setRequestStatusOverrides((p) => ({
+                                ...p,
+                                [r.id]: mappedStatus,
+                              }));
+                              setModuleFeedback({
+                                kind: 'ok',
+                                text: action.okMsg,
+                              });
+                              await onRefreshDashboard();
+                            } catch (err) {
+                              setModuleFeedback({
+                                kind: 'err',
+                                text:
+                                  err instanceof Error
+                                    ? err.message
+                                    : 'Impossible d’enregistrer la décision côté serveur.',
+                              });
+                            }
+                          }}
+                          className={`px-2.5 py-1 rounded cursor-pointer ${action.cls}`}
+                        >
+                          {action.label}
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>
