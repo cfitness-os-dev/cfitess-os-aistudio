@@ -15,6 +15,7 @@ pub const VARIABLES: &[&str] = &[
     "date",
     "heure",
     "prix",
+    "unsubscribe-url",
 ];
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -26,6 +27,8 @@ pub struct Message {
     pub body: String,
     #[serde(default)]
     pub email_layout: Option<EmailLayout>,
+    #[serde(default)]
+    pub email_document: Option<email_blocks::Document>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -123,9 +126,21 @@ pub fn validate_message(m: &Message) -> Result<(), Failure> {
         validate_text(&layout.footer)?;
         validate_text(&layout.button_label)?;
     }
+    if let Some(document) = &m.email_document {
+        if m.channel != "email" || m.email_layout.is_some() {
+            return Err(err_resp(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "Choisissez une seule présentation email.",
+            ));
+        }
+        email_blocks::validate(document)?;
+    }
     Ok(())
 }
 pub fn text_body(m: &Message) -> String {
+    if let Some(doc) = &m.email_document {
+        return email_blocks::text(doc);
+    }
     if let Some(layout) = &m.email_layout {
         [
             layout.heading.clone(),
@@ -169,7 +184,11 @@ pub fn materialize(d: &Definition, db: &AppDatabaseState) -> Result<Definition, 
             let t = find(db, &d.club_id, id, &step.kind)?;
             step.content = Some(text_body(&t.message));
             step.subject = Some(t.message.subject.clone());
+            step.email_document = t.message.email_document.clone();
             step.template_id = None;
+        }
+        if let Some(document) = &step.email_document {
+            step.content = Some(email_blocks::text(document));
         }
         if let Some(wa) = &mut step.whatsapp {
             if let Some(id) = &wa.fallback_template_id {

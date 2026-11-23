@@ -9,7 +9,7 @@ export interface LeadScenario {
 export interface ScenarioEnrollment {
   id: string; scenarioId: string; clubId: ScenarioClubId; prospectId: string; prospectName: string;
   version: number; status: 'running' | 'completed' | 'stopped'; cursor: number; nextAt: string; createdAt: string;
-  history: Array<{ stepId: string; at: string; status: string; detail: string; activityId: string | null; renderedSubject?: string | null; renderedContent?: string | null }>;
+  history: Array<{ stepId: string; at: string; status: string; detail: string; activityId: string | null; renderedSubject?: string | null; renderedContent?: string | null; renderedHtml?: string | null }>;
 }
 export interface ScenarioWorkspace {
   actorId: string; clubId: ScenarioClubId; simulationOnly: boolean; simulationAvailable: boolean;
@@ -17,6 +17,16 @@ export interface ScenarioWorkspace {
   prospects: Array<{ id: string; name: string; status: string; source: string }>;
   scenarios: LeadScenario[]; enrollments: ScenarioEnrollment[];
   commandResult?: { scenarioId: string | null; templateId: string | null } | null;
+  segments?: string[];
+}
+export async function previewScenarioEmail(actorId: string, clubId: ScenarioClubId, message: LeadMessage, signal?: AbortSignal): Promise<string> {
+  const token = sessionStorage.getItem('cfos_bearer_token');
+  if (!token || sessionStorage.getItem('cfos_bearer_actor_id') !== actorId) throw new Error('Reconnectez-vous pour consulter cet aperçu.');
+  const response = await fetch(`/api/lead/scenarios/${encodeURIComponent(clubId)}/email-preview`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(message), signal });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(payload?.message || payload?.error || 'Aperçu indisponible.');
+  if (payload?.actorId !== actorId || payload.clubId !== clubId || payload.fictitious !== true || typeof payload.html !== 'string') throw new Error('La réponse ne correspond pas à cet aperçu.');
+  return payload.html;
 }
 export type ScenarioCommand =
   | { action: 'save_template'; templateId: string | null; expectedRevision: number | null; message: LeadMessage }

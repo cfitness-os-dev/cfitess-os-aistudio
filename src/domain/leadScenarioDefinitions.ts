@@ -1,7 +1,9 @@
 import { EXAMPLE_VALUES, renderMessage } from './leadMessageTemplates';
+import { validateEmailDocument, type EmailDocument } from './leadEmailBlocks';
 /** Contract for a complete scenario definition. This is not an execution engine. */
 export type ScenarioClubId = 'carre-de-soie' | 'beynost';
-export type ScenarioStepType = 'email' | 'sms' | 'whatsapp' | 'email_task' | 'sms_task' | 'call_task';
+export type ScenarioStepType = 'email' | 'sms' | 'whatsapp' | 'email_task' | 'sms_task' | 'call_task' | 'condition';
+export interface ScenarioBranch { predicate: 'reply'|'consent'|'assigned'|'status'|'source'|'segment'; values: string[]; yesStepId: string|null; noStepId: string|null }
 export interface ScenarioStep {
   id: string;
   type: ScenarioStepType;
@@ -11,6 +13,9 @@ export interface ScenarioStep {
   content: string | null;
   comment: string;
   subject?: string | null;
+  branch?: ScenarioBranch | null;
+  next?: { stepId: string|null } | null;
+  emailDocument?: EmailDocument | null;
   whatsapp?: { mode: 'direct' | 'template'; closedAction: 'skip' | 'template' | 'sms'; fallbackTemplateId: string | null; fallbackContent: string | null } | null;
 }
 export interface ScenarioDefinition {
@@ -28,12 +33,13 @@ export interface ScenarioCatalog {
   clubId: ScenarioClubId;
   statusIds: readonly string[];
   sourceIds: readonly string[];
+  segmentIds?: readonly string[];
   templates: readonly { id: string; channel: 'email' | 'sms' | 'whatsapp' }[];
 }
 export interface ScenarioIssue { path: string; message: string }
 export type ScenarioValidation = { ok: true; value: ScenarioDefinition } | { ok: false; issues: ScenarioIssue[] };
 
-const STEP_TYPES: readonly string[] = ['email', 'sms', 'whatsapp', 'email_task', 'sms_task', 'call_task'];
+const STEP_TYPES: readonly string[] = ['email', 'sms', 'whatsapp', 'email_task', 'sms_task', 'call_task', 'condition'];
 const UNITS: readonly string[] = ['minutes', 'hours', 'days'];
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -76,7 +82,7 @@ export function validateScenarioDefinition(input: unknown, catalog: ScenarioCata
     input.steps.forEach((step: unknown, index: number) => {
       const path = `steps.${index}.`;
       if (!isRecord(step)) { fail(`steps.${index}`, 'Étape invalide.'); return; }
-      fields(step, ['id', 'type', 'enabled', 'delay', 'templateId', 'content', 'comment', 'subject', 'whatsapp'], path);
+      fields(step, ['id', 'type', 'enabled', 'delay', 'templateId', 'content', 'comment', 'subject', 'whatsapp', 'branch', 'next', 'emailDocument'], path);
       if (!text(step.id, 100) || typeof step.id !== 'string' || step.id !== step.id.trim()) fail(`${path}id`, 'Identifiant d’étape invalide.');
       else if (ids.has(step.id)) fail(`${path}id`, 'Chaque étape doit avoir un identifiant distinct.');
       else ids.add(step.id);
@@ -90,6 +96,28 @@ export function validateScenarioDefinition(input: unknown, catalog: ScenarioCata
         if (typeof step.delay.unit !== 'string' || !UNITS.includes(step.delay.unit)) fail(`${path}delay.unit`, 'Choisissez minutes, heures ou jours.');
       }
       if (typeof step.comment !== 'string' || step.comment.length > 2000) fail(`${path}comment`, 'Commentaire invalide (2 000 caractères maximum).');
+      if (step.next != null) {
+        if (!isRecord(step.next)) fail(`${path}next`, 'Suite invalide.');
+        else {
+          const next = step.next;
+          fields(next,['stepId'],`${path}next.`);
+          if (step.type==='condition' || (next.stepId!==null && !(input.steps as unknown[]).some((s,i)=>i>index&&isRecord(s)&&s.id===next.stepId&&s.enabled===true))) fail(`${path}next`, 'La suite doit rejoindre une étape activée plus loin, ou terminer.');
+        }
+      }
+      if (step.emailDocument != null && (step.type !== 'email' || step.templateId != null || validateEmailDocument(step.emailDocument as EmailDocument).length)) fail(`${path}emailDocument`, 'Document email incompatible ou invalide.');
+      if (step.type === 'condition') {
+        const b = step.branch;
+        if (!isRecord(b)) fail(`${path}branch`, 'Définissez la condition et ses deux destinations.');
+        else {
+          fields(b, ['predicate','values','yesStepId','noStepId'], `${path}branch.`);
+          const known = b.predicate === 'status' ? catalog.statusIds : b.predicate === 'source' ? catalog.sourceIds : b.predicate === 'segment' ? catalog.segmentIds ?? [] : [];
+          const needsValues = ['status','source','segment'].includes(String(b.predicate));
+          if (!['reply','consent','assigned','status','source','segment'].includes(String(b.predicate)) || !Array.isArray(b.values) || b.values.length > 200 || (needsValues ? b.values.length === 0 : b.values.length !== 0) || new Set(b.values).size !== b.values.length || b.values.some(v=>typeof v !== 'string'||!known.includes(v))) fail(`${path}branch`, 'Sélectionnez des valeurs de condition du club courant.');
+          for (const key of ['yesStepId','noStepId']) if (b[key] !== null && (typeof b[key] !== 'string' || !(input.steps as unknown[]).some((target,i)=>i>index&&isRecord(target)&&target.id===b[key]&&target.enabled===true))) fail(`${path}branch.${key}`, 'Une branche doit rejoindre une étape activée plus loin, ou terminer.');
+        }
+        if (step.content !== null || step.templateId !== null || step.subject != null || step.whatsapp != null) fail(`${path}branch`, 'Une condition ne contient pas de message ni de modèle.');
+        return;
+      } else if (step.branch != null) fail(`${path}branch`, 'Les destinations exigent une étape Condition.');
       const channel = step.type === 'email' || step.type === 'sms' || step.type === 'whatsapp' ? step.type : null;
       if (step.templateId !== null) {
         if (typeof step.templateId !== 'string' || !catalog.templates.some(t => t.id === step.templateId && t.channel === channel)) fail(`${path}templateId`, 'Choisissez un modèle du bon canal et du club courant.');

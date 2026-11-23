@@ -10,6 +10,7 @@ fn email_composition_is_safe_structured_text_and_rejects_unsafe_urls() {
         channel: "email".into(),
         subject: "Bonjour".into(),
         body: "Votre séance".into(),
+        email_document: None,
         email_layout: Some(messages::EmailLayout {
             heading: "Bienvenue".into(),
             button_label: "Réserver".into(),
@@ -86,6 +87,7 @@ async fn templates_freeze_at_publication_render_once_and_reject_cross_club_or_ar
     let mut db = s.db.write().await;
     let (id, p) = setup(&mut db, now);
     let message = messages::Message {
+        email_document: None,
         email_layout: None,
         name: "Accueil".into(),
         channel: "email".into(),
@@ -263,6 +265,7 @@ async fn exit_rules_stop_before_due_and_whatsapp_fallbacks_never_invent_channel_
 async fn template_commands_require_role_revision_and_durable_write() {
     let s = state();
     let message = messages::Message {
+        email_document: None,
         email_layout: None,
         name: "SMS".into(),
         channel: "sms".into(),
@@ -347,7 +350,7 @@ async fn template_commands_require_role_revision_and_durable_write() {
     std::fs::remove_dir_all(&s.data_dir).unwrap();
 }
 
-fn state() -> SharedState {
+pub(super) fn state() -> SharedState {
     let dir = std::env::temp_dir().join(format!("scenario-test-{}", rand::random::<u128>()));
     Arc::new(SharedAppState {
         db: RwLock::new(crate::seed::load_or_init_state(&dir)),
@@ -367,7 +370,7 @@ async fn headers(s: &SharedState, emp: &str, op: &str) -> HeaderMap {
     h.insert("x-cfitness-operation-id", op.parse().unwrap());
     h
 }
-fn definition() -> Definition {
+pub(super) fn definition() -> Definition {
     Definition {
         schema_version: 1,
         club_id: "carre-de-soie".into(),
@@ -381,6 +384,9 @@ fn definition() -> Definition {
             Step {
                 id: "email".into(),
                 kind: "email".into(),
+                next: None,
+                branch: None,
+                email_document: None,
                 subject: None,
                 whatsapp: None,
                 enabled: true,
@@ -395,6 +401,9 @@ fn definition() -> Definition {
             Step {
                 id: "call".into(),
                 kind: "call_task".into(),
+                next: None,
+                branch: None,
+                email_document: None,
                 subject: None,
                 whatsapp: None,
                 enabled: true,
@@ -409,7 +418,7 @@ fn definition() -> Definition {
         ],
     }
 }
-fn setup(db: &mut AppDatabaseState, now: DateTime<Utc>) -> (String, LeadProspectRecord) {
+pub(super) fn setup(db: &mut AppDatabaseState, now: DateTime<Utc>) -> (String, LeadProspectRecord) {
     let p = db
         .lead_prospects
         .iter()

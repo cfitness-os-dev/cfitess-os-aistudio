@@ -17,6 +17,8 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
 type Failure = (StatusCode, Json<Value>);
+#[path = "lead_email_blocks.rs"]
+mod email_blocks;
 #[path = "lead_message_templates.rs"]
 mod messages;
 
@@ -34,6 +36,27 @@ pub struct WhatsAppOptions {
     pub closed_action: String,
     pub fallback_template_id: Option<String>,
     pub fallback_content: Option<String>,
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Branch {
+    pub predicate: String,
+    pub values: Vec<String>,
+    #[serde(deserialize_with = "explicit_destination")]
+    pub yes_step_id: Option<String>,
+    #[serde(deserialize_with = "explicit_destination")]
+    pub no_step_id: Option<String>,
+}
+fn explicit_destination<'de, D: serde::Deserializer<'de>>(
+    value: D,
+) -> Result<Option<String>, D::Error> {
+    Option::<String>::deserialize(value)
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Next {
+    #[serde(deserialize_with = "explicit_destination")]
+    pub step_id: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -75,6 +98,12 @@ pub struct Step {
     pub subject: Option<String>,
     #[serde(default)]
     pub whatsapp: Option<WhatsAppOptions>,
+    #[serde(default)]
+    pub email_document: Option<email_blocks::Document>,
+    #[serde(default)]
+    pub branch: Option<Branch>,
+    #[serde(default)]
+    pub next: Option<Next>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -123,6 +152,8 @@ pub struct Execution {
     pub rendered_subject: Option<String>,
     #[serde(default)]
     pub rendered_content: Option<String>,
+    #[serde(default)]
+    pub rendered_html: Option<String>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -170,7 +201,56 @@ fn command_snapshot(
 }
 
 pub fn router() -> Router<SharedState> {
-    Router::new().route("/api/lead/scenarios/:club", get(workspace).post(command))
+    Router::new()
+        .route("/api/lead/scenarios/:club", get(workspace).post(command))
+        .route(
+            "/api/lead/scenarios/:club/email-preview",
+            axum::routing::post(email_preview),
+        )
+        .layer(axum::extract::DefaultBodyLimit::max(8 * 1024 * 1024))
+}
+async fn email_preview(
+    State(state): State<SharedState>,
+    Path(club): Path<String>,
+    headers: HeaderMap,
+    Json(message): Json<messages::Message>,
+) -> Result<Json<Value>, Failure> {
+    let actor = actor(&state, &headers).await?;
+    {
+        let db = state.db.read().await;
+        authorize(&db, &actor, &club)?;
+    }
+    messages::validate_message(&message)?;
+    let doc = message.email_document.as_ref().ok_or_else(|| {
+        err_resp(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "Choisissez un document email à prévisualiser.",
+        )
+    })?;
+    let values: HashMap<String, String> = [
+        ("prenom", "Camille"),
+        ("nom", "Exemple"),
+        ("club", "Club de démonstration"),
+        ("telephone-club", "00 00 00 00 00"),
+        ("adresse-club", "Adresse fictive"),
+        ("url-rdv-club", "https://example.test/rdv"),
+        ("url-club", "https://example.test"),
+        ("prenom-commercial", "Alex"),
+        ("rdv-date", "01/12/2026"),
+        ("rdv-heure", "10:00"),
+        ("date", "01/12/2026"),
+        ("heure", "10:00"),
+        ("prix", "39,90 €"),
+        ("unsubscribe-url", "https://example.test/desabonnement"),
+    ]
+    .into_iter()
+    .map(|(k, v)| (k.into(), v.into()))
+    .collect();
+    let html = email_blocks::render(doc, &values, true)
+        .map_err(|message| err_resp(StatusCode::UNPROCESSABLE_ENTITY, &message))?;
+    Ok(Json(
+        json!({"actorId":actor,"clubId":club,"html":email_blocks::preview_document(&html),"text":messages::render(&email_blocks::text(doc),&values).unwrap_or_default(),"fictitious":true}),
+    ))
 }
 fn site(club: &str) -> Result<&'static str, Failure> {
     match club {
@@ -315,13 +395,96 @@ fn validate(d: &Definition, club: &str, db: &AppDatabaseState) -> Result<(), Fai
         }
         if !matches!(
             step.kind.as_str(),
-            "email" | "sms" | "whatsapp" | "email_task" | "sms_task" | "call_task"
+            "email" | "sms" | "whatsapp" | "email_task" | "sms_task" | "call_task" | "condition"
         ) {
             return Err(bad("Type d'étape inconnu."));
         }
         if step.delay.seconds().is_none() || step.delay.amount > 525600 {
             return Err(bad(
                 "Délai invalide : utilisez un entier positif ou nul et une unité connue.",
+            ));
+        }
+        if let Some(next) = &step.next {
+            if step.kind == "condition" {
+                return Err(bad("Une condition utilise ses destinations Oui et Non."));
+            }
+            if let Some(target) = &next.step_id {
+                let index = d.steps.iter().position(|s| s.id == step.id).unwrap_or(0);
+                if !d
+                    .steps
+                    .iter()
+                    .enumerate()
+                    .any(|(i, s)| i > index && s.id == *target && s.enabled)
+                {
+                    return Err(bad(
+                        "La suite doit rejoindre une étape activée plus loin, ou terminer.",
+                    ));
+                }
+            }
+        }
+        if let Some(doc) = &step.email_document {
+            if step.kind != "email" || step.template_id.is_some() {
+                return Err(bad("Document email incompatible avec cette étape."));
+            }
+            email_blocks::validate(doc)?;
+        }
+        if step.kind == "condition" {
+            let b = step
+                .branch
+                .as_ref()
+                .ok_or_else(|| bad("Définissez la condition et ses deux destinations."))?;
+            if step.comment.encode_utf16().count() > 2000
+                || step.template_id.is_some()
+                || step.content.is_some()
+                || step.subject.is_some()
+                || step.whatsapp.is_some()
+                || !matches!(
+                    b.predicate.as_str(),
+                    "reply" | "consent" | "assigned" | "status" | "source" | "segment"
+                )
+                || b.values.len() > 200
+                || b.values.iter().collect::<HashSet<_>>().len() != b.values.len()
+            {
+                return Err(bad("Étape conditionnelle invalide."));
+            }
+            let uses_values = matches!(b.predicate.as_str(), "status" | "source" | "segment");
+            if uses_values == b.values.is_empty() {
+                return Err(bad("Sélectionnez les valeurs de la condition."));
+            }
+            for value in &b.values {
+                let known = match b.predicate.as_str() {
+                    "status" => {
+                        statuses().contains(value)
+                            || db.lead_prospects.iter().any(|p| {
+                                p.club_id == club && (&p.stage == value || &p.lead_status == value)
+                            })
+                    }
+                    "source" => sources(db, club).contains(value),
+                    "segment" => db
+                        .lead_prospects
+                        .iter()
+                        .any(|p| p.club_id == club && p.segments.contains(value)),
+                    _ => false,
+                };
+                if !known {
+                    return Err(bad("Valeur de condition inconnue dans ce club."));
+                }
+            }
+            let index = d.steps.iter().position(|s| s.id == step.id).unwrap_or(0);
+            for target in [&b.yes_step_id, &b.no_step_id].into_iter().flatten() {
+                if !d
+                    .steps
+                    .iter()
+                    .enumerate()
+                    .any(|(i, s)| i > index && s.id == *target && s.enabled)
+                {
+                    return Err(bad("Une branche doit rejoindre une étape activée plus loin dans le parcours, ou terminer."));
+                }
+            }
+            continue;
+        } else if step.branch.is_some() {
+            return Err(bad(
+                "Les destinations conditionnelles exigent une étape Condition.",
             ));
         }
         if let Some(id) = &step.template_id {
@@ -456,7 +619,13 @@ fn snapshot(db: &AppDatabaseState, club: &str, actor: &str) -> Value {
             }
         }
     }
-    json!({"actorId":actor,"clubId":club,"simulationOnly":true,"simulationAvailable":is_demo_mode(),"sources":sources(db,club),"statusIds":all_statuses,"templates":db.lead_scenarios.templates.iter().filter(|t|t.club_id==club).collect::<Vec<_>>(),
+    let segments: HashSet<_> = db
+        .lead_prospects
+        .iter()
+        .filter(|p| p.club_id == club)
+        .flat_map(|p| p.segments.clone())
+        .collect();
+    json!({"actorId":actor,"clubId":club,"simulationOnly":true,"simulationAvailable":is_demo_mode(),"sources":sources(db,club),"statusIds":all_statuses,"segments":segments,"templates":db.lead_scenarios.templates.iter().filter(|t|t.club_id==club).collect::<Vec<_>>(),
         "scenarios":db.lead_scenarios.scenarios.iter().filter(|s|s.club_id==club).collect::<Vec<_>>(),
         "enrollments":db.lead_scenarios.enrollments.iter().filter(|e|e.club_id==club).collect::<Vec<_>>(),
         "prospects":db.lead_prospects.iter().filter(|p|p.club_id==club).map(|p|json!({"id":p.id,"name":format!("{} {}",p.first_name,p.last_name),"status":p.stage,"source":p.source})).collect::<Vec<_>>()})
@@ -886,6 +1055,7 @@ fn apply(
                 activity_id: None,
                 rendered_subject: None,
                 rendered_content: None,
+                rendered_html: None,
             });
         }
         Command::Run {} => {
@@ -1073,6 +1243,7 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
                 activity_id: None,
                 rendered_subject: None,
                 rendered_content: None,
+                rendered_html: None,
             });
             db.lead_scenarios.enrollments[idx] = e;
             continue;
@@ -1090,6 +1261,7 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
                 activity_id: None,
                 rendered_subject: None,
                 rendered_content: None,
+                rendered_html: None,
             });
             db.lead_scenarios.enrollments[idx] = e;
             continue;
@@ -1107,6 +1279,7 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
                 activity_id: None,
                 rendered_subject: None,
                 rendered_content: None,
+                rendered_html: None,
             });
             db.lead_scenarios.enrollments[idx] = e;
             continue;
@@ -1119,7 +1292,88 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
             activity_id: None,
             rendered_subject: None,
             rendered_content: None,
+            rendered_html: None,
         };
+        if step.kind == "condition" {
+            if let Some(branch) = &step.branch {
+                let needs_values =
+                    matches!(branch.predicate.as_str(), "status" | "source" | "segment");
+                if !matches!(
+                    branch.predicate.as_str(),
+                    "reply" | "consent" | "assigned" | "status" | "source" | "segment"
+                ) || (needs_values && branch.values.is_empty())
+                    || (!needs_values && !branch.values.is_empty())
+                {
+                    e.status = "stopped".into();
+                    result.status = "stopped".into();
+                    result.detail = "Condition restaurée invalide : parcours arrêté.".into();
+                    e.history.push(result);
+                    db.lead_scenarios.enrollments[idx] = e;
+                    continue;
+                }
+                let yes = match branch.predicate.as_str() {
+                    "consent" => p.rgpd_consent,
+                    "assigned" => valid_assignee(db, &p).is_some(),
+                    "status" => branch
+                        .values
+                        .iter()
+                        .any(|v| v == &p.stage || v == &p.lead_status),
+                    "source" => branch.values.contains(&p.source),
+                    "segment" => branch.values.iter().any(|v| p.segments.contains(v)),
+                    "reply" => p
+                        .last_inbound_reply_at
+                        .as_deref()
+                        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+                        .zip(DateTime::parse_from_rfc3339(&e.created_at).ok())
+                        .map(|(reply, start)| reply > start)
+                        .unwrap_or(false),
+                    _ => false,
+                };
+                let target = if yes {
+                    &branch.yes_step_id
+                } else {
+                    &branch.no_step_id
+                };
+                if let Some(id) = target {
+                    if let Some((index, next)) = e
+                        .definition
+                        .steps
+                        .iter()
+                        .enumerate()
+                        .find(|(i, s)| *i > e.cursor && s.id == *id && s.enabled)
+                    {
+                        result.status = "branched".into();
+                        result.detail = format!(
+                            "Condition : {}. Suite vers l’étape {}.",
+                            if yes { "Oui" } else { "Non" },
+                            index + 1
+                        );
+                        e.cursor = index;
+                        e.next_at = (now + Duration::seconds(next.delay.seconds().unwrap_or(0)))
+                            .to_rfc3339();
+                    } else {
+                        e.status = "stopped".into();
+                        result.status = "stopped".into();
+                        result.detail =
+                            "Destination conditionnelle invalide : parcours arrêté.".into();
+                    }
+                } else {
+                    e.status = "completed".into();
+                    result.status = "branched".into();
+                    result.detail = format!(
+                        "Condition : {}. Fin du parcours.",
+                        if yes { "Oui" } else { "Non" }
+                    );
+                }
+            } else {
+                e.status = "stopped".into();
+                result.status = "stopped".into();
+                result.detail = "Condition absente : parcours arrêté.".into();
+            }
+            e.history.push(result);
+            db.lead_scenarios.enrollments[idx] = e;
+            continue;
+        }
         if step.kind.ends_with("_task") {
             if let Some(assigned) = valid_assignee(db, &p) {
                 let id = format!("scenario-task-{}-{}", e.id, step.id);
@@ -1176,6 +1430,19 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
                 Ok((body, subject)) => {
                     result.rendered_content = Some(body);
                     result.rendered_subject = Some(subject);
+                    if let Some(doc) = &step.email_document {
+                        match email_blocks::render(doc, &values, true) {
+                            Ok(html) => {
+                                result.rendered_html = Some(email_blocks::preview_document(&html))
+                            }
+                            Err(reason) => {
+                                result.status = "skipped".into();
+                                result.detail = reason;
+                                result.rendered_content = None;
+                                result.rendered_subject = None;
+                            }
+                        }
+                    }
                 }
                 Err(reason) => {
                     result.status = "skipped".into();
@@ -1184,15 +1451,44 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
             }
         }
         e.history.push(result);
-        if let Some(next) = e
-            .definition
-            .steps
-            .iter()
-            .enumerate()
-            .skip(e.cursor + 1)
-            .find(|(_, s)| s.enabled)
-            .map(|(i, _)| i)
-        {
+        let next_index = if let Some(next) = &step.next {
+            if let Some(id) = &next.step_id {
+                let found = e
+                    .definition
+                    .steps
+                    .iter()
+                    .enumerate()
+                    .find(|(i, s)| *i > e.cursor && s.id == *id && s.enabled)
+                    .map(|(i, _)| i);
+                if found.is_none() {
+                    e.status = "stopped".into();
+                    e.history.push(Execution {
+                        step_id: "stop".into(),
+                        at: now.to_rfc3339(),
+                        status: "stopped".into(),
+                        detail: "Suite invalide : parcours arrêté.".into(),
+                        activity_id: None,
+                        rendered_subject: None,
+                        rendered_content: None,
+                        rendered_html: None,
+                    });
+                    db.lead_scenarios.enrollments[idx] = e;
+                    continue;
+                }
+                found
+            } else {
+                None
+            }
+        } else {
+            e.definition
+                .steps
+                .iter()
+                .enumerate()
+                .skip(e.cursor + 1)
+                .find(|(_, s)| s.enabled)
+                .map(|(i, _)| i)
+        };
+        if let Some(next) = next_index {
             e.cursor = next;
             e.next_at = (now
                 + Duration::seconds(e.definition.steps[next].delay.seconds().unwrap_or(0)))
@@ -1233,3 +1529,7 @@ pub fn spawn_worker(state: SharedState) {
 #[cfg(test)]
 #[path = "lead_scenarios_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "lead_blocks_branches_tests.rs"]
+mod blocks_branches_tests;

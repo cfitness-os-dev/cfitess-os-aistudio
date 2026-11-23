@@ -1,5 +1,7 @@
 # Scénarios Lead — éditeur et moteur local de recette
 
+État complété par le troisième lot : [éditeur à 12 blocs et branches conditionnelles](lead-email-blocs-branches.md), [recette et captures](lead-email-blocs-branches-recette.md). Les rapports des premier/deuxième lots conservent leurs limites historiques ; le présent lien décrit ce qui a été ajouté depuis.
+
 ## Périmètre livré
 
 Prospection – Vente → Communication → Scénarios : liste filtrable, recherche, brouillon complet, mode automatique ou manuel, ciblage par statut/source/commercial, étapes ordonnées et activables, délais minutes/heures/jours, messages et consignes, publication versionnée, activation, verrouillage des nouvelles inscriptions, archivage, copie interclub inactive, inscription manuelle, progression et arrêt motivé.
@@ -37,13 +39,13 @@ Autorisation actuelle : salarié actif avec profil de gestion de site dans le cl
 
 100 étapes, nom 120 caractères, commentaire 2000, contenu 20000, délai entier 0..525600 par unité : limites proposées C.Fitness OS, non présentées comme des limites Lead. Le brouillon doit être complet pour être enregistré ; aucune sauvegarde automatique de saisie incomplète.
 
-Non livré : éditeur email complet à 12 blocs (HTML/médias/colonnes), connecteurs réels et leurs accusés/réessais, fenêtres horaires et jours ouvrés, graphes à branches conditionnelles, réentrée configurable, inscription depuis la fiche commerciale, délégations fines, purge historique/reçus d'opération. La persistance JSON et le verrou concernent un seul processus ; aucune garantie distribuée.
+Restent non livrés : connecteurs réels et leurs accusés/réessais, fenêtres horaires et jours ouvrés, réentrée configurable, inscription depuis la fiche commerciale, délégations fines, purge historique/reçus d'opération. L’éditeur dispose maintenant des douze types de blocs et le moteur de branches sans boucle. Les propriétés Lead non observées et les clients email réels restent à valider. La persistance JSON et le verrou concernent un seul processus ; aucune garantie distribuée.
 
-## Modèles et options avancées — deuxième lot
+## Modèles et options avancées — deuxième lot, complété par le troisième
 
 L’onglet Modèles de messages remplace le constructeur local à un seul brouillon par un catalogue serveur par club. Email, SMS et WhatsApp disposent d’un nom, canal et contenu ; objet requis pour un modèle email. Recherche et filtre canal, création, édition avec révision, duplication locale préparatoire, copie interclub, archivage et inclusion des archives. Le canal d’un modèle existant ne change pas. Aucune approbation Meta ne peut être déclarée depuis cet écran.
 
-Un email propose titre, corps, bouton HTTPS, pied de page et les 18 polices déjà recensées (rendu dépendant des polices disponibles). L’aperçu est du texte React structuré, sans HTML exécutable, image distante ni chargement de police externe. Ce n’est pas encore l’éditeur Lead à 12 blocs. La publication fige le sujet et une représentation textuelle complète incluant titre, bouton/adresse et pied de page ; les futurs adaptateurs devront définir la version HTML sans perdre cette immutabilité.
+Un email propose soit la présentation simple titre/corps/bouton/pied/police, soit le document à douze types de blocs avec propriétés et aperçu serveur isolé. La publication fige le sujet, le document et sa version texte. La simulation conserve un HTML assaini sans chargement distant ni lien actif ; les futurs adaptateurs d’envoi devront préserver cette immutabilité et être testés dans les clients email réels. Voir le contrat du troisième lot pour import d’image, HTML et désabonnement.
 
 Chaque étape de message choisit un modèle du bon canal ou un contenu libre. La publication copie son contenu dans la version : modification/archivage du modèle ne change pas les parcours publiés. Une copie de scénario vers un autre club conserve ses références ; le responsable doit choisir un modèle du club destinataire (les modèles disposent de leur propre commande Copier). Aucune référence étrangère n’est acceptée pour publier.
 

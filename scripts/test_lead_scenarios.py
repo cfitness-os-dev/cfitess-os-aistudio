@@ -1,15 +1,18 @@
 """Loopback-only scenario recipe. Fictitious credentials supplied through env; no external sends."""
 import concurrent.futures
+import base64
 import json
 import os
 from pathlib import Path
 import socket
+import struct
 import subprocess
 import tempfile
 import time
 import urllib.error
 import urllib.request
 import uuid
+import zlib
 
 
 def main():
@@ -37,7 +40,12 @@ def main():
                 with urllib.request.urlopen(request, timeout=5) as reply:
                     return reply.status, json.load(reply)
             except urllib.error.HTTPError as error:
-                return error.code, json.load(error)
+                raw = error.read().decode('utf-8', errors='replace')
+                try:
+                    payload = json.loads(raw)
+                except json.JSONDecodeError:
+                    payload = {'message': raw}
+                return error.code, payload
 
         def start():
             proc = subprocess.Popen([binary], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -197,6 +205,74 @@ def main():
                 ids = list(pool.map(concurrent_template, ['Variation A', 'Variation B']))
             assert len(set(ids)) == 2
             checks.append('concurrent distinct creates return their own stable entity id, including replay after other creates')
+            kinds = ['texte','bouton','entete','reseaux','pied','html','image','image_texte','fond_image','navbar','separateur','espace']
+            def email_block(kind, index):
+                return dict(id=f'block-{index}', kind=kind, text='Bonjour %prenom%', label='Réserver', url='https://example.test/rdv', image='https://example.test/image.png', alt='Illustration', html='<p>Bonjour %prenom%</p><script>alert(1)</script>', links=[dict(label='Club',url='https://example.test')], style=dict(font='Arial',fontSize=16,align='left',textColor='#123456',backgroundColor='#ffffff',radius=8,padding=[10,10,10,10],imageWidth=400,height=50,imagePosition='left',thickness=2))
+            document = dict(version=1, blocks=[email_block(kind,i) for i,kind in enumerate(kinds)])
+            def png_chunk(tag, data):
+                return struct.pack('>I',len(data))+tag+data+struct.pack('>I',zlib.crc32(tag+data)&0xffffffff)
+            png=b'\x89PNG\r\n\x1a\n'+png_chunk(b'IHDR',struct.pack('>IIBBBBB',1,1,8,2,0,0,0))+png_chunk(b'IDAT',zlib.compress(b'\x00\x7c\x3a\xed'))+png_chunk(b'IEND',b'')
+            document['blocks'][6]['image']='data:image/png;base64,'+base64.b64encode(png).decode()
+            block_message = dict(name='Douze blocs',channel='email',subject='Bonjour %prenom%',body='Version texte',emailDocument=document)
+            employee = login('emp-chloe', 'CFITNESS_TEST_COMMERCIAL_SECRET')
+            assert call('POST', endpoint+'/email-preview', body=block_message)[0] == 401
+            assert call('POST', endpoint+'/email-preview', employee, block_message)[0] == 403
+            disk_before_preview = (folder/'cfitness_state.json').read_bytes()
+            code, preview = call('POST', endpoint+'/email-preview', admin, block_message)
+            assert code == 200, preview
+            assert "default-src 'none'" in preview['html'] and '<script>' not in preview['html']
+            assert ' href=' not in preview['html']
+            assert 'Se désabonner' in preview['html'] and 'src="https://example.test/image.png' not in preview['html']
+            assert 'src="data:image/png;base64,' in preview['html']
+            assert (folder/'cfitness_state.json').read_bytes() == disk_before_preview
+            bad_doc=json.loads(json.dumps(block_message));bad_doc['emailDocument']['blocks'][0]['image']='data:image/svg+xml;base64,PHN2Zz4='
+            assert call('POST',endpoint+'/email-preview',admin,bad_doc)[0] == 422
+            saved=call('POST',endpoint,admin,dict(action='save_template',templateId=None,expectedRevision=None,message=block_message))[1]
+            block_id=saved['commandResult']['templateId']
+            assert len(next(t for t in saved['templates'] if t['id']==block_id)['message']['emailDocument']['blocks'])==12
+            # Use a document without an unsubscribe block for a successful simulation: no real unsubscribe service is invented.
+            block_message['emailDocument']['blocks']=[b for b in document['blocks'] if b['kind']!='pied']
+            call('POST',endpoint,admin,dict(action='save_template',templateId=block_id,expectedRevision=1,message=block_message))
+            block_definition=json.loads(json.dumps(definition));block_definition['name']='Email composé';block_definition['steps']=[dict(id='composed',type='email',enabled=True,delay=dict(amount=0,unit='minutes'),templateId=block_id,content=None,comment='',next=dict(stepId=None))]
+            created=call('POST',endpoint,admin,dict(action='save',scenarioId=None,expectedRevision=None,definition=block_definition))[1]
+            block_scenario=created['commandResult']['scenarioId']
+            assert call('POST',endpoint,admin,dict(action='publish',scenarioId=block_scenario,expectedRevision=1))[0]==200
+            block_message['emailDocument']['blocks'][0]['text']='MODIFIÉ APRÈS PUBLICATION'
+            assert call('POST',endpoint,admin,dict(action='save_template',templateId=block_id,expectedRevision=2,message=block_message))[0]==200
+            call('POST',endpoint,admin,dict(action='status',scenarioId=block_scenario,expectedRevision=2,active=True,enrollmentLocked=False))
+            call('POST',endpoint,admin,dict(action='enroll',scenarioId=block_scenario,prospectId=prospect['id']))
+            result=call('POST',endpoint,admin,dict(action='run'))[1]
+            rendered=next(e for e in result['enrollments'] if e['scenarioId']==block_scenario)['history'][0]
+            assert rendered['status']=='simulated' and rendered['renderedHtml']
+            assert '<script>' not in rendered['renderedHtml'] and 'MODIFIÉ APRÈS PUBLICATION' not in rendered['renderedHtml']
+            checks.append('twelve-block preview enforces roles, safe HTML/media, no state mutation and immutable published document')
+            for expected in ['yes','no']:
+                graph=json.loads(json.dumps(definition));graph['name']='Branche '+expected
+                common=dict(enabled=True,delay=dict(amount=0,unit='minutes'),templateId=None,content=None,comment='')
+                graph['steps']=[dict(**common,id='if',type='condition',branch=dict(predicate='consent' if expected=='yes' else 'status',values=[] if expected=='yes' else ['Client'],yesStepId='yes',noStepId='no')),
+                                {**common,'id':'yes','type':'call_task','comment':'Chemin oui','next':dict(stepId=None)},
+                                {**common,'id':'no','type':'call_task','comment':'Chemin non','next':dict(stepId=None)}]
+                invalid=json.loads(json.dumps(graph));invalid['steps'][1]['next']['stepId']='if'
+                assert call('POST',endpoint,admin,dict(action='save',scenarioId=None,expectedRevision=None,definition=invalid))[0]==422
+                missing_destination=json.loads(json.dumps(graph));del missing_destination['steps'][0]['branch']['yesStepId']
+                assert call('POST',endpoint,admin,dict(action='save',scenarioId=None,expectedRevision=None,definition=missing_destination))[0]==422
+                response=call('POST',endpoint,admin,dict(action='save',scenarioId=None,expectedRevision=None,definition=graph))[1]
+                graph_id=response['commandResult']['scenarioId']
+                call('POST',endpoint,admin,dict(action='publish',scenarioId=graph_id,expectedRevision=1))
+                call('POST',endpoint,admin,dict(action='status',scenarioId=graph_id,expectedRevision=2,active=True,enrollmentLocked=False))
+                call('POST',endpoint,admin,dict(action='enroll',scenarioId=graph_id,prospectId=prospect['id']))
+                response=call('POST',endpoint,admin,dict(action='run'))[1]
+                enrollment=next(e for e in response['enrollments'] if e['scenarioId']==graph_id)
+                assert enrollment['history'][0]['status']=='branched'
+                stop(proc);proc=start();admin=login('emp-mario','CFITNESS_TEST_ADMIN_SECRET')
+                response=call('POST',endpoint,admin,dict(action='run'))[1]
+                enrollment=next(e for e in response['enrollments'] if e['scenarioId']==graph_id)
+                assert enrollment['status']=='completed' and len(enrollment['history'])==2
+                assert enrollment['history'][1]['stepId']==expected and enrollment['history'][1]['status']=='task_created'
+                call('POST',endpoint,admin,dict(action='run'))
+                actions=call('GET','/api/lead/workspace',admin)[1]['activities']
+                assert sum(a['id']==enrollment['history'][1]['activityId'] for a in actions)==1
+            checks.append('both conditional paths survive real restart, reject backward edges and execute only the selected task exactly once')
         finally:
             if proc.poll() is None:
                 stop(proc)

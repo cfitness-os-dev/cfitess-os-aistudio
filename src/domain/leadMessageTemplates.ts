@@ -1,13 +1,15 @@
+import { emailDocumentText, validateEmailDocument, type EmailDocument } from './leadEmailBlocks';
 export type MessageChannel = 'email' | 'sms' | 'whatsapp';
 export interface EmailLayout { heading: string; buttonLabel: string; buttonUrl: string; footer: string; font: string }
-export interface LeadMessage { name: string; channel: MessageChannel; subject: string; body: string; emailLayout?: EmailLayout | null }
+export interface LeadMessage { name: string; channel: MessageChannel; subject: string; body: string; emailLayout?: EmailLayout | null; emailDocument?: EmailDocument | null }
 export function messageText(message: LeadMessage): string {
+  if (message.emailDocument) return emailDocumentText(message.emailDocument);
   const layout = message.emailLayout;
   return layout ? [layout.heading, message.body, layout.buttonUrl ? `${layout.buttonLabel} : ${layout.buttonUrl}` : '', layout.footer].filter(Boolean).join('\n\n') : message.body;
 }
 export interface LeadMessageTemplate { id: string; clubId: string; revision: number; message: LeadMessage; archived: boolean; updatedAt: string }
-export const MESSAGE_VARIABLES = ['prenom', 'nom', 'club', 'telephone-club', 'adresse-club', 'url-rdv-club', 'url-club', 'prenom-commercial', 'rdv-date', 'rdv-heure', 'date', 'heure', 'prix'] as const;
-export const EXAMPLE_VALUES: Record<string, string> = { prenom: 'Camille', nom: 'Exemple', club: 'Club de démonstration', 'telephone-club': '00 00 00 00 00', 'adresse-club': 'Adresse fictive', 'url-rdv-club': 'https://example.test/rendez-vous', 'url-club': 'https://example.test', 'prenom-commercial': 'Alex', 'rdv-date': '01/12/2026', 'rdv-heure': '10:00', date: '01/12/2026', heure: '10:00', prix: '39,90 €' };
+export const MESSAGE_VARIABLES = ['prenom', 'nom', 'club', 'telephone-club', 'adresse-club', 'url-rdv-club', 'url-club', 'prenom-commercial', 'rdv-date', 'rdv-heure', 'date', 'heure', 'prix', 'unsubscribe-url'] as const;
+export const EXAMPLE_VALUES: Record<string, string> = { 'unsubscribe-url': 'https://example.test/desabonnement', prenom: 'Camille', nom: 'Exemple', club: 'Club de démonstration', 'telephone-club': '00 00 00 00 00', 'adresse-club': 'Adresse fictive', 'url-rdv-club': 'https://example.test/rendez-vous', 'url-club': 'https://example.test', 'prenom-commercial': 'Alex', 'rdv-date': '01/12/2026', 'rdv-heure': '10:00', date: '01/12/2026', heure: '10:00', prix: '39,90 €' };
 export function renderMessage(text: string, values: Record<string, string>): { text: string; missing: string[] } {
   const missing = new Set<string>();
   const result = text.replace(/%([a-zA-Z0-9_-]+)%/g, (tag, key: string) => {
@@ -30,6 +32,14 @@ export function validateMessage(message: LeadMessage): string[] {
     try { const url = new URL(layout.buttonUrl); validUrl = url.protocol === 'https:' && !!url.hostname && !url.username && !url.password && !/[\s<>"'\\]/.test(layout.buttonUrl); } catch { /* Invalid URL remains refused. */ }
     if (message.channel !== 'email' || layout.heading.length > 300 || layout.footer.length > 2000 || layout.buttonLabel.length > 120 || layout.buttonUrl.length > 2000 || !/^[A-Za-z0-9 -]{1,80}$/.test(layout.font) || (!!layout.buttonLabel.trim() !== !!layout.buttonUrl) || !validUrl) errors.push('Présentation email invalide : utilisez un bouton nommé avec une adresse HTTPS sans identifiant.');
     if (renderMessage(layout.heading + layout.buttonLabel + layout.footer, EXAMPLE_VALUES).missing.length) errors.push('Variable inconnue dans la présentation email.');
+  }
+  if (message.emailDocument) {
+    if (message.channel !== 'email' || message.emailLayout) errors.push('Choisissez une seule présentation email.');
+    errors.push(...validateEmailDocument(message.emailDocument));
+    for (const b of message.emailDocument.blocks) {
+      if (renderMessage([b.text,b.label,b.alt,b.html,...b.links.map(l=>l.label)].join('\n'), EXAMPLE_VALUES).missing.length) errors.push('Variable inconnue dans un bloc email.');
+    }
+    if (emailDocumentText(message.emailDocument).length > 20000) errors.push('Le texte total des blocs est limité à 20 000 caractères.');
   }
   return errors;
 }
