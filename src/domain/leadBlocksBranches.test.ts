@@ -3,6 +3,22 @@ import assert from 'node:assert/strict';
 import { EMAIL_BLOCK_KINDS, createEmailBlock, emailDocumentText, validateEmailDocument, type EmailDocument } from './leadEmailBlocks';
 import { validateMessage } from './leadMessageTemplates';
 import { validateScenarioDefinition, type ScenarioDefinition } from './leadScenarioDefinitions';
+import { embeddedImageBytes, MAX_EMAIL_IMAGE_BYTES, validateImageImport } from './leadEmailImages';
+
+test('image import checks actual signature, total budget and replacement without double counting', () => {
+  const png=Uint8Array.from([137,80,78,71,13,10,26,10]);
+  const doc:EmailDocument={version:1,blocks:[createEmailBlock('image','a'),createEmailBlock('image','b')]};
+  assert.equal(validateImageImport(doc,'a','image/png',png),null);
+  assert.match(validateImageImport(doc,'a','image/jpeg',png)!,/correspond/);
+  assert.match(validateImageImport(doc,'a','image/png',new TextEncoder().encode('<svg/>'))!,/correspond/);
+  assert.match(validateImageImport(doc,'deleted','image/png',png)!,/existe plus/);
+  assert.equal(embeddedImageBytes('data:image/png;base64,YQ=='),1);
+  assert.equal(embeddedImageBytes('data:image/jpeg;base64,YWI='),2);
+  assert.equal(embeddedImageBytes('https://example.test/image.png'),0);
+  doc.blocks[0].image='data:image/png;base64,'+Buffer.alloc(MAX_EMAIL_IMAGE_BYTES).toString('base64');
+  assert.equal(validateImageImport(doc,'a','image/png',png),null);
+  assert.match(validateImageImport(doc,'b','image/png',png)!,/2 Mo au total/);
+});
 
 test('all twelve blocks keep ordered content, styles and links; invalid media/schema/URLs rejected', () => {
   const document:EmailDocument={version:1,blocks:EMAIL_BLOCK_KINDS.map((kind,i)=>({...createEmailBlock(kind,`b${i}`),text:'Bonjour %prenom%',label:'Réserver',url:'https://example.test/rdv',image:'https://example.test/image.png',alt:'Illustration',html:'<p>Bonjour</p>',links:[{label:'Club',url:'https://example.test'}]}))};
