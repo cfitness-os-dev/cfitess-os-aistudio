@@ -3,6 +3,350 @@ use crate::routes::SharedAppState;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
 
+#[test]
+fn email_composition_is_safe_structured_text_and_rejects_unsafe_urls() {
+    let mut message = messages::Message {
+        name: "Visite".into(),
+        channel: "email".into(),
+        subject: "Bonjour".into(),
+        body: "Votre séance".into(),
+        email_layout: Some(messages::EmailLayout {
+            heading: "Bienvenue".into(),
+            button_label: "Réserver".into(),
+            button_url: "https://example.test/rdv".into(),
+            footer: "À bientôt".into(),
+            font: "Arial".into(),
+        }),
+    };
+    assert!(messages::validate_message(&message).is_ok());
+    assert_eq!(
+        messages::text_body(&message),
+        "Bienvenue\n\nVotre séance\n\nRéserver : https://example.test/rdv\n\nÀ bientôt"
+    );
+    for url in [
+        "javascript:alert(1)",
+        "https://user:secret@example.test",
+        "http://example.test",
+    ] {
+        message.email_layout.as_mut().unwrap().button_url = url.into();
+        assert!(messages::validate_message(&message).is_err());
+    }
+}
+
+#[tokio::test]
+async fn status_and_target_exit_rules_stop_pending_steps_without_removing_existing_activities() {
+    for mode in ["status", "target"] {
+        let s = state();
+        let now = Utc::now();
+        let mut db = s.db.write().await;
+        let (_, p) = setup(&mut db, now);
+        let mut scenario = db.lead_scenarios.scenarios[0].clone();
+        let definition = &mut scenario.versions[0].definition;
+        definition.mode = "automatic".into();
+        definition.conditions = Some(Conditions {
+            status_ids: vec![p.stage.clone()],
+            source_ids: vec![p.source.clone()],
+            require_assigned_commercial: true,
+        });
+        definition.exit_rules = Some(ExitRules {
+            stop_on_reply: false,
+            status_ids: if mode == "status" {
+                vec!["Client".into()]
+            } else {
+                vec![]
+            },
+            stop_if_no_longer_matches: mode == "target",
+        });
+        db.lead_scenarios.scenarios[0] = scenario.clone();
+        enroll(&mut db, &scenario, &p, now).unwrap();
+        let record = db.lead_prospects.iter_mut().find(|x| x.id == p.id).unwrap();
+        if mode == "status" {
+            record.stage = "Client".into();
+        } else {
+            record.source = "Source différente".into();
+        }
+        let before = db.lead_activities.len();
+        process(&mut db, "carre-de-soie", now);
+        assert_eq!(db.lead_scenarios.enrollments[0].status, "stopped");
+        assert_eq!(
+            db.lead_scenarios.enrollments[0].history[0].status,
+            "stopped"
+        );
+        assert_eq!(db.lead_activities.len(), before);
+        drop(db);
+        std::fs::remove_dir_all(&s.data_dir).unwrap();
+    }
+}
+
+#[tokio::test]
+async fn templates_freeze_at_publication_render_once_and_reject_cross_club_or_archived_references()
+{
+    let s = state();
+    let now = Utc::now();
+    let mut db = s.db.write().await;
+    let (id, p) = setup(&mut db, now);
+    let message = messages::Message {
+        email_layout: None,
+        name: "Accueil".into(),
+        channel: "email".into(),
+        subject: "Bonjour %prenom%".into(),
+        body: "Bienvenue au %club%, %prenom%".into(),
+    };
+    apply(
+        &mut db,
+        "carre-de-soie",
+        "emp-daniel",
+        Command::SaveTemplate {
+            template_id: None,
+            expected_revision: None,
+            message: message.clone(),
+        },
+        now,
+    )
+    .unwrap();
+    let tpl = db.lead_scenarios.templates[0].id.clone();
+    let mut d = definition();
+    d.steps[0].template_id = Some(tpl.clone());
+    d.steps[0].content = None;
+    apply(
+        &mut db,
+        "carre-de-soie",
+        "emp-daniel",
+        Command::Save {
+            scenario_id: Some(id.clone()),
+            expected_revision: Some(3),
+            definition: d.clone(),
+        },
+        now,
+    )
+    .unwrap();
+    apply(
+        &mut db,
+        "carre-de-soie",
+        "emp-daniel",
+        Command::Publish {
+            scenario_id: id.clone(),
+            expected_revision: 4,
+        },
+        now,
+    )
+    .unwrap();
+    let frozen = db.lead_scenarios.scenarios[0].versions.last().unwrap();
+    assert!(frozen.definition.steps[0].template_id.is_none());
+    assert_eq!(
+        frozen.definition.steps[0].subject.as_deref(),
+        Some("Bonjour %prenom%")
+    );
+    let mut changed = message;
+    changed.body = "Nouveau modèle".into();
+    apply(
+        &mut db,
+        "carre-de-soie",
+        "emp-daniel",
+        Command::SaveTemplate {
+            template_id: Some(tpl.clone()),
+            expected_revision: Some(1),
+            message: changed,
+        },
+        now,
+    )
+    .unwrap();
+    let scenario = db.lead_scenarios.scenarios[0].clone();
+    enroll(&mut db, &scenario, &p, now).unwrap();
+    process(&mut db, "carre-de-soie", now);
+    let entry = &db.lead_scenarios.enrollments[0].history[0];
+    assert_eq!(entry.status, "simulated");
+    assert!(entry
+        .rendered_content
+        .as_ref()
+        .unwrap()
+        .starts_with("Bienvenue au "));
+    assert_eq!(
+        entry.rendered_subject.as_deref(),
+        Some(format!("Bonjour {}", p.first_name).as_str())
+    );
+    let mut foreign = d.clone();
+    foreign.club_id = "beynost".into();
+    assert!(validate(&foreign, "beynost", &db).is_err());
+    apply(
+        &mut db,
+        "carre-de-soie",
+        "emp-daniel",
+        Command::ArchiveTemplate {
+            template_id: tpl,
+            expected_revision: 2,
+        },
+        now,
+    )
+    .unwrap();
+    assert!(validate(&d, "carre-de-soie", &db).is_err());
+    let restored: AppDatabaseState =
+        serde_json::from_value(serde_json::to_value(&*db).unwrap()).unwrap();
+    assert_eq!(restored.lead_scenarios.templates.len(), 1);
+    assert_eq!(
+        restored.lead_scenarios.enrollments[0].history[0].rendered_content,
+        entry_content(&db)
+    );
+    assert_eq!(
+        messages::render(
+            "%prenom% remise 10%",
+            &HashMap::from([("prenom".into(), "%nom%".into())])
+        )
+        .unwrap(),
+        "%nom% remise 10%"
+    );
+    assert!(messages::render("%rdv-date%", &HashMap::new()).is_err());
+    drop(db);
+    std::fs::remove_dir_all(&s.data_dir).unwrap();
+}
+fn entry_content(db: &AppDatabaseState) -> Option<String> {
+    db.lead_scenarios.enrollments[0].history[0]
+        .rendered_content
+        .clone()
+}
+
+#[tokio::test]
+async fn exit_rules_stop_before_due_and_whatsapp_fallbacks_never_invent_channel_evidence() {
+    let s = state();
+    let now = Utc::now();
+    let mut db = s.db.write().await;
+    let (_, p) = setup(&mut db, now);
+    let mut scenario = db.lead_scenarios.scenarios[0].clone();
+    scenario.versions[0].definition.exit_rules = Some(ExitRules {
+        stop_on_reply: true,
+        status_ids: vec![],
+        stop_if_no_longer_matches: false,
+    });
+    scenario.versions[0].definition.steps[0].delay.amount = 50;
+    db.lead_scenarios.scenarios[0] = scenario.clone();
+    enroll(&mut db, &scenario, &p, now).unwrap();
+    db.lead_prospects
+        .iter_mut()
+        .find(|x| x.id == p.id)
+        .unwrap()
+        .last_inbound_reply_at = Some((now + Duration::seconds(1)).to_rfc3339());
+    process(&mut db, "carre-de-soie", now + Duration::seconds(2));
+    assert_eq!(db.lead_scenarios.enrollments[0].status, "stopped");
+    assert_eq!(
+        db.lead_scenarios.enrollments[0].history[0].status,
+        "stopped"
+    );
+    let mut wa = definition();
+    wa.steps.truncate(1);
+    wa.steps[0].kind = "whatsapp".into();
+    wa.steps[0].whatsapp = Some(WhatsAppOptions {
+        mode: "direct".into(),
+        closed_action: "sms".into(),
+        fallback_template_id: None,
+        fallback_content: Some("Bonjour %prenom%".into()),
+    });
+    assert!(validate(&wa, "carre-de-soie", &db).is_ok());
+    db.lead_scenarios.enrollments.clear();
+    db.lead_scenarios.scenarios[0].versions[0].definition = wa.clone();
+    let scenario = db.lead_scenarios.scenarios[0].clone();
+    enroll(&mut db, &scenario, &p, now).unwrap();
+    process(&mut db, "carre-de-soie", now);
+    assert_eq!(
+        db.lead_scenarios.enrollments[0].history[0].status,
+        "skipped"
+    );
+    assert!(db.lead_scenarios.enrollments[0].history[0]
+        .rendered_content
+        .is_none());
+    wa.steps[0].whatsapp.as_mut().unwrap().fallback_content = Some("".into());
+    assert!(validate(&wa, "carre-de-soie", &db).is_err());
+    drop(db);
+    std::fs::remove_dir_all(&s.data_dir).unwrap();
+}
+
+#[tokio::test]
+async fn template_commands_require_role_revision_and_durable_write() {
+    let s = state();
+    let message = messages::Message {
+        email_layout: None,
+        name: "SMS".into(),
+        channel: "sms".into(),
+        subject: "".into(),
+        body: "Bonjour %prenom%".into(),
+    };
+    let make = || Command::SaveTemplate {
+        template_id: None,
+        expected_revision: None,
+        message: message.clone(),
+    };
+    let h = headers(&s, "emp-maxime", "forbidden-template").await;
+    assert_eq!(
+        command(
+            State(s.clone()),
+            Path("carre-de-soie".into()),
+            h,
+            Json(make())
+        )
+        .await
+        .unwrap_err()
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    let h = headers(&s, "emp-daniel", "saved-template").await;
+    let _ = command(
+        State(s.clone()),
+        Path("carre-de-soie".into()),
+        h.clone(),
+        Json(make()),
+    )
+    .await
+    .unwrap();
+    let _ = command(
+        State(s.clone()),
+        Path("carre-de-soie".into()),
+        h,
+        Json(make()),
+    )
+    .await
+    .unwrap();
+    assert_eq!(s.db.read().await.lead_scenarios.templates.len(), 1);
+    let template = s.db.read().await.lead_scenarios.templates[0].clone();
+    let h = headers(&s, "emp-daniel", "stale-template").await;
+    let stale = Command::SaveTemplate {
+        template_id: Some(template.id),
+        expected_revision: Some(99),
+        message: message.clone(),
+    };
+    assert_eq!(
+        command(
+            State(s.clone()),
+            Path("carre-de-soie".into()),
+            h,
+            Json(stale)
+        )
+        .await
+        .unwrap_err()
+        .0,
+        StatusCode::CONFLICT
+    );
+    let before = std::fs::read(s.data_dir.join("cfitness_state.json")).unwrap();
+    std::fs::create_dir(s.data_dir.join("cfitness_state.json.tmp")).unwrap();
+    let h = headers(&s, "emp-daniel", "failed-template").await;
+    assert_eq!(
+        command(
+            State(s.clone()),
+            Path("carre-de-soie".into()),
+            h,
+            Json(make())
+        )
+        .await
+        .unwrap_err()
+        .0,
+        StatusCode::INTERNAL_SERVER_ERROR
+    );
+    assert_eq!(s.db.read().await.lead_scenarios.templates.len(), 1);
+    assert_eq!(
+        before,
+        std::fs::read(s.data_dir.join("cfitness_state.json")).unwrap()
+    );
+    std::fs::remove_dir_all(&s.data_dir).unwrap();
+}
+
 fn state() -> SharedState {
     let dir = std::env::temp_dir().join(format!("scenario-test-{}", rand::random::<u128>()));
     Arc::new(SharedAppState {
@@ -32,10 +376,13 @@ fn definition() -> Definition {
         active: false,
         enrollment_locked: false,
         conditions: None,
+        exit_rules: None,
         steps: vec![
             Step {
                 id: "email".into(),
                 kind: "email".into(),
+                subject: None,
+                whatsapp: None,
                 enabled: true,
                 delay: Delay {
                     amount: 0,
@@ -48,6 +395,8 @@ fn definition() -> Definition {
             Step {
                 id: "call".into(),
                 kind: "call_task".into(),
+                subject: None,
+                whatsapp: None,
                 enabled: true,
                 delay: Delay {
                     amount: 5,

@@ -23,6 +23,14 @@ test('scenario writes carry stable operation id; failures and foreign-club repli
     assert.equal(new Headers(headers).get('x-cfitness-operation-id'), 'stable-operation');
     globalThis.fetch = async () => new Response(JSON.stringify({ actorId: 'employee', clubId: 'carre-de-soie', scenarios: [], enrollments: [] }));
     await assert.rejects(scenarioRequest('employee', 'beynost'), /ne correspond pas/);
+    const base = { actorId: 'employee', clubId: 'beynost', scenarios: [], enrollments: [], templates: [], sources: [], statusIds: [], prospects: [] };
+    globalThis.fetch = async () => new Response(JSON.stringify({ ...base, templates: [{ id: 'foreign', clubId: 'carre-de-soie' }] }));
+    await assert.rejects(scenarioRequest('employee', 'beynost'), /autre club/);
+    const command = { action: 'save_template' as const, templateId: null, expectedRevision: null, message: { name: 'Test', channel: 'sms' as const, subject: '', body: 'Bonjour' } };
+    globalThis.fetch = async () => new Response(JSON.stringify({ ...base, templates: [{ id: 'last-other-create', clubId: 'beynost' }] }));
+    await assert.rejects(scenarioRequest('employee', 'beynost', command, 'create-op'), /identifier le modèle/);
+    globalThis.fetch = async () => new Response(JSON.stringify({ ...base, templates: [{ id: 'mine', clubId: 'beynost' }, { id: 'last-other-create', clubId: 'beynost' }], commandResult: { templateId: 'mine' } }));
+    assert.equal((await scenarioRequest('employee', 'beynost', command, 'create-op')).commandResult?.templateId, 'mine');
     globalThis.fetch = async () => new Response(JSON.stringify({ actorId: 'other', clubId: 'beynost', scenarios: [], enrollments: [] }));
     await assert.rejects(scenarioRequest('employee', 'beynost'), /ne correspond pas/);
   } finally { globalThis.fetch = original; if (storage) Object.defineProperty(globalThis, 'sessionStorage', storage); else Reflect.deleteProperty(globalThis, 'sessionStorage'); }

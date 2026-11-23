@@ -17,6 +17,24 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
 type Failure = (StatusCode, Json<Value>);
+#[path = "lead_message_templates.rs"]
+mod messages;
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ExitRules {
+    pub stop_on_reply: bool,
+    pub status_ids: Vec<String>,
+    pub stop_if_no_longer_matches: bool,
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct WhatsAppOptions {
+    pub mode: String,
+    pub closed_action: String,
+    pub fallback_template_id: Option<String>,
+    pub fallback_content: Option<String>,
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -53,6 +71,10 @@ pub struct Step {
     pub template_id: Option<String>,
     pub content: Option<String>,
     pub comment: String,
+    #[serde(default)]
+    pub subject: Option<String>,
+    #[serde(default)]
+    pub whatsapp: Option<WhatsAppOptions>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -65,6 +87,8 @@ pub struct Definition {
     pub enrollment_locked: bool,
     pub conditions: Option<Conditions>,
     pub steps: Vec<Step>,
+    #[serde(default)]
+    pub exit_rules: Option<ExitRules>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -95,6 +119,10 @@ pub struct Execution {
     pub status: String,
     pub detail: String,
     pub activity_id: Option<String>,
+    #[serde(default)]
+    pub rendered_subject: Option<String>,
+    #[serde(default)]
+    pub rendered_content: Option<String>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -115,10 +143,30 @@ pub struct Enrollment {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Store {
+    #[serde(default)]
+    pub templates: Vec<messages::Template>,
     pub scenarios: Vec<Scenario>,
     pub enrollments: Vec<Enrollment>,
     #[serde(default)]
     pub receipts: HashMap<String, String>,
+    #[serde(default)]
+    pub results: HashMap<String, CommandResult>,
+}
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommandResult {
+    pub scenario_id: Option<String>,
+    pub template_id: Option<String>,
+}
+fn command_snapshot(
+    db: &AppDatabaseState,
+    club: &str,
+    actor: &str,
+    result: Option<&CommandResult>,
+) -> Value {
+    let mut payload = snapshot(db, club, actor);
+    payload["commandResult"] = json!(result);
+    payload
 }
 
 pub fn router() -> Router<SharedState> {
@@ -276,26 +324,103 @@ fn validate(d: &Definition, club: &str, db: &AppDatabaseState) -> Result<(), Fai
                 "Délai invalide : utilisez un entier positif ou nul et une unité connue.",
             ));
         }
-        // No authoritative shared template catalog is connected yet. Never trust a foreign/client template id.
-        if step.template_id.is_some() {
-            return Err(bad("Les modèles partagés ne sont pas encore raccordés. Renseignez le contenu du message."));
+        if let Some(id) = &step.template_id {
+            messages::find(db, club, id, &step.kind)?;
+            if step.content.is_some() {
+                return Err(bad(
+                    "Choisissez un modèle ou un message libre, pas les deux.",
+                ));
+            }
+        }
+        if let Some(subject) = &step.subject {
+            if step.kind != "email"
+                || subject.chars().count() > 200
+                || subject.contains(['\r', '\n'])
+            {
+                return Err(bad("Objet email invalide."));
+            }
+            messages::validate_text(subject)?;
+        }
+        if let Some(content) = &step.content {
+            messages::validate_text(content)?;
+        }
+        if let Some(wa) = &step.whatsapp {
+            if step.kind != "whatsapp"
+                || !matches!(wa.mode.as_str(), "direct" | "template")
+                || !matches!(wa.closed_action.as_str(), "skip" | "template" | "sms")
+                || (wa.mode == "template" && step.template_id.is_none())
+            {
+                return Err(bad("Options WhatsApp incohérentes."));
+            }
+            match wa.closed_action.as_str() {
+                "template" => {
+                    messages::find(
+                        db,
+                        club,
+                        wa.fallback_template_id
+                            .as_deref()
+                            .ok_or_else(|| bad("Choisissez le modèle WhatsApp de repli."))?,
+                        "whatsapp",
+                    )?;
+                    if wa.fallback_content.is_some() {
+                        return Err(bad("Le repli modèle ne contient pas de SMS libre."));
+                    }
+                }
+                "sms" => {
+                    let content = wa
+                        .fallback_content
+                        .as_deref()
+                        .filter(|s| !s.trim().is_empty() && s.chars().count() <= 20000)
+                        .ok_or_else(|| bad("Renseignez explicitement le SMS de repli."))?;
+                    messages::validate_text(content)?;
+                    if wa.fallback_template_id.is_some() {
+                        return Err(bad("Le repli SMS ne contient pas de modèle WhatsApp."));
+                    }
+                }
+                _ => {
+                    if wa.fallback_template_id.is_some() || wa.fallback_content.is_some() {
+                        return Err(bad("Retirez le contenu de repli inutilisé."));
+                    }
+                }
+            }
         }
         if step.comment.chars().count() > 2000 {
             return Err(bad("Commentaire trop long."));
         }
         if step.kind.ends_with("_task") {
-            if step.comment.trim().is_empty() || step.content.is_some() {
+            if step.comment.trim().is_empty()
+                || step.content.is_some()
+                || step.template_id.is_some()
+            {
                 return Err(bad(
                     "Décrivez la tâche dans son commentaire, sans envoi automatique.",
                 ));
             }
-        } else if step
-            .content
-            .as_ref()
-            .map(|s| s.trim().is_empty() || s.chars().count() > 20000)
-            .unwrap_or(true)
+        } else if step.template_id.is_none()
+            && step
+                .content
+                .as_ref()
+                .map(|s| s.trim().is_empty() || s.chars().count() > 20000)
+                .unwrap_or(true)
         {
             return Err(bad("Renseignez un message de 1 à 20 000 caractères."));
+        }
+    }
+    if let Some(rules) = &d.exit_rules {
+        if rules.status_ids.len() > 200
+            || rules.status_ids.iter().collect::<HashSet<_>>().len() != rules.status_ids.len()
+            || rules.status_ids.iter().any(|s| {
+                !statuses().contains(s)
+                    && !db
+                        .lead_prospects
+                        .iter()
+                        .any(|p| p.club_id == club && (&p.stage == s || &p.lead_status == s))
+            })
+            || (rules.stop_if_no_longer_matches && d.mode != "automatic")
+        {
+            return Err(bad(
+                "Conditions de sortie invalides pour ce club ou ce mode.",
+            ));
         }
     }
     Ok(())
@@ -331,7 +456,7 @@ fn snapshot(db: &AppDatabaseState, club: &str, actor: &str) -> Value {
             }
         }
     }
-    json!({"actorId":actor,"clubId":club,"simulationOnly":true,"simulationAvailable":is_demo_mode(),"sources":sources(db,club),"statusIds":all_statuses,"templates":[],
+    json!({"actorId":actor,"clubId":club,"simulationOnly":true,"simulationAvailable":is_demo_mode(),"sources":sources(db,club),"statusIds":all_statuses,"templates":db.lead_scenarios.templates.iter().filter(|t|t.club_id==club).collect::<Vec<_>>(),
         "scenarios":db.lead_scenarios.scenarios.iter().filter(|s|s.club_id==club).collect::<Vec<_>>(),
         "enrollments":db.lead_scenarios.enrollments.iter().filter(|e|e.club_id==club).collect::<Vec<_>>(),
         "prospects":db.lead_prospects.iter().filter(|p|p.club_id==club).map(|p|json!({"id":p.id,"name":format!("{} {}",p.first_name,p.last_name),"status":p.stage,"source":p.source})).collect::<Vec<_>>()})
@@ -350,6 +475,25 @@ async fn workspace(
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "action", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Command {
+    SaveTemplate {
+        #[serde(rename = "templateId")]
+        template_id: Option<String>,
+        #[serde(rename = "expectedRevision")]
+        expected_revision: Option<u64>,
+        message: messages::Message,
+    },
+    ArchiveTemplate {
+        #[serde(rename = "templateId")]
+        template_id: String,
+        #[serde(rename = "expectedRevision")]
+        expected_revision: u64,
+    },
+    CopyTemplate {
+        #[serde(rename = "templateId")]
+        template_id: String,
+        #[serde(rename = "destinationClubId")]
+        destination_club_id: String,
+    },
     Save {
         #[serde(rename = "scenarioId")]
         scenario_id: Option<String>,
@@ -477,6 +621,84 @@ fn apply(
     now: DateTime<Utc>,
 ) -> Result<(), Failure> {
     match cmd {
+        Command::SaveTemplate {
+            template_id,
+            expected_revision,
+            message,
+        } => {
+            messages::validate_message(&message)?;
+            if let Some(id) = template_id {
+                let t = db
+                    .lead_scenarios
+                    .templates
+                    .iter_mut()
+                    .find(|t| t.id == id && t.club_id == club)
+                    .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Modèle introuvable."))?;
+                if Some(t.revision) != expected_revision || t.archived {
+                    return Err(err_resp(
+                        StatusCode::CONFLICT,
+                        "Modèle modifié ou archivé. Rechargez la liste.",
+                    ));
+                }
+                if t.message.channel != message.channel {
+                    return Err(err_resp(
+                        StatusCode::CONFLICT,
+                        "Le canal d’un modèle existant ne peut pas changer.",
+                    ));
+                }
+                t.message = message;
+                t.revision += 1;
+                t.updated_at = now.to_rfc3339();
+            } else {
+                if expected_revision.is_some() {
+                    return Err(err_resp(StatusCode::BAD_REQUEST, "Révision inattendue."));
+                }
+                db.lead_scenarios.templates.push(messages::Template {
+                    id: format!("tpl-{}", rand::random::<u128>()),
+                    club_id: club.into(),
+                    revision: 1,
+                    message,
+                    archived: false,
+                    updated_at: now.to_rfc3339(),
+                });
+            }
+        }
+        Command::ArchiveTemplate {
+            template_id,
+            expected_revision,
+        } => {
+            let t = db
+                .lead_scenarios
+                .templates
+                .iter_mut()
+                .find(|t| t.id == template_id && t.club_id == club)
+                .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Modèle introuvable."))?;
+            if t.revision != expected_revision {
+                return Err(err_resp(StatusCode::CONFLICT, "Le modèle a changé."));
+            }
+            t.archived = true;
+            t.revision += 1;
+            t.updated_at = now.to_rfc3339();
+        }
+        Command::CopyTemplate {
+            template_id,
+            destination_club_id,
+        } => {
+            authorize(db, actor, &destination_club_id)?;
+            let mut t = db
+                .lead_scenarios
+                .templates
+                .iter()
+                .find(|t| t.id == template_id && t.club_id == club)
+                .cloned()
+                .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Modèle introuvable."))?;
+            t.id = format!("tpl-{}", rand::random::<u128>());
+            t.club_id = destination_club_id;
+            t.revision = 1;
+            t.archived = false;
+            t.updated_at = now.to_rfc3339();
+            db.lead_scenarios.templates.push(t);
+        }
         Command::Save {
             scenario_id,
             expected_revision,
@@ -524,13 +746,14 @@ fn apply(
         } => {
             let idx = index(db, club, &scenario_id, expected_revision)?;
             validate(&db.lead_scenarios.scenarios[idx].draft, club, db)?;
+            let frozen = messages::materialize(&db.lead_scenarios.scenarios[idx].draft, db)?;
             let s = &mut db.lead_scenarios.scenarios[idx];
             if s.archived {
                 return Err(err_resp(StatusCode::CONFLICT, "Ce scénario est archivé."));
             }
             s.versions.push(Version {
                 number: s.versions.len() as u32 + 1,
-                definition: s.draft.clone(),
+                definition: frozen,
                 published_at: now.to_rfc3339(),
                 published_by: actor.into(),
             });
@@ -661,6 +884,8 @@ fn apply(
                 status: "stopped".into(),
                 detail: reason.trim().into(),
                 activity_id: None,
+                rendered_subject: None,
+                rendered_content: None,
             });
         }
         Command::Run {} => {
@@ -710,10 +935,32 @@ async fn command(
                 "Cette commande a déjà été utilisée pour un contenu différent.",
             ));
         }
-        return Ok(Json(snapshot(&db, &club, &actor)));
+        return Ok(Json(command_snapshot(
+            &db,
+            &club,
+            &actor,
+            db.lead_scenarios.results.get(&key),
+        )));
     }
     let mut next = db.clone();
     apply(&mut next, &club, &actor, cmd, Utc::now())?;
+    let result = CommandResult {
+        scenario_id: next
+            .lead_scenarios
+            .scenarios
+            .iter()
+            .find(|s| !db.lead_scenarios.scenarios.iter().any(|old| old.id == s.id))
+            .map(|s| s.id.clone()),
+        template_id: next
+            .lead_scenarios
+            .templates
+            .iter()
+            .find(|t| !db.lead_scenarios.templates.iter().any(|old| old.id == t.id))
+            .map(|t| t.id.clone()),
+    };
+    next.lead_scenarios
+        .results
+        .insert(key.clone(), result.clone());
     next.lead_scenarios.receipts.insert(key, fingerprint);
     append_audit(
         &mut next,
@@ -732,7 +979,7 @@ async fn command(
         )
     })?;
     *db = next;
-    Ok(Json(snapshot(&db, &club, &actor)))
+    Ok(Json(command_snapshot(&db, &club, &actor, Some(&result))))
 }
 
 /// Entire batch is committed under the shared DB lock. No network or external side effect.
@@ -794,6 +1041,42 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
         let due = DateTime::parse_from_rfc3339(&e.next_at)
             .map(|d| d.with_timezone(&Utc))
             .ok();
+        let exit = e.definition.exit_rules.as_ref().and_then(|rules| {
+            if rules.stop_on_reply
+                && p.last_inbound_reply_at
+                    .as_deref()
+                    .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+                    .zip(DateTime::parse_from_rfc3339(&e.created_at).ok())
+                    .map(|(reply, started)| reply > started)
+                    .unwrap_or(false)
+            {
+                Some("Réponse entrante reçue depuis l’inscription : parcours arrêté.")
+            } else if rules
+                .status_ids
+                .iter()
+                .any(|s| s == &p.stage || s == &p.lead_status)
+            {
+                Some("Le contact a atteint un statut de sortie : parcours arrêté.")
+            } else if rules.stop_if_no_longer_matches && !eligible(&e.definition, &p, db) {
+                Some("Le contact ne correspond plus au ciblage : parcours arrêté.")
+            } else {
+                None
+            }
+        });
+        if let Some(reason) = exit {
+            e.status = "stopped".into();
+            e.history.push(Execution {
+                step_id: "stop".into(),
+                at: now.to_rfc3339(),
+                status: "stopped".into(),
+                detail: reason.into(),
+                activity_id: None,
+                rendered_subject: None,
+                rendered_content: None,
+            });
+            db.lead_scenarios.enrollments[idx] = e;
+            continue;
+        }
         if due.map(|d| d > now).unwrap_or(true) {
             continue;
         }
@@ -805,6 +1088,8 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
                 status: "stopped".into(),
                 detail: "Contact archivé : parcours arrêté.".into(),
                 activity_id: None,
+                rendered_subject: None,
+                rendered_content: None,
             });
             db.lead_scenarios.enrollments[idx] = e;
             continue;
@@ -820,6 +1105,8 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
                     "Parcours incohérent : aucune étape à cette position. Vérification requise."
                         .into(),
                 activity_id: None,
+                rendered_subject: None,
+                rendered_content: None,
             });
             db.lead_scenarios.enrollments[idx] = e;
             continue;
@@ -830,6 +1117,8 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
             status: "simulated".into(),
             detail: "Message simulé ; aucun envoi externe.".into(),
             activity_id: None,
+            rendered_subject: None,
+            rendered_content: None,
         };
         if step.kind.ends_with("_task") {
             if let Some(assigned) = valid_assignee(db, &p) {
@@ -871,6 +1160,28 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
         } else if step.kind == "whatsapp" {
             result.status = "skipped".into();
             result.detail="WhatsApp non exécuté : compte, modèle ou fenêtre de conversation propres à ce canal non vérifiés. Aucun repli ni envoi.".into();
+        }
+        if result.status == "simulated" {
+            let values = messages::context(db, &p);
+            match messages::render(step.content.as_deref().unwrap_or(""), &values).and_then(
+                |body| {
+                    messages::render(step.subject.as_deref().unwrap_or(""), &values)
+                        .map(|subject| (body, subject))
+                },
+            ) {
+                Ok((_, subject)) if subject.contains(['\r', '\n']) => {
+                    result.status = "skipped".into();
+                    result.detail = "Objet email invalide après remplacement des variables.".into();
+                }
+                Ok((body, subject)) => {
+                    result.rendered_content = Some(body);
+                    result.rendered_subject = Some(subject);
+                }
+                Err(reason) => {
+                    result.status = "skipped".into();
+                    result.detail = reason;
+                }
+            }
         }
         e.history.push(result);
         if let Some(next) = e

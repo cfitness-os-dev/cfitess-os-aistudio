@@ -37,7 +37,29 @@ Autorisation actuelle : salarié actif avec profil de gestion de site dans le cl
 
 100 étapes, nom 120 caractères, commentaire 2000, contenu 20000, délai entier 0..525600 par unité : limites proposées C.Fitness OS, non présentées comme des limites Lead. Le brouillon doit être complet pour être enregistré ; aucune sauvegarde automatique de saisie incomplète.
 
-Non livré : catalogue de modèles persistants, objet/éditeur riche d'email, substitution de variables, connecteurs réels et leurs accusés/réessais, fenêtres horaires et jours ouvrés, branches conditionnelles, réentrée configurable, inscription depuis la fiche commerciale, délégations fines, purge historique/reçus d'opération. La persistance JSON et le verrou concernent un seul processus ; aucune garantie distribuée.
+Non livré : éditeur email complet à 12 blocs (HTML/médias/colonnes), connecteurs réels et leurs accusés/réessais, fenêtres horaires et jours ouvrés, graphes à branches conditionnelles, réentrée configurable, inscription depuis la fiche commerciale, délégations fines, purge historique/reçus d'opération. La persistance JSON et le verrou concernent un seul processus ; aucune garantie distribuée.
+
+## Modèles et options avancées — deuxième lot
+
+L’onglet Modèles de messages remplace le constructeur local à un seul brouillon par un catalogue serveur par club. Email, SMS et WhatsApp disposent d’un nom, canal et contenu ; objet requis pour un modèle email. Recherche et filtre canal, création, édition avec révision, duplication locale préparatoire, copie interclub, archivage et inclusion des archives. Le canal d’un modèle existant ne change pas. Aucune approbation Meta ne peut être déclarée depuis cet écran.
+
+Un email propose titre, corps, bouton HTTPS, pied de page et les 18 polices déjà recensées (rendu dépendant des polices disponibles). L’aperçu est du texte React structuré, sans HTML exécutable, image distante ni chargement de police externe. Ce n’est pas encore l’éditeur Lead à 12 blocs. La publication fige le sujet et une représentation textuelle complète incluant titre, bouton/adresse et pied de page ; les futurs adaptateurs devront définir la version HTML sans perdre cette immutabilité.
+
+Chaque étape de message choisit un modèle du bon canal ou un contenu libre. La publication copie son contenu dans la version : modification/archivage du modèle ne change pas les parcours publiés. Une copie de scénario vers un autre club conserve ses références ; le responsable doit choisir un modèle du club destinataire (les modèles disposent de leur propre commande Copier). Aucune référence étrangère n’est acceptée pour publier.
+
+Variables proposées : `%prenom%`, `%nom%`, `%club%`, `%telephone-club%`, `%adresse-club%`, `%url-rdv-club%`, `%url-club%`, `%prenom-commercial%`, `%rdv-date%`, `%rdv-heure%`, `%date%`, `%heure%`, `%prix%`. Le moteur utilise uniquement prénom/nom du contact, club/adresse canonique et prénom du commercial actif habilité au club. Les autres variables sont configurables dans le texte mais restent indisponibles à l’exécution tant que leur contexte officiel n’est pas raccordé ; elles font exclure le message avec un motif, sans valeur fictive ou supposée. L’aperçu emploie explicitement des exemples fictifs pour toutes les variables. Remplacement en un seul passage ; variables inconnues refusées, pourcentages littéraux conservés.
+
+L’historique des simulations email/SMS conserve le sujet et contenu réellement résolus. Une valeur absente ou un objet contenant un retour à la ligne après résolution exclut le message. Aucun résultat simulé n’est présenté comme un envoi fournisseur.
+
+L’estimation SMS calcule GSM-7 (160, puis 153 unités par segment), extension à deux unités et Unicode UTF-16 (70, puis 67). Ce choix OS n’est pas une reproduction du compteur historique Lead à 159 caractères/crédit ; les tags remplacés et la tarification réelle du fournisseur restent déterminants.
+
+WhatsApp : modèle ou Message direct, et conversation fermée → ne pas envoyer / modèle WhatsApp de repli / SMS de repli explicitement saisi. Ces paramètres sont validés et persistés, mais aucune branche WhatsApp/repli n’est exécutée tant que compte, modèle approuvé, destinataire et fenêtre propre à WhatsApp ne sont pas vérifiés. Le générique `lastInboundReplyAt` ne sert jamais à inventer une conversation WhatsApp ouverte. Le SMS de repli explicite est un choix OS : son contenu exact n’était pas établi dans l’audit Lead-1323..1333.
+
+Améliorations OS optionnelles : arrêt des étapes restantes après une nouvelle réponse entrante (date postérieure à l’inscription), atteinte d’un statut choisi, ou sortie du ciblage d’un scénario automatique. Arrêt tracé avant la prochaine échéance, lors du passage moteur, sans supprimer les tâches déjà créées. Les réglages sont figés dans chaque version ; aucun de ces ajouts n’est présenté comme une règle Lead exécutée et vérifiée. Une seule inscription par contact/scénario reste la règle.
+
+Commandes supplémentaires sur la même route protégée : `save_template`, `archive_template`, `copy_template`. Même verrou, persistance atomique, contrôle du club et identifiant de rejeu que les scénarios. Les anciennes données se chargent avec un catalogue vide et des options nulles par défaut. Le client ne met pas à jour la révision de base d’une saisie non enregistrée à la simple actualisation : une édition concurrente reste détectée.
+
+Sources : Lead-1301..1306 (conditions), 1313..1345 (étapes, modèles, délais, WhatsApp, SMS), 0209..0220 et 1517 (variables). Leurs limites d’observation restent celles de l’inventaire initial. Rapport complémentaire : `lead-modeles-options-recette.md`.
 
 Les messages ne sont jamais envoyés. L'interface le précise et conserve l'état de recette. Ne pas activer en production avant raccordement, tests et validation des connecteurs.
 

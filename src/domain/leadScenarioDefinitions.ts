@@ -1,3 +1,4 @@
+import { EXAMPLE_VALUES, renderMessage } from './leadMessageTemplates';
 /** Contract for a complete scenario definition. This is not an execution engine. */
 export type ScenarioClubId = 'carre-de-soie' | 'beynost';
 export type ScenarioStepType = 'email' | 'sms' | 'whatsapp' | 'email_task' | 'sms_task' | 'call_task';
@@ -9,6 +10,8 @@ export interface ScenarioStep {
   templateId: string | null;
   content: string | null;
   comment: string;
+  subject?: string | null;
+  whatsapp?: { mode: 'direct' | 'template'; closedAction: 'skip' | 'template' | 'sms'; fallbackTemplateId: string | null; fallbackContent: string | null } | null;
 }
 export interface ScenarioDefinition {
   schemaVersion: 1;
@@ -19,6 +22,7 @@ export interface ScenarioDefinition {
   enrollmentLocked: boolean;
   conditions: { statusIds: string[]; sourceIds: string[]; requireAssignedCommercial: boolean } | null;
   steps: ScenarioStep[];
+  exitRules?: { stopOnReply: boolean; statusIds: string[]; stopIfNoLongerMatches: boolean } | null;
 }
 export interface ScenarioCatalog {
   clubId: ScenarioClubId;
@@ -43,7 +47,7 @@ export function validateScenarioDefinition(input: unknown, catalog: ScenarioCata
   };
   const text = (value: unknown, max: number) => typeof value === 'string' && value.trim().length > 0 && value.length <= max;
   if (!isRecord(input)) return { ok: false, issues: [{ path: '', message: 'Scénario invalide.' }] };
-  fields(input, ['schemaVersion', 'clubId', 'name', 'mode', 'active', 'enrollmentLocked', 'conditions', 'steps'], '');
+  fields(input, ['schemaVersion', 'clubId', 'name', 'mode', 'active', 'enrollmentLocked', 'conditions', 'steps', 'exitRules'], '');
   if (input.schemaVersion !== 1) fail('schemaVersion', 'Version de scénario non prise en charge.');
   if (input.clubId !== catalog.clubId || !['carre-de-soie', 'beynost'].includes(String(input.clubId))) fail('clubId', 'Ce scénario appartient à un autre club ou à un club inconnu.');
   if (!text(input.name, 120)) fail('name', 'Indiquez un nom de 1 à 120 caractères.');
@@ -72,7 +76,7 @@ export function validateScenarioDefinition(input: unknown, catalog: ScenarioCata
     input.steps.forEach((step: unknown, index: number) => {
       const path = `steps.${index}.`;
       if (!isRecord(step)) { fail(`steps.${index}`, 'Étape invalide.'); return; }
-      fields(step, ['id', 'type', 'enabled', 'delay', 'templateId', 'content', 'comment'], path);
+      fields(step, ['id', 'type', 'enabled', 'delay', 'templateId', 'content', 'comment', 'subject', 'whatsapp'], path);
       if (!text(step.id, 100) || typeof step.id !== 'string' || step.id !== step.id.trim()) fail(`${path}id`, 'Identifiant d’étape invalide.');
       else if (ids.has(step.id)) fail(`${path}id`, 'Chaque étape doit avoir un identifiant distinct.');
       else ids.add(step.id);
@@ -89,13 +93,37 @@ export function validateScenarioDefinition(input: unknown, catalog: ScenarioCata
       const channel = step.type === 'email' || step.type === 'sms' || step.type === 'whatsapp' ? step.type : null;
       if (step.templateId !== null) {
         if (typeof step.templateId !== 'string' || !catalog.templates.some(t => t.id === step.templateId && t.channel === channel)) fail(`${path}templateId`, 'Choisissez un modèle du bon canal et du club courant.');
+        if (step.content !== null) fail(`${path}content`, 'Choisissez un modèle ou un message libre, pas les deux.');
+      }
+      if (step.subject != null && (channel !== 'email' || typeof step.subject !== 'string' || step.subject.length > 200 || /[\r\n]/.test(step.subject))) fail(`${path}subject`, 'Objet email invalide.');
+      if (step.whatsapp != null) {
+        const wa = step.whatsapp;
+        if (!isRecord(wa)) fail(`${path}whatsapp`, 'Options WhatsApp invalides.');
+        else {
+          fields(wa, ['mode', 'closedAction', 'fallbackTemplateId', 'fallbackContent'], `${path}whatsapp.`);
+          if (channel !== 'whatsapp' || !['direct', 'template'].includes(String(wa.mode)) || !['skip', 'template', 'sms'].includes(String(wa.closedAction)) || (wa.mode === 'template' && step.templateId == null)) fail(`${path}whatsapp`, 'Options WhatsApp incohérentes.');
+          if (wa.closedAction === 'template' && (!catalog.templates.some(t => t.id === wa.fallbackTemplateId && t.channel === 'whatsapp') || wa.fallbackContent !== null)) fail(`${path}whatsapp`, 'Choisissez un modèle WhatsApp de repli.');
+          if (wa.closedAction === 'sms' && (!text(wa.fallbackContent, 20000) || wa.fallbackTemplateId !== null)) fail(`${path}whatsapp`, 'Renseignez explicitement le SMS de repli.');
+          if (wa.closedAction === 'skip' && (wa.fallbackTemplateId !== null || wa.fallbackContent !== null)) fail(`${path}whatsapp`, 'Retirez le contenu de repli inutilisé.');
+        }
       }
       if (step.content !== null && !text(step.content, 20000)) fail(`${path}content`, 'Le contenu doit être renseigné et limité à 20 000 caractères.');
+      for (const value of [step.content, step.subject, isRecord(step.whatsapp) ? step.whatsapp.fallbackContent : null]) {
+        if (typeof value === 'string' && renderMessage(value, EXAMPLE_VALUES).missing.length) fail(`${path}content`, 'Utilisez les variables proposées ; une variable inconnue est présente.');
+      }
       if (channel && step.templateId === null && step.content === null) fail(`${path}content`, 'Choisissez un modèle ou renseignez le message.');
       if (!channel && (step.templateId !== null || step.content !== null)) fail(`${path}content`, 'Une tâche utilise son commentaire ; elle ne déclenche pas directement un envoi.');
       if (!channel && !text(step.comment, 2000)) fail(`${path}comment`, 'Décrivez la tâche à réaliser.');
     });
     if (!enabled) fail('steps', 'Activez au moins une étape avant de publier.');
+  }
+  if (input.exitRules != null) {
+    const rules = input.exitRules;
+    if (!isRecord(rules)) fail('exitRules', 'Conditions de sortie invalides.');
+    else {
+      fields(rules, ['stopOnReply', 'statusIds', 'stopIfNoLongerMatches'], 'exitRules.');
+      if (typeof rules.stopOnReply !== 'boolean' || typeof rules.stopIfNoLongerMatches !== 'boolean' || (rules.stopIfNoLongerMatches && input.mode !== 'automatic') || !Array.isArray(rules.statusIds) || rules.statusIds.length > 200 || new Set(rules.statusIds).size !== rules.statusIds.length || rules.statusIds.some(s => typeof s !== 'string' || !catalog.statusIds.includes(s))) fail('exitRules', 'Conditions de sortie invalides pour ce club ou ce mode.');
+    }
   }
   if (issues.length) return { ok: false, issues };
   // All fields and nested values were checked above; return a detached copy.

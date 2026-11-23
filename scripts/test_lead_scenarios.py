@@ -139,6 +139,64 @@ def main():
             assert len(final['enrollments'][0]['history']) == 2
             assert final['enrollments'][0]['version'] == 1
             checks.append('independent session reads persisted version, progression and history')
+            message = dict(name='Accueil personnalisé', channel='email', subject='Bonjour %prenom%', body='Bienvenue %prenom% au %club%')
+            template_cmd = dict(action='save_template', templateId=None, expectedRevision=None, message=message)
+            employee = login('emp-chloe', 'CFITNESS_TEST_COMMERCIAL_SECRET')
+            assert call('POST', endpoint, employee, template_cmd)[0] == 403
+            operation = uuid.uuid4().hex
+            assert call('POST', endpoint, admin, template_cmd, operation)[0] == 200
+            assert call('POST', endpoint, admin, template_cmd, operation)[0] == 200
+            ws = call('GET', endpoint, admin)[1]
+            assert len(ws['templates']) == 1
+            template = ws['templates'][0]
+            assert call('GET', '/api/lead/scenarios/beynost', admin)[1]['templates'] == []
+            templated = json.loads(json.dumps(definition))
+            templated['name'] = 'Parcours avec modèle'
+            templated['steps'] = [{**templated['steps'][0], 'templateId': template['id'], 'content': None}]
+            ws = call('POST', endpoint, admin, dict(action='save', scenarioId=None, expectedRevision=None, definition=templated))[1]
+            second_scenario = ws['scenarios'][-1]
+            assert call('POST', endpoint, admin, dict(action='publish', scenarioId=second_scenario['id'], expectedRevision=1))[0] == 200
+            edit_template = dict(action='save_template', templateId=template['id'], expectedRevision=1, message={**message, 'body': 'Modèle modifié après publication'})
+            assert call('POST', endpoint, admin, edit_template)[0] == 200
+            assert call('POST', endpoint, admin, edit_template)[0] == 409
+            assert call('POST', endpoint, admin, dict(action='archive_template', templateId=template['id'], expectedRevision=2))[0] == 200
+            ws = call('POST', endpoint, admin, dict(action='status', scenarioId=second_scenario['id'], expectedRevision=2, active=True, enrollmentLocked=False))[1]
+            assert call('POST', endpoint, admin, dict(action='enroll', scenarioId=second_scenario['id'], prospectId=prospect['id']))[0] == 200
+            ws = call('POST', endpoint, admin, dict(action='run'))[1]
+            execution = next(e for e in ws['enrollments'] if e['scenarioId'] == second_scenario['id'])['history'][0]
+            assert execution['status'] == 'simulated'
+            assert execution['renderedContent'].startswith('Bienvenue ')
+            assert '%prenom%' not in execution['renderedContent']
+            assert execution['renderedSubject'].startswith('Bonjour ')
+            assert call('POST', endpoint, admin, dict(action='publish', scenarioId=second_scenario['id'], expectedRevision=3))[0] == 422
+            checks.append('template role/club isolation, retries, stale edits, frozen publication and variable rendering survive template archive')
+            assert call('POST', endpoint, admin, dict(action='copy_template', templateId=template['id'], destinationClubId='beynost'))[0] == 200
+            copied = call('GET', '/api/lead/scenarios/beynost', admin)[1]['templates'][0]
+            assert copied['clubId'] == 'beynost' and not copied['archived'] and copied['id'] != template['id']
+            stop(proc)
+            proc = start()
+            admin = login('emp-mario', 'CFITNESS_TEST_ADMIN_SECRET')
+            restored = call('GET', endpoint, admin)[1]
+            assert restored['templates'][0]['archived']
+            assert restored['templates'][0]['message']['body'] == 'Modèle modifié après publication'
+            restored_execution = next(e for e in restored['enrollments'] if e['scenarioId'] == second_scenario['id'])['history'][0]
+            assert restored_execution['renderedContent'] == execution['renderedContent']
+            assert len(call('GET', '/api/lead/scenarios/beynost', admin)[1]['templates']) == 1
+            checks.append('template copy and immutable rendered execution persist after real process restart')
+            def concurrent_template(label):
+                cmd = dict(action='save_template', templateId=None, expectedRevision=None, message={**message, 'name': 'Même nom', 'body': label})
+                operation = uuid.uuid4().hex
+                status, response = call('POST', endpoint, admin, cmd, operation)
+                assert status == 200
+                created_id = response['commandResult']['templateId']
+                assert next(t for t in response['templates'] if t['id'] == created_id)['message']['body'] == label
+                replay = call('POST', endpoint, admin, cmd, operation)[1]
+                assert replay['commandResult']['templateId'] == created_id
+                return created_id
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+                ids = list(pool.map(concurrent_template, ['Variation A', 'Variation B']))
+            assert len(set(ids)) == 2
+            checks.append('concurrent distinct creates return their own stable entity id, including replay after other creates')
         finally:
             if proc.poll() is None:
                 stop(proc)
