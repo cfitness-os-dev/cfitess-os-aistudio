@@ -15,14 +15,14 @@ ENV VITE_DEMO_MODE=${VITE_DEMO_MODE}
 RUN npm run build
 
 # Étape 2 : Build Backend Rust + Axum + Tokio
-FROM rust:1.85-alpine3.21 AS rust-builder
+FROM rust:1.88-alpine3.21 AS rust-builder
 WORKDIR /app
 
 RUN apk add --no-cache musl-dev
-COPY Cargo.toml ./
+COPY Cargo.toml Cargo.lock ./
 COPY contracts ./contracts
 COPY src-rust ./src-rust
-RUN cargo build --release
+RUN cargo build --release --locked
 
 # Étape 3 : Image de production Linux minimale et durcie (Alpine 3.21)
 FROM alpine:3.21 AS runtime

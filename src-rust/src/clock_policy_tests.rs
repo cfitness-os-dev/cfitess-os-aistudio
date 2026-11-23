@@ -239,19 +239,24 @@ async fn policy_auth_scope_reason_and_disk_failure_preserve_state_and_audit() {
     std::fs::remove_dir_all(&s.data_dir).unwrap();
 }
 #[tokio::test]
-async fn managed_teams_determine_targets_not_simple_membership() {
+async fn managed_teams_and_sites_managers_cannot_edit_owner_only_clock_policies() {
     let s = state();
     {
         let mut db = s.db.write().await;
-        let mut profile = db.profiles[0].clone();
-        profile.id = "policy-test-teams".into();
-        profile.scope_selected = "teams".into();
-        for row in &mut profile.rows {
+        let mut teams_profile = db.profiles[0].clone();
+        teams_profile.id = "policy-test-teams".into();
+        teams_profile.scope_selected = "teams".into();
+        for row in &mut teams_profile.rows {
             row.exposed = true;
             row.disabled = Some(false);
             row.checked = Some(true);
         }
-        db.profiles.push(profile);
+        let mut sites_profile = teams_profile.clone();
+        sites_profile.id = "policy-test-sites".into();
+        sites_profile.scope_selected = "sites".into();
+        db.profiles.push(teams_profile);
+        db.profiles.push(sites_profile);
+
         for e in &mut db.employees {
             if let Some(a) = e
                 .site_accesses
@@ -265,56 +270,91 @@ async fn managed_teams_determine_targets_not_simple_membership() {
                         a.managed_team_ids = vec!["managed".into()];
                     }
                     "emp-maxime" => a.team_ids = vec!["managed".into()],
-                    "emp-karim" => a.team_ids = vec!["other".into()],
+                    "emp-karim" => {
+                        a.profile_id = "policy-test-sites".into();
+                        a.team_ids = vec!["other".into()];
+                    }
                     _ => {}
                 }
             }
         }
     }
+
+    // 1. Manager Teams (ORG04-37 autorisé) refusé 403 en lecture et écriture
     let sarah = headers(&s, "emp-sarah").await;
-    let result = get_policies(
-        State(s.clone()),
-        Path("carre-de-soie".into()),
-        sarah.clone(),
-    )
-    .await
-    .unwrap()
-    .0;
-    assert!(result["rows"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .any(|r| r["employeeId"] == "emp-maxime"));
-    assert!(!result["rows"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .any(|r| r["employeeId"] == "emp-karim"));
-    let _ = set(
-        &s,
-        &sarah,
-        "emp-maxime",
-        "carre-de-soie",
-        true,
-        None,
-        "Équipe gérée",
-    )
-    .await
-    .unwrap();
+    assert_eq!(
+        get_policies(State(s.clone()), Path("carre-de-soie".into()), sarah.clone())
+            .await
+            .unwrap_err()
+            .0,
+        StatusCode::FORBIDDEN
+    );
     assert_eq!(
         set(
             &s,
             &sarah,
-            "emp-karim",
+            "emp-maxime",
             "carre-de-soie",
             true,
             None,
-            "Même équipe seulement"
+            "Manager Teams non autorisé"
         )
         .await
         .unwrap_err()
         .0,
         StatusCode::FORBIDDEN
     );
+    assert!(!policy(&*s.db.read().await, "emp-maxime", "carre-de-soie").personal_allowed);
+
+    // 2. Manager Sites (hors admin_systeme, ORG04-37 autorisé) refusé 403 également
+    let karim = headers(&s, "emp-karim").await;
+    assert_eq!(
+        get_policies(State(s.clone()), Path("carre-de-soie".into()), karim.clone())
+            .await
+            .unwrap_err()
+            .0,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        set(
+            &s,
+            &karim,
+            "emp-maxime",
+            "carre-de-soie",
+            true,
+            None,
+            "Manager Sites non admin_systeme"
+        )
+        .await
+        .unwrap_err()
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    assert!(!policy(&*s.db.read().await, "emp-maxime", "carre-de-soie").personal_allowed);
+
+    // 3. Propriétaire / Super-Admin (emp-daniel, profile admin_systeme) autorisé
+    let daniel = headers(&s, "emp-daniel").await;
+    let view_ok = get_policies(State(s.clone()), Path("carre-de-soie".into()), daniel.clone())
+        .await
+        .unwrap()
+        .0;
+    assert!(view_ok["rows"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|r| r["employeeId"] == "emp-maxime"));
+    let _ = set(
+        &s,
+        &daniel,
+        "emp-maxime",
+        "carre-de-soie",
+        true,
+        None,
+        "Validation propriétaire",
+    )
+    .await
+    .unwrap();
+    assert!(policy(&*s.db.read().await, "emp-maxime", "carre-de-soie").personal_allowed);
+
     std::fs::remove_dir_all(&s.data_dir).unwrap();
 }

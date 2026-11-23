@@ -1,5 +1,5 @@
 use crate::models::AppDatabaseState;
-use crate::rbac::{can_access_site_scope, evaluate_permission, PermissionTarget};
+use crate::rbac::can_access_site_scope;
 use crate::routes::{append_audit, err_resp, resolve_session_actor, SharedState};
 use crate::seed::persist_state;
 use axum::{
@@ -79,19 +79,7 @@ pub fn hash_terminal_token(token: &str) -> String {
 }
 
 fn can_manage_terminals(db: &AppDatabaseState, actor_id: &str, site_id: &str) -> bool {
-    evaluate_permission(
-        db,
-        actor_id,
-        site_id,
-        "ORG04-37",
-        Some(PermissionTarget {
-            site_id: Some(site_id),
-            target_employee_id: Some(actor_id),
-            target_team_ids: &[],
-            lock_state: None,
-        }),
-    )
-    .allowed
+    crate::rbac::is_owner_or_super_admin(db, actor_id, site_id)
 }
 
 /// A shared device identity never replaces the employee's authenticated session.
@@ -601,10 +589,6 @@ pub async fn post_terminal_punch(
         }
     };
 
-    if payload.photo_proof.is_some() {
-        return Err(err_resp(StatusCode::CONFLICT,"La capture et la conservation des photos ne sont pas encore disponibles. Aucun pointage avec photo n’a été confirmé."));
-    }
-
     let Some(employee) = db.employees.iter().find(|e| e.id == payload.employee_id) else {
         return Err(err_resp(
             StatusCode::NOT_FOUND,
@@ -651,8 +635,32 @@ pub async fn post_terminal_punch(
         ));
     }
 
+    let photo_policy = crate::punch_photos::club_photo_policy(&db, &term.site_id);
+    if photo_policy == "required" && payload.photo_proof.is_none() {
+        return Err(err_resp(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "Une preuve photo est obligatoire pour pointer sur les terminaux de ce club.",
+        ));
+    }
+
     let punch_id = format!("terminal-punch-{}", rand::random::<u128>());
     let now = Utc::now().to_rfc3339();
+    let mut next = db.clone();
+
+    let consumed_photo = if let Some(ref photo_id) = payload.photo_proof {
+        Some(crate::punch_photos::consume_punch_photo(
+            &mut next,
+            &state.data_dir,
+            photo_id,
+            &payload.employee_id,
+            &term.id,
+            &term.site_id,
+            &punch_id,
+        )?)
+    } else {
+        None
+    };
+
     let entry = json!({
         "id": punch_id,
         "employeeId": payload.employee_id,
@@ -662,13 +670,14 @@ pub async fn post_terminal_punch(
         "source": "terminal",
         "terminalId": term.id,
         "roomLabel": term.room_label,
-        "photoProofPresent": false
+        "photoProofPresent": consumed_photo.is_some(),
+        "photoProofId": consumed_photo.as_ref().map(|p| p.id.clone()),
+        "photoSha256": consumed_photo.as_ref().map(|p| p.sha256_hex.clone())
     });
 
     rows.push(entry.clone());
     person["timeEntries"] = Value::Array(rows);
 
-    let mut next = db.clone();
     next.personal_workspace
         .people
         .insert(payload.employee_id.clone(), person);
@@ -679,7 +688,13 @@ pub async fn post_terminal_punch(
         "TERMINAL_PUNCH",
         format!(
             "Pointage {} enregistré depuis terminal {} ({}) - photo : {}",
-            payload.punch_type, term.id, term.room_label, "non fournie"
+            payload.punch_type,
+            term.id,
+            term.room_label,
+            consumed_photo
+                .as_ref()
+                .map(|p| p.id.as_str())
+                .unwrap_or("non fournie")
         ),
         &term.site_id,
         &payload.employee_id,
