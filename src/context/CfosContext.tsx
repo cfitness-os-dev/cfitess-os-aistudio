@@ -1181,6 +1181,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     }));
     setIsArchitectUnlocked(false);
     setIsAuthenticated(false);
+    setCurrentUserId('');
     try {
       const existingToken = window.sessionStorage.getItem('cfos_bearer_token');
       if (existingToken) {
@@ -1190,6 +1191,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
         }).catch(() => {});
       }
       window.sessionStorage.removeItem('cfos_local_auth_active');
+      window.sessionStorage.removeItem('cfos_local_auth_user_id');
       window.sessionStorage.removeItem('cfos_bearer_token');
       window.sessionStorage.removeItem('cfos_bearer_actor_id');
       window.sessionStorage.removeItem('cfos_architect_pin_unlocked');

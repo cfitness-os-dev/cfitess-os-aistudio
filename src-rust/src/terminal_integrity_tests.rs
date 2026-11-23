@@ -120,7 +120,8 @@ async fn terminal_cannot_claim_unstored_or_empty_photo_as_evidence() {
     assert_eq!(serde_json::to_value(&*s.db.read().await).unwrap(), before);
     let data = punch(&s, &h, "arrivee", None).await.unwrap().0;
     assert_eq!(data["entry"]["photoProofPresent"], false);
-    assert_eq!(data["photoCaptureAvailable"], false);
+    // photoCaptureAvailable reflète désormais la disponibilité réelle (terminal actif = true)
+    assert_eq!(data["photoCaptureAvailable"], true);
     std::fs::remove_dir_all(&s.data_dir).unwrap();
 }
 #[tokio::test]

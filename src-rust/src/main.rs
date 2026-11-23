@@ -63,7 +63,7 @@ async fn security_headers_middleware(req: Request<Body>, next: Next) -> Response
     );
     headers.insert(
         "permissions-policy",
-        HeaderValue::from_static("camera=(), microphone=(self), geolocation=()"),
+        HeaderValue::from_static("camera=(self), microphone=(self), geolocation=()"),
     );
     headers.insert("x-xss-protection", HeaderValue::from_static("0"));
     res
@@ -154,3 +154,4 @@ async fn main() {
         .await
         .expect("Erreur fatale du serveur HTTP Axum");
 }
+

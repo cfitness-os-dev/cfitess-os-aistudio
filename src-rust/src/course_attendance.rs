@@ -9,6 +9,7 @@ use axum::{
     Json,
 };
 use chrono::{DateTime, Utc};
+use chrono_tz::Europe::Paris;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -210,7 +211,8 @@ pub async fn get_room_occurrences(
 ) -> Result<Json<Value>, Failure> {
     let db = state.db.read().await;
     let terminal: ClockTerminal = authenticate_terminal(&db, &headers).await?;
-    let today = Utc::now().date_naive();
+    // Utiliser le fuseau Europe/Paris pour la date du jour (et non UTC)
+    let today = Utc::now().with_timezone(&Paris).date_naive();
 
     let occurrences: Vec<Value> = db
         .course_occurrences
@@ -220,7 +222,7 @@ pub async fn get_room_occurrences(
                 return false;
             }
             DateTime::parse_from_rfc3339(&o.start_time)
-                .map(|dt| dt.with_timezone(&Utc).date_naive() == today)
+                .map(|dt| dt.with_timezone(&Paris).date_naive() == today)
                 .unwrap_or(false)
         })
         .map(|o| {

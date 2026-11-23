@@ -541,6 +541,8 @@ pub async fn get_terminal_whoami(
 ) -> Result<Json<Value>, Failure> {
     let db = state.db.read().await;
     let term = authenticate_terminal(&db, &headers).await?;
+    // photoCaptureAvailable : true uniquement pour les terminaux actifs (capacité réelle de prendre une photo)
+    let photo_capture_available = term.status == "active";
     Ok(Json(json!({
         "terminalId": term.id,
         "siteId": term.site_id,
@@ -549,7 +551,7 @@ pub async fn get_terminal_whoami(
         "label": term.label,
         "status": term.status,
         "pairedAt": term.paired_at,
-        "photoCaptureAvailable": false
+        "photoCaptureAvailable": photo_capture_available
     })))
 }
 
@@ -710,10 +712,12 @@ pub async fn post_terminal_punch(
     })?;
     *db = next;
 
+    // photoCaptureAvailable : cohérent avec quiami — true uniquement si terminal actif
+    let photo_capture_available = term.status == "active";
     Ok(Json(json!({
         "status": "recorded",
         "entry": entry,
-        "photoCaptureAvailable": false
+        "photoCaptureAvailable": photo_capture_available
     })))
 }
 
