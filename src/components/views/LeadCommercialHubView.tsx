@@ -1,3 +1,5 @@
+import { LeadMessageTemplatesView } from "./LeadMessageTemplatesView";
+import { LeadScenariosView } from "./LeadScenariosView";
 import { useLeadSettings } from '../useLeadSettings';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -55,7 +57,6 @@ import {
   LEAD_AUDIT_META,
   LEAD_CLIENT_STATUSES,
   LEAD_EMAIL_BLOCKS_12,
-  LEAD_EMAIL_FONTS_18,
   LEAD_IMPORT_COLUMNS_11,
   LEAD_PARTNERS_9,
   LEAD_PROSPECT_STATUSES,
@@ -387,33 +388,6 @@ export function LeadCommercialHubView({
     }
   });
 
-  const [emailDraft, setEmailDraft] = useState<{
-    subject: string;
-    heading: string;
-    bodyText: string;
-    ctaLabel: string;
-    ctaUrl: string;
-    footerText: string;
-    font: string;
-  }>(() => {
-    try {
-      const raw = localStorage.getItem('cfos_email_builder_v1');
-      if (raw) return JSON.parse(raw);
-    } catch {
-      // ignore
-    }
-    return {
-      subject: 'Votre séance découverte offerte chez C.Fitness',
-      heading: 'Bienvenue chez C.Fitness Carré de Soie & Beynost',
-      bodyText: 'Profitez d’un bilan forme Technogym Checkup complet avec nos coachs.',
-      ctaLabel: 'Réserver mon créneau',
-      ctaUrl: 'https://c.fitness/essai',
-      footerText: 'SAS C.FITNESS — SIRET 818 651 317 00018 · Désinscription RGPD',
-      font: LEAD_EMAIL_FONTS_18[0],
-    };
-  });
-  const [emailSavedNotice, setEmailSavedNotice] = useState<string | null>(null);
-
   const [requestedProfileClubId, setSelectedProfileClubId] = useState<'carre-de-soie' | 'beynost'>(() =>
     clubFilter === 'beynost' ? 'beynost' : 'carre-de-soie'
   );
@@ -690,14 +664,10 @@ export function LeadCommercialHubView({
   // Tab 6 : Communication
   const [commSubTab, setCommSubTab] = useState<'models' | 'campaigns' | 'utm' | 'scenarios' | 'logs'>('models');
   const [emailStep, setEmailStep] = useState<1 | 2 | 3 | 4>(1);
-  const [emailEditorMobilePane, setEmailEditorMobilePane] = useState<'edit' | 'preview'>('edit');
+
   const [smsDraftText, setSmsDraftText] = useState(
     'Bonjour %prenom%, C.Fitness %club% vous rappelle votre séance le %rdv-date% à %rdv-heure%. STOP au 36xxx.'
   );
-  const [scenarioMode, setScenarioMode] = useState<'Automatique' | 'Manuel'>('Automatique');
-  const [scenarioState, setScenarioState] = useState<'Actif' | 'Verrouillé' | 'Inactif'>('Actif');
-  const [scenarioStepUnit, setScenarioStepUnit] = useState<'Minutes' | 'Heures' | 'Jours'>('Minutes');
-  const [scenarioStepDelay, setScenarioStepDelay] = useState(5);
 
   // Tab 7 : Statistiques, Ventes & Formulaires
   const [analyticsSubTab, setAnalyticsSubTab] = useState<'stats' | 'sales' | 'forms'>('stats');
@@ -2566,11 +2536,11 @@ export function LeadCommercialHubView({
             <div className="space-y-4">
               <div className="cf-card p-3 flex flex-wrap gap-1.5">
                 {[
-                  { id: 'models', label: '1. Modèles (12 blocs / 18 polices)' },
-                  { id: 'campaigns', label: '2. Campagnes (Email 4 étapes & SMS)' },
-                  { id: 'utm', label: '3. Campagnes UTM' },
-                  { id: 'scenarios', label: '4. Scénarios (SC-01/02 & WA-01)' },
-                  { id: 'logs', label: '5-6. SMS envoyés & Emails échangés' },
+                  { id: 'models', label: 'Modèles de messages' },
+                  { id: 'campaigns', label: 'Campagnes' },
+                  { id: 'utm', label: 'Suivi des campagnes' },
+                  { id: 'scenarios', label: 'Scénarios' },
+                  { id: 'logs', label: 'Historique des échanges' },
                 ].map((sub) => (
                   <button
                     key={sub.id}
@@ -2587,157 +2557,7 @@ export function LeadCommercialHubView({
                 ))}
               </div>
 
-              {commSubTab === 'models' && (
-                <div className="cf-card p-4 space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-sm font-extrabold">
-                      Constructeur Email (12 blocs &amp; 18 polices) — Correction mobile RSP-04
-                    </h3>
-                    <div className="flex gap-1 md:hidden">
-                      <button
-                        type="button"
-                        onClick={() => setEmailEditorMobilePane('edit')}
-                        className={`px-2.5 py-1 rounded text-xs font-bold ${
-                          emailEditorMobilePane === 'edit' ? 'bg-violet-600 text-white' : 'bg-slate-800 text-slate-300'
-                        }`}
-                      >
-                        Éditer
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEmailEditorMobilePane('preview')}
-                        className={`px-2.5 py-1 rounded text-xs font-bold ${
-                          emailEditorMobilePane === 'preview' ? 'bg-violet-600 text-white' : 'bg-slate-800 text-slate-300'
-                        }`}
-                      >
-                        Aperçu
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                    <div className={`${emailEditorMobilePane === 'preview' ? 'hidden md:block' : ''} space-y-2.5`}>
-                      <div className="font-bold">Éditeur de modèle email (Composition &amp; Propriétés) :</div>
-                      <div className="space-y-2 p-3 rounded-xl bg-slate-900/70 border border-slate-800">
-                        <label className="block">
-                          <span className="text-[10px] cf-muted">Objet de l&apos;email</span>
-                          <input
-                            type="text"
-                            value={emailDraft.subject}
-                            onChange={(e) => setEmailDraft((p) => ({ ...p, subject: e.target.value }))}
-                            className="w-full mt-0.5 px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
-                          />
-                        </label>
-                        <label className="block">
-                          <span className="text-[10px] cf-muted">Titre (En-tête)</span>
-                          <input
-                            type="text"
-                            value={emailDraft.heading}
-                            onChange={(e) => setEmailDraft((p) => ({ ...p, heading: e.target.value }))}
-                            className="w-full mt-0.5 px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
-                          />
-                        </label>
-                        <label className="block">
-                          <span className="text-[10px] cf-muted">Texte principal</span>
-                          <textarea
-                            rows={2}
-                            value={emailDraft.bodyText}
-                            onChange={(e) => setEmailDraft((p) => ({ ...p, bodyText: e.target.value }))}
-                            className="w-full mt-0.5 px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
-                          />
-                        </label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <label className="block">
-                            <span className="text-[10px] cf-muted">Libellé Bouton CTA</span>
-                            <input
-                              type="text"
-                              value={emailDraft.ctaLabel}
-                              onChange={(e) => setEmailDraft((p) => ({ ...p, ctaLabel: e.target.value }))}
-                              className="w-full mt-0.5 px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
-                            />
-                          </label>
-                          <label className="block">
-                            <span className="text-[10px] cf-muted">URL Bouton CTA</span>
-                            <input
-                              type="url"
-                              value={emailDraft.ctaUrl}
-                              onChange={(e) => setEmailDraft((p) => ({ ...p, ctaUrl: e.target.value }))}
-                              className="w-full mt-0.5 px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
-                            />
-                          </label>
-                        </div>
-                        <label className="block">
-                          <span className="text-[10px] cf-muted">Pied de page</span>
-                          <input
-                            type="text"
-                            value={emailDraft.footerText}
-                            onChange={(e) => setEmailDraft((p) => ({ ...p, footerText: e.target.value }))}
-                            className="w-full mt-0.5 px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
-                          />
-                        </label>
-                        <div className="flex items-center justify-between gap-2 pt-1">
-                          <select
-                            aria-label="Police"
-                            value={emailDraft.font}
-                            onChange={(e) => setEmailDraft((p) => ({ ...p, font: e.target.value }))}
-                            className="px-2 py-1 rounded bg-slate-950 border border-slate-700 text-[11px]"
-                          >
-                            {LEAD_EMAIL_FONTS_18.map((font) => (
-                              <option key={font} value={font}>
-                                {font}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              try {
-                                localStorage.setItem('cfos_email_builder_v1', JSON.stringify(emailDraft));
-                              } catch {
-                                // ignore
-                              }
-                              setEmailSavedNotice('Modèle email enregistré avec succès.');
-                              setTimeout(() => setEmailSavedNotice(null), 3500);
-                            }}
-                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer"
-                          >
-                            Enregistrer le modèle
-                          </button>
-                        </div>
-                        {emailSavedNotice && (
-                          <div className="text-[11px] font-bold text-emerald-400">{emailSavedNotice}</div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className={`${emailEditorMobilePane === 'edit' ? 'hidden md:block' : ''} space-y-2`}>
-                      <div className="font-bold">Aperçu en direct (Police : {emailDraft.font}) :</div>
-                      <div
-                        style={{ fontFamily: emailDraft.font }}
-                        className="p-4 rounded-xl bg-white text-slate-900 border border-slate-300 space-y-3"
-                      >
-                        <div className="text-[10px] text-slate-500 border-b pb-1">
-                          Objet : <strong>{emailDraft.subject}</strong>
-                        </div>
-                        <h4 className="text-sm font-extrabold text-violet-700">{emailDraft.heading}</h4>
-                        <p className="text-xs text-slate-700">{emailDraft.bodyText}</p>
-                        <div>
-                          <a
-                            href={emailDraft.ctaUrl}
-                            onClick={(e) => e.preventDefault()}
-                            className="inline-block px-4 py-2 rounded-lg bg-violet-600 text-white font-bold text-xs"
-                          >
-                            {emailDraft.ctaLabel}
-                          </a>
-                        </div>
-                        <div className="text-[10px] text-slate-400 border-t pt-2">
-                          {emailDraft.footerText}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {commSubTab === 'models' && <LeadMessageTemplatesView key={`${currentUser.id}:${clubFilter}`} actorId={currentUser.id} clubId={clubFilter === 'all' ? null : clubFilter} />}
 
               {commSubTab === 'campaigns' && (() => {
                 const computeCampaignTargets = (channel: 'EMAIL' | 'SMS') => {
@@ -3082,71 +2902,7 @@ export function LeadCommercialHubView({
               )}
 
               {commSubTab === 'scenarios' && (
-                <div className="cf-card p-4 space-y-3 text-xs">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-sm font-extrabold flex items-center gap-2">
-                      <GitBranch className="w-4 h-4 text-emerald-400" />
-                      Scénarios Automatique / Manuel · Étapes SC-01 / SC-02 &amp; Verrouillage
-                    </h3>
-                    <div className="flex gap-1.5">
-                      {(['Actif', 'Verrouillé', 'Inactif'] as const).map((st) => (
-                        <button
-                          key={st}
-                          type="button"
-                          onClick={() => setScenarioState(st)}
-                          className={`px-2.5 py-1 rounded-lg font-bold cursor-pointer ${
-                            scenarioState === st ? 'bg-violet-600 text-white' : 'bg-slate-800 text-slate-300'
-                          }`}
-                        >
-                          {st}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-                    <label>
-                      Mode d&apos;entrée
-                      <select
-                        value={scenarioMode}
-                        onChange={(e) => setScenarioMode(e.target.value as 'Automatique' | 'Manuel')}
-                        className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700"
-                      >
-                        <option value="Automatique">Automatique (Source + Commercial)</option>
-                        <option value="Manuel">Manuel (Conditions source masquées)</option>
-                      </select>
-                    </label>
-                    <label>
-                      Délai nouvelle étape (SC-02)
-                      <input
-                        type="number"
-                        min={1}
-                        value={scenarioStepDelay}
-                        onChange={(e) => setScenarioStepDelay(Number(e.target.value) || 1)}
-                        className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700"
-                      />
-                    </label>
-                    <label>
-                      Unité de délai (SC-02)
-                      <select
-                        value={scenarioStepUnit}
-                        onChange={(e) =>
-                          setScenarioStepUnit(e.target.value as 'Minutes' | 'Heures' | 'Jours')
-                        }
-                        className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700"
-                      >
-                        <option value="Minutes">Minutes</option>
-                        <option value="Heures">Heures</option>
-                        <option value="Jours">Jours</option>
-                      </select>
-                    </label>
-                  </div>
-                  <div className="p-2.5 rounded-lg bg-slate-900/70 border border-slate-800">
-                    État actuel : <strong>{scenarioState}</strong>{' '}
-                    {scenarioState === 'Verrouillé' &&
-                      '— Aucune nouvelle entrée autorisée, les contacts déjà engagés terminent leur parcours.'}
-                    {' · '}Étape existante (SC-01) : type et délai grisés en édition, contenu email éditable séparément.
-                  </div>
-                </div>
+                <LeadScenariosView key={`${currentUser.id}:${clubFilter}`} actorId={currentUser.id} clubId={clubFilter === 'all' ? null : clubFilter} onActivitiesChanged={syncLeadWorkspaceFromServer} />
               )}
 
               {commSubTab === 'logs' && (

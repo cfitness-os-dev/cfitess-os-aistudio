@@ -1,0 +1,27 @@
+﻿[package]
+name = "cfitness-os"
+version = "0.2.0"
+edition = "2021"
+rust-version = "1.85"
+description = "Backend Axum/Tokio pour CFitness OS (Module RH Mon compte)"
+
+[[bin]]
+name = "cfitness-os"
+path = "src-rust/src/main.rs"
+
+[dependencies]
+ammonia = "4.2.4"
+base64 = "0.22"
+axum = "0.7"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "sync", "time", "fs", "io-util", "signal"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tower-http = { version = "0.5", features = ["fs", "cors", "trace"] }
+chrono = { version = "0.4", features = ["serde"] }
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+rand = "0.8"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
