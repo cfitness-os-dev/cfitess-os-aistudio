@@ -1967,14 +1967,11 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
         ]),
         personal_workspace: Default::default(),
         clock_terminals: vec![],
-<<<<<<< HEAD
         punch_photos: vec![],
         photo_policy_by_club: HashMap::new(),
         course_occurrences: vec![],
         course_attendances: vec![],
-=======
         club_displays: vec![],
->>>>>>> origin/feat/club-display-screens
         social_posts: vec![
             crate::models::SocialPostRecord {
                 id: "soc-demo-01".into(),
@@ -2139,14 +2136,11 @@ pub fn create_production_initial_state() -> AppDatabaseState {
         ]),
         personal_workspace: Default::default(),
         clock_terminals: vec![],
-<<<<<<< HEAD
         punch_photos: vec![],
         photo_policy_by_club: HashMap::new(),
         course_occurrences: vec![],
         course_attendances: vec![],
-=======
         club_displays: vec![],
->>>>>>> origin/feat/club-display-screens
         social_posts: vec![],
     }
 }

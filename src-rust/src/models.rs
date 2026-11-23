@@ -832,7 +832,6 @@ pub struct AppDatabaseState {
     #[serde(default)]
     pub clock_terminals: Vec<crate::clock_terminals::ClockTerminal>,
     #[serde(default)]
-<<<<<<< HEAD
     pub punch_photos: Vec<crate::punch_photos::PunchPhotoRecord>,
     #[serde(default)]
     pub photo_policy_by_club: HashMap<String, String>,
@@ -840,9 +839,8 @@ pub struct AppDatabaseState {
     pub course_occurrences: Vec<crate::course_attendance::CourseOccurrence>,
     #[serde(default)]
     pub course_attendances: Vec<crate::course_attendance::CourseAttendanceRecord>,
-=======
+    #[serde(default)]
     pub club_displays: Vec<crate::club_displays::ClubDisplayScreen>,
->>>>>>> origin/feat/club-display-screens
 }
 
 #[derive(Debug, Clone, Serialize)]

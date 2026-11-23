@@ -198,15 +198,12 @@ pub fn api_router(state: SharedState) -> Router {
         .route("/api/hr/photo-policy/:club_id", get(crate::punch_photos::get_photo_policy).put(crate::punch_photos::put_photo_policy))
         .route("/api/terminals/:club_id", get(crate::clock_terminals::get_club_terminals).post(crate::clock_terminals::post_create_terminal))
         .route("/api/terminals/:club_id/:terminal_id/revoke", post(crate::clock_terminals::post_revoke_terminal))
-<<<<<<< HEAD
         .route("/api/courses/room-occurrences", get(crate::course_attendance::get_room_occurrences))
         .route("/api/courses/verify-presence", post(crate::course_attendance::post_verify_course_presence))
         .route("/api/courses/:club_id/attendances", get(crate::course_attendance::get_club_course_attendances))
-=======
         .route("/api/displays/:club_id", get(crate::club_displays::get_club_displays).post(crate::club_displays::post_create_display))
         .route("/api/displays/:club_id/:screen_id", axum::routing::patch(crate::club_displays::patch_update_display).delete(crate::club_displays::delete_display))
         .route("/api/displays/public/:club_id/:screen_id", get(crate::club_displays::get_public_display_feed))
->>>>>>> origin/feat/club-display-screens
         .route("/api/lead/registry", get(get_lead_registry))
         .route("/api/lead/webhooks/clubEntry", post(post_lead_webhook_club_entry))
         .route("/api/public/forms/:club_id/:form_id", get(get_public_lead_form))
