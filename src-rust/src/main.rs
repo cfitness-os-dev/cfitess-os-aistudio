@@ -1,5 +1,6 @@
 mod auth_passwords;
 mod clock_terminals;
+mod club_displays;
 #[cfg(test)]
 mod terminal_integrity_tests;
 mod course_attendance;
