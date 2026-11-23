@@ -3,6 +3,37 @@ use crate::routes::SharedAppState;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
 
+#[tokio::test]
+async fn brevo_outbox_persists_once_and_exclusion_blocks_future_steps_and_duplicate_addresses() {
+    let state=state(); let now=Utc::now(); let mut db=state.db.write().await;
+    let (_,p)=setup(&mut db,now);
+    let mut scenario=db.lead_scenarios.scenarios[0].clone();
+    let mut email=scenario.versions[0].definition.steps[0].clone();
+    email.subject=Some("Bonjour %prenom%".into());
+    let mut second=email.clone(); second.id="second-email".into(); second.delay.amount=5;
+    scenario.versions[0].definition.steps=vec![email,second];
+    db.lead_scenarios.scenarios[0]=scenario.clone();
+    enroll(&mut db,&scenario,&p,now).unwrap();
+    process(&mut db,"carre-de-soie",now);
+    assert_eq!(db.lead_scenarios.email_outbox.len(),1);
+    apply(&mut db,"carre-de-soie","emp-mario",Command::SuppressEmail{prospect_id:p.id.clone(),reason:"Demande fictive du contact".into()},now).unwrap();
+    persist_state(&state.data_dir,&db).unwrap();
+    let mut restored=crate::seed::load_or_init_state(&state.data_dir);
+    process(&mut restored,"carre-de-soie",now+Duration::minutes(6));
+    assert_eq!(restored.lead_scenarios.email_outbox.len(),1);
+    assert_eq!(restored.lead_scenarios.enrollments[0].history[1].status,"skipped");
+    let mut duplicate=p.clone(); duplicate.id="duplicate-email".into(); duplicate.email=p.email.to_uppercase();
+    restored.lead_prospects.push(duplicate.clone());
+    enroll(&mut restored,&scenario,&duplicate,now).unwrap();
+    process(&mut restored,"carre-de-soie",now);
+    assert_eq!(restored.lead_scenarios.email_outbox.len(),1);
+    assert_eq!(restored.lead_scenarios.enrollments[1].history[0].status,"skipped");
+    assert_eq!(snapshot(&restored,"beynost","emp-mario")["emailOutbox"],json!([]));
+    assert_eq!(snapshot(&restored,"beynost","emp-mario")["emailSuppressions"],json!([]));
+    assert!(apply(&mut restored,"beynost","emp-mario",Command::SuppressEmail{prospect_id:p.id,reason:"Test".into()},now).is_err());
+    drop(db); std::fs::remove_dir_all(&state.data_dir).unwrap();
+}
+
 #[test]
 fn email_composition_is_safe_structured_text_and_rejects_unsafe_urls() {
     let mut message = messages::Message {

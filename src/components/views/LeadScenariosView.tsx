@@ -28,13 +28,15 @@ export function LeadScenariosView({ actorId, clubId, onActivitiesChanged }: { ac
   const [contactId, setContactId] = useState('');
   const [historyId, setHistoryId] = useState('');
   const [stopReason, setStopReason] = useState('');
+  const [excludedContact, setExcludedContact] = useState('');
+  const [exclusionReason, setExclusionReason] = useState('');
   const [copyClub, setCopyClub] = useState<ScenarioClubId>('beynost');
   const seq = useRef(0);
   const request = useRef<AbortController | null>(null);
   const retry = useRef<{ body: string; id: string } | null>(null);
   useEffect(() => {
     const ticket = ++seq.current; request.current?.abort(); const controller = new AbortController(); request.current = controller;
-    setWorkspace(null); setDraft(null); setSelectedId(null); setDirty(false); setRevision(null); retry.current = null; setError(null); setNotice(null);
+    setWorkspace(null); setDraft(null); setSelectedId(null); setDirty(false); setRevision(null); retry.current = null; setError(null); setNotice(null); setExcludedContact(''); setExclusionReason('');
     if (!clubId) return;
     setCopyClub(clubId === 'beynost' ? 'carre-de-soie' : 'beynost'); setBusy(true);
     void scenarioRequest(actorId, clubId, undefined, undefined, controller.signal).then(data => { if (ticket === seq.current) setWorkspace(data); }).catch(err => { if (!controller.signal.aborted && ticket === seq.current) setError(err.message); }).finally(() => { if (ticket === seq.current) setBusy(false); });
@@ -84,6 +86,13 @@ export function LeadScenariosView({ actorId, clubId, onActivitiesChanged }: { ac
   return <section className="space-y-4" aria-label="Scénarios commerciaux" aria-busy={busy}>
     <header className="cf-card p-4 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-bold flex gap-2 items-center"><GitBranch aria-hidden="true" size={20} />Scénarios</h2><p className="text-sm cf-muted">{nameOfClub(clubId)} · Automatisez le suivi, les messages et les tâches de votre équipe.</p></div><div className="flex flex-wrap gap-2"><button className={buttonClass} disabled={busy} onClick={() => void act()}><RefreshCw className="inline mr-2" size={16} />Actualiser</button><button className={buttonClass} disabled={busy || !workspace} onClick={() => select(null)}><Plus className="inline mr-2" size={16} />Créer un scénario</button></div></header>
     <p className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm">{workspace?.simulationAvailable ? 'Démonstration : les messages ne sont pas envoyés. Les tâches créées et la progression sont enregistrées sur le serveur.' : 'L’exécution simulée est désactivée dans cet environnement. Aucun envoi fournisseur n’est raccordé.'}</p>
+    {workspace?.emailDelivery && <details className="cf-card p-4 space-y-3"><summary className="cursor-pointer font-semibold">Emails Brevo · Préparation et exclusions</summary>
+      <p className="text-sm cf-muted">Les scénarios préparent leurs emails ici, sans les envoyer. Les emails actuels de Heitz restent gérés par Heitz. La répartition des automatismes doit être vérifiée avant toute activation.</p>
+      <p className="text-sm">{workspace.emailOutbox?.length ?? 0} email(s) préparé(s) en simulation · {workspace.emailSuppressions?.length ?? 0} adresse(s) exclue(s) dans ce club.</p>
+      <ul className="space-y-2">{workspace.emailOutbox?.slice(-10).reverse().map(email=><li key={email.id} className="text-sm break-words">{email.payload.subject} · {date(email.createdAt)} · Simulation, aucun envoi</li>)}</ul>
+      {workspace.simulationAvailable && <fieldset disabled={busy} className="space-y-2"><legend className="font-medium">Tester une exclusion email</legend><p className="text-xs cf-muted">Bloque les prochains emails de scénarios pour cette adresse dans ce club, y compris les fiches en doublon. Aucun changement dans Heitz ou Brevo. Les autres étapes continuent.</p><label className="block text-sm">Contact à exclure<select className={inputClass} value={excludedContact} onChange={e=>setExcludedContact(e.target.value)}><option value="">Choisir un contact</option>{workspace.prospects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><label className="block text-sm">Motif de l’exclusion<input className={inputClass} maxLength={2000} value={exclusionReason} onChange={e=>setExclusionReason(e.target.value)} /></label><button className={buttonClass} disabled={!workspace.prospects.some(p=>p.id===excludedContact)||!exclusionReason.trim()} onClick={()=>void act({action:'suppress_email',prospectId:excludedContact,reason:exclusionReason})}>Exclure des emails de scénarios</button></fieldset>}
+      {workspace.emailSuppressions?.map(row=><p key={row.email} className="text-sm break-words">{row.email} · {row.reason}</p>)}
+    </details>}
     {error && <div role="alert" className="p-3 border border-rose-500 rounded-lg text-rose-400">{error}</div>}{notice && <div role="status" className="p-3 border border-emerald-500 rounded-lg text-emerald-400">{notice}</div>}
     {!workspace && !busy && <button className={buttonClass} onClick={() => void act()}>Réessayer le chargement</button>}
     {workspace && <div className="grid xl:grid-cols-[minmax(220px,1fr)_minmax(0,3fr)] gap-4">

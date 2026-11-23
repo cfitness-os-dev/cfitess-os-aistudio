@@ -74,7 +74,7 @@ def main():
         endpoint = '/api/lead/scenarios/carre-de-soie'
         definition = dict(schemaVersion=1, clubId='carre-de-soie', name='Parcours de recette', mode='manual', active=False,
                           enrollmentLocked=False, conditions=None, steps=[
-                              dict(id='welcome', type='email', enabled=True, delay=dict(amount=0, unit='minutes'), templateId=None, content='Bienvenue au club', comment=''),
+                              dict(id='welcome', type='email', enabled=True, delay=dict(amount=0, unit='minutes'), templateId=None, content='Bienvenue au club', subject='Bienvenue', comment=''),
                               dict(id='call', type='call_task', enabled=True, delay=dict(amount=0, unit='minutes'), templateId=None, content=None, comment='Rappel fictif de préparation')])
         proc = start()
         try:
@@ -117,12 +117,20 @@ def main():
             admin = login('emp-mario', 'CFITNESS_TEST_ADMIN_SECRET')
             _, ws = call('POST', endpoint, admin, dict(action='run'))
             assert ws['enrollments'][0]['history'][0]['status'] == 'simulated'
+            assert ws['emailDelivery']['realSendingEnabled'] is False
+            assert ws['emailDelivery']['heitzCoordination'] == 'unverified'
+            assert len(ws['emailOutbox']) == 1
+            prepared_id = ws['emailOutbox'][0]['id']
+            assert ws['emailOutbox'][0]['payload']['headers']['X-Sib-Sandbox'] == 'drop'
             # Stop/restart between steps: the second execution must keep its snapshot and continue exactly once.
             stop(proc)
             proc = start()
             admin = login('emp-mario', 'CFITNESS_TEST_ADMIN_SECRET')
             _, ws = call('POST', endpoint, admin, dict(action='run'))
             assert ws['enrollments'][0]['status'] == 'completed'
+            assert [m['id'] for m in ws['emailOutbox']] == [prepared_id]
+            assert call('GET', '/api/lead/scenarios/beynost', admin)[1]['emailOutbox'] == []
+            checks.append('Brevo offline payload persists across restart, sandbox enforced and club isolated')
             assert ws['enrollments'][0]['history'][1]['status'] == 'task_created'
             task_id = ws['enrollments'][0]['history'][1]['activityId']
             call('POST', endpoint, admin, dict(action='run'))
@@ -273,6 +281,34 @@ def main():
                 actions=call('GET','/api/lead/workspace',admin)[1]['activities']
                 assert sum(a['id']==enrollment['history'][1]['activityId'] for a in actions)==1
             checks.append('both conditional paths survive real restart, reject backward edges and execute only the selected task exactly once')
+            # Exclusion and progress use the same atomic store; neither crosses clubs.
+            pending=json.loads(json.dumps(definition)); pending['name']='Exclusion de recette'; pending['steps']=pending['steps'][:1]
+            status,response=call('POST',endpoint,admin,dict(action='save',scenarioId=None,expectedRevision=None,definition=pending))
+            assert status==200
+            pending_id=response['commandResult']['scenarioId']
+            call('POST',endpoint,admin,dict(action='publish',scenarioId=pending_id,expectedRevision=1))
+            call('POST',endpoint,admin,dict(action='status',scenarioId=pending_id,expectedRevision=2,active=True,enrollmentLocked=False))
+            call('POST',endpoint,admin,dict(action='enroll',scenarioId=pending_id,prospectId=prospect['id']))
+            exclusion=dict(action='suppress_email',prospectId=prospect['id'],reason='Exclusion fictive demandée')
+            employee=login('emp-chloe','CFITNESS_TEST_COMMERCIAL_SECRET')
+            assert call('POST',endpoint,employee,exclusion)[0]==403
+            assert call('POST','/api/lead/scenarios/beynost',admin,exclusion)[0]==404
+            before=call('GET',endpoint,admin)[1]
+            (folder/'cfitness_state.json.tmp').mkdir()
+            assert call('POST',endpoint,admin,exclusion)[0]==500
+            assert call('GET',endpoint,admin)[1]['emailSuppressions']==before['emailSuppressions']
+            (folder/'cfitness_state.json.tmp').rmdir()
+            operation=uuid.uuid4().hex
+            assert call('POST',endpoint,admin,exclusion,operation)[0]==200
+            assert call('POST',endpoint,admin,exclusion,operation)[0]==200
+            stop(proc);proc=start();admin=login('emp-mario','CFITNESS_TEST_ADMIN_SECRET')
+            response=call('POST',endpoint,admin,dict(action='run'))[1]
+            enrollment=next(e for e in response['enrollments'] if e['scenarioId']==pending_id)
+            assert enrollment['history'][0]['status']=='skipped'
+            assert len(response['emailOutbox'])==len(before['emailOutbox'])
+            assert len(response['emailSuppressions'])==1
+            assert call('GET','/api/lead/scenarios/beynost',admin)[1]['emailSuppressions']==[]
+            checks.append('email exclusion enforces role/club, rollback on disk failure, replay and restart before pending step')
         finally:
             if proc.poll() is None:
                 stop(proc)

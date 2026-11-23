@@ -18,6 +18,9 @@ export interface ScenarioWorkspace {
   scenarios: LeadScenario[]; enrollments: ScenarioEnrollment[];
   commandResult?: { scenarioId: string | null; templateId: string | null } | null;
   segments?: string[];
+  emailDelivery?: { provider: 'brevo'; mode: 'offline_simulation'; realSendingEnabled: false; heitzCoordination: 'unverified' };
+  emailOutbox?: Array<{ id: string; clubId: ScenarioClubId; prospectId: string; createdAt: string; status: 'simulated'; payload: { subject: string } }>;
+  emailSuppressions?: Array<{ clubId: ScenarioClubId; email: string; reason: string; createdAt: string }>;
 }
 export async function previewScenarioEmail(actorId: string, clubId: ScenarioClubId, message: LeadMessage, signal?: AbortSignal): Promise<string> {
   const token = sessionStorage.getItem('cfos_bearer_token');
@@ -29,6 +32,7 @@ export async function previewScenarioEmail(actorId: string, clubId: ScenarioClub
   return payload.html;
 }
 export type ScenarioCommand =
+  | { action: 'suppress_email'; prospectId: string; reason: string }
   | { action: 'save_template'; templateId: string | null; expectedRevision: number | null; message: LeadMessage }
   | { action: 'archive_template'; templateId: string; expectedRevision: number }
   | { action: 'copy_template'; templateId: string; destinationClubId: ScenarioClubId }
@@ -54,6 +58,9 @@ export async function scenarioRequest(actorId: string, clubId: ScenarioClubId, c
   if (!response.ok) throw new Error(payload?.error || payload?.message || (response.status === 403 ? 'Les scénarios sont réservés aux responsables habilités de ce club.' : 'Impossible de joindre le serveur. Votre modification n’est pas confirmée.'));
   if (!payload || payload.actorId !== actorId || payload.clubId !== clubId || !Array.isArray(payload.scenarios) || !Array.isArray(payload.enrollments) || !Array.isArray(payload.templates) || !Array.isArray(payload.sources) || !Array.isArray(payload.statusIds) || !Array.isArray(payload.prospects)) throw new Error('La réponse ne correspond pas au compte ou au club choisi. Rechargez cet espace.');
   if ([...payload.scenarios, ...payload.enrollments, ...payload.templates].some(row => !row || row.clubId !== clubId)) throw new Error('Le serveur a retourné des données d’un autre club. Rechargez cet espace.');
+  for (const key of ['emailOutbox', 'emailSuppressions']) {
+    if (payload[key] !== undefined && (!Array.isArray(payload[key]) || payload[key].some((row: { clubId?: string } | null) => !row || row.clubId !== clubId))) throw new Error('Les informations email ne correspondent pas au club choisi.');
+  }
   if (command?.action === 'save' && command.scenarioId === null && !payload.scenarios.some((s: { id: string }) => s.id === payload.commandResult?.scenarioId)) throw new Error('La réponse ne permet pas d’identifier le scénario créé. Votre saisie est conservée ; actualisez avant de recommencer.');
   if (command?.action === 'save_template' && command.templateId === null && !payload.templates.some((t: { id: string }) => t.id === payload.commandResult?.templateId)) throw new Error('La réponse ne permet pas d’identifier le modèle créé. Votre saisie est conservée ; actualisez avant de recommencer.');
   return payload as ScenarioWorkspace;

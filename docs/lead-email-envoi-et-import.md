@@ -17,6 +17,8 @@ Limite de preuve : la navigation du navigateur intégré vers la copie locale ex
 
 ## Choix du service d’envoi : proposition, à confirmer avant activation
 
+**Mise à jour :** le client a confirmé que Heitz utilise déjà Brevo. La décision courante est de préparer Brevo ; voir [le contrat Brevo/Heitz](lead-brevo-integration.md). Le comparatif ci-dessous reste un relevé historique, pas la recommandation d’activation actuelle.
+
 Recommandation pour l’OS propriétaire : Amazon SES par API, région européenne à choisir, avec un adaptateur remplaçable. Les modèles et scénarios restent dans C.Fitness OS. Le coût unitaire d’envoi est faible ; la gestion fiable des livraisons constitue le principal travail restant.
 
 Tarifs publics consultés le 23 novembre 2026, hors taxes, options, données et développement :
