@@ -833,6 +833,10 @@ pub struct AppDatabaseState {
     pub punch_photos: Vec<crate::punch_photos::PunchPhotoRecord>,
     #[serde(default)]
     pub photo_policy_by_club: HashMap<String, String>,
+    #[serde(default)]
+    pub course_occurrences: Vec<crate::course_attendance::CourseOccurrence>,
+    #[serde(default)]
+    pub course_attendances: Vec<crate::course_attendance::CourseAttendanceRecord>,
 }
 
 #[derive(Debug, Clone, Serialize)]
