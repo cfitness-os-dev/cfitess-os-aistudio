@@ -1,4 +1,4 @@
-﻿//! Persistent, simulation-only scenario engine. Never calls an external provider.
+//! Persistent, simulation-only scenario engine. Never calls an external provider.
 use crate::{
     models::{AppDatabaseState, LeadActivityRecord, LeadProspectRecord},
     rbac::can_access_site_scope,
@@ -230,13 +230,13 @@ async fn email_preview(
     let doc = message.email_document.as_ref().ok_or_else(|| {
         err_resp(
             StatusCode::UNPROCESSABLE_ENTITY,
-            "Choisissez un document email ├á pr├®visualiser.",
+            "Choisissez un document email à prévisualiser.",
         )
     })?;
     let values: HashMap<String, String> = [
         ("prenom", "Camille"),
         ("nom", "Exemple"),
-        ("club", "Club de d├®monstration"),
+        ("club", "Club de démonstration"),
         ("telephone-club", "00 00 00 00 00"),
         ("adresse-club", "Adresse fictive"),
         ("url-rdv-club", "https://example.test/rdv"),
@@ -246,7 +246,7 @@ async fn email_preview(
         ("rdv-heure", "10:00"),
         ("date", "01/12/2026"),
         ("heure", "10:00"),
-        ("prix", "39,90 Ôé¼"),
+        ("prix", "39,90 €"),
         ("unsubscribe-url", "https://example.test/desabonnement"),
     ]
     .into_iter()
@@ -274,7 +274,7 @@ async fn actor(state: &SharedState, headers: &HeaderMap) -> Result<String, Failu
         .ok_or_else(|| {
             err_resp(
                 StatusCode::UNAUTHORIZED,
-                "Reconnectez-vous pour acc├®der aux sc├®narios.",
+                "Reconnectez-vous pour accéder aux scénarios.",
             )
         })?;
     state
@@ -284,7 +284,7 @@ async fn actor(state: &SharedState, headers: &HeaderMap) -> Result<String, Failu
         .get(token)
         .filter(|(_, expiry)| *expiry > Utc::now().timestamp())
         .map(|(id, _)| id.clone())
-        .ok_or_else(|| err_resp(StatusCode::UNAUTHORIZED, "Votre session a expir├®."))
+        .ok_or_else(|| err_resp(StatusCode::UNAUTHORIZED, "Votre session a expiré."))
 }
 fn can_manage(db: &AppDatabaseState, actor: &str, club: &str) -> bool {
     let Ok(site) = site(club) else { return false };
@@ -309,7 +309,7 @@ fn authorize(db: &AppDatabaseState, actor: &str, club: &str) -> Result<(), Failu
     if !can_manage(db, actor, club) {
         return Err(err_resp(
             StatusCode::FORBIDDEN,
-            "La gestion des sc├®narios est r├®serv├®e aux responsables habilit├®s de ce club.",
+            "La gestion des scénarios est réservée aux responsables habilités de ce club.",
         ));
     }
     Ok(())
@@ -317,13 +317,13 @@ fn authorize(db: &AppDatabaseState, actor: &str, club: &str) -> Result<(), Failu
 pub fn statuses() -> Vec<String> {
     [
         "Nouveau",
-        "Jamais consult├®",
+        "Jamais consulté",
         "Froid",
-        "Ti├¿de",
+        "Tiède",
         "Chaud",
         "Accueil Club",
-        "RDV fix├®",
-        "S├®ance effectu├®e",
+        "RDV fixé",
+        "Séance effectuée",
         "Relance en cours",
         "Client",
         "Client enseigne",
@@ -348,24 +348,24 @@ fn sources(db: &AppDatabaseState, club: &str) -> Vec<String> {
 fn validate(d: &Definition, club: &str, db: &AppDatabaseState) -> Result<(), Failure> {
     let bad = |msg: &str| err_resp(StatusCode::UNPROCESSABLE_ENTITY, msg);
     if d.schema_version != 1 || d.club_id != club {
-        return Err(bad("Version ou club du sc├®nario invalide."));
+        return Err(bad("Version ou club du scénario invalide."));
     }
     if d.name.trim().is_empty() || d.name.chars().count() > 120 {
-        return Err(bad("Indiquez un nom de 1 ├á 120 caract├¿res."));
+        return Err(bad("Indiquez un nom de 1 à 120 caractères."));
     }
     if d.mode != "automatic" && d.mode != "manual" {
         return Err(bad("Choisissez un mode automatique ou manuel."));
     }
     if d.mode == "manual" && d.conditions.is_some() {
         return Err(bad(
-            "Un sc├®nario manuel ne contient pas de conditions automatiques.",
+            "Un scénario manuel ne contient pas de conditions automatiques.",
         ));
     }
     if d.mode == "automatic" {
         let c = d
             .conditions
             .as_ref()
-            .ok_or_else(|| bad("D├®finissez les conditions d'inscription."))?;
+            .ok_or_else(|| bad("Définissez les conditions d'inscription."))?;
         let known = statuses();
         let known_sources = sources(db, club);
         if c.status_ids.is_empty()
@@ -388,7 +388,7 @@ fn validate(d: &Definition, club: &str, db: &AppDatabaseState) -> Result<(), Fai
         }
     }
     if d.steps.is_empty() || d.steps.len() > 100 || !d.steps.iter().any(|s| s.enabled) {
-        return Err(bad("Ajoutez de 1 ├á 100 ├®tapes, dont une activ├®e."));
+        return Err(bad("Ajoutez de 1 à 100 étapes, dont une activée."));
     }
     let mut ids = HashSet::new();
     for step in &d.steps {
@@ -397,17 +397,17 @@ fn validate(d: &Definition, club: &str, db: &AppDatabaseState) -> Result<(), Fai
             || step.id.trim() != step.id
             || !ids.insert(&step.id)
         {
-            return Err(bad("Chaque ├®tape doit avoir un identifiant distinct."));
+            return Err(bad("Chaque étape doit avoir un identifiant distinct."));
         }
         if !matches!(
             step.kind.as_str(),
             "email" | "sms" | "whatsapp" | "email_task" | "sms_task" | "call_task" | "condition"
         ) {
-            return Err(bad("Type d'├®tape inconnu."));
+            return Err(bad("Type d'étape inconnu."));
         }
         if step.delay.seconds().is_none() || step.delay.amount > 525600 {
             return Err(bad(
-                "D├®lai invalide : utilisez un entier positif ou nul et une unit├® connue.",
+                "Délai invalide : utilisez un entier positif ou nul et une unité connue.",
             ));
         }
         if let Some(next) = &step.next {
@@ -423,14 +423,14 @@ fn validate(d: &Definition, club: &str, db: &AppDatabaseState) -> Result<(), Fai
                     .any(|(i, s)| i > index && s.id == *target && s.enabled)
                 {
                     return Err(bad(
-                        "La suite doit rejoindre une ├®tape activ├®e plus loin, ou terminer.",
+                        "La suite doit rejoindre une étape activée plus loin, ou terminer.",
                     ));
                 }
             }
         }
         if let Some(doc) = &step.email_document {
             if step.kind != "email" || step.template_id.is_some() {
-                return Err(bad("Document email incompatible avec cette ├®tape."));
+                return Err(bad("Document email incompatible avec cette étape."));
             }
             email_blocks::validate(doc)?;
         }
@@ -438,7 +438,7 @@ fn validate(d: &Definition, club: &str, db: &AppDatabaseState) -> Result<(), Fai
             let b = step
                 .branch
                 .as_ref()
-                .ok_or_else(|| bad("D├®finissez la condition et ses deux destinations."))?;
+                .ok_or_else(|| bad("Définissez la condition et ses deux destinations."))?;
             if step.comment.encode_utf16().count() > 2000
                 || step.template_id.is_some()
                 || step.content.is_some()
@@ -451,11 +451,11 @@ fn validate(d: &Definition, club: &str, db: &AppDatabaseState) -> Result<(), Fai
                 || b.values.len() > 200
                 || b.values.iter().collect::<HashSet<_>>().len() != b.values.len()
             {
-                return Err(bad("├ëtape conditionnelle invalide."));
+                return Err(bad("Étape conditionnelle invalide."));
             }
             let uses_values = matches!(b.predicate.as_str(), "status" | "source" | "segment");
             if uses_values == b.values.is_empty() {
-                return Err(bad("S├®lectionnez les valeurs de la condition."));
+                return Err(bad("Sélectionnez les valeurs de la condition."));
             }
             for value in &b.values {
                 let known = match b.predicate.as_str() {
@@ -484,20 +484,20 @@ fn validate(d: &Definition, club: &str, db: &AppDatabaseState) -> Result<(), Fai
                     .enumerate()
                     .any(|(i, s)| i > index && s.id == *target && s.enabled)
                 {
-                    return Err(bad("Une branche doit rejoindre une ├®tape activ├®e plus loin dans le parcours, ou terminer."));
+                    return Err(bad("Une branche doit rejoindre une étape activée plus loin dans le parcours, ou terminer."));
                 }
             }
             continue;
         } else if step.branch.is_some() {
             return Err(bad(
-                "Les destinations conditionnelles exigent une ├®tape Condition.",
+                "Les destinations conditionnelles exigent une étape Condition.",
             ));
         }
         if let Some(id) = &step.template_id {
             messages::find(db, club, id, &step.kind)?;
             if step.content.is_some() {
                 return Err(bad(
-                    "Choisissez un mod├¿le ou un message libre, pas les deux.",
+                    "Choisissez un modèle ou un message libre, pas les deux.",
                 ));
             }
         }
@@ -519,7 +519,7 @@ fn validate(d: &Definition, club: &str, db: &AppDatabaseState) -> Result<(), Fai
                 || !matches!(wa.closed_action.as_str(), "skip" | "template" | "sms")
                 || (wa.mode == "template" && step.template_id.is_none())
             {
-                return Err(bad("Options WhatsApp incoh├®rentes."));
+                return Err(bad("Options WhatsApp incohérentes."));
             }
             match wa.closed_action.as_str() {
                 "template" => {
@@ -528,11 +528,11 @@ fn validate(d: &Definition, club: &str, db: &AppDatabaseState) -> Result<(), Fai
                         club,
                         wa.fallback_template_id
                             .as_deref()
-                            .ok_or_else(|| bad("Choisissez le mod├¿le WhatsApp de repli."))?,
+                            .ok_or_else(|| bad("Choisissez le modèle WhatsApp de repli."))?,
                         "whatsapp",
                     )?;
                     if wa.fallback_content.is_some() {
-                        return Err(bad("Le repli mod├¿le ne contient pas de SMS libre."));
+                        return Err(bad("Le repli modèle ne contient pas de SMS libre."));
                     }
                 }
                 "sms" => {
@@ -543,12 +543,12 @@ fn validate(d: &Definition, club: &str, db: &AppDatabaseState) -> Result<(), Fai
                         .ok_or_else(|| bad("Renseignez explicitement le SMS de repli."))?;
                     messages::validate_text(content)?;
                     if wa.fallback_template_id.is_some() {
-                        return Err(bad("Le repli SMS ne contient pas de mod├¿le WhatsApp."));
+                        return Err(bad("Le repli SMS ne contient pas de modèle WhatsApp."));
                     }
                 }
                 _ => {
                     if wa.fallback_template_id.is_some() || wa.fallback_content.is_some() {
-                        return Err(bad("Retirez le contenu de repli inutilis├®."));
+                        return Err(bad("Retirez le contenu de repli inutilisé."));
                     }
                 }
             }
@@ -562,7 +562,7 @@ fn validate(d: &Definition, club: &str, db: &AppDatabaseState) -> Result<(), Fai
                 || step.template_id.is_some()
             {
                 return Err(bad(
-                    "D├®crivez la t├óche dans son commentaire, sans envoi automatique.",
+                    "Décrivez la tâche dans son commentaire, sans envoi automatique.",
                 ));
             }
         } else if step.template_id.is_none()
@@ -572,7 +572,7 @@ fn validate(d: &Definition, club: &str, db: &AppDatabaseState) -> Result<(), Fai
                 .map(|s| s.trim().is_empty() || s.chars().count() > 20000)
                 .unwrap_or(true)
         {
-            return Err(bad("Renseignez un message de 1 ├á 20 000 caract├¿res."));
+            return Err(bad("Renseignez un message de 1 à 20 000 caractères."));
         }
     }
     if let Some(rules) = &d.exit_rules {
@@ -732,11 +732,11 @@ fn index(db: &AppDatabaseState, club: &str, id: &str, rev: u64) -> Result<usize,
         .scenarios
         .iter()
         .position(|s| s.id == id && s.club_id == club)
-        .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Sc├®nario introuvable dans ce club."))?;
+        .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Scénario introuvable dans ce club."))?;
     if db.lead_scenarios.scenarios[idx].revision != rev {
         return Err(err_resp(
             StatusCode::CONFLICT,
-            "Le sc├®nario a chang├®. Rechargez sa derni├¿re version avant de modifier.",
+            "Le scénario a changé. Rechargez sa dernière version avant de modifier.",
         ));
     }
     Ok(idx)
@@ -750,7 +750,7 @@ fn enroll(
     if !s.active || s.enrollment_locked || s.archived {
         return Err(err_resp(
             StatusCode::CONFLICT,
-            "Ce sc├®nario n'accepte pas de nouvelles inscriptions.",
+            "Ce scénario n'accepte pas de nouvelles inscriptions.",
         ));
     }
     let v = s.versions.last().ok_or_else(|| {
@@ -778,7 +778,7 @@ fn enroll(
         .steps
         .iter()
         .position(|st| st.enabled)
-        .ok_or_else(|| err_resp(StatusCode::CONFLICT, "Aucune ├®tape activ├®e."))?;
+        .ok_or_else(|| err_resp(StatusCode::CONFLICT, "Aucune étape activée."))?;
     db.lead_scenarios.enrollments.push(Enrollment {
         id: format!("enr-{}", rand::random::<u128>()),
         scenario_id: s.id.clone(),
@@ -805,11 +805,11 @@ fn apply(
 ) -> Result<(), Failure> {
     match cmd {
         Command::SuppressEmail { prospect_id, reason } => {
-            if !is_demo_mode() { return Err(err_resp(StatusCode::CONFLICT,"Les exclusions de recette sont r├®serv├®es ├á la d├®monstration.")); }
-            if reason.trim().is_empty() || reason.chars().count() > 2000 { return Err(err_resp(StatusCode::UNPROCESSABLE_ENTITY,"Indiquez le motif de lÔÇÖexclusion email.")); }
+            if !is_demo_mode() { return Err(err_resp(StatusCode::CONFLICT,"Les exclusions de recette sont réservées à la démonstration.")); }
+            if reason.trim().is_empty() || reason.chars().count() > 2000 { return Err(err_resp(StatusCode::UNPROCESSABLE_ENTITY,"Indiquez le motif de l’exclusion email.")); }
             let p=db.lead_prospects.iter().find(|p|p.id==prospect_id && p.club_id==club)
                 .ok_or_else(||err_resp(StatusCode::NOT_FOUND,"Contact introuvable dans ce club."))?;
-            if !brevo::valid_address(&p.email) { return Err(err_resp(StatusCode::UNPROCESSABLE_ENTITY,"Ce contact nÔÇÖa pas dÔÇÖadresse email valide.")); }
+            if !brevo::valid_address(&p.email) { return Err(err_resp(StatusCode::UNPROCESSABLE_ENTITY,"Ce contact n’a pas d’adresse email valide.")); }
             if !brevo::suppressed(&db.lead_scenarios.email_suppressions,club,&p.email) {
                 db.lead_scenarios.email_suppressions.push(brevo::Suppression {club_id:club.into(),email:brevo::normalized(&p.email),reason:reason.trim().into(),actor_id:actor.into(),created_at:now.to_rfc3339()});
             }
@@ -826,17 +826,17 @@ fn apply(
                     .templates
                     .iter_mut()
                     .find(|t| t.id == id && t.club_id == club)
-                    .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Mod├¿le introuvable."))?;
+                    .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Modèle introuvable."))?;
                 if Some(t.revision) != expected_revision || t.archived {
                     return Err(err_resp(
                         StatusCode::CONFLICT,
-                        "Mod├¿le modifi├® ou archiv├®. Rechargez la liste.",
+                        "Modèle modifié ou archivé. Rechargez la liste.",
                     ));
                 }
                 if t.message.channel != message.channel {
                     return Err(err_resp(
                         StatusCode::CONFLICT,
-                        "Le canal dÔÇÖun mod├¿le existant ne peut pas changer.",
+                        "Le canal d’un modèle existant ne peut pas changer.",
                     ));
                 }
                 t.message = message;
@@ -844,7 +844,7 @@ fn apply(
                 t.updated_at = now.to_rfc3339();
             } else {
                 if expected_revision.is_some() {
-                    return Err(err_resp(StatusCode::BAD_REQUEST, "R├®vision inattendue."));
+                    return Err(err_resp(StatusCode::BAD_REQUEST, "Révision inattendue."));
                 }
                 db.lead_scenarios.templates.push(messages::Template {
                     id: format!("tpl-{}", rand::random::<u128>()),
@@ -865,9 +865,9 @@ fn apply(
                 .templates
                 .iter_mut()
                 .find(|t| t.id == template_id && t.club_id == club)
-                .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Mod├¿le introuvable."))?;
+                .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Modèle introuvable."))?;
             if t.revision != expected_revision {
-                return Err(err_resp(StatusCode::CONFLICT, "Le mod├¿le a chang├®."));
+                return Err(err_resp(StatusCode::CONFLICT, "Le modèle a changé."));
             }
             t.archived = true;
             t.revision += 1;
@@ -884,7 +884,7 @@ fn apply(
                 .iter()
                 .find(|t| t.id == template_id && t.club_id == club)
                 .cloned()
-                .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Mod├¿le introuvable."))?;
+                .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Modèle introuvable."))?;
             t.id = format!("tpl-{}", rand::random::<u128>());
             t.club_id = destination_club_id;
             t.revision = 1;
@@ -904,11 +904,11 @@ fn apply(
                     club,
                     &id,
                     expected_revision
-                        .ok_or_else(|| err_resp(StatusCode::BAD_REQUEST, "R├®vision requise."))?,
+                        .ok_or_else(|| err_resp(StatusCode::BAD_REQUEST, "Révision requise."))?,
                 )?;
                 let s = &mut db.lead_scenarios.scenarios[idx];
                 if s.archived {
-                    return Err(err_resp(StatusCode::CONFLICT, "Ce sc├®nario est archiv├®."));
+                    return Err(err_resp(StatusCode::CONFLICT, "Ce scénario est archivé."));
                 }
                 s.draft = definition;
                 s.revision += 1;
@@ -917,7 +917,7 @@ fn apply(
                 if expected_revision.is_some() {
                     return Err(err_resp(
                         StatusCode::BAD_REQUEST,
-                        "Une cr├®ation ne porte pas de r├®vision existante.",
+                        "Une création ne porte pas de révision existante.",
                     ));
                 }
                 db.lead_scenarios.scenarios.push(Scenario {
@@ -942,7 +942,7 @@ fn apply(
             let frozen = messages::materialize(&db.lead_scenarios.scenarios[idx].draft, db)?;
             let s = &mut db.lead_scenarios.scenarios[idx];
             if s.archived {
-                return Err(err_resp(StatusCode::CONFLICT, "Ce sc├®nario est archiv├®."));
+                return Err(err_resp(StatusCode::CONFLICT, "Ce scénario est archivé."));
             }
             s.versions.push(Version {
                 number: s.versions.len() as u32 + 1,
@@ -960,14 +960,14 @@ fn apply(
             enrollment_locked,
         } => {
             if active && !is_demo_mode() {
-                return Err(err_resp(StatusCode::CONFLICT,"Aucun canal fournisseur r├®el nÔÇÖest raccord├® : activation r├®serv├®e ├á la d├®monstration."));
+                return Err(err_resp(StatusCode::CONFLICT,"Aucun canal fournisseur réel n’est raccordé : activation réservée à la démonstration."));
             }
             let idx = index(db, club, &scenario_id, expected_revision)?;
             let s = &mut db.lead_scenarios.scenarios[idx];
             if s.archived || (active && s.versions.is_empty()) {
                 return Err(err_resp(
                     StatusCode::CONFLICT,
-                    "Publiez une version non archiv├®e avant l'activation.",
+                    "Publiez une version non archivée avant l'activation.",
                 ));
             }
             s.active = active;
@@ -1018,7 +1018,7 @@ fn apply(
             if !is_demo_mode() {
                 return Err(err_resp(
                     StatusCode::CONFLICT,
-                    "Inscription simul├®e disponible uniquement en d├®monstration.",
+                    "Inscription simulée disponible uniquement en démonstration.",
                 ));
             }
             let s = db
@@ -1027,7 +1027,7 @@ fn apply(
                 .iter()
                 .find(|s| s.id == scenario_id && s.club_id == club)
                 .cloned()
-                .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Sc├®nario introuvable."))?;
+                .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Scénario introuvable."))?;
             let p = db
                 .lead_prospects
                 .iter()
@@ -1043,7 +1043,7 @@ fn apply(
             if version.definition.mode != "manual" {
                 return Err(err_resp(
                     StatusCode::CONFLICT,
-                    "Ce sc├®nario inscrit automatiquement les contacts r├®pondant aux conditions.",
+                    "Ce scénario inscrit automatiquement les contacts répondant aux conditions.",
                 ));
             }
             enroll(db, &s, &p, now)?;
@@ -1055,7 +1055,7 @@ fn apply(
             if reason.trim().is_empty() || reason.chars().count() > 2000 {
                 return Err(err_resp(
                     StatusCode::UNPROCESSABLE_ENTITY,
-                    "Indiquez un motif d'arr├¬t (2 000 caract├¿res maximum).",
+                    "Indiquez un motif d'arrêt (2 000 caractères maximum).",
                 ));
             }
             let e = db
@@ -1067,7 +1067,7 @@ fn apply(
             if e.status != "running" {
                 return Err(err_resp(
                     StatusCode::CONFLICT,
-                    "Ce parcours est d├®j├á termin├® ou arr├¬t├®.",
+                    "Ce parcours est déjà terminé ou arrêté.",
                 ));
             }
             e.status = "stopped".into();
@@ -1084,7 +1084,7 @@ fn apply(
         }
         Command::Run {} => {
             if !is_demo_mode() {
-                return Err(err_resp(StatusCode::CONFLICT,"L'ex├®cution simul├®e est disponible uniquement dans l'environnement de d├®monstration."));
+                return Err(err_resp(StatusCode::CONFLICT,"L'exécution simulée est disponible uniquement dans l'environnement de démonstration."));
             }
             process(db, club, now);
         }
@@ -1126,7 +1126,7 @@ async fn command(
         if previous != &fingerprint {
             return Err(err_resp(
                 StatusCode::CONFLICT,
-                "Cette commande a d├®j├á ├®t├® utilis├®e pour un contenu diff├®rent.",
+                "Cette commande a déjà été utilisée pour un contenu différent.",
             ));
         }
         return Ok(Json(command_snapshot(
@@ -1160,7 +1160,7 @@ async fn command(
         &mut next,
         &actor,
         "LEAD_SCENARIO_COMMAND",
-        "Modification des sc├®narios enregistr├®e".into(),
+        "Modification des scénarios enregistrée".into(),
         site(&club)?,
         "lead-scenarios",
         None,
@@ -1169,7 +1169,7 @@ async fn command(
     persist_state(&state.data_dir, &next).map_err(|_| {
         err_resp(
             StatusCode::INTERNAL_SERVER_ERROR,
-            "Impossible d'enregistrer. Votre modification n'a pas ├®t├® appliqu├®e.",
+            "Impossible d'enregistrer. Votre modification n'a pas été appliquée.",
         )
     })?;
     *db = next;
@@ -1244,15 +1244,15 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
                     .map(|(reply, started)| reply > started)
                     .unwrap_or(false)
             {
-                Some("R├®ponse entrante re├ºue depuis lÔÇÖinscription : parcours arr├¬t├®.")
+                Some("Réponse entrante reçue depuis l’inscription : parcours arrêté.")
             } else if rules
                 .status_ids
                 .iter()
                 .any(|s| s == &p.stage || s == &p.lead_status)
             {
-                Some("Le contact a atteint un statut de sortie : parcours arr├¬t├®.")
+                Some("Le contact a atteint un statut de sortie : parcours arrêté.")
             } else if rules.stop_if_no_longer_matches && !eligible(&e.definition, &p, db) {
-                Some("Le contact ne correspond plus au ciblage : parcours arr├¬t├®.")
+                Some("Le contact ne correspond plus au ciblage : parcours arrêté.")
             } else {
                 None
             }
@@ -1281,7 +1281,7 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
                 step_id: "stop".into(),
                 at: now.to_rfc3339(),
                 status: "stopped".into(),
-                detail: "Contact archiv├® : parcours arr├¬t├®.".into(),
+                detail: "Contact archivé : parcours arrêté.".into(),
                 activity_id: None,
                 rendered_subject: None,
                 rendered_content: None,
@@ -1298,7 +1298,7 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
                 at: now.to_rfc3339(),
                 status: "stopped".into(),
                 detail:
-                    "Parcours incoh├®rent : aucune ├®tape ├á cette position. V├®rification requise."
+                    "Parcours incohérent : aucune étape à cette position. Vérification requise."
                         .into(),
                 activity_id: None,
                 rendered_subject: None,
@@ -1312,7 +1312,7 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
             step_id: step.id.clone(),
             at: now.to_rfc3339(),
             status: "simulated".into(),
-            detail: "Message simul├® ; aucun envoi externe.".into(),
+            detail: "Message simulé ; aucun envoi externe.".into(),
             activity_id: None,
             rendered_subject: None,
             rendered_content: None,
@@ -1330,7 +1330,7 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
                 {
                     e.status = "stopped".into();
                     result.status = "stopped".into();
-                    result.detail = "Condition restaur├®e invalide : parcours arr├¬t├®.".into();
+                    result.detail = "Condition restaurée invalide : parcours arrêté.".into();
                     e.history.push(result);
                     db.lead_scenarios.enrollments[idx] = e;
                     continue;
@@ -1368,7 +1368,7 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
                     {
                         result.status = "branched".into();
                         result.detail = format!(
-                            "Condition : {}. Suite vers lÔÇÖ├®tape {}.",
+                            "Condition : {}. Suite vers l’étape {}.",
                             if yes { "Oui" } else { "Non" },
                             index + 1
                         );
@@ -1379,7 +1379,7 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
                         e.status = "stopped".into();
                         result.status = "stopped".into();
                         result.detail =
-                            "Destination conditionnelle invalide : parcours arr├¬t├®.".into();
+                            "Destination conditionnelle invalide : parcours arrêté.".into();
                     }
                 } else {
                     e.status = "completed".into();
@@ -1392,7 +1392,7 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
             } else {
                 e.status = "stopped".into();
                 result.status = "stopped".into();
-                result.detail = "Condition absente : parcours arr├¬t├®.".into();
+                result.detail = "Condition absente : parcours arrêté.".into();
             }
             e.history.push(result);
             db.lead_scenarios.enrollments[idx] = e;
@@ -1417,19 +1417,19 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
                         due_at: now.to_rfc3339(),
                         status: "todo".into(),
                         assigned_to_id: assigned,
-                        status_label: "├Ç traiter".into(),
+                        status_label: "À traiter".into(),
                     });
                 }
                 result.status = "task_created".into();
-                result.detail = "T├óche ajout├®e aux Activit├®s du commercial assign├®.".into();
+                result.detail = "Tâche ajoutée aux Activités du commercial assigné.".into();
                 result.activity_id = Some(id);
             } else {
                 result.status = "skipped".into();
-                result.detail = "Aucun commercial actif affect├® ├á ce contact dans le club.".into();
+                result.detail = "Aucun commercial actif affecté à ce contact dans le club.".into();
             }
         } else if step.kind == "email" && brevo::suppressed(&db.lead_scenarios.email_suppressions,club,&p.email) {
             result.status = "skipped".into();
-            result.detail = "Email exclu : ce destinataire est dans la liste dÔÇÖexclusion du club.".into();
+            result.detail = "Email exclu : ce destinataire est dans la liste d’exclusion du club.".into();
         } else if !p.rgpd_consent {
             result.status = "skipped".into();
             result.detail = "Message exclu : consentement absent.".into();
@@ -1437,10 +1437,10 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
             || (step.kind != "email" && p.phone.trim().is_empty())
         {
             result.status = "skipped".into();
-            result.detail = "Message exclu : coordonn├®es du canal absentes.".into();
+            result.detail = "Message exclu : coordonnées du canal absentes.".into();
         } else if step.kind == "whatsapp" {
             result.status = "skipped".into();
-            result.detail="WhatsApp non ex├®cut├® : compte, mod├¿le ou fen├¬tre de conversation propres ├á ce canal non v├®rifi├®s. Aucun repli ni envoi.".into();
+            result.detail="WhatsApp non exécuté : compte, modèle ou fenêtre de conversation propres à ce canal non vérifiés. Aucun repli ni envoi.".into();
         }
         if result.status == "simulated" {
             let values = messages::context(db, &p);
@@ -1452,7 +1452,7 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
             ) {
                 Ok((_, subject)) if subject.contains(['\r', '\n']) => {
                     result.status = "skipped".into();
-                    result.detail = "Objet email invalide apr├¿s remplacement des variables.".into();
+                    result.detail = "Objet email invalide après remplacement des variables.".into();
                 }
                 Ok((body, subject)) => {
                     result.rendered_content = Some(body);
@@ -1482,9 +1482,9 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
                 result.rendered_subject.as_deref().unwrap_or(""),result.rendered_content.as_deref().unwrap_or(""),&now.to_rfc3339()) {
                 Ok(prepared) => {
                     if !db.lead_scenarios.email_outbox.iter().any(|r|r.id==prepared.id) { db.lead_scenarios.email_outbox.push(prepared); }
-                    result.detail = "Email pr├®par├® pour Brevo en simulation locale ; aucun appel externe ni livraison. Coordination avec Heitz ├á valider.".into();
+                    result.detail = "Email préparé pour Brevo en simulation locale ; aucun appel externe ni livraison. Coordination avec Heitz à valider.".into();
                 },
-                Err(reason) => { result.detail=format!("Simulation seulement ; pr├®paration Brevo bloqu├®e : {reason}"); }
+                Err(reason) => { result.detail=format!("Simulation seulement ; préparation Brevo bloquée : {reason}"); }
             }
         }
         e.history.push(result);
@@ -1503,7 +1503,7 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
                         step_id: "stop".into(),
                         at: now.to_rfc3339(),
                         status: "stopped".into(),
-                        detail: "Suite invalide : parcours arr├¬t├®.".into(),
+                        detail: "Suite invalide : parcours arrêté.".into(),
                         activity_id: None,
                         rendered_subject: None,
                         rendered_content: None,

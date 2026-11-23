@@ -1,4 +1,4 @@
-﻿use super::*;
+use super::*;
 use crate::routes::SharedAppState;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
@@ -40,20 +40,20 @@ fn email_composition_is_safe_structured_text_and_rejects_unsafe_urls() {
         name: "Visite".into(),
         channel: "email".into(),
         subject: "Bonjour".into(),
-        body: "Votre s├®ance".into(),
+        body: "Votre séance".into(),
         email_document: None,
         email_layout: Some(messages::EmailLayout {
             heading: "Bienvenue".into(),
-            button_label: "R├®server".into(),
+            button_label: "Réserver".into(),
             button_url: "https://example.test/rdv".into(),
-            footer: "├Ç bient├┤t".into(),
+            footer: "À bientôt".into(),
             font: "Arial".into(),
         }),
     };
     assert!(messages::validate_message(&message).is_ok());
     assert_eq!(
         messages::text_body(&message),
-        "Bienvenue\n\nVotre s├®ance\n\nR├®server : https://example.test/rdv\n\n├Ç bient├┤t"
+        "Bienvenue\n\nVotre séance\n\nRéserver : https://example.test/rdv\n\nÀ bientôt"
     );
     for url in [
         "javascript:alert(1)",
@@ -95,7 +95,7 @@ async fn status_and_target_exit_rules_stop_pending_steps_without_removing_existi
         if mode == "status" {
             record.stage = "Client".into();
         } else {
-            record.source = "Source diff├®rente".into();
+            record.source = "Source différente".into();
         }
         let before = db.lead_activities.len();
         process(&mut db, "carre-de-soie", now);
@@ -171,7 +171,7 @@ async fn templates_freeze_at_publication_render_once_and_reject_cross_club_or_ar
         Some("Bonjour %prenom%")
     );
     let mut changed = message;
-    changed.body = "Nouveau mod├¿le".into();
+    changed.body = "Nouveau modèle".into();
     apply(
         &mut db,
         "carre-de-soie",
@@ -444,7 +444,7 @@ pub(super) fn definition() -> Definition {
                 },
                 template_id: None,
                 content: None,
-                comment: "Appeler pour pr├®parer la visite".into(),
+                comment: "Appeler pour préparer la visite".into(),
             },
         ],
     }
@@ -582,7 +582,7 @@ async fn durable_versions_delays_locking_pause_and_task_idempotence() {
         .filter(|a| a.id.starts_with("scenario-task-"))
         .collect();
     assert_eq!(tasks.len(), 1);
-    assert_eq!(tasks[0].title, "Appeler pour pr├®parer la visite");
+    assert_eq!(tasks[0].title, "Appeler pour préparer la visite");
     assert_eq!(loaded.lead_scenarios.enrollments[0].status, "completed");
     drop(db);
     std::fs::remove_dir_all(&s.data_dir).unwrap();

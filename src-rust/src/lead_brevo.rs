@@ -1,4 +1,4 @@
-﻿//! Offline preparation only: deliberately no HTTP client, API key or send method.
+//! Offline preparation only: deliberately no HTTP client, API key or send method.
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -40,9 +40,9 @@ pub fn prepare(
 ) -> Result<PreparedEmail, &'static str> {
     if !valid_address(email) { return Err("Adresse email invalide."); }
     if subject.trim().is_empty() || subject.len() > 300 || subject.contains(['\r','\n']) {
-        return Err("Renseignez un objet email valide avant de pr├®parer le message Brevo.");
+        return Err("Renseignez un objet email valide avant de préparer le message Brevo.");
     }
-    if text.trim().is_empty() { return Err("Le contenu de lÔÇÖemail est vide."); }
+    if text.trim().is_empty() { return Err("Le contenu de l’email est vide."); }
     // JSON tuple prevents ambiguous composite keys. Version is immutable at enrollment.
     let key = serde_json::to_vec(&(club,enrollment,step,version)).map_err(|_| "Message invalide.")?;
     let id = format!("brevo-sim-{:x}", Sha256::digest(key));
@@ -51,7 +51,7 @@ pub fn prepare(
         prospect_id: prospect.into(), step_id: step.into(), version,
         created_at: at.into(), status: "simulated".into(),
         payload: json!({
-            "sender":{"name":"C.Fitness ÔÇö simulation", "email":"simulation@example.test"},
+            "sender":{"name":"C.Fitness — simulation", "email":"simulation@example.test"},
             "to":[{"email":email.trim()}], "subject":subject, "textContent":text,
             "tags":["cfitness-os","lead-scenario",club],
             "headers":{"X-Sib-Sandbox":"drop", "X-Mailin-custom":id}

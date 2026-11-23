@@ -1,4 +1,4 @@
-﻿//! Structured email documents. No network access; HTML fragments are sanitized.
+//! Structured email documents. No network access; HTML fragments are sanitized.
 use super::*;
 use base64::Engine as _;
 
@@ -110,7 +110,7 @@ fn image_bytes(s: &str) -> Option<usize> {
 }
 pub fn validate(d: &Document) -> Result<(), Failure> {
     let bad = || {
-        err_resp(StatusCode::UNPROCESSABLE_ENTITY, "Document email invalide : v├®rifiez les blocs, dimensions, liens HTTPS et images JPEG/PNG (2 Mo au total).")
+        err_resp(StatusCode::UNPROCESSABLE_ENTITY, "Document email invalide : vérifiez les blocs, dimensions, liens HTTPS et images JPEG/PNG (2 Mo au total).")
     };
     if d.version != 1
         || d.blocks.is_empty()
@@ -232,7 +232,7 @@ pub fn text(d: &Document) -> String {
                 .map(|l| format!("{} : {}", l.label, l.url))
                 .collect::<Vec<_>>()
                 .join("\n"),
-            "pied" => format!("{}\nSe d├®sabonner : %unsubscribe-url%", b.text),
+            "pied" => format!("{}\nSe désabonner : %unsubscribe-url%", b.text),
             "html" => {
                 let mut inside = false;
                 sanitized(&b.html)
@@ -278,7 +278,7 @@ pub fn render(
         let txt = escape(&resolve(&b.text)?).replace('\n', "<br>");
         let image = if !b.image.is_empty() {
             if preview && !b.image.starts_with("data:") {
-                format!("<div style=\"border:1px dashed #64748b;padding:16px\">Image distante non charg├®e ┬À {}</div>", escape(&resolve(&b.alt)?))
+                format!("<div style=\"border:1px dashed #64748b;padding:16px\">Image distante non chargée · {}</div>", escape(&resolve(&b.alt)?))
             } else {
                 format!("<img src=\"{}\" alt=\"{}\" width=\"{}\" style=\"width:{}px;max-width:100%;border-radius:{}px\">", if b.image.starts_with("data:") { escape(&b.image) } else { link_url(&b.image)? }, escape(&resolve(&b.alt)?), s.image_width, s.image_width, s.radius)
             }
@@ -292,7 +292,7 @@ pub fn render(
             "image" | "entete" => if b.url.is_empty() { image } else { format!("<a {href}=\"{}\">{image}</a>", link_url(&b.url)?) },
             "image_texte" => if s.image_position == "left" { format!("<div class=\"mail-row\"><div>{image}</div><div>{txt}</div></div>") } else { format!("<div class=\"mail-row\"><div>{txt}</div><div>{image}</div></div>") },
             "fond_image" => if preview && !b.image.starts_with("data:") { format!("{image}<div>{txt}</div>") } else { format!("<div style=\"background-image:url('{}');background-size:cover;background-position:center;min-height:{}px;padding:20px\">{txt}</div>", if b.image.starts_with("data:") { escape(&b.image) } else { link_url(&b.image)? }, s.height) },
-            "pied" => format!("{txt}<p><a {href}=\"{}\">Se d├®sabonner</a></p>", link_url("%unsubscribe-url%")?),
+            "pied" => format!("{txt}<p><a {href}=\"{}\">Se désabonner</a></p>", link_url("%unsubscribe-url%")?),
             "navbar" | "reseaux" => b.links.iter().map(|l| Ok(format!("<a {href}=\"{}\" style=\"display:inline-block;margin:8px;color:{}\">{}</a>", link_url(&l.url)?, s.text_color, escape(&resolve(&l.label)?)))).collect::<Result<Vec<_>, String>>()?.join(" "),
             "separateur" => format!("<hr style=\"border:0;border-top:{}px solid {}\">", s.thickness, s.text_color),
             "espace" => format!("<div style=\"height:{}px\"></div>", s.height),

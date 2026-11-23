@@ -1,4 +1,4 @@
-﻿//! Club-owned reusable messages. Plain text only: no executable HTML is rendered.
+//! Club-owned reusable messages. Plain text only: no executable HTML is rendered.
 use super::*;
 
 pub const VARIABLES: &[&str] = &[
@@ -82,7 +82,7 @@ pub fn validate_text(text: &str) -> Result<(), Failure> {
     if tags(text).iter().any(|t| !VARIABLES.contains(&t.as_str())) {
         return Err(err_resp(
             StatusCode::UNPROCESSABLE_ENTITY,
-            "Variable inconnue. Utilisez les variables propos├®es.",
+            "Variable inconnue. Utilisez les variables proposées.",
         ));
     }
     Ok(())
@@ -100,7 +100,7 @@ pub fn validate_message(m: &Message) -> Result<(), Failure> {
     {
         return Err(err_resp(
             StatusCode::UNPROCESSABLE_ENTITY,
-            "Mod├¿le invalide : nom, canal, message et objet email sont requis et born├®s.",
+            "Modèle invalide : nom, canal, message et objet email sont requis et bornés.",
         ));
     }
     validate_text(&m.subject)?;
@@ -120,7 +120,7 @@ pub fn validate_message(m: &Message) -> Result<(), Failure> {
             || (layout.button_label.trim().is_empty() != layout.button_url.is_empty())
             || (!layout.button_url.is_empty() && !valid_button_url(&layout.button_url))
         {
-            return Err(err_resp(StatusCode::UNPROCESSABLE_ENTITY, "Pr├®sentation email invalide. Le bouton exige un libell├® et une adresse HTTPS sans identifiant."));
+            return Err(err_resp(StatusCode::UNPROCESSABLE_ENTITY, "Présentation email invalide. Le bouton exige un libellé et une adresse HTTPS sans identifiant."));
         }
         validate_text(&layout.heading)?;
         validate_text(&layout.footer)?;
@@ -130,7 +130,7 @@ pub fn validate_message(m: &Message) -> Result<(), Failure> {
         if m.channel != "email" || m.email_layout.is_some() {
             return Err(err_resp(
                 StatusCode::UNPROCESSABLE_ENTITY,
-                "Choisissez une seule pr├®sentation email.",
+                "Choisissez une seule présentation email.",
             ));
         }
         email_blocks::validate(document)?;
@@ -173,7 +173,7 @@ pub fn find<'a>(
         .ok_or_else(|| {
             err_resp(
                 StatusCode::UNPROCESSABLE_ENTITY,
-                "Choisissez un mod├¿le actif du bon canal et de ce club.",
+                "Choisissez un modèle actif du bon canal et de ce club.",
             )
         })
 }

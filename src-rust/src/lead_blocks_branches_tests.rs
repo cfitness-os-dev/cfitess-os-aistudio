@@ -1,10 +1,10 @@
-﻿use super::*;
+use super::*;
 fn block(kind: &str, id: &str) -> email_blocks::Block {
     email_blocks::Block {
         id: id.into(),
         kind: kind.into(),
         text: "Bonjour %prenom%".into(),
-        label: "R├®server".into(),
+        label: "Réserver".into(),
         url: "https://example.test/rdv".into(),
         image: "https://example.test/image.png".into(),
         alt: "Illustration".into(),
@@ -49,10 +49,10 @@ fn twelve_blocks_render_and_html_preview_is_isolated_without_loading_remote_medi
     let html = email_blocks::render(&doc, &values, true).unwrap();
     assert!(html.contains("&lt;script&gt;nom&lt;/script&gt;"));
     assert!(!html.contains("<script>nom</script>"));
-    assert!(html.contains("Image distante non charg├®e"));
+    assert!(html.contains("Image distante non chargée"));
     assert!(!html.contains("src=\"https://example.test/image.png"));
     assert!(html.contains("@media(max-width:767px)"));
-    assert!(html.contains("Se d├®sabonner"));
+    assert!(html.contains("Se désabonner"));
     assert!(!html.contains(" href="));
     let isolated = email_blocks::preview_document(&html);
     assert!(isolated.contains("default-src 'none'"));
