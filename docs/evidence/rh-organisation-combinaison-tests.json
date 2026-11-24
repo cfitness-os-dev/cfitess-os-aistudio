@@ -1,0 +1,34 @@
+{
+  "passed": 83,
+  "suites": [
+    {
+      "script": "test_hr_organisation.py",
+      "groups": 18
+    },
+    {
+      "script": "test_timeclock_settings_owner.py",
+      "groups": 5
+    },
+    {
+      "script": "test_lead_scenarios.py",
+      "groups": 22
+    },
+    {
+      "script": "test_lead_campaign_scheduling.py",
+      "groups": 11
+    },
+    {
+      "script": "test_personal_workspace.py",
+      "groups": 12
+    },
+    {
+      "script": "test_hr_manager_workflows.py",
+      "groups": 7
+    },
+    {
+      "script": "test_personal_leave_withdrawal.py",
+      "groups": 8
+    }
+  ],
+  "externalSends": 0
+}
