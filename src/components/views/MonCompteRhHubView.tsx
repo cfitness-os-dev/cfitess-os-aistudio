@@ -1,4 +1,5 @@
-import { lazy, useEffect, useState } from 'react';
+import { confirmLeadDraftNavigation } from '../../domain/leadDraftGuard';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import {
   AlertTriangle,
   Building2,
@@ -24,9 +25,12 @@ import { AdminRightsView } from '../../views/AdminRightsView';
 import { DashboardView } from '../../views/DashboardView';
 import { PlanningAndModulesView } from '../../views/PlanningAndModulesView';
 import { PreferencesView } from '../../views/PreferencesView';
-import { HrEmployeeDossierView } from './HrEmployeeDossierView';
 import { MyDayCollaboratorView } from './MyDayCollaboratorView';
 import { PersonalWorkspaceView } from './PersonalWorkspaceView';
+
+const HrEmployeeDossierView = lazy(() =>
+  import('./HrEmployeeDossierView').then((m) => ({ default: m.HrEmployeeDossierView }))
+);
 
 const PlanningHrView = lazy(() =>
   import('./PlanningHrView').then((m) => ({ default: m.PlanningHrView }))
@@ -160,7 +164,10 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
 
   const auth = { actorId: activeActorId, siteId: activeSiteId, token: bearerToken };
 
+  const refreshEpoch = useRef(0);
+  useEffect(() => () => { refreshEpoch.current += 1; }, []);
   async function refreshAll(nextAuth = auth, verifySection?: McSectionId) {
+    const requestEpoch = ++refreshEpoch.current;
     setLoading(true);
     setFatalError(null);
     try {
@@ -170,6 +177,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
         clientApi.getRegistry(nextAuth),
         clientApi.getAmbiguities(nextAuth),
       ]);
+      if (requestEpoch !== refreshEpoch.current) return;
       setBackendKind(healthRes.backend);
       setDashboard(dashRes);
       setRegistry(regRes);
@@ -188,11 +196,14 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
             {
               actorId: nextAuth.actorId,
               siteId: dashRes.session.activeSiteId,
+              token: nextAuth.token,
             },
             verifySection
           );
+          if (requestEpoch !== refreshEpoch.current) return;
           setForbiddenBanner(null);
         } catch (err) {
+          if (requestEpoch !== refreshEpoch.current) return;
           if (err instanceof ApiClientError && err.status === 403) {
             setForbiddenBanner(err.message);
             setHubTab('mon-compte');
@@ -201,13 +212,14 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
         }
       }
     } catch (err) {
+      if (requestEpoch !== refreshEpoch.current) return;
       setFatalError(
         err instanceof Error
           ? err.message
           : 'Impossible de charger les données RH CFitness OS.'
       );
     } finally {
-      setLoading(false);
+      if (requestEpoch === refreshEpoch.current) setLoading(false);
     }
   }
 
@@ -261,6 +273,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
   }
 
   async function handleNavigateSection(sectionId: McSectionId) {
+    if (!confirmLeadDraftNavigation(() => { void handleNavigateSection(sectionId); })) return;
     setForbiddenBanner(null);
     try {
       await clientApi.assertSectionAccess(auth, sectionId);
@@ -290,6 +303,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
   }
 
   function handleChangeSite(nextSiteId: string | 'all') {
+    if (!confirmLeadDraftNavigation(() => handleChangeSite(nextSiteId))) return;
     setForbiddenBanner(null);
     setActiveSiteId(nextSiteId);
     const nextFilter = siteIdToClubFilter(nextSiteId);
@@ -300,7 +314,8 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
 
   // Vérité serveur exclusive : aucune projection synthétique côté client (#1 / #9)
   const effectiveDashboard: DashboardPayload | null =
-    dashboard && dashboard.session.employee.id === currentUser.id ? dashboard : null;
+    dashboard && dashboard.session.employee.id === currentUser.id &&
+    dashboard.session.activeSiteId === activeSiteId ? dashboard : null;
   const identityMismatchBanner =
     dashboard && dashboard.session.employee.id !== currentUser.id
       ? `Identité serveur (${dashboard.session.employee.id}) différente de la session (${currentUser.id}). Dossier synthétique désactivé.`
@@ -359,7 +374,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
 
             <button
               type="button"
-              onClick={() => setHubTab('github-my-day')}
+              onClick={() => { if (confirmLeadDraftNavigation(() => setHubTab('github-my-day'))) setHubTab('github-my-day'); }}
               className={`px-3 py-2 rounded-btn text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
                 hubTab === 'github-my-day'
                   ? 'cf-brand-gradient text-white shadow-sm'
@@ -644,11 +659,13 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
               )}
 
               {hubTab === 'mon-compte' && activeSection === 'MC02' && effectiveDashboard && (
-                <HrEmployeeDossierView
-                  clubId={effectiveClubId}
-                  personalOnly={isPersonalSpace}
-                  onDossierMutated={() => void refreshAll()}
-                />
+                <Suspense fallback={<p role="status">Chargement du dossier RH…</p>}>
+                  <HrEmployeeDossierView
+                    clubId={effectiveClubId}
+                    personalOnly={isPersonalSpace}
+                    onDossierMutated={() => void refreshAll()}
+                  />
+                </Suspense>
               )}
 
               {hubTab === 'mon-compte' && activeSection === 'MC04' && (

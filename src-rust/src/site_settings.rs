@@ -131,19 +131,16 @@ pub async fn put_admin_site_settings(
     Path(raw_site_id): Path<String>,
     Json(patch): Json<UpdateSiteSettingsPayload>,
 ) -> Result<Json<Site>, (StatusCode, Json<Value>)> {
-    let (actor_id, active_site) = resolve_session_actor(&state, &headers).await?;
+    let (actor_id, _active_site) = resolve_session_actor(&state, &headers).await?;
     let mut db = state.db.write().await;
 
-    let allowed = is_admin_employee(&db, &actor_id)
-        || evaluate_permission(&db, &actor_id, &active_site, "ORG04-32", None).allowed;
+    let target_site_id = normalize_site_id(&raw_site_id);
+    let allowed = crate::rbac::is_owner_or_super_admin(&db, &actor_id, &target_site_id)
+        || crate::hr_organisation::site_permission(&db,&actor_id,&target_site_id,"ORG04-32");
     if !allowed {
-        return Err(err_resp(
-            StatusCode::FORBIDDEN,
-            "Accès refusé (403) : modification des paramètres d'établissement réservée à l'administration.",
-        ));
+        return Err(err_resp(StatusCode::FORBIDDEN, "Modification des paramètres non autorisée sur ce club."));
     }
 
-    let target_site_id = normalize_site_id(&raw_site_id);
     if !db.sites.iter().any(|s| s.id == target_site_id) {
         return Err(err_resp(
             StatusCode::NOT_FOUND,
