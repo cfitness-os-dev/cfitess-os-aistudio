@@ -1,0 +1,50 @@
+{
+  "date": "2026-11-24",
+  "sourceCommit": "48c8e35",
+  "base": "9c0af75",
+  "branch": "feat/rh-leave-policies-counters",
+  "npmLint": {
+    "exitCode": 0
+  },
+  "npmTest": {
+    "exitCode": 0,
+    "passed": 133,
+    "failed": 0
+  },
+  "npmBuild": {
+    "exitCode": 0
+  },
+  "cargoTest": {
+    "exitCode": 0,
+    "passed": 143,
+    "failed": 0
+  },
+  "http": {
+    "exitCode": 0,
+    "groups": 67,
+    "scripts": 7
+  },
+  "browser": {
+    "provider": "Chrome",
+    "origin": "http://127.0.0.1:18135",
+    "viewports": [
+      {
+        "width": 1440,
+        "height": 1000
+      },
+      {
+        "width": 390,
+        "height": 844
+      },
+      {
+        "width": 768,
+        "height": 1024
+      }
+    ],
+    "physicalHardware": false
+  },
+  "externalSends": 0,
+  "deploymentChanged": false,
+  "scheduledPolling": false,
+  "note": "Rust build/test succeeded; local linker emitted a temporary cache warning, not a compilation failure."
+}

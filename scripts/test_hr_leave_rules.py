@@ -1,15 +1,14 @@
 """Leave policy/counters HTTP recipe against a disposable loopback-only Rust server.
 
-Requires CFITNESS_TEST_ADMIN_SECRET and CFITNESS_TEST_COMMERCIAL_SECRET for
+Requires CFITNESS_TEST_ADMIN_SECRET, CFITNESS_TEST_COMMERCIAL_SECRET,
+CFITNESS_TEST_READONLY_SECRET and CFITNESS_TEST_MAXIME_SECRET for
 the built-in fictional accounts. Never accepts a remote base URL.
 """
 import concurrent.futures
-import copy
 import json
 import os
 from pathlib import Path
 import socket
-import secrets
 import subprocess
 import tempfile
 import time

@@ -30,7 +30,7 @@ Les formulaires conservent leurs valeurs après un refus serveur. Les actualisat
 
 ## Recette exécutée
 
-Les résultats chiffrés définitifs et la base intégrée sont consignés dans la PR. Les fichiers de preuve sont produits hors des sources puis joints à cette livraison.
+Base intégrée 9c0af75, code testé 48c8e35 : lint et build réussis, **143 tests Rust et 133 tests TypeScript réussis**, **67 groupes HTTP réussis dans sept recettes**. Les commandes ont toutes terminé avec le code zéro. Le build Rust émet un avertissement local de cache du linker sans échec de compilation. Les comptes de recette sont fictifs. Voir [les résultats détaillés](recette/rh-absences-2026-11-24/summary.json) et [les groupes HTTP](recette/rh-absences-2026-11-24/http-results.json).
 
 `scripts/test_hr_leave_rules.py` démarre un véritable serveur Rust sur une adresse de boucle locale et un dossier neuf. Il couvre onze groupes : authentification et clubs ; catalogue et chevauchements ; demi-journées ; partage CP N/reliquat ; compensation après correction ; RTT et changement ultérieur de règle ; pièces manquantes et propriété ; changement de justificatif et révision ; ancienne route de décision ; échec disque ; persistance après redémarrage. Une validation simultanée produit exactement une réussite et un conflit. Les écritures refusées sont comparées au fichier avant tentative.
 
@@ -46,3 +46,9 @@ Chrome, copie locale `127.0.0.1:18135`, données fictives : parcours salarié et
 - Pas de recalcul automatique de planning, remplacement de salarié, paie, Skello ou Heitz. L'absence et son compteur sont liés ; le remplacement et les heures d'annualisation sont des chantiers distincts.
 - Un historique inconnu ne reçoit pas automatiquement un motif moderne ou un débit. Les anciennes validations sans mouvement lié restent identifiées comme telles.
 - Recette ciblée validée sur ses preuves ; elle ne certifie ni tout le logiciel, ni la parité complète Skello, ni la conformité réglementaire.
+
+## Captures de recette
+
+[Ordinateur](recette/rh-absences-2026-11-24/ordinateur.jpg) · [Mobile](recette/rh-absences-2026-11-24/mobile.jpg) · [Tablette](recette/rh-absences-2026-11-24/tablette.jpg)
+
+Pendant une reconstruction locale, un onglet conservant les anciens noms de fichiers chargés à la demande est devenu blanc après suppression de ces anciens fichiers ; un rechargement sur le nouveau build a rétabli la vue. La relecture finale utilise les nouveaux fichiers. La conservation des anciens fichiers lors des futurs déploiements et une récupération explicite des erreurs de chargement restent à vérifier séparément ; ce lot ne prétend pas les corriger.
