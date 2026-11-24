@@ -21,6 +21,8 @@ type Failure = (StatusCode, Json<Value>);
 mod brevo;
 #[path = "lead_campaigns.rs"]
 mod campaigns;
+#[path = "lead_sms.rs"]
+mod sms;
 #[path = "lead_email_blocks.rs"]
 mod email_blocks;
 #[path = "lead_message_templates.rs"]
@@ -178,6 +180,8 @@ pub struct Enrollment {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Store {
+    #[serde(default)] pub sms_preferences: Vec<sms::Preference>,
+    #[serde(default)] pub sms_outbox: Vec<sms::PreparedSms>,
     #[serde(default)]
     pub campaigns: Vec<campaigns::Campaign>,
     #[serde(default)]
@@ -637,13 +641,15 @@ fn snapshot(db: &AppDatabaseState, club: &str, actor: &str) -> Value {
         .flat_map(|p| p.segments.clone())
         .collect();
     json!({"actorId":actor,"clubId":club,"simulationOnly":true,"simulationAvailable":is_demo_mode(),"emailDelivery":brevo::status(),
+        "smsPreferences":db.lead_scenarios.sms_preferences.iter().filter(|p|p.club_id==club).collect::<Vec<_>>(),
+        "smsOutbox":db.lead_scenarios.sms_outbox.iter().filter(|p|p.club_id==club).collect::<Vec<_>>(),
         "campaigns":db.lead_scenarios.campaigns.iter().filter(|c|c.club_id==club).map(|c|json!({"campaign":c,"audience":campaigns::targets(db,c)})).collect::<Vec<_>>(),
         "emailOutbox":db.lead_scenarios.email_outbox.iter().filter(|r|r.club_id==club).collect::<Vec<_>>(),
         "emailSuppressions":db.lead_scenarios.email_suppressions.iter().filter(|r|r.club_id==club).collect::<Vec<_>>(),
         "sources":sources(db,club),"statusIds":all_statuses,"segments":segments,"templates":db.lead_scenarios.templates.iter().filter(|t|t.club_id==club).collect::<Vec<_>>(),
         "scenarios":db.lead_scenarios.scenarios.iter().filter(|s|s.club_id==club).collect::<Vec<_>>(),
         "enrollments":db.lead_scenarios.enrollments.iter().filter(|e|e.club_id==club).collect::<Vec<_>>(),
-        "prospects":db.lead_prospects.iter().filter(|p|p.club_id==club).map(|p|json!({"id":p.id,"name":format!("{} {}",p.first_name,p.last_name),"status":p.stage,"source":p.source})).collect::<Vec<_>>()})
+        "prospects":db.lead_prospects.iter().filter(|p|p.club_id==club).map(|p|json!({"id":p.id,"name":format!("{} {}",p.first_name,p.last_name),"status":p.stage,"source":p.source,"phone":sms::normalize_phone(&p.phone)})).collect::<Vec<_>>()})
 }
 async fn workspace(
     State(state): State<SharedState>,
@@ -659,6 +665,12 @@ async fn workspace(
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "action", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Command {
+    SetSmsConsent {
+        #[serde(rename="prospectId")] prospect_id:String,
+        granted:bool,reason:String,
+        #[serde(rename="expectedRevision")] expected_revision:Option<u64>,
+    },
+    StopSms {#[serde(rename="prospectId")] prospect_id:String,reason:String},
     SaveCampaign {
         #[serde(rename = "campaignId")]
         campaign_id: Option<String>,
@@ -671,6 +683,7 @@ pub enum Command {
         status_ids: Vec<String>,
         #[serde(rename = "sourceIds")]
         source_ids: Vec<String>,
+        #[serde(default,rename="segmentIds")] segment_ids:Vec<String>,
     },
     SimulateCampaign {
         #[serde(rename = "campaignId")]
@@ -835,6 +848,8 @@ fn apply(
     now: DateTime<Utc>,
 ) -> Result<(), Failure> {
     match cmd {
+        Command::SetSmsConsent{prospect_id,granted,reason,expected_revision}=>sms::preference(db,club,actor,&prospect_id,granted,false,expected_revision,&reason,now)?,
+        Command::StopSms{prospect_id,reason}=>sms::preference(db,club,actor,&prospect_id,false,true,None,&reason,now)?,
         cmd @ Command::SaveCampaign { .. }
         | cmd @ Command::SimulateCampaign { .. }
         | cmd @ Command::ArchiveCampaign { .. } => campaigns::apply(db, club, actor, &cmd, now)?,
@@ -1504,6 +1519,9 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
             result.status = "skipped".into();
             result.detail =
                 "Email exclu : ce destinataire est dans la liste d’exclusion du club.".into();
+        } else if step.kind=="sms" && sms::excluded(db,club,&p.phone).is_some() {
+            result.status="skipped".into();
+            result.detail=sms::excluded(db,club,&p.phone).unwrap_or("SMS exclu").into();
         } else if !p.rgpd_consent {
             result.status = "skipped".into();
             result.detail = "Message exclu : consentement absent.".into();
@@ -1549,6 +1567,12 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
                     result.status = "skipped".into();
                     result.detail = reason;
                 }
+            }
+        }
+        if step.kind=="sms" && result.status=="simulated" {
+            match sms::prepare(club,&format!("scenario:{}:{}:{}",e.id,e.version,step.id),&p.id,&p.phone,result.rendered_content.as_deref().unwrap_or(""),&now.to_rfc3339()) {
+                Ok(prepared)=>{if !db.lead_scenarios.sms_outbox.iter().any(|r|r.id==prepared.id){db.lead_scenarios.sms_outbox.push(prepared);}result.detail="SMS simulé et enregistré, sans fournisseur connecté ni envoi réel.".into();},
+                Err(reason)=>{result.status="skipped".into();result.detail=reason;},
             }
         }
         if step.kind == "email" && result.status == "simulated" {

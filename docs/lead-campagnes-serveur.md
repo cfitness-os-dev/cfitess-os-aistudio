@@ -4,11 +4,11 @@ Branche `feat/lead-campaigns-persistence`, basée sur `cd68196`. Lot de dévelop
 
 ## Comportement livré
 
-Les campagnes email ont un propriétaire club côté serveur et une révision. Le catalogue, la lecture, l’enregistrement, l’archivage, le calcul des destinataires et la simulation passent par la même frontière authentifiée que les scénarios. Un commercial non habilité reçoit 403 ; un modèle ou une campagne d’un autre club n’est pas utilisable. Les droits de gestion suivent actuellement les responsables autorisés sur le club entier déjà prévus dans `lead_scenarios::authorize`, pas une nouvelle interprétation du rôle visuel.
+Les campagnes email et SMS ont un propriétaire club côté serveur et une révision. Le catalogue, la lecture, l’enregistrement, l’archivage, le calcul des destinataires et la simulation passent par la même frontière authentifiée que les scénarios. Un commercial non habilité reçoit 403 ; un modèle ou une campagne d’un autre club n’est pas utilisable. Les droits de gestion suivent actuellement les responsables autorisés sur le club entier déjà prévus dans `lead_scenarios::authorize`, pas une nouvelle interprétation du rôle visuel.
 
 Le contenu provient du catalogue email existant. Les documents à blocs et mises en page sont réutilisés pour leur version texte ; la préparation HTML/CID vers un vrai fournisseur reste à réaliser. À chaque simulation, l’historique conserve la version de campagne, le message alors utilisé, la cible et les résultats. Modifier ensuite un modèle ne réécrit pas cet historique.
 
-Le ciblage utilise exclusivement les contacts canoniques du club, avec filtres statut et source. Sont exclus : archivés, perdus, en vacances, sans consentement, adresse invalide, adresse exclue et adresses déjà retenues. Les exclusions sont communes aux scénarios email et campagnes de l’OS pour ce club. La portée interclubs et la synchronisation Brevo restent à définir avant envoi réel ; pas de réabonnement automatique.
+Le ciblage utilise exclusivement les contacts canoniques du club, avec filtres statut, source et segments. Sont exclus : archivés, perdus, en vacances, sans consentement, adresse invalide, adresse exclue et adresses déjà retenues. Les exclusions sont communes aux scénarios email et campagnes de l’OS pour ce club. La portée interclubs et la synchronisation Brevo restent à définir avant envoi réel ; pas de réabonnement automatique.
 
 Le ciblage est recalculé au lancement sous le verrou serveur, pas repris d’un compteur navigateur. Une révision donnée ne peut être simulée qu’une fois, même avec une autre clé de commande après redémarrage. Une nouvelle révision est une nouvelle simulation intentionnelle. Les rejets de variables manquantes sont conservés dans le bilan, sans inventer téléphone de club, lien de désabonnement ou dates de rendez-vous.
 
@@ -29,7 +29,7 @@ Ce lot ne termine pas la parité exhaustive avec le logiciel Lead audité. Il re
 | Sujet | État / prochain contrôle |
 |---|---|
 | Campagnes email | Brouillons serveur, ciblage, simulation et historique livrés dans ce lot ; parcours principal contrôlé en local ; recette métier complète avant intégration |
-| Campagnes SMS | Calculateur conservé ; sauvegarde serveur, STOP et fournisseur non raccordés. Aucun SMS envoyé ni faux coût confirmé |
+| Campagnes SMS | Sauvegarde, segments, consentement distinct/STOP, simulation et historique livrés ; voir [la recette SMS](lead-sms-recette.md). Fournisseur et envois réels non raccordés | 
 | Modèles et scénarios | Socle existant réutilisé ; fenêtres horaires, réinscription et délégations fines à compléter |
 | Brevo | Préparation hors ligne ; compte, clés, expéditeurs, exclusions réelles, transport, webhooks et délivrabilité non raccordés |
 | WhatsApp | Modèles OS existants ; compte Meta, approbations, fenêtre 24 h et intégration réelle non validés |
@@ -44,3 +44,5 @@ Les 117 tests Rust, 105 tests TypeScript et 17 groupes HTTP réels ont été ex�
 Le premier essai de garde utilisait une confirmation native et a bloqué le navigateur. Après fermeture de cette boîte par le client, les essais UI de la fenêtre intégrée passent : annuler conserve le nom et le club, abandonner autorise le changement d’onglet, sauvegarde puis choix du modèle dans une campagne, sauvegarde/simulation/historique, absence de campagne à Beynost et refus du commercial limité à ce club. Le bandeau de connexion périmé disparaît après login. Largeurs document 383 px à 390×844 et 761 px à 768×1024, reprise ordinateur à 1440×1000. Captures dans docs/evidence/lead-campaigns/. La navigation native retour/avance, toutes les délégations, les clients mail et le sélecteur image restent non validés. Aucune caméra, tablette physique, clé ou donnée réelle utilisée. Docker/Linux non exécuté.
 
 Sauvegarder les données avant intégration. Les champs campagnes sont additifs et chargés avec valeurs par défaut ; un retour à un ancien code peut ignorer puis perdre ces données à sa prochaine sauvegarde. Ne pas tester un ancien binaire sur une base nouvelle sans copie préalable.
+
+Complément du 24 novembre : campagnes SMS et filtres de segments ajoutés. La recette courante passe à 119 tests Rust, 106 tests TypeScript et 21 groupes HTTP ; le détail des nouveaux parcours et des limites figure dans [lead-sms-recette.md](lead-sms-recette.md). Les comptes de recette et leurs préférences ne constituent pas une preuve de consentement utilisable en production.

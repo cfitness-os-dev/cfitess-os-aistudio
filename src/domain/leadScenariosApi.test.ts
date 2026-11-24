@@ -27,9 +27,13 @@ test('scenario writes carry stable operation id; failures and foreign-club repli
     globalThis.fetch = async () => new Response(JSON.stringify({ ...base, templates: [{ id: 'foreign', clubId: 'carre-de-soie' }] }));
     await assert.rejects(scenarioRequest('employee', 'beynost'), /autre club/);
     globalThis.fetch = async () => new Response(JSON.stringify({ ...base, emailOutbox: [{ id: 'foreign', clubId: 'carre-de-soie' }] }));
-    await assert.rejects(scenarioRequest('employee', 'beynost'), /informations email/);
+    await assert.rejects(scenarioRequest('employee', 'beynost'), /informations de communication/);
     globalThis.fetch = async () => new Response(JSON.stringify({ ...base, emailSuppressions: [null] }));
-    await assert.rejects(scenarioRequest('employee', 'beynost'), /informations email/);
+    await assert.rejects(scenarioRequest('employee', 'beynost'), /informations de communication/);
+    for (const key of ["smsPreferences", "smsOutbox"]) {
+      globalThis.fetch = async () => new Response(JSON.stringify({ ...base, [key]: [{ clubId: "carre-de-soie" }] }));
+      await assert.rejects(scenarioRequest("employee", "beynost"), /communication ne correspondent pas/);
+    }
     const command = { action: 'save_template' as const, templateId: null, expectedRevision: null, message: { name: 'Test', channel: 'sms' as const, subject: '', body: 'Bonjour' } };
     globalThis.fetch = async () => new Response(JSON.stringify({ ...base, templates: [{ id: 'last-other-create', clubId: 'beynost' }] }));
     await assert.rejects(scenarioRequest('employee', 'beynost', command, 'create-op'), /identifier le modèle/);

@@ -4,6 +4,10 @@ fn bad(message: &str) -> Failure {
     err_resp(StatusCode::UNPROCESSABLE_ENTITY, message)
 }
 
+fn default_channel() -> String {
+    "email".into()
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Campaign {
@@ -11,6 +15,10 @@ pub struct Campaign {
     pub club_id: String,
     pub revision: u64,
     pub name: String,
+    #[serde(default = "default_channel")]
+    pub channel: String,
+    #[serde(default)]
+    pub segment_ids: Vec<String>,
     pub template_id: String,
     pub status_ids: Vec<String>,
     pub source_ids: Vec<String>,
@@ -39,7 +47,12 @@ pub fn targets(db: &AppDatabaseState, campaign: &Campaign) -> Value {
         if !campaign.source_ids.is_empty() && !campaign.source_ids.contains(&p.source) {
             continue;
         }
-        let reason = if p.is_archived {
+        if !campaign.segment_ids.is_empty()
+            && !campaign.segment_ids.iter().any(|s| p.segments.contains(s))
+        {
+            continue;
+        }
+        let mut reason = if p.is_archived {
             Some("Contact archivé")
         } else if p.stage == "Perdu" || p.lead_status == "Perdu / Sans suite" {
             Some("Contact perdu")
@@ -48,20 +61,35 @@ pub fn targets(db: &AppDatabaseState, campaign: &Campaign) -> Value {
         {
             Some("Contact en vacances")
         } else if !p.rgpd_consent {
-            Some("Consentement absent")
-        } else if !brevo::valid_address(&p.email) {
-            Some("Adresse email invalide")
-        } else if brevo::suppressed(
-            &db.lead_scenarios.email_suppressions,
-            &campaign.club_id,
-            &p.email,
-        ) {
-            Some("Adresse exclue des emails")
-        } else if !seen.insert(brevo::normalized(&p.email)) {
-            Some("Adresse déjà retenue")
+            Some("Consentement général absent")
         } else {
             None
         };
+        if reason.is_none() {
+            reason = if campaign.channel == "sms" {
+                sms::excluded(db, &campaign.club_id, &p.phone)
+            } else if campaign.channel != "email" {
+                Some("Canal de campagne invalide")
+            } else if !brevo::valid_address(&p.email) {
+                Some("Adresse email invalide")
+            } else if brevo::suppressed(
+                &db.lead_scenarios.email_suppressions,
+                &campaign.club_id,
+                &p.email,
+            ) {
+                Some("Adresse exclue des emails")
+            } else {
+                None
+            };
+        }
+        let key = if campaign.channel == "sms" {
+            sms::normalize_phone(&p.phone).unwrap_or_default()
+        } else {
+            brevo::normalized(&p.email)
+        };
+        if reason.is_none() && !seen.insert(key) {
+            reason = Some("Coordonnées déjà retenues");
+        }
         if let Some(reason) = reason {
             excluded.push(json!({"prospectId":p.id,"reason":reason}));
         } else {
@@ -86,11 +114,13 @@ pub fn apply(
             template_id,
             status_ids,
             source_ids,
+            segment_ids,
         } => {
             if name.trim().is_empty()
                 || name.chars().count() > 200
                 || status_ids.len() > 100
                 || source_ids.len() > 100
+                || segment_ids.len() > 100
             {
                 return Err(bad("Nom ou ciblage de campagne invalide."));
             }
@@ -104,6 +134,13 @@ pub fn apply(
             {
                 return Err(bad("Ciblage absent du référentiel de ce club."));
             }
+            if segment_ids.iter().any(|s| {
+                !db.lead_prospects
+                    .iter()
+                    .any(|p| p.club_id == club && p.segments.contains(s))
+            }) {
+                return Err(bad("Segment absent de ce club."));
+            }
             let template = db
                 .lead_scenarios
                 .templates
@@ -112,9 +149,10 @@ pub fn apply(
                 .ok_or_else(|| {
                     err_resp(StatusCode::NOT_FOUND, "Modèle introuvable dans ce club.")
                 })?;
-            if template.message.channel != "email" {
-                return Err(bad("Choisissez un modèle email. Les campagnes SMS ne sont pas encore raccordées à ce module."));
+            if !matches!(template.message.channel.as_str(), "email" | "sms") {
+                return Err(bad("Choisissez un modèle email ou SMS."));
             }
+            let channel = template.message.channel.clone();
             if let Some(id) = campaign_id {
                 let c = db
                     .lead_scenarios
@@ -128,6 +166,12 @@ pub fn apply(
                         "La campagne a changé ou est archivée. Rechargez-la.",
                     ));
                 }
+                if c.channel != channel {
+                    return Err(bad(
+                        "Le canal d’une campagne enregistrée ne peut pas changer.",
+                    ));
+                }
+                c.segment_ids = segment_ids.clone();
                 c.revision += 1;
                 c.name = name.trim().into();
                 c.template_id = template_id.clone();
@@ -142,6 +186,8 @@ pub fn apply(
                     id: format!("campaign-{}", rand::random::<u128>()),
                     club_id: club.into(),
                     revision: 1,
+                    channel,
+                    segment_ids: segment_ids.clone(),
                     name: name.trim().into(),
                     template_id: template_id.clone(),
                     status_ids: status_ids.clone(),
@@ -201,6 +247,12 @@ pub fn apply(
                 })?
                 .message
                 .clone();
+            if message.channel != c.channel {
+                return Err(err_resp(
+                    StatusCode::CONFLICT,
+                    "Le canal du modèle a changé. Choisissez un modèle du canal de cette campagne.",
+                ));
+            }
             let audience = targets(db, &c);
             let mut outcomes = vec![];
             for id in audience["eligibleIds"].as_array().unwrap() {
@@ -214,6 +266,36 @@ pub fn apply(
                     messages::render(&messages::text_body(&message), &values)
                         .map(|text| (subject, text))
                 });
+                if c.channel == "sms" {
+                    match result.and_then(|(_, text)| {
+                        sms::prepare(
+                            club,
+                            &format!("campaign:{}:{}", c.id, c.revision),
+                            &p.id,
+                            &p.phone,
+                            &text,
+                            &now.to_rfc3339(),
+                        )
+                    }) {
+                        Ok(prepared) => {
+                            let estimate = json!(prepared.estimate);
+                            if !db
+                                .lead_scenarios
+                                .sms_outbox
+                                .iter()
+                                .any(|r| r.id == prepared.id)
+                            {
+                                db.lead_scenarios.sms_outbox.push(prepared);
+                            }
+                            outcomes.push(
+                                json!({"prospectId":p.id,"status":"simulated","estimate":estimate}),
+                            );
+                        }
+                        Err(reason) => outcomes
+                            .push(json!({"prospectId":p.id,"status":"excluded","reason":reason})),
+                    }
+                    continue;
+                }
                 match result.and_then(|(subject, text)| {
                     brevo::prepare(
                         club,
@@ -229,7 +311,7 @@ pub fn apply(
                     .map_err(str::to_string)
                 }) {
                     Ok(mut prepared) => {
-                        prepared.payload["tags"] = json!(["cfitness-os","lead-campaign",club]);
+                        prepared.payload["tags"] = json!(["cfitness-os", "lead-campaign", club]);
                         if !db
                             .lead_scenarios
                             .email_outbox
@@ -247,7 +329,12 @@ pub fn apply(
             db.lead_scenarios.campaigns[idx]
                 .simulated_revisions
                 .push(c.revision);
-            db.lead_scenarios.campaigns[idx].runs.push(json!({"revision":c.revision,"at":now.to_rfc3339(),"actorId":actor,"message":message,"audience":audience,"outcomes":outcomes,"simulationOnly":true}));
+            let estimated_segments: usize = outcomes
+                .iter()
+                .filter_map(|o| o["estimate"]["segments"].as_u64())
+                .map(|v| v as usize)
+                .sum();
+            db.lead_scenarios.campaigns[idx].runs.push(json!({"revision":c.revision,"at":now.to_rfc3339(),"actorId":actor,"message":message,"audience":audience,"outcomes":outcomes,"estimatedSegments":estimated_segments,"simulationOnly":true}));
         }
         _ => return Err(bad("Commande de campagne invalide.")),
     }

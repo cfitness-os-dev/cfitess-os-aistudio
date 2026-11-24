@@ -365,6 +365,84 @@ def main():
             assert call('POST',endpoint,admin,dict(action='archive_campaign',campaignId=campaign_id,expectedRevision=2))[0]==200
             assert call('POST',endpoint,admin,{**simulation,'expectedRevision':3})[0]==409
             checks.append('updated campaign rechecks exclusions before simulation and archived campaigns cannot execute')
+            stop(proc)
+            fixture=json.loads((folder/'cfitness_state.json').read_text())
+            for contact in fixture['leadProspects']:
+                contact['segments']=['SMS cible']
+                contact['phone']={'cmp-valid':'06 00 00 00 01','cmp-duplicate':'+33600000001','cmp-foreign':'0033600000001','cmp-invalid':'0600000004'}.get(contact['id'],'invalid')
+            (folder/'cfitness_state.json').write_text(json.dumps(fixture))
+            proc=start();admin=login('emp-mario','CFITNESS_TEST_ADMIN_SECRET');employee=login('emp-chloe','CFITNESS_TEST_COMMERCIAL_SECRET')
+            response=call('POST',endpoint,admin,dict(action='save_template',templateId=None,expectedRevision=None,message=dict(name='SMS de recette',channel='sms',subject='',body='Bonjour %prenom%, visite du club (€).')))[1]
+            sms_template=response['commandResult']['templateId']
+            sms_campaign=dict(action='save_campaign',campaignId=None,expectedRevision=None,name='Campagne SMS locale',templateId=sms_template,statusIds=[],sourceIds=[],segmentIds=['SMS cible'])
+            response=call('POST',endpoint,admin,sms_campaign)[1]
+            sms_campaign_id=response['commandResult']['campaignId']
+            sms_row=next(r for r in response['campaigns'] if r['campaign']['id']==sms_campaign_id)
+            assert sms_row['campaign']['channel']=='sms' and sms_row['audience']['eligibleIds']==[]
+            assert call('POST',endpoint,admin,{**sms_campaign,'segmentIds':['Autre club']})[0]==422
+            consent=dict(action='set_sms_consent',prospectId='cmp-valid',granted=True,expectedRevision=None,reason='Accord SMS fictif documenté')
+            assert call('POST',endpoint,employee,consent)[0]==403
+            assert call('POST','/api/lead/scenarios/beynost',admin,consent)[0]==404
+            operation=uuid.uuid4().hex
+            assert call('POST',endpoint,admin,consent,operation)[0]==200
+            response=call('POST',endpoint,admin,consent,operation)[1]
+            assert response['smsPreferences'][0]['revision']==1
+            assert call('POST',endpoint,admin,consent)[0]==409
+            assert call('POST','/api/lead/scenarios/beynost',admin,dict(action='stop_sms',prospectId='cmp-foreign',reason='STOP fictif autre club'))[0]==200
+            row=next(r for r in call('GET',endpoint,admin)[1]['campaigns'] if r['campaign']['id']==sms_campaign_id)
+            assert row['audience']['eligibleIds']==['cmp-valid']
+            assert call('GET','/api/lead/scenarios/beynost',admin)[1]['smsOutbox']==[]
+            checks.append('SMS campaigns filter canonical segments, require independent opt-in, normalize duplicate numbers and isolate consent/STOP by club and role')
+            sms_sim=dict(action='simulate_campaign',campaignId=sms_campaign_id,expectedRevision=1)
+            before=call('GET',endpoint,admin)[1]
+            (folder/'cfitness_state.json.tmp').mkdir()
+            assert call('POST',endpoint,admin,sms_sim)[0]==500
+            assert call('GET',endpoint,admin)[1]['smsOutbox']==before['smsOutbox']
+            (folder/'cfitness_state.json.tmp').rmdir()
+            response=call('POST',endpoint,admin,sms_sim)[1]
+            assert len(response['smsOutbox'])==1 and len(response['emailOutbox'])==len(before['emailOutbox'])
+            sms=response['smsOutbox'][0]
+            assert sms['phone']=='+33600000001' and '%prenom%' not in sms['content']
+            assert sms['providerConnected'] is False and sms['stopInstructionVerified'] is False
+            assert sms['estimate']['encoding']=='GSM-7' and sms['estimate']['segments']==1
+            stop(proc);proc=start();admin=login('emp-mario','CFITNESS_TEST_ADMIN_SECRET')
+            response=call('POST',endpoint,admin,sms_sim)[1]
+            assert len(response['smsOutbox'])==1
+            assert call('POST',endpoint,admin,{**sms_campaign,'campaignId':sms_campaign_id,'expectedRevision':1,'templateId':template_id})[0]==422
+            checks.append('SMS simulation freezes rendered content and segment estimates, survives restart/replay without duplicates and rolls back on disk failure')
+            sms_steps=[dict(id='sms-a',type='sms',enabled=True,delay=dict(amount=0,unit='minutes'),templateId=None,content='Rappel %prenom%',subject=None,comment=''),dict(id='sms-b',type='sms',enabled=True,delay=dict(amount=0,unit='minutes'),templateId=None,content='Second rappel %prenom%',subject=None,comment='')]
+            sms_definition={**definition,'name':'Parcours SMS','steps':sms_steps}
+            response=call('POST',endpoint,admin,dict(action='save',scenarioId=None,expectedRevision=None,definition=sms_definition))[1]
+            sms_scenario=response['commandResult']['scenarioId']
+            call('POST',endpoint,admin,dict(action='publish',scenarioId=sms_scenario,expectedRevision=1))
+            call('POST',endpoint,admin,dict(action='status',scenarioId=sms_scenario,expectedRevision=2,active=True,enrollmentLocked=False))
+            call('POST',endpoint,admin,dict(action='enroll',scenarioId=sms_scenario,prospectId='cmp-valid'))
+            response=call('POST',endpoint,admin,dict(action='run'))[1]
+            assert len(response['smsOutbox'])==2
+            stop_cmd=dict(action='stop_sms',prospectId='cmp-valid',reason='STOP reçu — exemple fictif')
+            operation=uuid.uuid4().hex
+            assert call('POST',endpoint,admin,stop_cmd,operation)[0]==200
+            response=call('POST',endpoint,admin,stop_cmd,operation)[1]
+            pref=next(p for p in response['smsPreferences'] if p['phone']=='+33600000001')
+            assert pref['stopped'] is True and pref['granted'] is False
+            assert call('POST',endpoint,admin,{**consent,'expectedRevision':pref['revision']})[0]==409
+            response=call('POST',endpoint,admin,dict(action='run'))[1]
+            sms_enrollment=next(e for e in response['enrollments'] if e['scenarioId']==sms_scenario)
+            assert sms_enrollment['history'][-1]['status']=='skipped' and 'STOP' in sms_enrollment['history'][-1]['detail']
+            assert len(response['smsOutbox'])==2
+            assert call('POST',endpoint,admin,{**sms_campaign,'campaignId':sms_campaign_id,'expectedRevision':1})[0]==200
+            response=call('POST',endpoint,admin,{**sms_sim,'expectedRevision':2})[1]
+            assert len(response['smsOutbox'])==2
+            assert all(p['clubId']=='carre-de-soie' for p in response['smsPreferences'])
+            checks.append('STOP persists, cannot be reversed by opt-in, blocks duplicate-phone campaign contacts and the next SMS scenario step without mutating past simulations')
+            # A model can be edited independently: never interpret email content as an SMS.
+            assert call('POST',endpoint,admin,{**sms_campaign,'campaignId':sms_campaign_id,'expectedRevision':2})[0]==200
+            assert call('POST',endpoint,admin,dict(action='save_template',templateId=sms_template,expectedRevision=1,message=dict(name='Canal modifié',channel='email',subject='Un email',body='Message email')))[0]==200
+            before=call('GET',endpoint,admin)[1]
+            assert call('POST',endpoint,admin,{**sms_sim,'expectedRevision':3})[0]==409
+            after=call('GET',endpoint,admin)[1]
+            assert after['smsOutbox']==before['smsOutbox'] and after['emailOutbox']==before['emailOutbox'] and after['campaigns']==before['campaigns']
+            checks.append('changing a referenced template channel rejects the campaign simulation without queue or history mutation')
         finally:
             if proc.poll() is None:
                 stop(proc)
