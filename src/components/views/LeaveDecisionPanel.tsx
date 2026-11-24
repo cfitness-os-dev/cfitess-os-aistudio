@@ -7,6 +7,7 @@ export function LeavePolicySummary({ policy }: {
     policy: LeavePolicy;
 }) {
     return <div className="space-y-2 text-sm">
+    {policy.closedCounterPeriod&&<p role="status">Ce décompte appartient à une période clôturée. Une régularisation doit être examinée par le responsable ; cette reprise ne modifiera pas automatiquement les compteurs du nouvel exercice.</p>}
     <p>Début : {policy.startPeriod === 'pm' ? 'après-midi' : 'matin'} · Fin : {policy.endPeriod === 'am' ? 'fin de matinée' : 'fin de journée'}.</p>
     {policy.active === false && <p role="status">Ce motif est désactivé. Vérifiez la demande avant toute décision.</p>}
     {policy.requiresDocument && <p>{policy.missingDocument ? 'Justificatif requis : la validation reste bloquée.' : 'Justificatif joint · à vérifier avant de valider.'}</p>}
@@ -72,7 +73,7 @@ export function LeaveDecisionPanel({ row, actorId, club, locked, onChanged, onSi
     {stale && <div role="alert"><p>La demande, ses règles ou le compteur ont changé. Vérifiez les données actualisées avant de décider.</p><button type="button" className="cf-card-secondary min-h-[44px] px-3 rounded-xl" disabled={blocked} onClick={() => { setSnapshot(policy); setReviewed(false); setError(''); }}>Utiliser les données actualisées</button></div>}
     {error && <p role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
     {snapshot.counter && <p className="text-sm">CP en cours : {snapshot.counter.values.cpNAcquired - snapshot.counter.values.cpNTaken} j disponibles · Reliquat : {snapshot.counter.values.cpNMinus1Remaining} j · RTT : {snapshot.counter.values.rttDaysRemaining ?? 'non disponible'}</p>}
-    {!policy.canSettle && <p>Un responsable habilité aux absences et aux compteurs doit confirmer ce décompte.</p>}
+    {!policy.canSettle && !policy.closedCounterPeriod && <p>Un responsable habilité aux absences et aux compteurs doit confirmer ce décompte.</p>}
     {row.status === 'approved' && !reverse && <p>Aucun décompte lié n’est enregistré pour cette validation historique. Une remise en attente ne modifiera pas les soldes.</p>}
     <form className="space-y-3" onSubmit={async (e) => {
             e.preventDefault();

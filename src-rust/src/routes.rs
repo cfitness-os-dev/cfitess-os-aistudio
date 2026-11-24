@@ -278,6 +278,9 @@ pub fn api_router(state: SharedState) -> Router {
         .route("/api/hr/pilotage/:club_id", get(crate::hr_pilotage::get).post(crate::hr_pilotage::post))
         .route("/api/hr/site-rules/:club_id", get(crate::hr_site_rules::get).post(crate::hr_site_rules::post))
         .route("/api/hr/leave-rules/:club_id", get(crate::hr_leave_policy::get_settings).put(crate::hr_leave_policy::put_settings))
+        .route("/api/hr/leave-accrual/:club_id", get(crate::hr_leave_accrual::get).put(crate::hr_leave_accrual::put))
+        .route("/api/hr/leave-accrual/:club_id/preview", post(crate::hr_leave_accrual::preview))
+        .route("/api/hr/leave-accrual/:club_id/apply", post(crate::hr_leave_accrual::apply))
         .route("/api/hr/leave-rules/:club_id/requests/:request_id/settle", post(crate::hr_leave_policy::settle))
         .route("/api/admin/profiles", get(get_admin_profiles))
         .route("/api/admin/profiles/:profile_id", put(put_admin_profile))
@@ -6739,6 +6742,7 @@ mod tests {
 
     #[tokio::test]
     async fn security_p0_hardening_enforces_auth_admin_backup_revocation_and_minimal_health() {
+        let _backup_env_guard = BACKUP_SECURITY_TEST_ENV.lock().await;
         let state = test_state();
         std::env::set_var("CFITNESS_STRICT_SESSION", "1");
 
@@ -6839,8 +6843,13 @@ mod tests {
         std::env::remove_var("CFITNESS_STRICT_SESSION");
     }
 
+    // Both backup tests share process environment: P1 installs a signing key that
+    // would otherwise make P0's unsigned restoration fail depending on timing.
+    static BACKUP_SECURITY_TEST_ENV: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
     #[tokio::test]
     async fn security_p1_hardening_enforces_httponly_cookie_proxy_ratelimit_hmac_backup_and_prod_readiness() {
+        let _backup_env_guard = BACKUP_SECURITY_TEST_ENV.lock().await;
         let state = test_state();
         std::env::set_var("CFITNESS_STRICT_SESSION", "1");
 

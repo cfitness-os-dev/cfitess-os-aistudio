@@ -16,6 +16,7 @@ import { useCfos } from '../../context/CfosContext';
 import { useLeadDraftGuard } from '../useLeadDraftGuard';
 import { confirmLeadDraftNavigation } from '../../domain/leadDraftGuard';
 import { LeaveCounterRulesPanel } from './LeaveCounterRulesPanel';
+import { HrLeaveAccrualPanel } from './HrLeaveAccrualPanel';
 import {
   DAY_OF_WEEK_LABELS,
   fetchHrSiteRules,
@@ -30,7 +31,7 @@ import {
 } from '../../domain/hrSiteRules';
 import type { ClubId } from '../../types/cfos';
 
-type RulesTab = 'rules' | 'counters' | 'absences' | 'needs';
+type RulesTab = 'rules' | 'counters' | 'absences' | 'needs' | 'accrual';
 
 interface HrSiteRulesViewProps {
   clubId: ClubId;
@@ -320,6 +321,7 @@ export function HrSiteRulesView({ clubId, onMutated }: HrSiteRulesViewProps) {
               [
                 ['rules', 'Règles, alertes & badgeuse'],
                 ['counters', 'Compteurs & annualisation'],
+                ['accrual', 'Acquisition et report'],
                 ['absences', `Motifs d’absence (${snapshot.motives.length})`],
                 ['needs', `Besoins en personnel (${snapshot.staffingNeeds.length})`],
               ] as const
@@ -338,6 +340,7 @@ export function HrSiteRulesView({ clubId, onMutated }: HrSiteRulesViewProps) {
               </button>
             ))}
           </nav>
+          {tab === 'accrual' && <HrLeaveAccrualPanel key={`${currentUser.id}:${clubId}`} actorId={currentUser.id} club={clubId} />}
 
           {(tab === 'counters' || tab === 'absences') && <LeaveCounterRulesPanel key={`${currentUser.id}:${clubId}`} actorId={currentUser.id} club={clubId} />}
 

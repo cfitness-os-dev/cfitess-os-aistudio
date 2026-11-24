@@ -1,0 +1,25 @@
+{
+  "date": "2026-11-24",
+  "branch": "feat/rh-leave-accrual-carryover",
+  "base": "a226eac",
+  "rust": 150,
+  "typescript": 136,
+  "httpGroups": 71,
+  "lint": "passed",
+  "productionBuild": "passed",
+  "browser": {
+    "desktop": "1440x1000",
+    "mobile": "390x844",
+    "tablet": "768x1024"
+  },
+  "data": "fictional local only",
+  "externalSends": 0,
+  "deployed": false,
+  "limits": [
+    "manual execution with preview",
+    "no inferred prorata or legal absence formula",
+    "no automatic expiry",
+    "closed-period absence reopening not implemented",
+    "real club policies disabled pending Skello verification"
+  ]
+}
