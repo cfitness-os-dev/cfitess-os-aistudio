@@ -32,6 +32,10 @@ const HrEmployeeDossierView = lazy(() =>
   import('./HrEmployeeDossierView').then((m) => ({ default: m.HrEmployeeDossierView }))
 );
 
+const HrSiteRulesView = lazy(() =>
+  import('./HrSiteRulesView').then((m) => ({ default: m.HrSiteRulesView }))
+);
+
 const PlanningHrView = lazy(() =>
   import('./PlanningHrView').then((m) => ({ default: m.PlanningHrView }))
 );
@@ -721,6 +725,15 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                 </div>
               )}
 
+              {hubTab === 'mon-compte' && activeSection === 'MC10' && effectiveDashboard && (
+                <Suspense fallback={<p role="status">Chargement des paramètres RH…</p>}>
+                  <HrSiteRulesView
+                    clubId={effectiveClubId}
+                    onMutated={() => void refreshAll()}
+                  />
+                </Suspense>
+              )}
+
               {hubTab === 'mon-compte' && activeSection === 'MC11' && effectiveDashboard && (
                 <AdminRightsView
                   auth={auth}
@@ -745,6 +758,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                 activeSection !== 'MC05' &&
                 activeSection !== 'MC06' &&
                 activeSection !== 'MC07' &&
+                activeSection !== 'MC10' &&
                 activeSection !== 'MC11' &&
                 activeSection !== 'MC12' &&
                 activeSection !== 'MC13' && (
