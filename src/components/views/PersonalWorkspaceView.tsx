@@ -7,6 +7,7 @@ import {
   GraduationCap,
   Home,
   Bell,
+  UserCheck,
 } from "lucide-react";
 import { useCfos } from "../../context/CfosContext";
 import {
@@ -15,10 +16,12 @@ import {
   type PersonalWorkspace,
 } from "../../domain/personalWorkspace";
 import { statusLabel } from "../../domain/hrWorkflow";
+import { HrEmployeeDossierView } from "./HrEmployeeDossierView";
 import type { ClubId } from "../../types/cfos";
 
 const tabs = [
   ["home", "Ma journée", Home],
+  ["dossier", "Mon dossier", UserCheck],
   ["planning", "Mon planning", Calendar],
   ["leave", "Mes absences", Calendar],
   ["documents", "Mes documents", FileText],
@@ -242,6 +245,9 @@ function PersonalWorkspaceContent({
       )}
       {data && (
         <>
+          {tab === "dossier" && (
+            <HrEmployeeDossierView clubId={club} personalOnly />
+          )}
           {tab === "home" && (
             <div className="grid lg:grid-cols-2 gap-4">
               <section className="cf-card p-4 space-y-3">

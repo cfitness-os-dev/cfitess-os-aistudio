@@ -202,6 +202,20 @@ pub struct EmployeeCounter {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct CounterAdjustmentRecord {
+    pub id: String,
+    pub employee_id: String,
+    pub site_id: String,
+    pub actor_id: String,
+    pub actor_name: String,
+    pub timestamp: String,
+    pub reason: String,
+    pub before: EmployeeCounter,
+    pub after: EmployeeCounter,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Employee {
     pub id: String,
     pub first_name: String,
@@ -841,6 +855,8 @@ pub struct AppDatabaseState {
     pub course_attendances: Vec<crate::course_attendance::CourseAttendanceRecord>,
     #[serde(default)]
     pub club_displays: Vec<crate::club_displays::ClubDisplayScreen>,
+    #[serde(default)]
+    pub employee_counter_history: Vec<CounterAdjustmentRecord>,
 }
 
 #[derive(Debug, Clone, Serialize)]
