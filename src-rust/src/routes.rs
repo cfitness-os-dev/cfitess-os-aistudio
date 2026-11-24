@@ -273,6 +273,7 @@ pub fn api_router(state: SharedState) -> Router {
             patch(patch_shift).delete(delete_shift),
         )
         .route("/api/hr/organisation/:site_id", get(crate::hr_organisation::get).post(crate::hr_organisation::post))
+        .route("/api/hr/site-rules/:club_id", get(crate::hr_site_rules::get).post(crate::hr_site_rules::post))
         .route("/api/admin/profiles", get(get_admin_profiles))
         .route("/api/admin/profiles/:profile_id", put(put_admin_profile))
         .route(

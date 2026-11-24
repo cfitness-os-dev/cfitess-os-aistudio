@@ -717,6 +717,8 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
     AppDatabaseState {
         lead_scenarios: Default::default(),
         employee_counter_history: vec![],
+        site_absence_motives: vec![],
+        site_staffing_needs: vec![],
         version: "0.2.0-lot2-fictif".into(),
         org02_billing_policy: "exclude_skello_saas".into(),
         organization: Organization {
@@ -2024,6 +2026,8 @@ pub fn create_production_initial_state() -> AppDatabaseState {
     AppDatabaseState {
         lead_scenarios: Default::default(),
         employee_counter_history: vec![],
+        site_absence_motives: vec![],
+        site_staffing_needs: vec![],
         version: "1.0.0-production".into(),
         org02_billing_policy: "exclude_skello_saas".into(),
         organization: Organization {
