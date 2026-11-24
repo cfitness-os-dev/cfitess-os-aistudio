@@ -1,7 +1,7 @@
 use crate::models::{Site, SiteKpis};
 use crate::rbac::{
     can_access_finances, can_access_reports, evaluate_permission, is_admin_employee,
-    normalize_site_id,
+    normalize_site_id, is_owner_or_super_admin,
 };
 use crate::routes::{
     append_audit, authorized_clubs_for_actor, err_resp, resolve_session_actor, SharedState,
@@ -62,17 +62,20 @@ pub async fn put_site_timeclock_settings(
     Path(raw_site_id): Path<String>,
     Json(patch): Json<UpdateTimeclockSettingsPayload>,
 ) -> Result<Json<Site>, (StatusCode, Json<Value>)> {
+    if !headers.get("authorization").and_then(|v| v.to_str().ok())
+        .is_some_and(|v| v.starts_with("Bearer ")) {
+        return Err(err_resp(StatusCode::UNAUTHORIZED,
+            "Connectez-vous pour modifier les réglages de badgeuse."));
+    }
     let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
     let target = normalize_site_id(&raw_site_id);
     let mut db = state.db.write().await;
     let index = db.sites.iter().position(|s| s.id == target)
         .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Établissement introuvable."))?;
-    // Reading timeclock settings alone must not grant permission to edit them.
-    if !is_admin_employee(&db, &actor_id)
-        && !(evaluate_permission(&db, &actor_id, &target, "ORG04-29", None).allowed
-            && evaluate_permission(&db, &actor_id, &target, "ORG04-37", None).allowed) {
+    // Generic organisation permissions must not grant badgeuse administration.
+    if !is_owner_or_super_admin(&db, &actor_id, &target) {
         return Err(err_resp(StatusCode::FORBIDDEN,
-            "La modification des règles de badgeage de ce club n’est pas autorisée."));
+            "Les réglages de badgeuse sont réservés au propriétaire ou super administrateur de ce club."));
     }
     let mut next = db.clone();
     next.sites[index].settings.badge_frequency = match patch.badge_frequency {
@@ -601,6 +604,18 @@ mod tests {
             badge_frequency: BadgeFrequency::EachShift,
             tablet_break_badging: true,
         };
+        // A Master with the generic organisation rights may not edit badgeuses.
+        let before = serde_json::to_value(&*state.db.read().await).unwrap();
+        assert_eq!(put_site_timeclock_settings(State(state.clone()), headers.clone(),
+            Path("club-carre-soie".into()), Json(payload())).await.unwrap_err().0, StatusCode::FORBIDDEN);
+        assert_eq!(serde_json::to_value(&*state.db.read().await).unwrap(), before);
+        // Owner/superadmin on one club does not grant rights on the other club.
+        {
+            let mut db = state.db.write().await;
+            db.employees.iter_mut().find(|e| e.id == "emp-master").unwrap()
+                .site_accesses.iter_mut().find(|a| a.site_id == "club-carre-soie").unwrap()
+                .profile_id = "admin_systeme".into();
+        }
         let _ = put_site_timeclock_settings(State(state.clone()), headers.clone(),
             Path("club-carre-soie".into()), Json(payload())).await.unwrap();
         let before = serde_json::to_value(&*state.db.read().await).unwrap();
@@ -617,6 +632,10 @@ mod tests {
             badge_frequency: BadgeFrequency::EachShift,
             tablet_break_badging: false,
         };
+        let mut forged = HeaderMap::new();
+        forged.insert("x-cfitness-actor-id", HeaderValue::from_static("emp-mario"));
+        assert_eq!(put_site_timeclock_settings(State(state.clone()), forged,
+            Path("club-carre-soie".into()), Json(payload())).await.unwrap_err().0, StatusCode::UNAUTHORIZED);
         let before = serde_json::to_value(&*state.db.read().await).unwrap();
         for actor in ["emp-maxime", "emp-chloe"] {
             let headers = session_headers(&state, actor, "club-carre-soie").await;
