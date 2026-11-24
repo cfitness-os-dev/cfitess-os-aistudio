@@ -14,6 +14,7 @@ import {
   type PersonalAction,
   type PersonalWorkspace,
 } from "../../domain/personalWorkspace";
+import { statusLabel } from "../../domain/hrWorkflow";
 import type { ClubId } from "../../types/cfos";
 
 const tabs = [
@@ -75,6 +76,7 @@ function PersonalWorkspaceContent({
     endDate: "",
     comment: "",
   });
+  const [withdrawals, setWithdrawals] = useState<Record<string, string>>({});
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [consents, setConsents] = useState<Record<string, boolean>>({});
   const mounted = useRef(true);
@@ -99,6 +101,8 @@ function PersonalWorkspaceContent({
     };
   }, [employeeId, club]);
   const reload = async () => {
+    if (saving.current) return;
+    saving.current = true;
     setLoading(true);
     setError("");
     try {
@@ -108,6 +112,7 @@ function PersonalWorkspaceContent({
       if (mounted.current)
         setError(e instanceof Error ? e.message : "Chargement impossible.");
     } finally {
+      saving.current = false;
       if (mounted.current) setLoading(false);
     }
   };
@@ -115,7 +120,7 @@ function PersonalWorkspaceContent({
     action: PersonalAction,
     message = "Enregistrement confirmé.",
   ) => {
-    if (saving.current || !data) return false;
+    if (saving.current || loading || !data) return false;
     saving.current = true;
     setBusy(true);
     setError("");
@@ -154,6 +159,8 @@ function PersonalWorkspaceContent({
         )}
       </header>
       <div className="flex flex-wrap gap-2">
+        <button type="button" className={button} disabled={busy || loading}
+          onClick={() => void reload()}>Actualiser mon espace</button>
         <a
           className={button}
           href="https://pronext.mywellness.com/"
@@ -405,7 +412,7 @@ function PersonalWorkspaceContent({
                   Contactez votre responsable.
                 </p>
               )}
-              <fieldset disabled={busy || !data.canRequestLeave}>
+              <fieldset disabled={busy || loading || !data.canRequestLeave}>
                 <form
                   className="space-y-3"
                   onSubmit={async (e) => {
@@ -485,16 +492,25 @@ function PersonalWorkspaceContent({
                   <strong>
                     {row.motive} · {row.startDate} → {row.endDate}
                   </strong>
-                  <p>
-                    {row.status === "pending"
-                      ? "En attente de validation"
-                      : row.status === "approved"
-                        ? "Validée"
-                        : row.status === "rejected"
-                          ? "Refusée"
-                          : row.status}
-                  </p>
-                  <p>{row.comment}</p>
+                  <p>{row.status === "pending" ? "En attente de validation" : statusLabel(row.status)}</p>
+                  <p className="whitespace-pre-wrap break-words">{row.comment}</p>
+                  {row.status === "pending" && data.canRequestLeave && (
+                    <form className="space-y-3 mt-3" onSubmit={async e => {
+                      e.preventDefault();
+                      if (await save({ action: "cancel_leave", id: row.id, comment: withdrawals[row.id] ?? "" },
+                        "Demande retirée. Elle ne sera plus soumise à validation ; son historique est conservé.")) {
+                        setWithdrawals(previous => { const next = { ...previous }; delete next[row.id]; return next; });
+                      }
+                    }}>
+                      <p className="text-sm cf-muted">Vous pouvez retirer cette demande tant que votre responsable ne l’a pas traitée.</p>
+                      <label className="block">Motif du retrait ({row.motive}, du {row.startDate} au {row.endDate})
+                        <textarea required maxLength={1000} className={input} disabled={busy}
+                          value={withdrawals[row.id] ?? ""}
+                          onChange={e => setWithdrawals({ ...withdrawals, [row.id]: e.target.value })} />
+                      </label>
+                      <button className={button} disabled={busy || loading || !withdrawals[row.id]?.trim()}>Retirer ma demande du {row.startDate} au {row.endDate}</button>
+                    </form>
+                  )}
                 </article>
               ))}
             </section>

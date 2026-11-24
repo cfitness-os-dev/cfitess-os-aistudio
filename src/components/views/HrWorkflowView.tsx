@@ -224,7 +224,7 @@ function Workflow({
               value={status}
               onChange={(e) => setStatus(e.target.value)}
             >
-              {["all", "En attente", "Validée", "Refusée"].map((value) => (
+              {["all", "En attente", "Validée", "Refusée", "Annulée"].map((value) => (
                 <option key={value} value={value}>
                   {value === "all" ? "Tous les états" : value}
                 </option>
@@ -337,7 +337,9 @@ function Workflow({
                     </div>
                   ) : (
                     <p className="cf-muted text-sm">
-                      {row.employeeId === actorId
+                      {row.status === "cancelled"
+                        ? "Demande retirée par le collaborateur. Historique conservé ; aucune décision possible."
+                        : row.employeeId === actorId
                         ? "Consultation uniquement. Une autre personne habilitée traite vos propres demandes."
                         : "Consultation uniquement. Vos droits ne permettent pas de traiter cette demande."}
                     </p>

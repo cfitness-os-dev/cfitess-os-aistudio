@@ -53,6 +53,7 @@ export interface PersonalWorkspace {
   }>;
 }
 export type PersonalAction =
+  | { action: "cancel_leave"; id: string; comment: string }
   | { action: "add_task"; title: string; category?: string }
   | { action: "set_task" | "set_checklist"; id: string; completed: boolean }
   | { action: "read_notification"; id: string }
