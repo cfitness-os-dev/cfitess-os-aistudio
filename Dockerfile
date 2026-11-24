@@ -5,9 +5,10 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --ignore-scripts --no-audit --no-fund
 
-COPY index.html postcss.config.js tailwind.config.js tsconfig.json vite.config.ts metadata.json ./
+COPY index.html postcss.config.js tailwind.config.js tsconfig.json vite.config.ts metadata.json docker-compose.yml Dockerfile deploy-linux.sh Cargo.toml ./
 COPY contracts ./contracts
 COPY public ./public
+COPY src-rust ./src-rust
 COPY src ./src
 ARG VITE_DEMO_MODE=true
 ENV VITE_DEMO_MODE=${VITE_DEMO_MODE}
