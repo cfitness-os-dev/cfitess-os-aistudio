@@ -3,12 +3,31 @@ import {
   fetchClubTerminals,
   createTerminal,
   revokeTerminal,
+  fetchClubPhotoPolicy,
+  updateClubPhotoPolicy,
+  fetchClubPunchPhotos,
+  fetchPunchPhotoBlobUrl,
+  deleteClubPunchPhoto,
+  purgeClubPunchPhotos,
   TerminalAccessDenied,
   type ClockTerminalItem,
   type CreatedTerminalResponse,
+  type PhotoPolicyMode,
+  type PunchPhotoMetadata,
 } from "../../domain/terminals";
 import type { ClubId } from "../../types/cfos";
-import { Tablet, Plus, ShieldAlert, CheckCircle2, Clock, Ban } from "lucide-react";
+import {
+  Tablet,
+  Plus,
+  ShieldAlert,
+  CheckCircle2,
+  Clock,
+  Ban,
+  Camera,
+  Eye,
+  Trash2,
+  RefreshCw,
+} from "lucide-react";
 
 const CLUB_DEFAULT_ROOMS: Record<ClubId, Array<{ id: string; label: string }>> = {
   "carre-de-soie": [
@@ -50,16 +69,37 @@ export function TerminalsManagementPanel({
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [revokeReason, setRevokeReason] = useState("");
 
+  // Politique photo & galerie privée propriétaire (#33)
+  const [photoPolicy, setPhotoPolicy] = useState<PhotoPolicyMode>("optional");
+  const [savingPolicy, setSavingPolicy] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [galleryPhotos, setGalleryPhotos] = useState<PunchPhotoMetadata[]>([]);
+  const [photoBlobUrls, setPhotoBlobUrls] = useState<Record<string, string>>({});
+  const photoBlobUrlsRef = useRef<Record<string, string>>({});
+  const [photoBusyId, setPhotoBusyId] = useState<string | null>(null);
+  const [purgingPhotos, setPurgingPhotos] = useState(false);
+
   const version = useRef(0);
+
+  function revokeAllBlobUrls() {
+    Object.values(photoBlobUrlsRef.current).forEach((url) => URL.revokeObjectURL(url));
+    photoBlobUrlsRef.current = {};
+    setPhotoBlobUrls({});
+  }
 
   async function load(signal?: AbortSignal) {
     const currentVer = ++version.current;
     setLoading(true);
     setError("");
     try {
-      const data = await fetchClubTerminals(actor, club, signal);
+      const [data, policy] = await Promise.all([
+        fetchClubTerminals(actor, club, signal),
+        fetchClubPhotoPolicy(club, signal),
+      ]);
       if (currentVer === version.current) {
         setTerminals(data);
+        setPhotoPolicy(policy);
         setDenied(false);
       }
     } catch (e) {
@@ -77,12 +117,129 @@ export function TerminalsManagementPanel({
 
   useEffect(() => {
     const abort = new AbortController();
+    revokeAllBlobUrls();
+    setGalleryPhotos([]);
+    setGalleryOpen(false);
     void load(abort.signal);
     return () => {
       version.current++;
       abort.abort();
+      revokeAllBlobUrls();
     };
   }, [actor, club]);
+
+  async function loadGallery() {
+    setGalleryLoading(true);
+    setError("");
+    try {
+      const list = await fetchClubPunchPhotos(club);
+      setGalleryPhotos(list);
+    } catch (err) {
+      if (err instanceof TerminalAccessDenied) {
+        setDenied(true);
+      } else {
+        setError(err instanceof Error ? err.message : "Impossible de charger la galerie photos.");
+      }
+    } finally {
+      setGalleryLoading(false);
+    }
+  }
+
+  async function handleChangePhotoPolicy(nextMode: PhotoPolicyMode) {
+    setSavingPolicy(true);
+    setError("");
+    setSuccessMsg("");
+    try {
+      const updated = await updateClubPhotoPolicy(club, nextMode);
+      setPhotoPolicy(updated.mode);
+      const labelPolicy =
+        updated.mode === "disabled"
+          ? "Désactivée"
+          : updated.mode === "required"
+          ? "Obligatoire"
+          : "Facultative";
+      setSuccessMsg(`Politique photo du club enregistrée : ${labelPolicy}.`);
+    } catch (err) {
+      if (err instanceof TerminalAccessDenied) {
+        setDenied(true);
+      } else {
+        setError(err instanceof Error ? err.message : "Impossible de modifier la politique photo.");
+      }
+    } finally {
+      setSavingPolicy(false);
+    }
+  }
+
+  async function handleViewPhoto(photoId: string) {
+    setPhotoBusyId(photoId);
+    setError("");
+    try {
+      const blobUrl = await fetchPunchPhotoBlobUrl(club, photoId);
+      const prevUrl = photoBlobUrlsRef.current[photoId];
+      if (prevUrl) URL.revokeObjectURL(prevUrl);
+      photoBlobUrlsRef.current[photoId] = blobUrl;
+      setPhotoBlobUrls((prev) => ({ ...prev, [photoId]: blobUrl }));
+    } catch (err) {
+      if (err instanceof TerminalAccessDenied) {
+        setDenied(true);
+      } else {
+        setError(err instanceof Error ? err.message : "Impossible d'afficher cette photo.");
+      }
+    } finally {
+      setPhotoBusyId(null);
+    }
+  }
+
+  async function handleDeletePhoto(photoId: string) {
+    setPhotoBusyId(photoId);
+    setError("");
+    setSuccessMsg("");
+    try {
+      await deleteClubPunchPhoto(club, photoId);
+      const prevUrl = photoBlobUrlsRef.current[photoId];
+      if (prevUrl) {
+        URL.revokeObjectURL(prevUrl);
+        delete photoBlobUrlsRef.current[photoId];
+      }
+      setPhotoBlobUrls((prev) => {
+        const next = { ...prev };
+        delete next[photoId];
+        return next;
+      });
+      setGalleryPhotos((prev) => prev.filter((p) => p.id !== photoId));
+      setSuccessMsg("Preuve photo supprimée du serveur et du registre.");
+    } catch (err) {
+      if (err instanceof TerminalAccessDenied) {
+        setDenied(true);
+      } else {
+        setError(err instanceof Error ? err.message : "Échec de suppression de la photo.");
+      }
+    } finally {
+      setPhotoBusyId(null);
+    }
+  }
+
+  async function handlePurgePhotos() {
+    setPurgingPhotos(true);
+    setError("");
+    setSuccessMsg("");
+    try {
+      const res = await purgeClubPunchPhotos(club, 30);
+      revokeAllBlobUrls();
+      await loadGallery();
+      setSuccessMsg(
+        `Purge terminée : ${res.removedCount} photo(s) supprimée(s) (rétention ${res.retentionDays} jours).`
+      );
+    } catch (err) {
+      if (err instanceof TerminalAccessDenied) {
+        setDenied(true);
+      } else {
+        setError(err instanceof Error ? err.message : "Échec de la purge des photos.");
+      }
+    } finally {
+      setPurgingPhotos(false);
+    }
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -331,6 +488,154 @@ export function TerminalsManagementPanel({
           ))}
         </div>
       )}
+
+      {/* Politique photo de pointage du club (#33 - réservée propriétaire) */}
+      <div className="pt-3 border-t space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold flex items-center gap-2">
+              <Camera className="w-4 h-4 text-indigo-500" />
+              <span>Politique photo au pointage (club)</span>
+            </div>
+            <p className="cf-muted text-xs">
+              Contrôle immédiat de la caméra sur les tablettes appairées de ce club.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {(
+              [
+                { value: "disabled", label: "Désactivée" },
+                { value: "optional", label: "Facultative" },
+                { value: "required", label: "Obligatoire" },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                disabled={savingPolicy}
+                onClick={() => handleChangePhotoPolicy(opt.value)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border cursor-pointer disabled:opacity-50 ${
+                  photoPolicy === opt.value
+                    ? "bg-indigo-600 text-white border-indigo-600"
+                    : "cf-btn-secondary"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Galerie privée des photos de pointage (#33 - réservée propriétaire) */}
+      <details
+        open={galleryOpen}
+        onToggle={(e) => {
+          const isOpen = (e.currentTarget as HTMLDetailsElement).open;
+          setGalleryOpen(isOpen);
+          if (isOpen) {
+            void loadGallery();
+          }
+        }}
+        className="pt-3 border-t space-y-3"
+      >
+        <summary className="cursor-pointer text-sm font-semibold flex items-center gap-2 min-h-[38px]">
+          <Eye className="w-4 h-4 text-indigo-500" />
+          <span>Galerie privée des preuves photo ({galleryPhotos.length})</span>
+        </summary>
+
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="cf-muted text-xs">
+            Consultation nominative authentifiée (aucun accès sans session propriétaire).
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void loadGallery()}
+              disabled={galleryLoading}
+              className="cf-btn-secondary text-xs flex items-center gap-1.5"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${galleryLoading ? "animate-spin" : ""}`} />
+              <span>Actualiser</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => void handlePurgePhotos()}
+              disabled={purgingPhotos || galleryLoading}
+              className="cf-btn-danger text-xs flex items-center gap-1.5"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>{purgingPhotos ? "Purge..." : "Purger (> 30j)"}</span>
+            </button>
+          </div>
+        </div>
+
+        {galleryLoading ? (
+          <div className="text-xs cf-muted">Chargement des preuves photo...</div>
+        ) : galleryPhotos.length === 0 ? (
+          <div className="text-xs cf-muted italic">
+            Aucune preuve photo enregistrée pour ce club.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {galleryPhotos.map((photo) => {
+              const blobUrl = photoBlobUrls[photo.id];
+              const isBusy = photoBusyId === photo.id;
+              return (
+                <div
+                  key={photo.id}
+                  className="p-3 border rounded-xl space-y-2 text-xs bg-slate-50/50 dark:bg-slate-900/40"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-0.5">
+                      <div className="font-semibold">
+                        {photo.employeeName || photo.employeeId}
+                      </div>
+                      <div className="cf-muted">
+                        {photo.terminalLabel || photo.terminalId} ·{" "}
+                        {new Date(photo.capturedAt).toLocaleString("fr-FR", {
+                          timeZone: "Europe/Paris",
+                        })}
+                      </div>
+                      <div className="cf-muted">
+                        {Math.max(1, Math.round(photo.byteSize / 1024))} Ko ·{" "}
+                        {photo.consumedAt ? "Consommée au pointage" : "En attente / expirée"}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        disabled={isBusy}
+                        onClick={() => void handleViewPhoto(photo.id)}
+                        className="cf-btn-secondary text-xs flex items-center gap-1"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>{blobUrl ? "Recharger" : "Afficher"}</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isBusy}
+                        onClick={() => void handleDeletePhoto(photo.id)}
+                        className="cf-btn-danger text-xs flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Supprimer</span>
+                      </button>
+                    </div>
+                  </div>
+                  {blobUrl && (
+                    <img
+                      src={blobUrl}
+                      alt={`Preuve photo ${photo.employeeName || photo.employeeId}`}
+                      className="w-full max-h-48 object-contain rounded-lg border bg-black/80"
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </details>
     </details>
   );
 }
