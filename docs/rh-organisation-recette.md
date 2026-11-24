@@ -54,3 +54,9 @@ Ce lot ne termine pas C.Fitness OS ni toute la parité Skello. Les 571 entrées 
 - Besoins d’effectif, Smart Planner, motifs d’absence, règles de compteurs, alertes, modèles/dossiers documentaires et autres paramètres du registre demandent encore leurs lots opérationnels.
 - La configuration Société a été testée via HTTP ; sa sauvegarde n’a pas été exécutée dans le navigateur. La suppression d’équipe est testée en API sur fixture jetable, pas en UI. Les appareils physiques ne sont pas certifiés.
 - Les contraintes SIREN/SIRET sont des validations de format, pas une vérification légale de l’entreprise.
+
+## Recette cumulée Lead/RH du même jour
+Une branche de recette séparée `test/rh-lead-settings-compatibility` réunit le code de ce lot, #53, #51 (email) et #52 (retrait d’absence), tous fondés sur la dernière tête de #48. Les deux cherry-picks métier ont été appliqués sans conflit ; aucun merge de main ni déploiement n’a été effectué.
+Résultats réellement exécutés sur cette combinaison : **132 tests Rust, 120 tests TypeScript, builds réussis et 83 groupes HTTP réussis** répartis entre organisation (18), réglages badgeuse (5), scénarios Lead (22), programmation email/SMS (11), espace personnel (12), parcours responsable (7) et retrait d’absence (8). Zéro envoi externe.
+La synthèse machine est dans `evidence/rh-organisation-combinaison-tests.json`. Cette branche est une aide de recette, pas une autorisation de fusion directe ou de déploiement. La recette cumulée est automatisée ; les captures navigateur concernent le lot organisation seul, sans prétendre avoir rejoué visuellement chaque module de la combinaison.
+Le stockage actuel est un fichier JSON avec verrou du processus serveur. La concurrence testée concerne un seul serveur ; une exploitation multi-instance exigerait une autre stratégie de stockage/verrouillage.
