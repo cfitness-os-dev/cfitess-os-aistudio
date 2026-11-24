@@ -47,8 +47,17 @@ pub async fn get_heitz_integration(
             urls.insert(club.into(), serde_json::json!(configured_web_url(std::env::var(var).ok())));
         }
     }
-    Ok(Json(serde_json::json!({ "webUrls": urls, "apiWritesAvailable": false,
-        "mode": "web_only", "canImportSnapshot": is_admin_employee(&db, &actor_id) })))
+    Ok(Json(serde_json::json!({
+        "webUrls": urls,
+        "apiWritesAvailable": false,
+        "mode": "web_only",
+        "canImportSnapshot": is_admin_employee(&db, &actor_id),
+        "liveConfigured": crate::heitz_live::is_heitz_live_configured(),
+        "centerIds": {
+            "carre-de-soie": crate::heitz_live::heitz_center_id_cds(),
+            "beynost": crate::heitz_live::heitz_center_id_bey(),
+        }
+    })))
 }
 
 pub async fn get_heitz_members(

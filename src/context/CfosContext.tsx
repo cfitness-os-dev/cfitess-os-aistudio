@@ -900,6 +900,86 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
         if (!cancelled && Array.isArray(rows)) setState(previous => ({ ...previous, heitzMembers: rows }));
       })
       .catch(() => { if (!cancelled) setState(previous => ({ ...previous, heitzMembers: [] })); });
+
+    fetch('/api/heitz/live-overview', { headers })
+      .then(async response => {
+        if (!response.ok) return;
+        const live = (await response.json()) as {
+          liveConnected?: boolean;
+          recentPassages?: Array<{
+            id: string;
+            clubId: ClubId;
+            memberId: string;
+            badgeCode: string;
+            timestamp: string;
+            granted: boolean;
+            reason: string;
+          }>;
+          recentTickets?: Array<{
+            idTicket: number;
+            ticketNumber: string;
+            clubId: ClubId;
+            date: string;
+            sellerName: string;
+            idEmpSeller: number;
+            amountTtcEur: number;
+          }>;
+        };
+        if (cancelled || !live?.liveConnected) return;
+        const realAccessEvents: AccessEvent[] = (live.recentPassages ?? []).map(p => ({
+          id: p.id,
+          clubId: p.clubId,
+          homeClubId: p.clubId,
+          memberId: p.memberId,
+          memberName: `Adhérent ${p.badgeCode}`,
+          timestamp: p.timestamp ? p.timestamp.slice(11, 19) : 'En direct',
+          granted: p.granted,
+          latencyMs: 18,
+          reason: p.reason,
+          smsRelanceSent: false,
+          qrTokenGenerated: p.badgeCode,
+          readerType: 'RFID_MIFARE_HEITZ',
+        }));
+        const realTickets: HeitzKpiTicket[] = (live.recentTickets ?? []).map(t => ({
+          id: t.idTicket,
+          number: t.ticketNumber || String(t.idTicket),
+          clubId: t.clubId,
+          idCenter: t.clubId === 'beynost' ? 4967 : 3845,
+          dateIso: t.date ? t.date.slice(0, 10) : new Date().toISOString().slice(0, 10),
+          idClient: 0,
+          clientName: 'Client Heitz Cloud',
+          articleId: 1,
+          articleName: 'Ticket Heitz TPV',
+          articleCategory: 2,
+          amountTtcEur: Number(t.amountTtcEur || 0),
+          paymentMethodName: 'CB TPV',
+          idEmpSeller: t.idEmpSeller || 0,
+          sellerEmployeeId: 'emp-mario',
+          sellerName: t.sellerName || 'Accueil C.Fitness',
+          silaeCommissionEur: 0,
+          ticketState: 1,
+        }));
+        setState(previous => ({
+          ...previous,
+          accessEvents: realAccessEvents,
+          heitzKpiTickets: realTickets,
+        }));
+      })
+      .catch(() => {
+        // ignore live overview error
+      });
+
+    fetch('/api/recovery/cases', { headers })
+      .then(async response => {
+        if (!response.ok) return;
+        const cases = (await response.json()) as RecoveryCase[];
+        if (!cancelled && Array.isArray(cases)) {
+          setState(previous => ({ ...previous, recoveryCases: cases }));
+        }
+      })
+      .catch(() => {
+        // ignore recovery fetch error
+      });
     return () => {
       cancelled = true;
     };

@@ -439,6 +439,14 @@ pub fn api_router(state: SharedState) -> Router {
         )
         .route("/api/heitz/integration", get(crate::heitz_members::get_heitz_integration))
         .route(
+            "/api/heitz/live-overview",
+            get(crate::heitz_live::get_heitz_live_overview),
+        )
+        .route(
+            "/api/heitz/sync-live",
+            post(crate::heitz_live::post_heitz_sync_live),
+        )
+        .route(
             "/api/heitz/members/import",
             post(crate::heitz_members::post_heitz_members_import),
         )
