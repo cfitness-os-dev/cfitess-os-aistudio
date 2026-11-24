@@ -158,7 +158,17 @@
     "tokio",
     "serde",
     "hmac",
-    "webp"
+    "webp",
+    "nosniff",
+    "SAMEORIGIN",
+    "regularise",
+    "rngs",
+    "réplicas",
+    "sérialisables",
+    "httponly",
+    "HttpOnly",
+    "ratelimit",
+    "hdrs"
   ],
   "ignorePaths": [
     "node_modules/**",

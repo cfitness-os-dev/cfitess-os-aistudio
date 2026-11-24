@@ -692,6 +692,7 @@ fn record_failed_rate_key(
     entry.0
 }
 
+#[cfg(test)]
 async fn post_local_auth_login(
     State(state): State<SharedState>,
     Json(payload): Json<LocalAuthLoginRequest>,
