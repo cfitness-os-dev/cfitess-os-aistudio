@@ -772,6 +772,35 @@ pub struct SocialPostRecord {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct SiteAbsenceMotiveConfig {
+    pub id: String,
+    pub site_id: String,
+    pub label: String,
+    pub category: String,
+    pub active: bool,
+    pub employee_requestable: bool,
+    pub included_in_annualization: bool,
+    pub requires_document: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SiteStaffingNeed {
+    pub id: String,
+    pub site_id: String,
+    pub position_id: String,
+    pub day_of_week: String,
+    pub kind: String,
+    pub start_time: String,
+    pub end_time: String,
+    pub min_headcount: u32,
+    pub active: bool,
+    #[serde(default)]
+    pub note: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AppDatabaseState {
     #[serde(default)]
     pub lead_scenarios: crate::lead_scenarios::Store,
@@ -857,6 +886,10 @@ pub struct AppDatabaseState {
     pub club_displays: Vec<crate::club_displays::ClubDisplayScreen>,
     #[serde(default)]
     pub employee_counter_history: Vec<CounterAdjustmentRecord>,
+    #[serde(default)]
+    pub site_absence_motives: Vec<SiteAbsenceMotiveConfig>,
+    #[serde(default)]
+    pub site_staffing_needs: Vec<SiteStaffingNeed>,
 }
 
 #[derive(Debug, Clone, Serialize)]
