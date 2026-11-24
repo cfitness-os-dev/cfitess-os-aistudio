@@ -290,7 +290,9 @@
     "tokio",
     "serde",
     "hmac",
-    "webp"
+    "webp",
+    "nosniff",
+    "SAMEORIGIN"
   ],
   "cSpell.ignoreRegExpList": [
     "\\bACCES\\b",
