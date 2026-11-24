@@ -562,7 +562,7 @@ export interface HeitzKpiTicket {
   id: number;
   number: string;
   clubId: ClubId;
-  idCenter: 5052 | 5053; // 5052 = Carré de Soie, 5053 = Beynost
+  idCenter: 3845 | 4967 | 5052 | 5053; // 3845 = Carré de Soie, 4967 = Beynost
   dateIso: string;
   idEmpSeller: number;
   sellerEmployeeId: string;

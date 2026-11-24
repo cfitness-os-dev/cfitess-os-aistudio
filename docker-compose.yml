@@ -43,8 +43,12 @@ services:
       CFITNESS_BACKUP_SIGNING_KEY: ${CFITNESS_BACKUP_SIGNING_KEY:-}
       CFITNESS_TRUST_PROXY: ${CFITNESS_TRUST_PROXY:-0}
       CFITNESS_COOKIE_SECURE: ${CFITNESS_COOKIE_SECURE:-0}
-      # Passerelle locale VM Windows Heitz (Heitz-WS.exe · ID centers 5052 / 5053) & liens web vérifiés
-      HEITZ_WS_URL: ${HEITZ_WS_URL:-http://10.10.0.20:8080/api/heitz-ws}
+      # Passerelle API Heitz-WS / Cloud HeitzSystem (ID centers 3845 Carré de Soie / 4967 Beynost) & liens web vérifiés
+      HEITZ_WS_URL: ${HEITZ_WS_URL:-https://fitness.cf.cloud0302.heitzsystem.com}
+      HEITZ_DEV_ID: ${HEITZ_DEV_ID:-}
+      HEITZ_DEV_KEY: ${HEITZ_DEV_KEY:-}
+      HEITZ_CENTER_ID_CDS: ${HEITZ_CENTER_ID_CDS:-3845}
+      HEITZ_CENTER_ID_BEY: ${HEITZ_CENTER_ID_BEY:-4967}
       HEITZ_WS_TOKEN: ${HEITZ_WS_TOKEN:-}
       CFITNESS_HEITZ_WEB_URL_CDS: ${CFITNESS_HEITZ_WEB_URL_CDS:-}
       CFITNESS_HEITZ_WEB_URL_BEY: ${CFITNESS_HEITZ_WEB_URL_BEY:-}

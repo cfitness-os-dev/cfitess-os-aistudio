@@ -239,8 +239,44 @@ export function DevicesHeitzView() {
     reader.readAsText(file, 'utf-8');
   };
 
-  const handleRunSoftwareSync = (_source: 'HEITZ_API' | 'MYWELLNESS_API') => {
-    setImportReport('Aucun connecteur de synchronisation vérifié n’est configuré. Aucune opération externe effectuée.');
+  const handleRunSoftwareSync = (source: 'HEITZ_API' | 'MYWELLNESS_API') => {
+    if (source !== 'HEITZ_API') {
+      setImportReport('Connecteur Mywellness en attente de clé API Technogym.');
+      return;
+    }
+    setImportReport('Synchronisation HeitzSystem Cloud en cours (centres #3845 Carré de Soie & #4967 Beynost)…');
+    const siteHeader = selectedClubGate === 'beynost' ? 'club-beynost' : 'club-carre-soie';
+    const headers: Record<string, string> = {
+      'x-cfitness-actor-id': currentUser.id,
+      'x-cfitness-site-id': siteHeader,
+    };
+    try {
+      const token = window.sessionStorage.getItem('cfos_bearer_token');
+      if (token) headers.Authorization = `Bearer ${token}`;
+    } catch {
+      // ignore
+    }
+    void fetch('/api/heitz/sync-live', { method: 'POST', headers })
+      .then(async (res) => {
+        const payload = (await res.json()) as {
+          ok?: boolean;
+          syncedMembersCount?: number;
+          carreDeSoieMembers?: number;
+          beynostMembers?: number;
+          entriesToday?: number;
+          error?: string;
+        };
+        if (!res.ok || !payload.ok) {
+          setImportReport(`Erreur synchronisation Heitz Cloud : ${payload.error || `HTTP ${res.status}`}`);
+          return;
+        }
+        setImportReport(
+          `Synchronisation Heitz Cloud réussie : ${payload.syncedMembersCount ?? 0} adhérents réels (Carré de Soie #3845 : ${payload.carreDeSoieMembers ?? 0}, Beynost #4967 : ${payload.beynostMembers ?? 0}) · FMI : ${payload.entriesToday ?? 0} entrées aujourd’hui.`
+        );
+      })
+      .catch(() => {
+        setImportReport('Impossible de joindre /api/heitz/sync-live.');
+      });
   };
 
   useEffect(() => {

@@ -6,6 +6,7 @@ mod terminal_integrity_tests;
 mod course_attendance;
 mod employee_import;
 mod employee_lifecycle;
+mod heitz_live;
 mod heitz_members;
 mod hr_manager;
 mod hr_organisation;
@@ -193,6 +194,7 @@ async fn main() {
 
     lead_automations::spawn_lead_automation_scheduler(shared.clone());
     lead_scenarios::spawn_worker(shared.clone());
+    heitz_live::spawn_heitz_live_sync_worker(shared.clone());
 
     let app: Router = api_router(shared)
         .fallback_service(spa_service)
