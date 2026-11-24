@@ -8,6 +8,7 @@ mod employee_import;
 mod employee_lifecycle;
 mod heitz_members;
 mod hr_manager;
+mod hr_organisation;
 mod clock_policy;
 #[cfg(test)]
 mod clock_policy_tests;
