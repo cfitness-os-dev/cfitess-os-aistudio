@@ -1,4 +1,4 @@
-"""Real loopback HTTP recipe; fictitious data, local SMS preparation only."""
+"""Real loopback HTTP recipe; fictitious data, local email/SMS preparation only."""
 import concurrent.futures
 import datetime as dt
 import json
@@ -271,6 +271,83 @@ def main():
             post(dict(action='run_campaigns'))
             assert len(workspace()['smsOutbox']) == expected_count
             checks.append('real background worker resumes a due persisted campaign at startup and does not duplicate it after another restart')
+
+            # Email uses the same scheduler with the same atomic/offline guarantees.
+            employee = login('emp-chloe', 'CFITNESS_TEST_COMMERCIAL_SECRET')
+            email_message = dict(name='Email programmé', channel='email', subject='Découverte %prenom%', body='Email figé pour %prenom%')
+            email_template = post(dict(action='save_template', templateId=None, expectedRevision=None, message=email_message))['commandResult']['templateId']
+
+            def create_email(name):
+                return post(dict(action='save_campaign', campaignId=None, expectedRevision=None, name=name, templateId=email_template, statusIds=[], sourceIds=[], segmentIds=[]))['commandResult']['campaignId']
+
+            email_id = create_email('Email à échéance')
+            assert call('POST', endpoint, employee, plan(email_id))[0] == 403
+            assert call('POST', '/api/lead/scenarios/beynost', admin, plan(email_id))[0] == 404
+            post(plan(email_id))
+            assert row(email_id)['channel'] == 'email'
+            post(dict(action='save_template', templateId=email_template, expectedRevision=1, message={**email_message, 'subject':'Objet changé', 'body':'Texte changé après programmation'}))
+            stop(proc)
+            due(email_id)
+            proc = start()
+            admin = login('emp-mario', 'CFITNESS_TEST_ADMIN_SECRET')
+            before = workspace()
+            (folder/'cfitness_state.json.tmp').mkdir()
+            assert call('POST', endpoint, admin, dict(action='run_campaigns'))[0] == 500
+            assert row(email_id)['schedules'][0]['status'] == 'scheduled' and workspace()['emailOutbox'] == before['emailOutbox']
+            (folder/'cfitness_state.json.tmp').rmdir()
+            post(dict(action='run_campaigns'))
+            after = workspace()
+            assert len(after['emailOutbox']) == len(before['emailOutbox'])+1
+            email = after['emailOutbox'][-1]
+            assert email['payload']['subject'].startswith('Découverte ') and 'Email figé pour' in email['payload']['textContent']
+            assert '%prenom%' not in email['payload']['textContent'] and email['payload']['headers']['X-Sib-Sandbox'] == 'drop'
+            assert after['smsOutbox'] == before['smsOutbox']
+            stop(proc)
+            proc = start(worker=True)
+            admin = login('emp-mario', 'CFITNESS_TEST_ADMIN_SECRET')
+            post(dict(action='run_campaigns'))
+            assert len(workspace()['emailOutbox']) == len(after['emailOutbox']) and row(email_id)['schedules'][0]['status'] == 'simulated'
+            checks.append('scheduled email freezes subject/body, enforces role/club, rolls back on disk failure and survives restart without duplicate offline Brevo preparation')
+
+            excluded_email = create_email('Email exclu avant échéance')
+            post(plan(excluded_email))
+            post(dict(action='suppress_email', prospectId=contact, reason='Retrait fictif avant échéance email'))
+            stop(proc)
+            due(excluded_email)
+            proc = start()
+            admin = login('emp-mario', 'CFITNESS_TEST_ADMIN_SECRET')
+            post(dict(action='run_campaigns'))
+            assert len(workspace()['emailOutbox']) == len(after['emailOutbox'])
+            assert row(excluded_email)['runs'][-1]['audience']['eligibleIds'] == []
+            assert any('exclue' in r['reason'] for r in row(excluded_email)['runs'][-1]['audience']['excluded'])
+            checks.append('email exclusion added after scheduling is rechecked at the due time without changing earlier history or SMS preferences')
+
+            cancelled_email = create_email('Email annulé')
+            post(plan(cancelled_email))
+            email_schedule_id = row(cancelled_email)['schedules'][0]['id']
+            post(dict(action='cancel_campaign_schedule', campaignId=cancelled_email, expectedRevision=1, scheduleId=email_schedule_id, reason='Campagne fictive annulée'))
+            stop(proc)
+            due(cancelled_email)
+            proc = start(worker=True)
+            admin = login('emp-mario', 'CFITNESS_TEST_ADMIN_SECRET')
+            post(dict(action='run_campaigns'))
+            assert row(cancelled_email)['schedules'][0]['status'] == 'cancelled' and row(cancelled_email)['runs'] == []
+            assert len(workspace()['emailOutbox']) == len(after['emailOutbox'])
+            checks.append('email cancellation remains durable across restart and cannot create a later preparation')
+
+            inconsistent_email = create_email('Canal restauré incohérent')
+            post(plan(inconsistent_email))
+            stop(proc)
+            due(inconsistent_email)
+            fixture = json.loads(state_file.read_text())
+            next(c for c in fixture['leadScenarios']['campaigns'] if c['id'] == inconsistent_email)['schedules'][0]['message']['channel'] = 'sms'
+            state_file.write_text(json.dumps(fixture))
+            proc = start()
+            admin = login('emp-mario', 'CFITNESS_TEST_ADMIN_SECRET')
+            post(dict(action='run_campaigns'))
+            assert row(inconsistent_email)['schedules'][0]['status'] == 'failed'
+            assert len(workspace()['emailOutbox']) == len(after['emailOutbox']) and workspace()['smsOutbox'] == after['smsOutbox']
+            checks.append('restored mismatched email/SMS channels fail without adding any message preparation')
         finally:
             if proc.poll() is None:
                 stop(proc)
