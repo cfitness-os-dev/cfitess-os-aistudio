@@ -11,6 +11,7 @@ mod hr_manager;
 mod hr_organisation;
 mod hr_pilotage;
 mod hr_site_rules;
+mod hr_leave_policy;
 mod clock_policy;
 #[cfg(test)]
 mod clock_policy_tests;

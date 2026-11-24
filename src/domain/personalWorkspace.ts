@@ -1,3 +1,4 @@
+import type { LeavePolicy } from './hrLeaveRules';
 import type {
   ClubId,
   HRDocument,
@@ -19,6 +20,7 @@ export interface PersonalWorkspace {
     openClubId: ClubId | null;
   };
   canRequestLeave: boolean;
+  requestMotives: Array<{id:string;label:string;requiresDocument:boolean}>;
   employeeId: string;
   clubId: ClubId;
   demoMode: boolean;
@@ -42,6 +44,7 @@ export interface PersonalWorkspace {
     endDate: string;
     status: string;
     comment: string;
+    policy?: LeavePolicy;
   }>;
   shifts: Array<{
     id: string;
@@ -53,6 +56,7 @@ export interface PersonalWorkspace {
   }>;
 }
 export type PersonalAction =
+  | { action:"attach_leave_documents";id:string;documentIds:string[];expectedRevision:string }
   | { action: "cancel_leave"; id: string; comment: string }
   | { action: "add_task"; title: string; category?: string }
   | { action: "set_task" | "set_checklist"; id: string; completed: boolean }
@@ -61,6 +65,10 @@ export type PersonalAction =
   | {
       action: "request_leave";
       motive: string;
+      motiveId?: string;
+      documentIds?: string[];
+      startPeriod?: 'am'|'pm';
+      endPeriod?: 'am'|'pm';
       startDate: string;
       endDate: string;
       comment: string;
@@ -92,9 +100,12 @@ export function validatePersonalResponse(
     "timeEntries",
     "leaves",
     "shifts",
+    "requestMotives",
   ])
     if (!(key in value) || !Array.isArray(Reflect.get(value, key)))
       throw new Error("Les données reçues sont incomplètes.");
+  const motives=Reflect.get(value,'requestMotives');
+  if(!motives.every((m:unknown)=>!!m&&typeof m==='object'&&'id' in m&&typeof m.id==='string'&&'label' in m&&typeof m.label==='string'&&'requiresDocument' in m&&typeof m.requiresDocument==='boolean'))throw new Error('Les motifs d’absence reçus sont incomplets.');
   const clock = Reflect.get(value, "punchAvailability");
   const policy = Reflect.get(value, "clockingPolicy");
   if (

@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { useCfos } from '../../context/CfosContext';
 import { useLeadDraftGuard } from '../useLeadDraftGuard';
+import { confirmLeadDraftNavigation } from '../../domain/leadDraftGuard';
+import { LeaveCounterRulesPanel } from './LeaveCounterRulesPanel';
 import {
   DAY_OF_WEEK_LABELS,
   fetchHrSiteRules,
@@ -325,7 +327,7 @@ export function HrSiteRulesView({ clubId, onMutated }: HrSiteRulesViewProps) {
               <button
                 key={id}
                 type="button"
-                onClick={() => setTab(id)}
+                onClick={() => { if (id===tab || confirmLeadDraftNavigation(()=>setTab(id))) setTab(id); }}
                 className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer ${
                   tab === id
                     ? 'cf-brand-gradient text-white'
@@ -336,6 +338,8 @@ export function HrSiteRulesView({ clubId, onMutated }: HrSiteRulesViewProps) {
               </button>
             ))}
           </nav>
+
+          {(tab === 'counters' || tab === 'absences') && <LeaveCounterRulesPanel key={`${currentUser.id}:${clubId}`} actorId={currentUser.id} club={clubId} />}
 
           {tab === 'rules' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 min-w-0">

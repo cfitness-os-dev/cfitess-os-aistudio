@@ -90,3 +90,15 @@ test("withdrawn leave is a distinct final label in manager filters and exports",
   assert.notEqual(statusLabel("cancelled"), statusLabel("pending"));
   assert.equal(statusLabel("approved"), "Validée");
 });
+
+test('refresh after a linked counter decision keeps mounted drafts until updated rows arrive, but clears inaccessible rows on failure',async()=>{
+  let finish!: (data:HrWorkspace)=>void;
+  let calls=0;
+  const editor=new HrWorkflowEditor(async()=>{calls++;if(calls===1)return data;if(calls===3)throw new Error('Accès retiré');return new Promise(resolve=>{finish=resolve;});});
+  await editor.load();
+  const refresh=editor.load(true);
+  assert.equal(editor.getSnapshot().data,data);assert.equal(editor.getSnapshot().loading,true);
+  const updated={...data,requests:[]};finish(updated);await refresh;
+  assert.equal(editor.getSnapshot().data,updated);
+  await editor.load(true);assert.equal(editor.getSnapshot().data,null);assert.match(editor.getSnapshot().error,/Accès retiré/);
+});
