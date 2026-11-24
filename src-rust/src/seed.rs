@@ -6,8 +6,9 @@ use crate::models::{
     Shift, Site, SiteHrSettings, SiteKpis, StockItemRecord, MaintenanceTicketRecord, MissionRecord, Team, TimeclockAnomaly, UserPreferences,
 };
 use std::collections::HashMap;
+use std::fmt;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 const PERMISSIONS_MATRIX_JSON: &str = include_str!("../data/permissions_matrix.json");
 pub const REGISTRY_SUMMARY_JSON: &str = include_str!("../data/registry_summary.json");
@@ -2198,99 +2199,186 @@ fn apply_initial_admin_password_bootstrap(state: &mut AppDatabaseState) -> bool 
     apply_admin_password_bootstrap_with(state, &raw_pwd, &target_id)
 }
 
-pub fn load_or_init_state(data_dir: &Path) -> AppDatabaseState {
-    load_or_init_state_with_mode(data_dir, crate::routes::is_demo_mode())
+#[derive(Debug)]
+pub enum StateLoadError {
+    ReadFailed {
+        path: PathBuf,
+        source: std::io::Error,
+    },
+    InvalidOrIncompatible {
+        path: PathBuf,
+        source: serde_json::Error,
+    },
+    PersistFailed {
+        path: PathBuf,
+        source: std::io::Error,
+    },
 }
 
-pub fn load_or_init_state_with_mode(data_dir: &Path, demo_mode: bool) -> AppDatabaseState {
-    let state_file = data_dir.join("cfitness_state.json");
-    if state_file.exists() {
-        if let Ok(raw) = fs::read_to_string(&state_file) {
-            if let Ok(mut parsed) = serde_json::from_str::<AppDatabaseState>(&raw) {
-                let mut migrated = false;
-                if demo_mode {
-                    let baseline = create_initial_seed_state();
-                    for seed_emp in baseline.employees {
-                        if !parsed.employees.iter().any(|e| e.id == seed_emp.id) {
-                            parsed.employees.push(seed_emp);
-                            migrated = true;
-                        }
-                    }
-                    for seed_shift in baseline.shifts {
-                        if !parsed.shifts.iter().any(|s| s.id == seed_shift.id) {
-                            parsed.shifts.push(seed_shift);
-                            migrated = true;
-                        }
-                    }
-                    if parsed.lead_forms.is_empty() {
-                        parsed.lead_forms = baseline.lead_forms;
-                        migrated = true;
-                    }
-                    if parsed.lead_prospects.is_empty() {
-                        parsed.lead_prospects = baseline.lead_prospects;
-                        migrated = true;
-                    }
-                    if parsed.lead_appointments.is_empty() {
-                        parsed.lead_appointments = baseline.lead_appointments;
-                        migrated = true;
-                    }
-                    if parsed.lead_activities.is_empty() {
-                        parsed.lead_activities = baseline.lead_activities;
-                        migrated = true;
-                    }
-                    for (eid, prefs) in baseline.preferences_by_employee {
-                        parsed.preferences_by_employee.entry(eid).or_insert_with(|| {
-                            migrated = true;
-                            prefs
-                        });
-                    }
-                    if parsed.recovery_cases.is_empty() {
-                        parsed.recovery_cases = baseline.recovery_cases;
-                        migrated = true;
-                    }
-                    if parsed.stock_items.is_empty() {
-                        parsed.stock_items = baseline.stock_items;
-                        migrated = true;
-                    }
-                    if parsed.maintenance_tickets.is_empty() {
-                        parsed.maintenance_tickets = baseline.maintenance_tickets;
-                        migrated = true;
-                    }
-                    if parsed.orchestrator_decisions.is_empty() {
-                        parsed.orchestrator_decisions = baseline.orchestrator_decisions;
-                        migrated = true;
-                    }
-                    if parsed.purchase_orders.is_empty() {
-                        parsed.purchase_orders = baseline.purchase_orders;
-                        migrated = true;
-                    }
-                    if parsed.missions.is_empty() {
-                        parsed.missions = baseline.missions;
-                        migrated = true;
-                    }
-                }
-                if parsed.lead_settings_by_club.is_empty() {
-                    parsed.lead_settings_by_club = default_lead_settings_by_club();
-                    migrated = true;
-                }
-                if apply_initial_admin_password_bootstrap(&mut parsed) {
-                    migrated = true;
-                }
-                if migrated {
-                    let _ = persist_state(data_dir, &parsed);
-                }
-                return parsed;
-            }
+impl fmt::Display for StateLoadError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            StateLoadError::ReadFailed { path, source } => write!(
+                f,
+                "Impossible de lire la base existante '{}' ({source}). Démarrage interrompu sans modifier le fichier existant.",
+                path.display()
+            ),
+            StateLoadError::InvalidOrIncompatible { path, source } => write!(
+                f,
+                "Base existante invalide ou schéma incompatible dans '{}' ({source}). Démarrage interrompu sans écraser les données par le seed.",
+                path.display()
+            ),
+            StateLoadError::PersistFailed { path, source } => write!(
+                f,
+                "Impossible d'enregistrer l'état initial ou migré vers '{}' ({source}).",
+                path.display()
+            ),
         }
     }
-    let mut state = if demo_mode {
-        create_initial_seed_state()
-    } else {
-        create_production_initial_state()
-    };
-    let _ = apply_initial_admin_password_bootstrap(&mut state);
-    let _ = persist_state(data_dir, &state);
-    state
+}
+
+impl std::error::Error for StateLoadError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            StateLoadError::ReadFailed { source, .. }
+            | StateLoadError::PersistFailed { source, .. } => Some(source),
+            StateLoadError::InvalidOrIncompatible { source, .. } => Some(source),
+        }
+    }
+}
+
+pub fn try_load_or_init_state(data_dir: &Path) -> Result<AppDatabaseState, StateLoadError> {
+    try_load_or_init_state_with_mode(data_dir, crate::routes::is_demo_mode())
+}
+
+pub fn try_load_or_init_state_with_mode(
+    data_dir: &Path,
+    demo_mode: bool,
+) -> Result<AppDatabaseState, StateLoadError> {
+    let state_file = data_dir.join("cfitness_state.json");
+    match fs::symlink_metadata(&state_file) {
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+            let mut state = if demo_mode {
+                create_initial_seed_state()
+            } else {
+                create_production_initial_state()
+            };
+            let _ = apply_initial_admin_password_bootstrap(&mut state);
+            persist_state(data_dir, &state).map_err(|source| StateLoadError::PersistFailed {
+                path: state_file,
+                source,
+            })?;
+            Ok(state)
+        }
+        Err(source) => Err(StateLoadError::ReadFailed {
+            path: state_file,
+            source,
+        }),
+        Ok(_) => {
+            let raw = fs::read_to_string(&state_file).map_err(|source| {
+                StateLoadError::ReadFailed {
+                    path: state_file.clone(),
+                    source,
+                }
+            })?;
+            let mut parsed =
+                serde_json::from_str::<AppDatabaseState>(&raw).map_err(|source| {
+                    StateLoadError::InvalidOrIncompatible {
+                        path: state_file.clone(),
+                        source,
+                    }
+                })?;
+
+            let mut migrated = false;
+            if demo_mode {
+                let baseline = create_initial_seed_state();
+                for seed_emp in baseline.employees {
+                    if !parsed.employees.iter().any(|e| e.id == seed_emp.id) {
+                        parsed.employees.push(seed_emp);
+                        migrated = true;
+                    }
+                }
+                for seed_shift in baseline.shifts {
+                    if !parsed.shifts.iter().any(|s| s.id == seed_shift.id) {
+                        parsed.shifts.push(seed_shift);
+                        migrated = true;
+                    }
+                }
+                if parsed.lead_forms.is_empty() {
+                    parsed.lead_forms = baseline.lead_forms;
+                    migrated = true;
+                }
+                if parsed.lead_prospects.is_empty() {
+                    parsed.lead_prospects = baseline.lead_prospects;
+                    migrated = true;
+                }
+                if parsed.lead_appointments.is_empty() {
+                    parsed.lead_appointments = baseline.lead_appointments;
+                    migrated = true;
+                }
+                if parsed.lead_activities.is_empty() {
+                    parsed.lead_activities = baseline.lead_activities;
+                    migrated = true;
+                }
+                for (eid, prefs) in baseline.preferences_by_employee {
+                    parsed.preferences_by_employee.entry(eid).or_insert_with(|| {
+                        migrated = true;
+                        prefs
+                    });
+                }
+                if parsed.recovery_cases.is_empty() {
+                    parsed.recovery_cases = baseline.recovery_cases;
+                    migrated = true;
+                }
+                if parsed.stock_items.is_empty() {
+                    parsed.stock_items = baseline.stock_items;
+                    migrated = true;
+                }
+                if parsed.maintenance_tickets.is_empty() {
+                    parsed.maintenance_tickets = baseline.maintenance_tickets;
+                    migrated = true;
+                }
+                if parsed.orchestrator_decisions.is_empty() {
+                    parsed.orchestrator_decisions = baseline.orchestrator_decisions;
+                    migrated = true;
+                }
+                if parsed.purchase_orders.is_empty() {
+                    parsed.purchase_orders = baseline.purchase_orders;
+                    migrated = true;
+                }
+                if parsed.missions.is_empty() {
+                    parsed.missions = baseline.missions;
+                    migrated = true;
+                }
+            }
+            if parsed.lead_settings_by_club.is_empty() {
+                parsed.lead_settings_by_club = default_lead_settings_by_club();
+                migrated = true;
+            }
+            if apply_initial_admin_password_bootstrap(&mut parsed) {
+                migrated = true;
+            }
+            if migrated {
+                persist_state(data_dir, &parsed).map_err(|source| {
+                    StateLoadError::PersistFailed {
+                        path: state_file,
+                        source,
+                    }
+                })?;
+            }
+            Ok(parsed)
+        }
+    }
+}
+
+#[cfg(test)]
+pub fn load_or_init_state(data_dir: &Path) -> AppDatabaseState {
+    try_load_or_init_state(data_dir).unwrap_or_else(|err| panic!("{err}"))
+}
+
+#[cfg(test)]
+pub fn load_or_init_state_with_mode(data_dir: &Path, demo_mode: bool) -> AppDatabaseState {
+    try_load_or_init_state_with_mode(data_dir, demo_mode).unwrap_or_else(|err| panic!("{err}"))
 }
 
 pub fn persist_state(data_dir: &Path, state: &AppDatabaseState) -> std::io::Result<()> {
@@ -2429,5 +2517,159 @@ mod tests {
             hash
         ));
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    fn temp_seed_dir(label: &str) -> PathBuf {
+        std::env::temp_dir().join(format!(
+            "cfos_seed_guard_{label}_{}_{}",
+            std::process::id(),
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default()
+        ))
+    }
+
+    fn sha256_bytes(bytes: &[u8]) -> String {
+        use sha2::{Digest, Sha256};
+        format!("{:x}", Sha256::digest(bytes))
+    }
+
+    #[test]
+    fn refuses_invalid_json_without_overwriting_existing_state_file() {
+        let dir = temp_seed_dir("invalid_json");
+        fs::create_dir_all(&dir).unwrap();
+        let state_file = dir.join("cfitness_state.json");
+        let original = b"{\"organization\":{\"id\":\"broken\"";
+        fs::write(&state_file, original).unwrap();
+        let before_hash = sha256_bytes(original);
+
+        for demo_mode in [true, false] {
+            let err = try_load_or_init_state_with_mode(&dir, demo_mode)
+                .expect_err("corrupted JSON must fail startup without seeding");
+            assert!(
+                matches!(err, StateLoadError::InvalidOrIncompatible { .. }),
+                "expected InvalidOrIncompatible, got {err:?}"
+            );
+            let after = fs::read(&state_file).unwrap();
+            assert_eq!(after.as_slice(), original);
+            assert_eq!(sha256_bytes(&after), before_hash);
+            assert!(!dir.join("cfitness_state.json.tmp").exists());
+        }
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn refuses_incompatible_schema_unknown_field_without_overwriting() {
+        let dir = temp_seed_dir("unknown_field");
+        fs::create_dir_all(&dir).unwrap();
+        let state_file = dir.join("cfitness_state.json");
+
+        let state = create_production_initial_state();
+        let mut raw_val = serde_json::to_value(&state).unwrap();
+        raw_val["leadScenarios"]["scenarios"] = serde_json::json!([{
+            "id": "sc-compat-test",
+            "clubId": "carre-de-soie",
+            "revision": 1,
+            "draft": {
+                "schemaVersion": 1,
+                "clubId": "carre-de-soie",
+                "name": "Scénario futur",
+                "mode": "manual",
+                "active": false,
+                "enrollmentLocked": false,
+                "conditions": null,
+                "steps": [],
+                "exitRules": null,
+                "futureUnknownField": "v999-incompatible"
+            },
+            "versions": [],
+            "active": false,
+            "enrollmentLocked": false,
+            "archived": false,
+            "updatedAt": "2026-11-24T10:00:00Z"
+        }]);
+        let original = serde_json::to_string_pretty(&raw_val).unwrap().into_bytes();
+        fs::write(&state_file, &original).unwrap();
+        let before_hash = sha256_bytes(&original);
+
+        for demo_mode in [true, false] {
+            let err = try_load_or_init_state_with_mode(&dir, demo_mode)
+                .expect_err("strict unknown field must fail startup without overwriting");
+            assert!(
+                matches!(err, StateLoadError::InvalidOrIncompatible { .. }),
+                "expected InvalidOrIncompatible, got {err:?}"
+            );
+            let after = fs::read(&state_file).unwrap();
+            assert_eq!(after, original);
+            assert_eq!(sha256_bytes(&after), before_hash);
+            assert!(!dir.join("cfitness_state.json.tmp").exists());
+        }
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn refuses_unreadable_state_path_without_overwriting() {
+        // 1. Octets non-UTF-8 (échec de fs::read_to_string -> ReadFailed)
+        let dir_bytes = temp_seed_dir("non_utf8");
+        fs::create_dir_all(&dir_bytes).unwrap();
+        let state_file = dir_bytes.join("cfitness_state.json");
+        let raw_bad = [0xFFu8, 0xFE, 0x00, 0x80];
+        fs::write(&state_file, raw_bad).unwrap();
+        let before_hash = sha256_bytes(&raw_bad);
+
+        let err = try_load_or_init_state_with_mode(&dir_bytes, true)
+            .expect_err("non-UTF-8 state file must fail without overwriting");
+        assert!(matches!(err, StateLoadError::ReadFailed { .. }));
+        let after = fs::read(&state_file).unwrap();
+        assert_eq!(after.as_slice(), &raw_bad);
+        assert_eq!(sha256_bytes(&after), before_hash);
+        assert!(!dir_bytes.join("cfitness_state.json.tmp").exists());
+        let _ = fs::remove_dir_all(&dir_bytes);
+
+        // 2. Chemin cfitness_state.json occupé par un répertoire -> ReadFailed sans écrasement
+        let dir_sub = temp_seed_dir("is_dir");
+        let state_dir_path = dir_sub.join("cfitness_state.json");
+        fs::create_dir_all(&state_dir_path).unwrap();
+        let err_dir = try_load_or_init_state_with_mode(&dir_sub, false)
+            .expect_err("directory at cfitness_state.json must fail without seeding");
+        assert!(matches!(err_dir, StateLoadError::ReadFailed { .. }));
+        assert!(state_dir_path.is_dir());
+        assert!(!dir_sub.join("cfitness_state.json.tmp").exists());
+        let _ = fs::remove_dir_all(&dir_sub);
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let dir_perm = temp_seed_dir("chmod000");
+            fs::create_dir_all(&dir_perm).unwrap();
+            let locked_file = dir_perm.join("cfitness_state.json");
+            let content = b"{\"locked\":true}";
+            fs::write(&locked_file, content).unwrap();
+            fs::set_permissions(&locked_file, fs::Permissions::from_mode(0o000)).unwrap();
+            let err_perm = try_load_or_init_state_with_mode(&dir_perm, false)
+                .expect_err("unreadable permissions must fail");
+            assert!(matches!(err_perm, StateLoadError::ReadFailed { .. }));
+            fs::set_permissions(&locked_file, fs::Permissions::from_mode(0o644)).unwrap();
+            assert_eq!(fs::read(&locked_file).unwrap(), content);
+            let _ = fs::remove_dir_all(&dir_perm);
+        }
+    }
+
+    #[test]
+    fn initializes_when_absent_and_reloads_valid_state_cleanly() {
+        let dir = temp_seed_dir("absent_then_reload");
+        assert!(!dir.exists());
+
+        let mut initialized = try_load_or_init_state_with_mode(&dir, false)
+            .expect("missing state file must initialize cleanly");
+        assert!(dir.join("cfitness_state.json").is_file());
+        initialized.employees[0].first_name = "TestReloadGuard".into();
+        persist_state(&dir, &initialized).expect("persist modified state");
+
+        let reloaded = try_load_or_init_state_with_mode(&dir, false)
+            .expect("valid state file must reload cleanly");
+        assert_eq!(reloaded.employees[0].first_name, "TestReloadGuard");
+
+        let _ = fs::remove_dir_all(&dir);
     }
 }

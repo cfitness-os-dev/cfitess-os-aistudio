@@ -33,7 +33,7 @@ mod stocks;
 mod timeclock;
 
 use crate::routes::{api_router, is_demo_mode, SharedAppState};
-use crate::seed::load_or_init_state;
+use crate::seed::try_load_or_init_state;
 use axum::body::Body;
 use axum::http::{HeaderValue, Request};
 use axum::middleware::{self, Next};
@@ -92,7 +92,14 @@ async fn main() {
             .unwrap_or_else(|_| "./dist".to_string()),
     );
 
-    let initial_state = load_or_init_state(&data_dir);
+    let initial_state = match try_load_or_init_state(&data_dir) {
+        Ok(state) => state,
+        Err(err) => {
+            tracing::error!("{err}");
+            eprintln!("ERREUR FATALE DÉMARRAGE C.FITNESS OS : {err}");
+            std::process::exit(1);
+        }
+    };
     let shared = Arc::new(SharedAppState {
         db: RwLock::new(initial_state),
         data_dir,
