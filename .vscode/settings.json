@@ -293,7 +293,14 @@
     "webp",
     "nosniff",
     "SAMEORIGIN",
-    "regularise"
+    "regularise",
+    "rngs",
+    "réplicas",
+    "sérialisables",
+    "httponly",
+    "HttpOnly",
+    "ratelimit",
+    "hdrs"
   ],
   "cSpell.ignoreRegExpList": [
     "\\bACCES\\b",
