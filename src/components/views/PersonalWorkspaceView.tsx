@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import {
   Calendar,
   CheckSquare,
@@ -7,6 +7,7 @@ import {
   GraduationCap,
   Home,
   Bell,
+  UserCheck,
 } from "lucide-react";
 import { useCfos } from "../../context/CfosContext";
 import {
@@ -17,8 +18,15 @@ import {
 import { statusLabel } from "../../domain/hrWorkflow";
 import type { ClubId } from "../../types/cfos";
 
+const HrEmployeeDossierView = lazy(() =>
+  import("./HrEmployeeDossierView").then((m) => ({
+    default: m.HrEmployeeDossierView,
+  })),
+);
+
 const tabs = [
   ["home", "Ma journée", Home],
+  ["dossier", "Mon dossier", UserCheck],
   ["planning", "Mon planning", Calendar],
   ["leave", "Mes absences", Calendar],
   ["documents", "Mes documents", FileText],
@@ -242,6 +250,11 @@ function PersonalWorkspaceContent({
       )}
       {data && (
         <>
+          {tab === "dossier" && (
+            <Suspense fallback={<p role="status">Chargement de votre dossier…</p>}>
+              <HrEmployeeDossierView clubId={club} personalOnly />
+            </Suspense>
+          )}
           {tab === "home" && (
             <div className="grid lg:grid-cols-2 gap-4">
               <section className="cf-card p-4 space-y-3">
