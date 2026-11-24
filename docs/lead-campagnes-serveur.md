@@ -29,7 +29,7 @@ Ce lot ne termine pas la parité exhaustive avec le logiciel Lead audité. Il re
 | Sujet | État / prochain contrôle |
 |---|---|
 | Campagnes email | Brouillons serveur, ciblage, simulation et historique livrés dans ce lot ; parcours principal contrôlé en local ; recette métier complète avant intégration |
-| Campagnes SMS | Sauvegarde, segments, consentement distinct/STOP, simulation et historique livrés ; voir [la recette SMS](lead-sms-recette.md). Fournisseur et envois réels non raccordés | 
+| Campagnes SMS | Sauvegarde, segments, consentement distinct/STOP, simulation et historique livrés ; voir [la recette SMS](lead-sms-recette.md). Fournisseur et envois réels non raccordés |
 | Modèles et scénarios | Socle existant réutilisé ; fenêtres horaires, réinscription et délégations fines à compléter |
 | Brevo | Préparation hors ligne ; compte, clés, expéditeurs, exclusions réelles, transport, webhooks et délivrabilité non raccordés |
 | WhatsApp | Modèles OS existants ; compte Meta, approbations, fenêtre 24 h et intégration réelle non validés |

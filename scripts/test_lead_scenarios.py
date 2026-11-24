@@ -435,14 +435,21 @@ def main():
             assert len(response['smsOutbox'])==2
             assert all(p['clubId']=='carre-de-soie' for p in response['smsPreferences'])
             checks.append('STOP persists, cannot be reversed by opt-in, blocks duplicate-phone campaign contacts and the next SMS scenario step without mutating past simulations')
-            # A model can be edited independently: never interpret email content as an SMS.
+            # API channel changes are forbidden; also reject inconsistent restored data.
             assert call('POST',endpoint,admin,{**sms_campaign,'campaignId':sms_campaign_id,'expectedRevision':2})[0]==200
-            assert call('POST',endpoint,admin,dict(action='save_template',templateId=sms_template,expectedRevision=1,message=dict(name='Canal modifié',channel='email',subject='Un email',body='Message email')))[0]==200
+            assert call('POST',endpoint,admin,dict(action='save_template',templateId=sms_template,expectedRevision=1,message=dict(name='Canal modifié',channel='email',subject='Un email',body='Message email')))[0]==409
+            stop(proc)
+            fixture=json.loads((folder/'cfitness_state.json').read_text())
+            template=next(t for t in fixture['leadScenarios']['templates'] if t['id']==sms_template)
+            template['message']['channel']='email'
+            template['message']['subject']='Objet'
+            (folder/'cfitness_state.json').write_text(json.dumps(fixture))
+            proc=start();admin=login('emp-mario','CFITNESS_TEST_ADMIN_SECRET')
             before=call('GET',endpoint,admin)[1]
             assert call('POST',endpoint,admin,{**sms_sim,'expectedRevision':3})[0]==409
             after=call('GET',endpoint,admin)[1]
             assert after['smsOutbox']==before['smsOutbox'] and after['emailOutbox']==before['emailOutbox'] and after['campaigns']==before['campaigns']
-            checks.append('changing a referenced template channel rejects the campaign simulation without queue or history mutation')
+            checks.append('template channel changes are forbidden and inconsistent restored channels reject the campaign simulation without queue or history mutation')
         finally:
             if proc.poll() is None:
                 stop(proc)
