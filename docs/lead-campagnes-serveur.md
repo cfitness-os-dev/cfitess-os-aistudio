@@ -28,7 +28,7 @@ Ce lot ne termine pas la parité exhaustive avec le logiciel Lead audité. Il re
 
 | Sujet | État / prochain contrôle |
 |---|---|
-| Campagnes email | Brouillons serveur, ciblage, simulation et historique livrés dans ce lot ; contrôle visuel restant avant intégration |
+| Campagnes email | Brouillons serveur, ciblage, simulation et historique livrés dans ce lot ; parcours principal contrôlé en local ; recette métier complète avant intégration |
 | Campagnes SMS | Calculateur conservé ; sauvegarde serveur, STOP et fournisseur non raccordés. Aucun SMS envoyé ni faux coût confirmé |
 | Modèles et scénarios | Socle existant réutilisé ; fenêtres horaires, réinscription et délégations fines à compléter |
 | Brevo | Préparation hors ligne ; compte, clés, expéditeurs, exclusions réelles, transport, webhooks et délivrabilité non raccordés |
@@ -41,6 +41,6 @@ Ce lot ne termine pas la parité exhaustive avec le logiciel Lead audité. Il re
 
 Les 117 tests Rust, 105 tests TypeScript et 17 groupes HTTP réels ont été exécutés pendant le lot, avec les contrôles finaux consignés dans le retour de PR. Les trois nouveaux groupes API couvrent les campagnes, leurs droits/clubs/ciblage, la persistance/échec disque et l’exclusion juste avant simulation. Aucun envoi externe.
 
-Le premier essai de garde utilisait une confirmation native ; le navigateur de contrôle a bloqué sur cette boîte puis a cessé d’exécuter les clics. La garde a été remplacée par une fenêtre intégrée testée au niveau du registre de navigation. Le contrôle visuel complet de cette version et les nouveaux écrans restent à exécuter : ne pas les annoncer validés. Aucune caméra, tablette physique, clé ou donnée réelle utilisée. Docker/Linux non exécuté.
+Le premier essai de garde utilisait une confirmation native et a bloqué le navigateur. Après fermeture de cette boîte par le client, les essais UI de la fenêtre intégrée passent : annuler conserve le nom et le club, abandonner autorise le changement d’onglet, sauvegarde puis choix du modèle dans une campagne, sauvegarde/simulation/historique, absence de campagne à Beynost et refus du commercial limité à ce club. Le bandeau de connexion périmé disparaît après login. Largeurs document 383 px à 390×844 et 761 px à 768×1024, reprise ordinateur à 1440×1000. Captures dans docs/evidence/lead-campaigns/. La navigation native retour/avance, toutes les délégations, les clients mail et le sélecteur image restent non validés. Aucune caméra, tablette physique, clé ou donnée réelle utilisée. Docker/Linux non exécuté.
 
 Sauvegarder les données avant intégration. Les champs campagnes sont additifs et chargés avec valeurs par défaut ; un retour à un ancien code peut ignorer puis perdre ces données à sa prochaine sauvegarde. Ne pas tester un ancien binaire sur une base nouvelle sans copie préalable.

@@ -314,7 +314,7 @@ fn authorize(db: &AppDatabaseState, actor: &str, club: &str) -> Result<(), Failu
     if !can_manage(db, actor, club) {
         return Err(err_resp(
             StatusCode::FORBIDDEN,
-            "La gestion des scénarios est réservée aux responsables habilités de ce club.",
+            "La gestion des communications est réservée aux responsables habilités de ce club.",
         ));
     }
     Ok(())
