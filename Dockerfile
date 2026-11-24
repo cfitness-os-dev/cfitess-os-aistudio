@@ -3,13 +3,12 @@ FROM node:22-alpine3.21 AS frontend-builder
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install --no-audit --no-fund
+RUN npm ci --ignore-scripts --no-audit --no-fund
 
-COPY index.html postcss.config.js tailwind.config.js tsconfig.json vite.config.ts ./
-COPY docker-compose.yml Dockerfile deploy-linux.sh Cargo.toml metadata.json ./
+COPY index.html postcss.config.js tailwind.config.js tsconfig.json vite.config.ts metadata.json ./
+COPY contracts ./contracts
 COPY public ./public
 COPY src ./src
-COPY src-rust ./src-rust
 ARG VITE_DEMO_MODE=true
 ENV VITE_DEMO_MODE=${VITE_DEMO_MODE}
 RUN npm run build

@@ -161,13 +161,12 @@ export function RecoveryView() {
     setCheckingOllama(true);
     setOllamaError(null);
     try {
-      const res = await fetch('/api/ollama/status');
-      const data = (await res.json()) as {
+      const data = await recoveryFetchJson<{
         online?: boolean;
         models?: string[];
         defaultModel?: string;
         error?: string;
-      };
+      }>('/api/ollama/status', currentUser.id, activeSiteId);
       setOllamaOnline(Boolean(data.online));
       const models = Array.isArray(data.models) ? data.models : [];
       setOllamaModels(models);
@@ -468,20 +467,18 @@ DOSSIER ADHÉRENT ACTUEL :
 - Dernière note : ${selectedCase.lastActionNote}`;
 
     try {
-      const res = await fetch('/api/ollama/chat', {
+      const data = await recoveryFetchJson<{
+        ok?: boolean;
+        reply?: string;
+        error?: string;
+      }>('/api/ollama/chat', currentUser.id, activeSiteId, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: selectedModel,
           systemPrompt,
           messages: nextHistory,
         }),
       });
-      const data = (await res.json()) as {
-        ok?: boolean;
-        reply?: string;
-        error?: string;
-      };
       if (data.ok && data.reply) {
         setChatMessages((prev) => [...prev, { role: 'assistant', content: data.reply! }]);
       } else {

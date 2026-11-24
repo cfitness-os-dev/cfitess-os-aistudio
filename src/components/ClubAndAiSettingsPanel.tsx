@@ -164,8 +164,11 @@ export function ClubAndAiSettingsPanel() {
   async function loadOllamaStatus() {
     setLoadingOllama(true);
     try {
-      const res = await fetch('/api/ollama/status');
-      const data = (await res.json()) as OllamaStatusPayload;
+      const data = await fetchAdminSiteJson<OllamaStatusPayload>(
+        '/api/ollama/status',
+        currentUser.id,
+        activeSiteId
+      );
       setOllamaStatus(data);
       setSelectedModel((prev) => prev || data.defaultModel || data.models?.[0] || 'qwen2.5:3b');
     } catch (e) {
@@ -305,16 +308,19 @@ export function ClubAndAiSettingsPanel() {
     setAiTestResult(null);
     const t0 = performance.now();
     try {
-      const res = await fetch('/api/ollama/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: selectedModel || undefined,
-          systemPrompt: 'Tu es l’assistant local C.Fitness OS. Réponds en français en une phrase courte.',
-          messages: [{ role: 'user', content: 'Confirme que tu es prêt pour aider sur les clubs Carré de Soie et Beynost.' }],
-        }),
-      });
-      const data = (await res.json()) as { ok?: boolean; reply?: string; error?: string };
+      const data = await fetchAdminSiteJson<{ ok?: boolean; reply?: string; error?: string }>(
+        '/api/ollama/chat',
+        currentUser.id,
+        activeSiteId,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            model: selectedModel || undefined,
+            systemPrompt: 'Tu es l’assistant local C.Fitness OS. Réponds en français en une phrase courte.',
+            messages: [{ role: 'user', content: 'Confirme que tu es prêt pour aider sur les clubs Carré de Soie et Beynost.' }],
+          }),
+        }
+      );
       const latencyMs = Math.round(performance.now() - t0);
       if (data.ok && data.reply) {
         setAiTestResult({ ok: true, latencyMs, text: data.reply });

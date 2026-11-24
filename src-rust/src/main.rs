@@ -38,7 +38,7 @@ mod timeclock;
 use crate::routes::{api_router, is_demo_mode, SharedAppState};
 use crate::seed::try_load_or_init_state;
 use axum::body::Body;
-use axum::http::{HeaderValue, Request};
+use axum::http::{header, HeaderName, HeaderValue, Method, Request};
 use axum::middleware::{self, Next};
 use axum::response::Response;
 use axum::Router;
@@ -69,6 +69,12 @@ async fn security_headers_middleware(req: Request<Body>, next: Next) -> Response
         HeaderValue::from_static("camera=(self), microphone=(self), geolocation=()"),
     );
     headers.insert("x-xss-protection", HeaderValue::from_static("0"));
+    headers.insert(
+        "content-security-policy",
+        HeaderValue::from_static(
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; media-src 'self' blob:; frame-src 'self'; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'",
+        ),
+    );
     res
 }
 
@@ -124,7 +130,29 @@ async fn main() {
                 CorsLayer::permissive()
             } else {
                 tracing::info!("CORS restreint aux origines autorisées ({} entrées)", origins.len());
-                CorsLayer::very_permissive().allow_origin(AllowOrigin::list(origins))
+                CorsLayer::new()
+                    .allow_origin(AllowOrigin::list(origins))
+                    .allow_methods([
+                        Method::GET,
+                        Method::POST,
+                        Method::PUT,
+                        Method::PATCH,
+                        Method::DELETE,
+                        Method::OPTIONS,
+                    ])
+                    .allow_headers([
+                        header::AUTHORIZATION,
+                        header::CONTENT_TYPE,
+                        header::ACCEPT,
+                        HeaderName::from_static("x-cfitness-actor-id"),
+                        HeaderName::from_static("x-cfitness-site-id"),
+                        HeaderName::from_static("x-terminal-id"),
+                        HeaderName::from_static("x-terminal-secret"),
+                        HeaderName::from_static("x-cfitness-heitz-token"),
+                        HeaderName::from_static("x-cfitness-webhook-token"),
+                        HeaderName::from_static("stripe-signature"),
+                    ])
+                    .allow_credentials(true)
             }
         }
         _ => {
