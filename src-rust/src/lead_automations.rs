@@ -2335,6 +2335,7 @@ mod tests {
 
         {
             let mut db = state.db.write().await;
+            db.lead_appointments.clear();
             db.lead_appointments.push(crate::models::LeadAppointmentRecord {
                 id: "slot-j1-test".into(),
                 club_id: "carre-de-soie".into(),
