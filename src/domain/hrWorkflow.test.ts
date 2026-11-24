@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   csvCell,
+  statusLabel,
   entryDay,
   HrWorkflowEditor,
   type HrWorkspace,
@@ -82,4 +83,10 @@ test("timeclock date filters follow the club day across winter and summer midnig
   assert.equal(entryDay("2026-11-22T23:30:00Z"), "2026-11-23");
   assert.equal(entryDay("2026-07-22T22:30:00Z"), "2026-07-23");
   assert.equal(entryDay("invalid"), "");
+});
+
+test("withdrawn leave is a distinct final label in manager filters and exports", () => {
+  assert.equal(statusLabel("cancelled"), "Annulée");
+  assert.notEqual(statusLabel("cancelled"), statusLabel("pending"));
+  assert.equal(statusLabel("approved"), "Validée");
 });

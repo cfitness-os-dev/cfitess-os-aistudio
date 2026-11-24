@@ -79,7 +79,7 @@ fn view(db: &AppDatabaseState, actor: &str, club_id: &str, site: &str) -> Value 
             data["employeeName"] = json!(name(db, &row.employee_id));
             data["revision"] = json!(request_revision(row));
             data["canDecide"] = json!(
-                row.employee_id != actor && allowed(db, actor, site, &row.employee_id, "ORG04-17")
+                row.status != "cancelled" && row.employee_id != actor && allowed(db, actor, site, &row.employee_id, "ORG04-17")
             );
             data
         })
@@ -163,6 +163,9 @@ pub async fn decide_request(
     if request.employee_id == actor || !allowed(&db, &actor, site, &request.employee_id, "ORG04-17")
     {
         return Err(err_resp(StatusCode::FORBIDDEN,"Vous ne pouvez pas décider de cette absence. Une autre personne habilitée doit traiter vos propres demandes."));
+    }
+    if request.status == "cancelled" {
+        return Err(err_resp(StatusCode::CONFLICT, "Cette demande a été retirée par le collaborateur. Elle ne peut plus être traitée."));
     }
     if request.status != payload.expected_status
         || request_revision(&request) != payload.expected_revision

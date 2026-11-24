@@ -12,6 +12,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
+#[path = "personal_leave_withdrawal.rs"]
+mod leave_withdrawal;
+
 // Only these action handlers can mutate the store. No client state replacement.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -652,6 +655,12 @@ pub async fn post_workspace_action(
             rows.retain(|r| r["moduleId"] != id);
             rows.push(json!({"employeeId":actor,"moduleId":id,"completed":true,"scorePct":100,"completedAt":now}));
         }
+        "cancel_leave" => {
+            if !can_request_leave(&next, &actor, site) {
+                return Err(err_resp(StatusCode::FORBIDDEN, "Votre profil ne permet pas de retirer une demande dans ce club."));
+            }
+            leave_withdrawal::apply(&mut next, &actor, site, id, action.comment.as_deref().unwrap_or(""))?;
+        }
         "request_leave" => {
             if !can_request_leave(&next, &actor, site) {
                 return Err(err_resp(
@@ -682,7 +691,7 @@ pub async fn post_workspace_action(
                     && r.start_date == start
                     && r.end_date == end
                     && r.motive == motive
-                    && r.status != "rejected"
+                    && !matches!(r.status.as_str(), "rejected" | "cancelled")
             }) {
                 return Err(err_resp(StatusCode::CONFLICT, "Cette demande existe déjà."));
             }
