@@ -13,6 +13,7 @@ import {
 import { useCfos } from '../../context/CfosContext';
 import type { ClubFilter } from '../../types/cfos';
 import type { DashboardPayload } from '../../domain/apiEngine';
+import { resolveEffectiveClubSiteId } from '../../domain/hrEmployeeDossier';
 import {
   ApiClientError,
   clientApi,
@@ -24,6 +25,7 @@ import { AdminRightsView } from '../../views/AdminRightsView';
 import { DashboardView } from '../../views/DashboardView';
 import { PlanningAndModulesView } from '../../views/PlanningAndModulesView';
 import { PreferencesView } from '../../views/PreferencesView';
+import { HrEmployeeDossierView } from './HrEmployeeDossierView';
 import { MyDayCollaboratorView } from './MyDayCollaboratorView';
 import { PersonalWorkspaceView } from './PersonalWorkspaceView';
 
@@ -43,12 +45,6 @@ export type MonCompteHubTab =
 interface MonCompteRhHubViewProps {
   subTarget?: string | null;
   planningOnly?: boolean;
-}
-
-function clubFilterToSiteId(filter: ClubFilter): string | 'all' {
-  if (filter === 'carre-de-soie') return 'club-carre-soie';
-  if (filter === 'beynost') return 'club-beynost';
-  return 'all';
 }
 
 function siteIdToClubFilter(siteId: string | 'all'): ClubFilter {
@@ -90,6 +86,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
     currentUser,
     clubFilter,
     setClubFilter,
+    authorizedClubIds,
     isTechnicalMode,
     setActiveSection: setShellSection,
   } = useCfos();
@@ -119,7 +116,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
     }
   });
   const [activeSiteId, setActiveSiteId] = useState<string | 'all'>(() =>
-    clubFilter === 'all' ? (currentUser.clubId === 'beynost' ? 'club-beynost' : 'club-carre-soie') : clubFilterToSiteId(clubFilter)
+    resolveEffectiveClubSiteId(clubFilter, authorizedClubIds, currentUser.clubId)
   );
   const [activeSection, setActiveSection] = useState<McSectionId>(initialTarget.section);
 
@@ -144,8 +141,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
     } catch {
       setBearerToken(null);
     }
-    const primarySite = currentUser.clubId === 'beynost' ? 'club-beynost' : 'club-carre-soie';
-    setActiveSiteId(clubFilter === 'all' ? primarySite : clubFilterToSiteId(clubFilter));
+    setActiveSiteId(resolveEffectiveClubSiteId(clubFilter, authorizedClubIds, currentUser.clubId));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser.id, currentUser.role, currentUser.clubId]);
 
@@ -179,6 +175,10 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
       setAmbiguities(ambRes);
       if (isStrictAdmin && dashRes.session.activeSiteId !== nextAuth.siteId) {
         setActiveSiteId(dashRes.session.activeSiteId);
+        const nextFilter = siteIdToClubFilter(dashRes.session.activeSiteId);
+        if (nextFilter !== clubFilter) {
+          setClubFilter(nextFilter);
+        }
       }
 
       if (verifySection) {
@@ -250,12 +250,12 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
 
   // Synchronisation avec le filtre club de la sidebar AdminShell
   useEffect(() => {
-    const mapped = clubFilterToSiteId(clubFilter);
+    const mapped = resolveEffectiveClubSiteId(clubFilter, authorizedClubIds, currentUser.clubId);
     if (mapped !== activeSiteId) {
       setActiveSiteId(mapped);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clubFilter]);
+  }, [clubFilter, authorizedClubIds]);
 
   function syncUrl(nextPath: string) {
     if (typeof window !== 'undefined' && window.location.pathname !== nextPath) {
@@ -312,6 +312,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
       ? `Identité serveur (${dashboard.session.employee.id}) différente de la session (${currentUser.id}). Dossier synthétique désactivé.`
       : null;
 
+  const effectiveClubId = activeSiteId === 'club-beynost' ? 'beynost' : 'carre-de-soie';
   const effectiveSitesForCanSelect = effectiveDashboard?.sites ?? dashboard?.sites ?? [];
 
   return (
@@ -598,7 +599,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
         <PlanningHrView
           personalScopeOnly={!isShellAdmin}
           scopedEmployeeId={isShellAdmin ? undefined : currentUser.id}
-          forcedClubScope={currentUser.clubId}
+          forcedClubScope={effectiveClubId}
         />
       )}
 
@@ -648,13 +649,21 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                 />
               )}
 
+              {hubTab === 'mon-compte' && activeSection === 'MC02' && effectiveDashboard && (
+                <HrEmployeeDossierView
+                  clubId={effectiveClubId}
+                  personalOnly={isPersonalSpace}
+                  onDossierMutated={() => void refreshAll()}
+                />
+              )}
+
               {hubTab === 'mon-compte' && activeSection === 'MC04' && (
                 <div className="space-y-4">
                   <PlanningHrView
                     forcedSubTab="CONGES"
                     personalScopeOnly={isPersonalSpace || !isShellAdmin}
                     scopedEmployeeId={isPersonalSpace || !isShellAdmin ? currentUser.id : undefined}
-                    forcedClubScope={currentUser.clubId}
+                    forcedClubScope={effectiveClubId}
                   />
                 </div>
               )}
@@ -665,7 +674,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                     forcedSubTab="POINTAGES"
                     personalScopeOnly={isPersonalSpace || !isShellAdmin}
                     scopedEmployeeId={isPersonalSpace || !isShellAdmin ? currentUser.id : undefined}
-                    forcedClubScope={currentUser.clubId}
+                    forcedClubScope={effectiveClubId}
                   />
                 </div>
               )}
@@ -720,6 +729,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
               {hubTab === 'mon-compte' &&
                 effectiveDashboard &&
                 activeSection !== 'MC01' &&
+                activeSection !== 'MC02' &&
                 activeSection !== 'MC04' &&
                 activeSection !== 'MC05' &&
                 activeSection !== 'MC06' &&
