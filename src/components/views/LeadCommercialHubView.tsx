@@ -1,7 +1,10 @@
+import { LeadCommunicationsHistoryView } from "./LeadCommunicationsHistoryView";
+import { LeadCampaignsView } from "./LeadCampaignsView";
+import { confirmLeadDraftNavigation } from "../../domain/leadDraftGuard";
 import { LeadMessageTemplatesView } from "./LeadMessageTemplatesView";
 import { LeadScenariosView } from "./LeadScenariosView";
 import { useLeadSettings } from '../useLeadSettings';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity as ActivityIcon,
   BarChart3,
@@ -272,9 +275,14 @@ export function LeadCommercialHubView({
 
   const [workspaceSyncError, setWorkspaceSyncError] = useState<string | null>(null);
 
+  const syncSequence = useRef(0);
+  const [sessionRevision,setSessionRevision]=useState(0);
+  useEffect(()=>{ const update=(event:Event)=>{if((event as CustomEvent).detail?.employeeId===currentUser.id)setSessionRevision(v=>v+1);}; window.addEventListener('cfos-bearer-updated',update);return()=>window.removeEventListener('cfos-bearer-updated',update);},[currentUser.id]);
   const syncLeadWorkspaceFromServer = async () => {
+    const ticket=++syncSequence.current;
     setWorkspaceSyncError(null);
     const ws = await clientApi.getLeadWorkspace({ actorId: currentUser.id, siteId: 'all' });
+    if(ticket!==syncSequence.current)return;
     setFormsList(
       (ws.forms ?? []).map((f) => ({
         id: f.id,
@@ -360,16 +368,16 @@ export function LeadCommercialHubView({
       if (!cancelled) {
         setWorkspaceSyncError(
           err instanceof Error
-            ? `Synchronisation serveur Lead échouée : ${err.message}`
+            ? 'Connexion aux données Lead interrompue. Reconnectez-vous ou réessayez.'
             : 'Synchronisation serveur Lead indisponible.'
         );
       }
     });
     return () => {
-      cancelled = true;
+      cancelled = true; syncSequence.current++;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser.id]);
+  }, [currentUser.id,sessionRevision]);
 
   // États persistants pour WhatsApp conversation (CFOS-007), Constructeur Email (CFOS-006) et Profil Club (CFOS-005)
   const [waComposerOpen, setWaComposerOpen] = useState(false);
@@ -425,9 +433,10 @@ export function LeadCommercialHubView({
   const clubProfileForm = clubProfilesByClub[selectedProfileClubId];
   const [clubProfileSavedNotice, setClubProfileSavedNotice] = useState<{ text: string; error: boolean } | null>(null);
 
-  const [activeTab, setActiveTab] = useState<LeadHubTab>(() =>
+  const [activeTab, setActiveTabState] = useState<LeadHubTab>(() =>
     subTarget === 'lead-traceability' ? 'traceability' : 'prospects'
   );
+  const setActiveTab = (tab:LeadHubTab) => { if(tab===activeTab || confirmLeadDraftNavigation(()=>setActiveTabState(tab))) setActiveTabState(tab); };
   const [simulatedRole, setSimulatedRole] = useState<LeadRole>(() =>
     mapAppRoleToLeadRole(currentUser.role)
   );
@@ -580,68 +589,6 @@ export function LeadCommercialHubView({
   }, [rdvBookings]);
   const [rdvActionMessage, setRdvActionMessage] = useState<string | null>(null);
 
-  // Tab 6 : Campagnes Email/SMS, UTM, Scénarios, Historiques (mode test sans envoi, persisté)
-  const [campaignEmailSubject, setCampaignEmailSubject] = useState('Offre Découverte C.Fitness Nov 2026');
-  const [campaignSenderName, setCampaignSenderName] = useState('Équipe C.Fitness');
-  const [campaignSegmentTarget, setCampaignSegmentTarget] = useState('Tous prospects RGPD');
-  const [campaignEmailContent, setCampaignEmailContent] = useState(
-    'Bonjour %prenom%, venez tester le Biocircuit avec un coach dédié cette semaine.'
-  );
-  const [savedCampaigns, setSavedCampaigns] = useState<
-    Array<{
-      id: string;
-      channel: 'EMAIL' | 'SMS';
-      name: string;
-      sender?: string;
-      subject?: string;
-      body?: string;
-      segmentTarget?: string;
-      recipientIds?: string[];
-      targetCount: number;
-      status: string;
-      createdAt: string;
-    }>
-  >(() => {
-    try {
-      const raw = localStorage.getItem('cfos_lead_campaigns_v1');
-      if (raw) return JSON.parse(raw);
-    } catch {
-      // ignore
-    }
-    return [];
-  });
-  useEffect(() => {
-    try {
-      localStorage.setItem('cfos_lead_campaigns_v1', JSON.stringify(savedCampaigns));
-    } catch {
-      // ignore
-    }
-  }, [savedCampaigns]);
-  const [campaignFeedback, setCampaignFeedback] = useState<string | null>(null);
-  const [commLogFilter, setCommLogFilter] = useState<string>('Tous');
-  const [commLogs, setCommLogs] = useState<
-    Array<{ id: string; channel: 'SMS' | 'EMAIL'; recipient: string; clubId: string; status: string; subjectOrPreview: string; errorReason?: string; sentAt: string }>
-  >(() => {
-    try {
-      const raw = localStorage.getItem('cfos_lead_comm_logs_v1');
-      if (raw) return JSON.parse(raw);
-    } catch {
-      // ignore
-    }
-    return [
-      { id: 'log-1', channel: 'SMS', recipient: 'Claire Dubois', clubId: 'carre-de-soie', status: 'Envoyé', subjectOrPreview: 'Rappel séance découverte 10:00', sentAt: '2026-11-18 09:30' },
-      { id: 'log-2', channel: 'SMS', recipient: 'Paul Invalide', clubId: 'beynost', status: 'Erreur', subjectOrPreview: 'Relance essai Biocircuit', errorReason: 'STOP / opt-out actif', sentAt: '2026-11-18 11:10' },
-      { id: 'log-3', channel: 'EMAIL', recipient: 'Lucas Morel', clubId: 'beynost', status: 'Envoyé', subjectOrPreview: 'Votre bilan Technogym Checkup', sentAt: '2026-11-18 14:05' },
-    ];
-  });
-  useEffect(() => {
-    try {
-      localStorage.setItem('cfos_lead_comm_logs_v1', JSON.stringify(commLogs));
-    } catch {
-      // ignore
-    }
-  }, [commLogs]);
-
   // A separate editor for each actor/club prevents stale responses and shared-cache leaks.
   const { editor: settingsEditor, state: settingsState } = useLeadSettings(currentUser.id, selectedProfileClubId);
   const crmSettings = settingsState.settings;
@@ -663,12 +610,6 @@ export function LeadCommercialHubView({
 
   // Tab 6 : Communication
   const [commSubTab, setCommSubTab] = useState<'models' | 'campaigns' | 'utm' | 'scenarios' | 'logs'>('models');
-  const [emailStep, setEmailStep] = useState<1 | 2 | 3 | 4>(1);
-
-  const [smsDraftText, setSmsDraftText] = useState(
-    'Bonjour %prenom%, C.Fitness %club% vous rappelle votre séance le %rdv-date% à %rdv-heure%. STOP au 36xxx.'
-  );
-
   // Tab 7 : Statistiques, Ventes & Formulaires
   const [analyticsSubTab, setAnalyticsSubTab] = useState<'stats' | 'sales' | 'forms'>('stats');
   const [statsPeriodId, setStatsPeriodId] = useState<string>('current_month');
@@ -838,7 +779,6 @@ export function LeadCommercialHubView({
     [waHoursInbound, waMetaApproved, waMediaAttached, waFallback, waExplicitSave]
   );
 
-  const smsMetrics = useMemo(() => computeSmsSegmentMetrics(smsDraftText), [smsDraftText]);
 
   const filteredActivities = useMemo(() => {
     const allowedClubs =
@@ -2545,7 +2485,7 @@ export function LeadCommercialHubView({
                   <button
                     key={sub.id}
                     type="button"
-                    onClick={() => setCommSubTab(sub.id as typeof commSubTab)}
+                    onClick={() => { if(sub.id===commSubTab || confirmLeadDraftNavigation(()=>setCommSubTab(sub.id as typeof commSubTab))) setCommSubTab(sub.id as typeof commSubTab); }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer border ${
                       commSubTab === sub.id
                         ? 'bg-emerald-600 text-white border-emerald-400'
@@ -2559,312 +2499,7 @@ export function LeadCommercialHubView({
 
               {commSubTab === 'models' && <LeadMessageTemplatesView key={`${currentUser.id}:${clubFilter}`} actorId={currentUser.id} clubId={clubFilter === 'all' ? null : clubFilter} />}
 
-              {commSubTab === 'campaigns' && (() => {
-                const computeCampaignTargets = (channel: 'EMAIL' | 'SMS') => {
-                  let excludedRgpd = 0;
-                  let excludedStop = 0;
-                  let excludedLost = 0;
-                  let excludedVacation = 0;
-                  let excludedSegment = 0;
-                  const eligible = authorizedProspects.filter((p) => {
-                    if (p.stage === 'Perdu') {
-                      excludedLost += 1;
-                      return false;
-                    }
-                    if (!p.rgpdConsent) {
-                      excludedRgpd += 1;
-                      return false;
-                    }
-                    if (channel === 'SMS' && p.smsStopOptOut) {
-                      excludedStop += 1;
-                      return false;
-                    }
-                    if (p.leadStatus === 'Clients en vacances' || p.segments?.includes('Vacances')) {
-                      excludedVacation += 1;
-                      return false;
-                    }
-                    if (campaignSegmentTarget === 'Relance Biocircuit') {
-                      const matchesBio =
-                        p.goal.toLowerCase().includes('biocircuit') ||
-                        p.source.toLowerCase().includes('biocircuit') ||
-                        p.stage === 'Contacté' ||
-                        p.stage === 'Séance planifiée';
-                      if (!matchesBio) {
-                        excludedSegment += 1;
-                        return false;
-                      }
-                    } else if (campaignSegmentTarget === 'VIP Carré de Soie') {
-                      if (p.clubId !== 'carre-de-soie') {
-                        excludedSegment += 1;
-                        return false;
-                      }
-                    }
-                    return true;
-                  });
-                  return {
-                    eligible,
-                    excludedRgpd,
-                    excludedStop,
-                    excludedLost,
-                    excludedVacation,
-                    excludedSegment,
-                  };
-                };
-
-                const emailTargets = computeCampaignTargets('EMAIL');
-                const smsTargets = computeCampaignTargets('SMS');
-
-                const validateEmailStepUpTo = (targetStep: 1 | 2 | 3 | 4): boolean => {
-                  if (targetStep >= 3 && (!campaignEmailSubject.trim() || !campaignSenderName.trim())) {
-                    setCampaignFeedback('Objet et expéditeur obligatoires avant de continuer.');
-                    return false;
-                  }
-                  if (targetStep >= 4 && !campaignEmailContent.trim()) {
-                    setCampaignFeedback('Contenu du message obligatoire avant le contrôle final.');
-                    return false;
-                  }
-                  setCampaignFeedback(null);
-                  return true;
-                };
-
-                return (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {/* Assistant Email 4 étapes (RSP-02 corrigé) */}
-                  <div className="cf-card p-4 space-y-3">
-                    <h3 className="text-sm font-extrabold">
-                      Assistant Campagne Email (4 étapes CM-01 · Mobile sticky RSP-02)
-                    </h3>
-                    <div className="grid grid-cols-4 gap-1 text-[11px] font-bold text-center">
-                      {(['1. Cibler', '2. Objet & Expéd.', '3. Contenu', '4. Vérifier'] as const).map((lbl, idx) => {
-                        const targetStep = (idx + 1) as 1 | 2 | 3 | 4;
-                        return (
-                        <button
-                          key={lbl}
-                          type="button"
-                          onClick={() => {
-                            if (validateEmailStepUpTo(targetStep)) {
-                              setEmailStep(targetStep);
-                            }
-                          }}
-                          className={`py-1.5 rounded-lg cursor-pointer ${
-                            emailStep === targetStep ? 'bg-violet-600 text-white' : 'bg-slate-900 text-slate-400'
-                          }`}
-                        >
-                          {lbl}
-                        </button>
-                        );
-                      })}
-                    </div>
-                    {/* Campagne Email 4 étapes — Mode test sans envoi (CFOS-006/008/021) */}
-                    {emailStep === 1 && (
-                      <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2 text-xs">
-                        <div className="font-bold text-emerald-300">
-                          Étape 1/4 : Ciblage &amp; Destinataires (Mode test sans envoi)
-                        </div>
-                        <select
-                          value={campaignSegmentTarget}
-                          onChange={(e) => setCampaignSegmentTarget(e.target.value)}
-                          className="w-full px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
-                        >
-                          <option value="Tous prospects RGPD">Tous prospects avec consentement RGPD</option>
-                          <option value="Relance Biocircuit">Segment : Relance Biocircuit</option>
-                          <option value="VIP Carré de Soie">Segment : VIP Carré de Soie</option>
-                        </select>
-                        <div className="text-[11px] cf-muted">
-                          Segment « {campaignSegmentTarget} » :{' '}
-                          <strong>{emailTargets.eligible.length} éligible(s)</strong> · Exclusions :{' '}
-                          {emailTargets.excludedRgpd} RGPD=false, {emailTargets.excludedLost} Perdu,{' '}
-                          {emailTargets.excludedVacation} Vacances, {emailTargets.excludedSegment} hors segment.
-                        </div>
-                      </div>
-                    )}
-                    {emailStep === 2 && (
-                      <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2 text-xs">
-                        <div className="font-bold text-emerald-300">Étape 2/4 : Expéditeur &amp; Objet</div>
-                        <input
-                          type="text"
-                          value={campaignSenderName}
-                          onChange={(e) => setCampaignSenderName(e.target.value)}
-                          placeholder="Nom expéditeur"
-                          className="w-full px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
-                        />
-                        <input
-                          type="text"
-                          value={campaignEmailSubject}
-                          onChange={(e) => setCampaignEmailSubject(e.target.value)}
-                          placeholder="Objet de la campagne"
-                          className="w-full px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
-                        />
-                      </div>
-                    )}
-                    {emailStep === 3 && (
-                      <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2 text-xs">
-                        <div className="font-bold text-emerald-300">Étape 3/4 : Contenu du message</div>
-                        <textarea
-                          rows={3}
-                          value={campaignEmailContent}
-                          onChange={(e) => setCampaignEmailContent(e.target.value)}
-                          className="w-full px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700"
-                        />
-                      </div>
-                    )}
-                    {emailStep === 4 && (
-                      <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2 text-xs">
-                        <div className="font-bold text-emerald-300">Étape 4/4 : Contrôle final &amp; Brouillon (sans envoi réel)</div>
-                        <div>
-                          Segment : <strong>{campaignSegmentTarget}</strong> · Expéditeur : <strong>{campaignSenderName}</strong> · Objet : <strong>{campaignEmailSubject}</strong> · Cible :{' '}
-                          <strong>{emailTargets.eligible.length}</strong> destinataire(s).
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!validateEmailStepUpTo(4)) return;
-                            const count = emailTargets.eligible.length;
-                            setSavedCampaigns((prev) => [
-                              {
-                                id: `cmp-${Date.now()}`,
-                                channel: 'EMAIL',
-                                name: campaignEmailSubject.trim(),
-                                sender: campaignSenderName.trim(),
-                                subject: campaignEmailSubject.trim(),
-                                body: campaignEmailContent,
-                                segmentTarget: campaignSegmentTarget,
-                                recipientIds: emailTargets.eligible.map((p) => p.id),
-                                targetCount: count,
-                                status: 'Brouillon test (non envoyé)',
-                                createdAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
-                              },
-                              ...prev,
-                            ]);
-                            setCampaignFeedback(
-                              `Brouillon campagne email « ${campaignEmailSubject} » enregistré (${count} destinataires, segment ${campaignSegmentTarget}, aucun envoi SMTP réel).`
-                            );
-                          }}
-                          className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-bold cursor-pointer"
-                        >
-                          Enregistrer brouillon campagne (test)
-                        </button>
-                      </div>
-                    )}
-                    {campaignFeedback && (
-                      <div className="p-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-[11px] text-emerald-300 font-semibold">
-                        {campaignFeedback}
-                      </div>
-                    )}
-                    {savedCampaigns.length > 0 && (
-                      <div className="text-[11px] space-y-1 max-h-40 overflow-y-auto">
-                        {savedCampaigns.map((c) => (
-                          <div key={c.id} className="px-2 py-1 rounded bg-slate-900/60 border border-slate-800 flex items-center justify-between gap-2">
-                            <span className="truncate">
-                              [{c.channel}] {c.name} · {c.segmentTarget ?? 'Tous'} ({c.targetCount} dest.)
-                            </span>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <span className="text-amber-300">{c.status}</span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (c.segmentTarget) setCampaignSegmentTarget(c.segmentTarget);
-                                  if (c.channel === 'EMAIL') {
-                                    if (c.sender) setCampaignSenderName(c.sender);
-                                    if (c.subject) setCampaignEmailSubject(c.subject);
-                                    if (c.body) setCampaignEmailContent(c.body);
-                                    setEmailStep(1);
-                                  } else if (c.body) {
-                                    setSmsDraftText(c.body);
-                                  }
-                                  setCampaignFeedback(`Brouillon « ${c.name} » réouvert pour édition.`);
-                                }}
-                                className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-200 border border-cyan-500/40 cursor-pointer"
-                              >
-                                Réouvrir
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <div className="flex justify-between gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setEmailStep((s) => (s > 1 ? ((s - 1) as 1 | 2 | 3 | 4) : 1))}
-                        className="px-3 py-1.5 rounded-lg bg-slate-800 text-xs font-bold cursor-pointer"
-                      >
-                        Précédent
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const next = (emailStep < 4 ? emailStep + 1 : 4) as 1 | 2 | 3 | 4;
-                          if (validateEmailStepUpTo(next)) {
-                            setEmailStep(next);
-                          }
-                        }}
-                        className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold cursor-pointer"
-                      >
-                        Suivant (visible à 390 px)
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Campagne SMS sans crash RSP-03 + calculateur SMS-01 */}
-                  <div className="cf-card p-4 space-y-3">
-                    <h3 className="text-sm font-extrabold">
-                      Campagne SMS (STOP automatique &amp; calculateur de segments)
-                    </h3>
-                    <textarea
-                      rows={3}
-                      value={smsDraftText}
-                      onChange={(e) => setSmsDraftText(e.target.value)}
-                      aria-label="Message campagne SMS"
-                      className="w-full rounded-xl bg-slate-950 border border-slate-700 p-2.5 text-xs"
-                    />
-                    <div className="text-[11px] cf-muted">
-                      Cible SMS ({campaignSegmentTarget}) : <strong>{smsTargets.eligible.length} éligible(s)</strong> · Exclusions : {smsTargets.excludedStop} STOP, {smsTargets.excludedRgpd} sans RGPD, {smsTargets.excludedVacation} Vacances, {smsTargets.excludedLost} Perdu, {smsTargets.excludedSegment} hors segment.
-                    </div>
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
-                      <span>
-                        Encodage : <strong>{smsMetrics.encoding}</strong> ({smsMetrics.charCount} car. / {smsMetrics.maxPerSms})
-                      </span>
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-bold">
-                        {smsMetrics.segmentsCount} crédit(s) × {smsTargets.eligible.length} dest. ={' '}
-                        {smsMetrics.segmentsCount * smsTargets.eligible.length} crédits (test)
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!smsDraftText.trim()) {
-                          setCampaignFeedback('Contenu SMS obligatoire.');
-                          return;
-                        }
-                        const dest = smsTargets.eligible.length;
-                        setSavedCampaigns((prev) => [
-                          {
-                            id: `cmp-sms-${Date.now()}`,
-                            channel: 'SMS',
-                            name: smsDraftText.slice(0, 42) + '…',
-                            body: smsDraftText,
-                            segmentTarget: campaignSegmentTarget,
-                            recipientIds: smsTargets.eligible.map((p) => p.id),
-                            targetCount: dest,
-                            status: 'Brouillon SMS test (non envoyé)',
-                            createdAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
-                          },
-                          ...prev,
-                        ]);
-                        setCampaignFeedback(`Brouillon SMS enregistré pour ${dest} destinataire(s) éligible(s) (hors STOP/Vacances/RGPD=false).`);
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer"
-                    >
-                      Enregistrer brouillon SMS (mode test sans envoi)
-                    </button>
-                    <div className="text-[11px] cf-muted">
-                      12 statuts ciblage : {LEAD_TARGETING_STATUSES.join(', ')} · Clients en vacances &amp; refus STOP exclus automatiquement.
-                    </div>
-                  </div>
-                </div>
-                );
-              })()}
+              {commSubTab === 'campaigns' && <LeadCampaignsView key={`${currentUser.id}:${clubFilter}`} actorId={currentUser.id} clubId={clubFilter === 'all' ? null : clubFilter} />}
 
               {commSubTab === 'utm' && (
                 <div className="cf-card p-4 space-y-3 text-xs">
@@ -2905,83 +2540,7 @@ export function LeadCommercialHubView({
                 <LeadScenariosView key={`${currentUser.id}:${clubFilter}`} actorId={currentUser.id} clubId={clubFilter === 'all' ? null : clubFilter} onActivitiesChanged={syncLeadWorkspaceFromServer} />
               )}
 
-              {commSubTab === 'logs' && (
-                <div className="cf-card p-4 space-y-3 text-xs">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <h3 className="text-sm font-extrabold">Historique SMS envoyés (`/sms`) &amp; Emails échangés (`/email`)</h3>
-                      <p className="cf-muted text-[11px]">Données consultables, filtrables et exportables en CSV.</p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {['Tous', 'Envoyé', 'Erreur'].map((st) => (
-                        <button
-                          key={st}
-                          type="button"
-                          onClick={() => setCommLogFilter(st)}
-                          className={`px-2 py-1 rounded border cursor-pointer ${
-                            commLogFilter === st ? 'bg-emerald-600 text-white border-emerald-400' : 'bg-slate-900 border-slate-700 text-slate-300'
-                          }`}
-                        >
-                          {st}
-                        </button>
-                      ))}
-                      {simulatedRole !== 'commercial' && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const rows = commLogs
-                              .filter((l) => commLogFilter === 'Tous' || l.status === commLogFilter)
-                              .map((l) => `${l.channel};${l.recipient};${l.clubId};${l.status};${l.subjectOrPreview};${l.errorReason ?? ''};${l.sentAt}`);
-                            const csv = ['CANAL;DESTINATAIRE;CLUB;STATUT;OBJET_APERCU;ERREUR;HORODATAGE', ...rows].join('\n');
-                            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = 'historique-communication-lead.csv';
-                            a.click();
-                            URL.revokeObjectURL(url);
-                          }}
-                          className="px-2.5 py-1 rounded bg-violet-600 text-white font-bold cursor-pointer inline-flex items-center gap-1"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                          Export CSV
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b border-slate-800 text-slate-400">
-                          <th className="py-1.5 pr-3">Canal</th>
-                          <th className="py-1.5 pr-3">Destinataire</th>
-                          <th className="py-1.5 pr-3">Club</th>
-                          <th className="py-1.5 pr-3">Statut</th>
-                          <th className="py-1.5 pr-3">Message / Erreur</th>
-                          <th className="py-1.5">Date</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {commLogs
-                          .filter((l) => commLogFilter === 'Tous' || l.status === commLogFilter)
-                          .map((l) => (
-                            <tr key={l.id} className="border-b border-slate-800/60">
-                              <td className="py-1.5 pr-3 font-mono font-bold">{l.channel}</td>
-                              <td className="py-1.5 pr-3">{l.recipient}</td>
-                              <td className="py-1.5 pr-3 font-mono">{l.clubId}</td>
-                              <td className="py-1.5 pr-3">{l.status}</td>
-                              <td className="py-1.5 pr-3">
-                                {l.subjectOrPreview}
-                                {l.errorReason && <span className="text-rose-400 ml-1">({l.errorReason})</span>}
-                              </td>
-                              <td className="py-1.5 font-mono text-[10px]">{l.sentAt}</td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
+              {commSubTab === 'logs' && <LeadCommunicationsHistoryView key={`${currentUser.id}:${clubFilter}`} actorId={currentUser.id} clubId={clubFilter === 'all' ? null : clubFilter} />}
             </div>
           )}
 

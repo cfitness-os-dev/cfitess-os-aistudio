@@ -1,0 +1,74 @@
+[
+  {
+    "text": "Bonjour",
+    "estimate": {
+      "encoding": "GSM-7",
+      "units": 7,
+      "segments": 1
+    }
+  },
+  {
+    "text": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "estimate": {
+      "encoding": "GSM-7",
+      "units": 160,
+      "segments": 1
+    }
+  },
+  {
+    "text": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "estimate": {
+      "encoding": "GSM-7",
+      "units": 161,
+      "segments": 2
+    }
+  },
+  {
+    "text": "€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€",
+    "estimate": {
+      "encoding": "GSM-7",
+      "units": 162,
+      "segments": 2
+    }
+  },
+  {
+    "text": "漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢",
+    "estimate": {
+      "encoding": "Unicode",
+      "units": 70,
+      "segments": 1
+    }
+  },
+  {
+    "text": "漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢漢",
+    "estimate": {
+      "encoding": "Unicode",
+      "units": 71,
+      "segments": 2
+    }
+  },
+  {
+    "text": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+    "estimate": {
+      "encoding": "Unicode",
+      "units": 70,
+      "segments": 1
+    }
+  },
+  {
+    "text": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+    "estimate": {
+      "encoding": "Unicode",
+      "units": 72,
+      "segments": 2
+    }
+  },
+  {
+    "text": "",
+    "estimate": {
+      "encoding": "GSM-7",
+      "units": 0,
+      "segments": 0
+    }
+  }
+]

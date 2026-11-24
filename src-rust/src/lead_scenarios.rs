@@ -16,13 +16,19 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
+#[path = "lead_message_window.rs"]
+mod message_window;
 type Failure = (StatusCode, Json<Value>);
+#[path = "lead_brevo.rs"]
+mod brevo;
+#[path = "lead_campaigns.rs"]
+mod campaigns;
+#[path = "lead_sms.rs"]
+mod sms;
 #[path = "lead_email_blocks.rs"]
 mod email_blocks;
 #[path = "lead_message_templates.rs"]
 mod messages;
-#[path = "lead_brevo.rs"]
-mod brevo;
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -120,6 +126,8 @@ pub struct Definition {
     pub steps: Vec<Step>,
     #[serde(default)]
     pub exit_rules: Option<ExitRules>,
+    #[serde(default)]
+    pub message_window: Option<message_window::MessageWindow>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -176,6 +184,10 @@ pub struct Enrollment {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Store {
+    #[serde(default)] pub sms_preferences: Vec<sms::Preference>,
+    #[serde(default)] pub sms_outbox: Vec<sms::PreparedSms>,
+    #[serde(default)]
+    pub campaigns: Vec<campaigns::Campaign>,
     #[serde(default)]
     pub email_outbox: Vec<brevo::PreparedEmail>,
     #[serde(default)]
@@ -192,6 +204,7 @@ pub struct Store {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandResult {
+    pub campaign_id: Option<String>,
     pub scenario_id: Option<String>,
     pub template_id: Option<String>,
 }
@@ -309,7 +322,7 @@ fn authorize(db: &AppDatabaseState, actor: &str, club: &str) -> Result<(), Failu
     if !can_manage(db, actor, club) {
         return Err(err_resp(
             StatusCode::FORBIDDEN,
-            "La gestion des scénarios est réservée aux responsables habilités de ce club.",
+            "La gestion des communications est réservée aux responsables habilités de ce club.",
         ));
     }
     Ok(())
@@ -347,6 +360,7 @@ fn sources(db: &AppDatabaseState, club: &str) -> Vec<String> {
 }
 fn validate(d: &Definition, club: &str, db: &AppDatabaseState) -> Result<(), Failure> {
     let bad = |msg: &str| err_resp(StatusCode::UNPROCESSABLE_ENTITY, msg);
+    if d.message_window.as_ref().is_some_and(|w|!message_window::valid(w)) {return Err(bad("Jours ou horaires des messages invalides. Choisissez une plage dans la même journée, en heure de France."));}
     if d.schema_version != 1 || d.club_id != club {
         return Err(bad("Version ou club du scénario invalide."));
     }
@@ -632,12 +646,16 @@ fn snapshot(db: &AppDatabaseState, club: &str, actor: &str) -> Value {
         .flat_map(|p| p.segments.clone())
         .collect();
     json!({"actorId":actor,"clubId":club,"simulationOnly":true,"simulationAvailable":is_demo_mode(),"emailDelivery":brevo::status(),
+        "smsPreferences":db.lead_scenarios.sms_preferences.iter().filter(|p|p.club_id==club).collect::<Vec<_>>(),
+        "smsOutbox":db.lead_scenarios.sms_outbox.iter().filter(|p|p.club_id==club).collect::<Vec<_>>(),
+        "campaignSchedulingAutomatic":is_demo_mode() && std::env::var("CFITNESS_CAMPAIGNS_WORKER").as_deref()!=Ok("0"),
+        "campaigns":db.lead_scenarios.campaigns.iter().filter(|c|c.club_id==club).map(|c|json!({"campaign":c,"audience":campaigns::targets(db,c)})).collect::<Vec<_>>(),
         "emailOutbox":db.lead_scenarios.email_outbox.iter().filter(|r|r.club_id==club).collect::<Vec<_>>(),
         "emailSuppressions":db.lead_scenarios.email_suppressions.iter().filter(|r|r.club_id==club).collect::<Vec<_>>(),
         "sources":sources(db,club),"statusIds":all_statuses,"segments":segments,"templates":db.lead_scenarios.templates.iter().filter(|t|t.club_id==club).collect::<Vec<_>>(),
         "scenarios":db.lead_scenarios.scenarios.iter().filter(|s|s.club_id==club).collect::<Vec<_>>(),
         "enrollments":db.lead_scenarios.enrollments.iter().filter(|e|e.club_id==club).collect::<Vec<_>>(),
-        "prospects":db.lead_prospects.iter().filter(|p|p.club_id==club).map(|p|json!({"id":p.id,"name":format!("{} {}",p.first_name,p.last_name),"status":p.stage,"source":p.source})).collect::<Vec<_>>()})
+        "prospects":db.lead_prospects.iter().filter(|p|p.club_id==club).map(|p|json!({"id":p.id,"name":format!("{} {}",p.first_name,p.last_name),"status":p.stage,"source":p.source,"phone":sms::normalize_phone(&p.phone)})).collect::<Vec<_>>()})
 }
 async fn workspace(
     State(state): State<SharedState>,
@@ -653,6 +671,51 @@ async fn workspace(
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "action", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Command {
+    SetSmsConsent {
+        #[serde(rename="prospectId")] prospect_id:String,
+        granted:bool,reason:String,
+        #[serde(rename="expectedRevision")] expected_revision:Option<u64>,
+    },
+    StopSms {#[serde(rename="prospectId")] prospect_id:String,reason:String},
+    SaveCampaign {
+        #[serde(rename = "campaignId")]
+        campaign_id: Option<String>,
+        #[serde(rename = "expectedRevision")]
+        expected_revision: Option<u64>,
+        name: String,
+        #[serde(rename = "templateId")]
+        template_id: String,
+        #[serde(rename = "statusIds")]
+        status_ids: Vec<String>,
+        #[serde(rename = "sourceIds")]
+        source_ids: Vec<String>,
+        #[serde(default,rename="segmentIds")] segment_ids:Vec<String>,
+    },
+    ScheduleCampaign {
+        #[serde(rename="campaignId")] campaign_id:String,
+        #[serde(rename="expectedRevision")] expected_revision:u64,
+        #[serde(rename="localDateTime")] local_date_time:String,
+        timezone:String,
+    },
+    CancelCampaignSchedule {
+        #[serde(rename="campaignId")] campaign_id:String,
+        #[serde(rename="expectedRevision")] expected_revision:u64,
+        #[serde(rename="scheduleId")] schedule_id:String,
+        reason:String,
+    },
+    RunCampaigns {},
+    SimulateCampaign {
+        #[serde(rename = "campaignId")]
+        campaign_id: String,
+        #[serde(rename = "expectedRevision")]
+        expected_revision: u64,
+    },
+    ArchiveCampaign {
+        #[serde(rename = "campaignId")]
+        campaign_id: String,
+        #[serde(rename = "expectedRevision")]
+        expected_revision: u64,
+    },
     SuppressEmail {
         #[serde(rename = "prospectId")]
         prospect_id: String,
@@ -804,14 +867,53 @@ fn apply(
     now: DateTime<Utc>,
 ) -> Result<(), Failure> {
     match cmd {
-        Command::SuppressEmail { prospect_id, reason } => {
-            if !is_demo_mode() { return Err(err_resp(StatusCode::CONFLICT,"Les exclusions de recette sont réservées à la démonstration.")); }
-            if reason.trim().is_empty() || reason.chars().count() > 2000 { return Err(err_resp(StatusCode::UNPROCESSABLE_ENTITY,"Indiquez le motif de l’exclusion email.")); }
-            let p=db.lead_prospects.iter().find(|p|p.id==prospect_id && p.club_id==club)
-                .ok_or_else(||err_resp(StatusCode::NOT_FOUND,"Contact introuvable dans ce club."))?;
-            if !brevo::valid_address(&p.email) { return Err(err_resp(StatusCode::UNPROCESSABLE_ENTITY,"Ce contact n’a pas d’adresse email valide.")); }
-            if !brevo::suppressed(&db.lead_scenarios.email_suppressions,club,&p.email) {
-                db.lead_scenarios.email_suppressions.push(brevo::Suppression {club_id:club.into(),email:brevo::normalized(&p.email),reason:reason.trim().into(),actor_id:actor.into(),created_at:now.to_rfc3339()});
+        Command::SetSmsConsent{prospect_id,granted,reason,expected_revision}=>sms::preference(db,club,actor,&prospect_id,granted,false,expected_revision,&reason,now)?,
+        Command::StopSms{prospect_id,reason}=>sms::preference(db,club,actor,&prospect_id,false,true,None,&reason,now)?,
+        cmd @ Command::ScheduleCampaign { .. }
+        | cmd @ Command::CancelCampaignSchedule { .. }
+        | cmd @ Command::RunCampaigns {}
+        | cmd @ Command::SaveCampaign { .. }
+        | cmd @ Command::SimulateCampaign { .. }
+        | cmd @ Command::ArchiveCampaign { .. } => campaigns::apply(db, club, actor, &cmd, now)?,
+        Command::SuppressEmail {
+            prospect_id,
+            reason,
+        } => {
+            if !is_demo_mode() {
+                return Err(err_resp(
+                    StatusCode::CONFLICT,
+                    "Les exclusions de recette sont réservées à la démonstration.",
+                ));
+            }
+            if reason.trim().is_empty() || reason.chars().count() > 2000 {
+                return Err(err_resp(
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    "Indiquez le motif de l’exclusion email.",
+                ));
+            }
+            let p = db
+                .lead_prospects
+                .iter()
+                .find(|p| p.id == prospect_id && p.club_id == club)
+                .ok_or_else(|| {
+                    err_resp(StatusCode::NOT_FOUND, "Contact introuvable dans ce club.")
+                })?;
+            if !brevo::valid_address(&p.email) {
+                return Err(err_resp(
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    "Ce contact n’a pas d’adresse email valide.",
+                ));
+            }
+            if !brevo::suppressed(&db.lead_scenarios.email_suppressions, club, &p.email) {
+                db.lead_scenarios
+                    .email_suppressions
+                    .push(brevo::Suppression {
+                        club_id: club.into(),
+                        email: brevo::normalized(&p.email),
+                        reason: reason.trim().into(),
+                        actor_id: actor.into(),
+                        created_at: now.to_rfc3339(),
+                    });
             }
         }
         Command::SaveTemplate {
@@ -1139,6 +1241,12 @@ async fn command(
     let mut next = db.clone();
     apply(&mut next, &club, &actor, cmd, Utc::now())?;
     let result = CommandResult {
+        campaign_id: next
+            .lead_scenarios
+            .campaigns
+            .iter()
+            .find(|c| !db.lead_scenarios.campaigns.iter().any(|old| old.id == c.id))
+            .map(|c| c.id.clone()),
         scenario_id: next
             .lead_scenarios
             .scenarios
@@ -1308,6 +1416,23 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
             db.lead_scenarios.enrollments[idx] = e;
             continue;
         };
+        if matches!(step.kind.as_str(),"email"|"sms"|"whatsapp") {
+            if let Some(window)=&e.definition.message_window {
+                match message_window::next_allowed(window,now) {
+                    Ok(next) if next>now=>{
+                        e.next_at=next.to_rfc3339();
+                        e.history.push(Execution{step_id:step.id.clone(),at:now.to_rfc3339(),status:"deferred".into(),detail:format!("Message reporté au {} (heure de France), selon les jours et horaires du scénario.",next.with_timezone(&chrono_tz::Europe::Paris).format("%d/%m/%Y à %H:%M")),activity_id:None,rendered_subject:None,rendered_content:None,rendered_html:None});
+                        db.lead_scenarios.enrollments[idx]=e;continue;
+                    }
+                    Err(reason)=>{
+                        e.status="stopped".into();
+                        e.history.push(Execution{step_id:step.id.clone(),at:now.to_rfc3339(),status:"stopped".into(),detail:reason,activity_id:None,rendered_subject:None,rendered_content:None,rendered_html:None});
+                        db.lead_scenarios.enrollments[idx]=e;continue;
+                    }
+                    _=>{}
+                }
+            }
+        }
         let mut result = Execution {
             step_id: step.id.clone(),
             at: now.to_rfc3339(),
@@ -1427,9 +1552,15 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
                 result.status = "skipped".into();
                 result.detail = "Aucun commercial actif affecté à ce contact dans le club.".into();
             }
-        } else if step.kind == "email" && brevo::suppressed(&db.lead_scenarios.email_suppressions,club,&p.email) {
+        } else if step.kind == "email"
+            && brevo::suppressed(&db.lead_scenarios.email_suppressions, club, &p.email)
+        {
             result.status = "skipped".into();
-            result.detail = "Email exclu : ce destinataire est dans la liste d’exclusion du club.".into();
+            result.detail =
+                "Email exclu : ce destinataire est dans la liste d’exclusion du club.".into();
+        } else if step.kind=="sms" && sms::excluded(db,club,&p.phone).is_some() {
+            result.status="skipped".into();
+            result.detail=sms::excluded(db,club,&p.phone).unwrap_or("SMS exclu").into();
         } else if !p.rgpd_consent {
             result.status = "skipped".into();
             result.detail = "Message exclu : consentement absent.".into();
@@ -1477,14 +1608,39 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
                 }
             }
         }
+        if step.kind=="sms" && result.status=="simulated" {
+            match sms::prepare(club,&format!("scenario:{}:{}:{}",e.id,e.version,step.id),&p.id,&p.phone,result.rendered_content.as_deref().unwrap_or(""),&now.to_rfc3339()) {
+                Ok(prepared)=>{if !db.lead_scenarios.sms_outbox.iter().any(|r|r.id==prepared.id){db.lead_scenarios.sms_outbox.push(prepared);}result.detail="SMS simulé et enregistré, sans fournisseur connecté ni envoi réel.".into();},
+                Err(reason)=>{result.status="skipped".into();result.detail=reason;},
+            }
+        }
         if step.kind == "email" && result.status == "simulated" {
-            match brevo::prepare(club,&e.id,&p.id,&step.id,e.version,&p.email,
-                result.rendered_subject.as_deref().unwrap_or(""),result.rendered_content.as_deref().unwrap_or(""),&now.to_rfc3339()) {
+            match brevo::prepare(
+                club,
+                &e.id,
+                &p.id,
+                &step.id,
+                e.version,
+                &p.email,
+                result.rendered_subject.as_deref().unwrap_or(""),
+                result.rendered_content.as_deref().unwrap_or(""),
+                &now.to_rfc3339(),
+            ) {
                 Ok(prepared) => {
-                    if !db.lead_scenarios.email_outbox.iter().any(|r|r.id==prepared.id) { db.lead_scenarios.email_outbox.push(prepared); }
+                    if !db
+                        .lead_scenarios
+                        .email_outbox
+                        .iter()
+                        .any(|r| r.id == prepared.id)
+                    {
+                        db.lead_scenarios.email_outbox.push(prepared);
+                    }
                     result.detail = "Email préparé pour Brevo en simulation locale ; aucun appel externe ni livraison. Coordination avec Heitz à valider.".into();
-                },
-                Err(reason) => { result.detail=format!("Simulation seulement ; préparation Brevo bloquée : {reason}"); }
+                }
+                Err(reason) => {
+                    result.detail =
+                        format!("Simulation seulement ; préparation Brevo bloquée : {reason}");
+                }
             }
         }
         e.history.push(result);
@@ -1539,7 +1695,9 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
 }
 pub fn spawn_worker(state: SharedState) {
     // Explicitly simulation-only; never run a hypothetical provider adapter in production.
-    if !is_demo_mode() || std::env::var("CFITNESS_SCENARIOS_WORKER").as_deref() == Ok("0") {
+    let scenarios_enabled=std::env::var("CFITNESS_SCENARIOS_WORKER").as_deref()!=Ok("0");
+    let campaigns_enabled=std::env::var("CFITNESS_CAMPAIGNS_WORKER").as_deref()!=Ok("0");
+    if !is_demo_mode() || !(scenarios_enabled || campaigns_enabled) {
         return;
     }
     tokio::spawn(async move {
@@ -1551,7 +1709,8 @@ pub fn spawn_worker(state: SharedState) {
             let now = Utc::now();
             let mut changed = false;
             for club in ["carre-de-soie", "beynost"] {
-                changed |= process(&mut next, club, now);
+                if scenarios_enabled {changed |= process(&mut next, club, now);}
+                if campaigns_enabled {changed |= campaigns::process_due(&mut next,club,now);}
             }
             if changed {
                 match persist_state(&state.data_dir, &next) {

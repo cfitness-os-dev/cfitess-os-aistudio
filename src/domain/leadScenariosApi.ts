@@ -12,15 +12,24 @@ export interface ScenarioEnrollment {
   history: Array<{ stepId: string; at: string; status: string; detail: string; activityId: string | null; renderedSubject?: string | null; renderedContent?: string | null; renderedHtml?: string | null }>;
 }
 export interface ScenarioWorkspace {
+  campaignSchedulingAutomatic?:boolean;
+  campaigns?: Array<{campaign: LeadCampaign; audience: {eligibleIds: string[]; excluded: Array<{prospectId:string;reason:string}>}} >;
   actorId: string; clubId: ScenarioClubId; simulationOnly: boolean; simulationAvailable: boolean;
   sources: string[]; statusIds: string[]; templates: LeadMessageTemplate[];
-  prospects: Array<{ id: string; name: string; status: string; source: string }>;
+  prospects: Array<{ id: string; name: string; status: string; source: string; phone?:string|null }>;
+  smsPreferences?: Array<{clubId:ScenarioClubId;phone:string;granted:boolean;stopped:boolean;revision:number;reason:string}>;
+  smsOutbox?: Array<{id:string;clubId:ScenarioClubId;prospectId:string;createdAt:string;phone:string;content:string;estimate:{encoding:string;units:number;segments:number};status:'simulated';providerConnected:false;stopInstructionVerified:false}>;
   scenarios: LeadScenario[]; enrollments: ScenarioEnrollment[];
-  commandResult?: { scenarioId: string | null; templateId: string | null } | null;
+  commandResult?: { scenarioId: string | null; templateId: string | null; campaignId?: string | null } | null;
   segments?: string[];
   emailDelivery?: { provider: 'brevo'; mode: 'offline_simulation'; realSendingEnabled: false; heitzCoordination: 'unverified' };
   emailOutbox?: Array<{ id: string; clubId: ScenarioClubId; prospectId: string; createdAt: string; status: 'simulated'; payload: { subject: string } }>;
   emailSuppressions?: Array<{ clubId: ScenarioClubId; email: string; reason: string; createdAt: string }>;
+}
+export interface LeadCampaign {
+  id:string;clubId:ScenarioClubId;revision:number;name:string;templateId:string;statusIds:string[];sourceIds:string[];segmentIds:string[];channel:'email'|'sms';archived:boolean;updatedAt:string;simulatedRevisions:number[];
+  schedules?:Array<{id:string;campaignRevision:number;scheduledAt:string;localDateTime:string;timezone:'Europe/Paris';status:'scheduled'|'cancelled'|'simulated'|'failed';actorId:string;createdAt:string;message:LeadMessage;finishedAt:string|null;reason:string|null;cancelledBy:string|null}>;
+  runs:Array<{revision:number;at:string;simulationOnly:true;estimatedSegments?:number;outcomes:Array<{prospectId:string;status:string;reason?:string}>}>;
 }
 export async function previewScenarioEmail(actorId: string, clubId: ScenarioClubId, message: LeadMessage, signal?: AbortSignal): Promise<string> {
   const token = sessionStorage.getItem('cfos_bearer_token');
@@ -32,6 +41,13 @@ export async function previewScenarioEmail(actorId: string, clubId: ScenarioClub
   return payload.html;
 }
 export type ScenarioCommand =
+  | {action:'schedule_campaign';campaignId:string;expectedRevision:number;localDateTime:string;timezone:'Europe/Paris'}
+  | {action:'cancel_campaign_schedule';campaignId:string;expectedRevision:number;scheduleId:string;reason:string}
+  | {action:'run_campaigns'}
+  | {action:'set_sms_consent';prospectId:string;granted:boolean;reason:string;expectedRevision:number|null}
+  | {action:'stop_sms';prospectId:string;reason:string}
+  | {action:'save_campaign';campaignId:string|null;expectedRevision:number|null;name:string;templateId:string;statusIds:string[];sourceIds:string[];segmentIds?:string[]}
+  | {action:'simulate_campaign'|'archive_campaign';campaignId:string;expectedRevision:number}
   | { action: 'suppress_email'; prospectId: string; reason: string }
   | { action: 'save_template'; templateId: string | null; expectedRevision: number | null; message: LeadMessage }
   | { action: 'archive_template'; templateId: string; expectedRevision: number }
@@ -58,9 +74,11 @@ export async function scenarioRequest(actorId: string, clubId: ScenarioClubId, c
   if (!response.ok) throw new Error(payload?.error || payload?.message || (response.status === 403 ? 'Les scénarios sont réservés aux responsables habilités de ce club.' : 'Impossible de joindre le serveur. Votre modification n’est pas confirmée.'));
   if (!payload || payload.actorId !== actorId || payload.clubId !== clubId || !Array.isArray(payload.scenarios) || !Array.isArray(payload.enrollments) || !Array.isArray(payload.templates) || !Array.isArray(payload.sources) || !Array.isArray(payload.statusIds) || !Array.isArray(payload.prospects)) throw new Error('La réponse ne correspond pas au compte ou au club choisi. Rechargez cet espace.');
   if ([...payload.scenarios, ...payload.enrollments, ...payload.templates].some(row => !row || row.clubId !== clubId)) throw new Error('Le serveur a retourné des données d’un autre club. Rechargez cet espace.');
-  for (const key of ['emailOutbox', 'emailSuppressions']) {
-    if (payload[key] !== undefined && (!Array.isArray(payload[key]) || payload[key].some((row: { clubId?: string } | null) => !row || row.clubId !== clubId))) throw new Error('Les informations email ne correspondent pas au club choisi.');
+  for (const key of ['emailOutbox', 'emailSuppressions','smsOutbox','smsPreferences']) {
+    if (payload[key] !== undefined && (!Array.isArray(payload[key]) || payload[key].some((row: { clubId?: string } | null) => !row || row.clubId !== clubId))) throw new Error('Les informations de communication ne correspondent pas au club choisi.');
   }
+  if(payload.campaigns !== undefined && (!Array.isArray(payload.campaigns) || payload.campaigns.some((row:{campaign?:{clubId?:string}}|null)=>row?.campaign?.clubId!==clubId))) throw new Error('Les campagnes ne correspondent pas au club choisi.');
+  if(command?.action==='save_campaign' && command.campaignId===null && !payload.campaigns?.some((row:{campaign:{id:string}})=>row.campaign.id===payload.commandResult?.campaignId)) throw new Error('La réponse ne permet pas d’identifier la campagne créée. Actualisez avant de recommencer.');
   if (command?.action === 'save' && command.scenarioId === null && !payload.scenarios.some((s: { id: string }) => s.id === payload.commandResult?.scenarioId)) throw new Error('La réponse ne permet pas d’identifier le scénario créé. Votre saisie est conservée ; actualisez avant de recommencer.');
   if (command?.action === 'save_template' && command.templateId === null && !payload.templates.some((t: { id: string }) => t.id === payload.commandResult?.templateId)) throw new Error('La réponse ne permet pas d’identifier le modèle créé. Votre saisie est conservée ; actualisez avant de recommencer.');
   return payload as ScenarioWorkspace;

@@ -51,3 +51,10 @@ test('all supported time units and action types can be expressed without technic
     }
   }
 });
+
+test('scenario message windows share the strict Rust contract and remain optional for old definitions', async () => {
+  const {readFileSync}=await import('node:fs');
+  const cases=JSON.parse(readFileSync(new URL('../../contracts/lead-message-window-cases.json',import.meta.url),'utf8'));
+  for (const c of cases) assert.equal(validateScenarioDefinition({...scenario(),messageWindow:c.value},catalog).ok,c.valid,c.name);
+  assert.equal(validateScenarioDefinition({...scenario(),messageWindow:null},catalog).ok,true);
+});

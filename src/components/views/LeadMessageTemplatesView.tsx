@@ -1,4 +1,5 @@
 import { EmailBlocksEditor } from './EmailBlocksEditor';
+import { useLeadDraftGuard } from '../useLeadDraftGuard';
 import { EmailDocumentPreview } from './EmailDocumentPreview';
 import { createEmailBlock, type EmailDocument } from '../../domain/leadEmailBlocks';
 import { EmailLayoutEditor, EmailLayoutPreview } from './MessageEmailLayout';
@@ -16,6 +17,7 @@ export function LeadMessageTemplatesView({ actorId, clubId }: { actorId: string;
   const [draft, setDraft] = useState<LeadMessage>(fresh);
   const [editing, setEditing] = useState(false);
   const [dirty, setDirty] = useState(false);
+  useLeadDraftGuard(dirty);
   const [busy, setBusy] = useState(false);
   const [mediaBusy,setMediaBusy]=useState(false);
   const [error, setError] = useState('');

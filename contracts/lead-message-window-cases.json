@@ -1,0 +1,163 @@
+[
+  {
+    "name": "weekdays",
+    "value": {
+      "timezone": "Europe/Paris",
+      "weekdays": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    "valid": true
+  },
+  {
+    "name": "sunday",
+    "value": {
+      "timezone": "Europe/Paris",
+      "weekdays": [
+        7
+      ],
+      "startTime": "00:00",
+      "endTime": "23:59"
+    },
+    "valid": true
+  },
+  {
+    "name": "empty days",
+    "value": {
+      "timezone": "Europe/Paris",
+      "weekdays": [],
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    "valid": false
+  },
+  {
+    "name": "duplicate",
+    "value": {
+      "timezone": "Europe/Paris",
+      "weekdays": [
+        1,
+        1
+      ],
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    "valid": false
+  },
+  {
+    "name": "unknown day",
+    "value": {
+      "timezone": "Europe/Paris",
+      "weekdays": [
+        0,
+        8
+      ],
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    "valid": false
+  },
+  {
+    "name": "fraction",
+    "value": {
+      "timezone": "Europe/Paris",
+      "weekdays": [
+        1.5
+      ],
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    "valid": false
+  },
+  {
+    "name": "string day",
+    "value": {
+      "timezone": "Europe/Paris",
+      "weekdays": [
+        "1"
+      ],
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    "valid": false
+  },
+  {
+    "name": "overnight",
+    "value": {
+      "timezone": "Europe/Paris",
+      "weekdays": [
+        1
+      ],
+      "startTime": "20:00",
+      "endTime": "08:00"
+    },
+    "valid": false
+  },
+  {
+    "name": "same minute",
+    "value": {
+      "timezone": "Europe/Paris",
+      "weekdays": [
+        1
+      ],
+      "startTime": "09:00",
+      "endTime": "09:00"
+    },
+    "valid": false
+  },
+  {
+    "name": "invalid hour",
+    "value": {
+      "timezone": "Europe/Paris",
+      "weekdays": [
+        1
+      ],
+      "startTime": "09:00",
+      "endTime": "24:00"
+    },
+    "valid": false
+  },
+  {
+    "name": "unpad hour",
+    "value": {
+      "timezone": "Europe/Paris",
+      "weekdays": [
+        1
+      ],
+      "startTime": "9:00",
+      "endTime": "18:00"
+    },
+    "valid": false
+  },
+  {
+    "name": "timezone",
+    "value": {
+      "timezone": "UTC",
+      "weekdays": [
+        1
+      ],
+      "startTime": "09:00",
+      "endTime": "18:00"
+    },
+    "valid": false
+  },
+  {
+    "name": "foreign field",
+    "value": {
+      "timezone": "Europe/Paris",
+      "weekdays": [
+        1
+      ],
+      "startTime": "09:00",
+      "endTime": "18:00",
+      "sendReal": true
+    },
+    "valid": false
+  }
+]

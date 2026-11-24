@@ -1,3 +1,5 @@
+import {LeadProspectScenariosPanel} from './LeadProspectScenariosPanel';
+import {confirmLeadDraftNavigation} from '../../domain/leadDraftGuard';
 import React, { useState } from 'react';
 import { useCfos } from '../../context/CfosContext';
 import {
@@ -203,6 +205,8 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
     });
   };
 
+  const changeView=(mode:typeof viewMode)=>{if(mode===viewMode)return;if(confirmLeadDraftNavigation(()=>setViewMode(mode)))setViewMode(mode);};
+  const changeContact=(id:string)=>{if(id===selectedHubspotProspect?.id)return;if(confirmLeadDraftNavigation(()=>setSelectedHubspotProspectId(id)))setSelectedHubspotProspectId(id);};
   const totalPipelineValueEur = Math.round(filteredProspects.length * DEAL_ANNUAL_VALUE_EUR);
 
   return (
@@ -219,7 +223,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
             {/* Sélecteur de vue */}
             <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-xs">
               <button
-                onClick={() => setViewMode('KANBAN')}
+                onClick={() => changeView('KANBAN')}
                 className={`px-3.5 py-2 rounded-lg font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
                   viewMode === 'KANBAN'
                     ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-2xs'
@@ -230,7 +234,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                 Vue Kanban
               </button>
               <button
-                onClick={() => setViewMode('HUBSPOT_360')}
+                onClick={() => changeView('HUBSPOT_360')}
                 className={`px-3.5 py-2 rounded-lg font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
                   viewMode === 'HUBSPOT_360'
                     ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-2xs'
@@ -241,7 +245,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                 Fiche Prospect Détaillée
               </button>
               <button
-                onClick={() => setViewMode('TABLE')}
+                onClick={() => changeView('TABLE')}
                 className={`px-3.5 py-2 rounded-lg font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
                   viewMode === 'TABLE'
                     ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-2xs'
@@ -554,7 +558,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
               {filteredProspects.map((p) => (
                 <button
                   key={p.id}
-                  onClick={() => setSelectedHubspotProspectId(p.id)}
+                  onClick={() => changeContact(p.id)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold shrink-0 border cursor-pointer ${
                     selectedHubspotProspect.id === p.id
                       ? 'bg-[#FF7A59] text-white border-[#FF7A59]'
@@ -565,6 +569,8 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                 </button>
               ))}
             </div>
+
+            <LeadProspectScenariosPanel key={currentUser.id+":"+selectedHubspotProspect.clubId+":"+selectedHubspotProspect.id} actorId={currentUser.id} clubId={selectedHubspotProspect.clubId} prospectId={selectedHubspotProspect.id}/>
 
             {/* HubSpot 3-Column CRM Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 text-xs">

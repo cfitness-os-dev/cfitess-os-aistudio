@@ -411,6 +411,7 @@ pub(super) fn definition() -> Definition {
         enrollment_locked: false,
         conditions: None,
         exit_rules: None,
+        message_window: None,
         steps: vec![
             Step {
                 id: "email".into(),
