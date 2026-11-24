@@ -5542,7 +5542,9 @@ export function PlanningAndModulesView({
   // MC10 — Paramètres RH par établissement (PAR01-18, EXT-PAR02-01..08)
   // =========================================================================
   const renderMc10 = () => {
-    const canEditRules = can('ORG04-29') && can('ORG04-37');
+    const canEditBadgeSettings = dashboard.session.employee.active &&
+      dashboard.session.employee.siteAccesses.some(access =>
+        access.siteId === auth.siteId && access.profileId === 'admin_systeme');
     const canCreatePos = can('ORG04-27');
     const baseSite =
       dashboard.sites.find((s) => s.id === paramSiteId) ?? dashboard.sites[0];
@@ -5692,7 +5694,7 @@ export function PlanningAndModulesView({
                           <span>Fréquence de badgeage (PAR16)</span>
                           <button
                             type="button"
-                            disabled={!canEditRules || savingTimeclock || baseSite.id !== auth.siteId}
+                            disabled={!canEditBadgeSettings || savingTimeclock || baseSite.id !== auth.siteId}
                             aria-label="Fréquence de badgeage"
                             onClick={() => void saveTimeclockSettings(baseSite.id, {
                               ...effectiveSettings,
@@ -5711,7 +5713,7 @@ export function PlanningAndModulesView({
                           <span>Badgeage de pause sur tablette (PAR16)</span>
                           <button
                             type="button"
-                            disabled={!canEditRules || savingTimeclock || baseSite.id !== auth.siteId}
+                            disabled={!canEditBadgeSettings || savingTimeclock || baseSite.id !== auth.siteId}
                             aria-label="Badgeage des pauses sur tablette"
                             aria-pressed={effectiveSettings.tabletBreakBadging}
                             onClick={() => void saveTimeclockSettings(baseSite.id, {
