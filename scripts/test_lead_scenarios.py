@@ -309,6 +309,62 @@ def main():
             assert len(response['emailSuppressions'])==1
             assert call('GET','/api/lead/scenarios/beynost',admin)[1]['emailSuppressions']==[]
             checks.append('email exclusion enforces role/club, rollback on disk failure, replay and restart before pending step')
+            # Campaigns must use canonical club data, not the old browser prototype.
+            stop(proc)
+            fixture=json.loads((folder/'cfitness_state.json').read_text())
+            canonical=next(p for p in fixture['leadProspects'] if p['id']==prospect['id'])
+            def campaign_contact(id,email,club='carre-de-soie',**fields):
+                return {**canonical,'id':id,'email':email,'clubId':club,'rgpdConsent':True,'isArchived':False,'stage':'Nouveau','leadStatus':'Nouveau','segments':[],**fields}
+            fixture['leadProspects']=[canonical,
+                campaign_contact('cmp-valid','campaign@example.test'),
+                campaign_contact('cmp-duplicate','CAMPAIGN@example.test'),
+                campaign_contact('cmp-foreign','foreign@example.test','beynost'),
+                campaign_contact('cmp-no-consent','refus@example.test',rgpdConsent=False),
+                campaign_contact('cmp-archived','archive@example.test',isArchived=True),
+                campaign_contact('cmp-invalid','invalid-address')]
+            (folder/'cfitness_state.json').write_text(json.dumps(fixture))
+            proc=start();admin=login('emp-mario','CFITNESS_TEST_ADMIN_SECRET');employee=login('emp-chloe','CFITNESS_TEST_COMMERCIAL_SECRET')
+            response=call('POST',endpoint,admin,dict(action='save_template',templateId=None,expectedRevision=None,message=dict(name='Campagne club',channel='email',subject='Bonjour %prenom%',body='Bienvenue au %club%')))[1]
+            template_id=response['commandResult']['templateId']
+            campaign=dict(action='save_campaign',campaignId=None,expectedRevision=None,name='Campagne de recette',templateId=template_id,statusIds=[],sourceIds=[])
+            assert call('POST',endpoint,employee,campaign)[0]==403
+            assert call('POST','/api/lead/scenarios/beynost',admin,campaign)[0]==404
+            operation=uuid.uuid4().hex
+            response=call('POST',endpoint,admin,campaign,operation)[1]
+            campaign_id=response['commandResult']['campaignId']
+            replay=call('POST',endpoint,admin,campaign,operation)[1]
+            assert replay['commandResult']['campaignId']==campaign_id and len(replay['campaigns'])==1
+            row=replay['campaigns'][0]
+            assert row['audience']['eligibleIds']==['cmp-valid']
+            assert 'cmp-foreign' not in json.dumps(row)
+            assert call('GET','/api/lead/scenarios/beynost',admin)[1]['campaigns']==[]
+            assert call('POST',endpoint,admin,{**campaign,'campaignId':campaign_id,'expectedRevision':99})[0]==409
+            checks.append('campaign creation is server-owned, revisioned, role/club scoped, deduplicated and excludes missing consent, archived, invalid and suppressed addresses')
+            before=call('GET',endpoint,admin)[1];before_count=len(before['emailOutbox'])
+            simulation=dict(action='simulate_campaign',campaignId=campaign_id,expectedRevision=1)
+            (folder/'cfitness_state.json.tmp').mkdir()
+            assert call('POST',endpoint,admin,simulation)[0]==500
+            after=call('GET',endpoint,admin)[1]
+            assert after['campaigns']==before['campaigns'] and len(after['emailOutbox'])==before_count
+            (folder/'cfitness_state.json.tmp').rmdir()
+            response=call('POST',endpoint,admin,simulation)[1]
+            assert len(response['emailOutbox'])==before_count+1
+            assert 'lead-campaign' in response['emailOutbox'][-1]['payload']['tags']
+            assert response['campaigns'][0]['campaign']['runs'][0]['message']['subject']=='Bonjour %prenom%'
+            stop(proc);proc=start();admin=login('emp-mario','CFITNESS_TEST_ADMIN_SECRET')
+            response=call('POST',endpoint,admin,simulation)[1]
+            assert len(response['emailOutbox'])==before_count+1
+            assert len(response['campaigns'][0]['campaign']['runs'])==1
+            checks.append('campaign simulation freezes its message, rolls back with disk failure and persists across restart without duplicate preparation even with a new operation id')
+            # Editing a campaign recalculates its audience; exclusions are checked at simulation time.
+            assert call('POST',endpoint,admin,{**campaign,'campaignId':campaign_id,'expectedRevision':1,'name':'Version suivante'})[0]==200
+            assert call('POST',endpoint,admin,dict(action='suppress_email',prospectId='cmp-valid',reason='Retrait avant nouvelle simulation'))[0]==200
+            response=call('POST',endpoint,admin,{**simulation,'expectedRevision':2})[1]
+            assert len(response['emailOutbox'])==before_count+1
+            assert len(response['campaigns'][0]['campaign']['runs'][-1]['outcomes'])==0
+            assert call('POST',endpoint,admin,dict(action='archive_campaign',campaignId=campaign_id,expectedRevision=2))[0]==200
+            assert call('POST',endpoint,admin,{**simulation,'expectedRevision':3})[0]==409
+            checks.append('updated campaign rechecks exclusions before simulation and archived campaigns cannot execute')
         finally:
             if proc.poll() is None:
                 stop(proc)

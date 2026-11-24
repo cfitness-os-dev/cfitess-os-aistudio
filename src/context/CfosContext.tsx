@@ -1,5 +1,6 @@
 import { clientApi } from '../domain/clientApi';
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { confirmLeadDraftNavigation } from '../domain/leadDraftGuard';
 import type {
   AccessEvent,
   AdminSection,
@@ -637,6 +638,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
 
   const [clubFilter, setClubFilterState] = useState<ClubFilter>(primaryAuthorizedClub);
   const setClubFilter = (filter: ClubFilter) => {
+    if(filter !== clubFilter && !confirmLeadDraftNavigation(()=>setClubFilter(filter))) return;
     if (filter !== 'all' && authorizedClubIds.includes(filter)) {
       setClubFilterState(filter);
       return;
@@ -904,6 +906,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
   }, [currentUserId, isAuthenticated, primaryAuthorizedClub]);
 
   const setActiveSection = (sec: AdminSection, subTarget?: string) => {
+    if((sec !== activeSection || (subTarget ?? null) !== navSubTarget) && !confirmLeadDraftNavigation(()=>setActiveSection(sec,subTarget))) return;
     if (sec !== 'governance') {
       setIsArchitectUnlocked(false);
     }
@@ -1043,6 +1046,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
   };
 
   const switchUserSession = async (employeeId: string, preferredShell?: ShellMode) => {
+    if(employeeId !== currentUser.id && !confirmLeadDraftNavigation(()=>{void switchUserSession(employeeId,preferredShell);})) return;
     if (!IS_DEMO_CLIENT_MODE) {
       notify('error', 'Bascule rapide de session désactivée hors mode démo.');
       return;
@@ -1081,6 +1085,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     preferredShell,
   }) => {
     const target = state.employees.find((e) => e.id === employeeId);
+    if(employeeId !== currentUser.id && !confirmLeadDraftNavigation(()=>{void loginWithLocalCredentials({employeeId,secretOrPin,preferredShell});})) return {ok:false,message:'Changement de compte annulé. Votre brouillon est conservé.'};
     if (!target) {
       return { ok: false, message: 'Profil collaborateur introuvable sur le serveur local.' };
     }
@@ -1170,6 +1175,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logoutSession = () => {
+    if(!confirmLeadDraftNavigation(logoutSession))return;
     setState((prev) => ({
       ...prev,
       auditLogs: appendAudit(prev.auditLogs, {

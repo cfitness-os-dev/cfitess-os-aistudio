@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect } from 'react';
+import { LeadDraftNavigationDialog } from './components/LeadDraftNavigationDialog';
 import { CfosProvider, useCfos } from './context/CfosContext';
 import { AdminShell } from './components/AdminShell';
 import { LocalLoginGate } from './components/LocalLoginGate';
@@ -93,6 +94,7 @@ export default function App() {
   return (
     <CfosProvider>
       <CfosRouter />
+      <LeadDraftNavigationDialog />
     </CfosProvider>
   );
 }

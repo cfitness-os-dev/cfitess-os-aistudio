@@ -17,12 +17,14 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
 type Failure = (StatusCode, Json<Value>);
+#[path = "lead_brevo.rs"]
+mod brevo;
+#[path = "lead_campaigns.rs"]
+mod campaigns;
 #[path = "lead_email_blocks.rs"]
 mod email_blocks;
 #[path = "lead_message_templates.rs"]
 mod messages;
-#[path = "lead_brevo.rs"]
-mod brevo;
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -177,6 +179,8 @@ pub struct Enrollment {
 #[serde(rename_all = "camelCase")]
 pub struct Store {
     #[serde(default)]
+    pub campaigns: Vec<campaigns::Campaign>,
+    #[serde(default)]
     pub email_outbox: Vec<brevo::PreparedEmail>,
     #[serde(default)]
     pub email_suppressions: Vec<brevo::Suppression>,
@@ -192,6 +196,7 @@ pub struct Store {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandResult {
+    pub campaign_id: Option<String>,
     pub scenario_id: Option<String>,
     pub template_id: Option<String>,
 }
@@ -632,6 +637,7 @@ fn snapshot(db: &AppDatabaseState, club: &str, actor: &str) -> Value {
         .flat_map(|p| p.segments.clone())
         .collect();
     json!({"actorId":actor,"clubId":club,"simulationOnly":true,"simulationAvailable":is_demo_mode(),"emailDelivery":brevo::status(),
+        "campaigns":db.lead_scenarios.campaigns.iter().filter(|c|c.club_id==club).map(|c|json!({"campaign":c,"audience":campaigns::targets(db,c)})).collect::<Vec<_>>(),
         "emailOutbox":db.lead_scenarios.email_outbox.iter().filter(|r|r.club_id==club).collect::<Vec<_>>(),
         "emailSuppressions":db.lead_scenarios.email_suppressions.iter().filter(|r|r.club_id==club).collect::<Vec<_>>(),
         "sources":sources(db,club),"statusIds":all_statuses,"segments":segments,"templates":db.lead_scenarios.templates.iter().filter(|t|t.club_id==club).collect::<Vec<_>>(),
@@ -653,6 +659,31 @@ async fn workspace(
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "action", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Command {
+    SaveCampaign {
+        #[serde(rename = "campaignId")]
+        campaign_id: Option<String>,
+        #[serde(rename = "expectedRevision")]
+        expected_revision: Option<u64>,
+        name: String,
+        #[serde(rename = "templateId")]
+        template_id: String,
+        #[serde(rename = "statusIds")]
+        status_ids: Vec<String>,
+        #[serde(rename = "sourceIds")]
+        source_ids: Vec<String>,
+    },
+    SimulateCampaign {
+        #[serde(rename = "campaignId")]
+        campaign_id: String,
+        #[serde(rename = "expectedRevision")]
+        expected_revision: u64,
+    },
+    ArchiveCampaign {
+        #[serde(rename = "campaignId")]
+        campaign_id: String,
+        #[serde(rename = "expectedRevision")]
+        expected_revision: u64,
+    },
     SuppressEmail {
         #[serde(rename = "prospectId")]
         prospect_id: String,
@@ -804,14 +835,48 @@ fn apply(
     now: DateTime<Utc>,
 ) -> Result<(), Failure> {
     match cmd {
-        Command::SuppressEmail { prospect_id, reason } => {
-            if !is_demo_mode() { return Err(err_resp(StatusCode::CONFLICT,"Les exclusions de recette sont réservées à la démonstration.")); }
-            if reason.trim().is_empty() || reason.chars().count() > 2000 { return Err(err_resp(StatusCode::UNPROCESSABLE_ENTITY,"Indiquez le motif de l’exclusion email.")); }
-            let p=db.lead_prospects.iter().find(|p|p.id==prospect_id && p.club_id==club)
-                .ok_or_else(||err_resp(StatusCode::NOT_FOUND,"Contact introuvable dans ce club."))?;
-            if !brevo::valid_address(&p.email) { return Err(err_resp(StatusCode::UNPROCESSABLE_ENTITY,"Ce contact n’a pas d’adresse email valide.")); }
-            if !brevo::suppressed(&db.lead_scenarios.email_suppressions,club,&p.email) {
-                db.lead_scenarios.email_suppressions.push(brevo::Suppression {club_id:club.into(),email:brevo::normalized(&p.email),reason:reason.trim().into(),actor_id:actor.into(),created_at:now.to_rfc3339()});
+        cmd @ Command::SaveCampaign { .. }
+        | cmd @ Command::SimulateCampaign { .. }
+        | cmd @ Command::ArchiveCampaign { .. } => campaigns::apply(db, club, actor, &cmd, now)?,
+        Command::SuppressEmail {
+            prospect_id,
+            reason,
+        } => {
+            if !is_demo_mode() {
+                return Err(err_resp(
+                    StatusCode::CONFLICT,
+                    "Les exclusions de recette sont réservées à la démonstration.",
+                ));
+            }
+            if reason.trim().is_empty() || reason.chars().count() > 2000 {
+                return Err(err_resp(
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    "Indiquez le motif de l’exclusion email.",
+                ));
+            }
+            let p = db
+                .lead_prospects
+                .iter()
+                .find(|p| p.id == prospect_id && p.club_id == club)
+                .ok_or_else(|| {
+                    err_resp(StatusCode::NOT_FOUND, "Contact introuvable dans ce club.")
+                })?;
+            if !brevo::valid_address(&p.email) {
+                return Err(err_resp(
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    "Ce contact n’a pas d’adresse email valide.",
+                ));
+            }
+            if !brevo::suppressed(&db.lead_scenarios.email_suppressions, club, &p.email) {
+                db.lead_scenarios
+                    .email_suppressions
+                    .push(brevo::Suppression {
+                        club_id: club.into(),
+                        email: brevo::normalized(&p.email),
+                        reason: reason.trim().into(),
+                        actor_id: actor.into(),
+                        created_at: now.to_rfc3339(),
+                    });
             }
         }
         Command::SaveTemplate {
@@ -1139,6 +1204,12 @@ async fn command(
     let mut next = db.clone();
     apply(&mut next, &club, &actor, cmd, Utc::now())?;
     let result = CommandResult {
+        campaign_id: next
+            .lead_scenarios
+            .campaigns
+            .iter()
+            .find(|c| !db.lead_scenarios.campaigns.iter().any(|old| old.id == c.id))
+            .map(|c| c.id.clone()),
         scenario_id: next
             .lead_scenarios
             .scenarios
@@ -1427,9 +1498,12 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
                 result.status = "skipped".into();
                 result.detail = "Aucun commercial actif affecté à ce contact dans le club.".into();
             }
-        } else if step.kind == "email" && brevo::suppressed(&db.lead_scenarios.email_suppressions,club,&p.email) {
+        } else if step.kind == "email"
+            && brevo::suppressed(&db.lead_scenarios.email_suppressions, club, &p.email)
+        {
             result.status = "skipped".into();
-            result.detail = "Email exclu : ce destinataire est dans la liste d’exclusion du club.".into();
+            result.detail =
+                "Email exclu : ce destinataire est dans la liste d’exclusion du club.".into();
         } else if !p.rgpd_consent {
             result.status = "skipped".into();
             result.detail = "Message exclu : consentement absent.".into();
@@ -1478,13 +1552,32 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
             }
         }
         if step.kind == "email" && result.status == "simulated" {
-            match brevo::prepare(club,&e.id,&p.id,&step.id,e.version,&p.email,
-                result.rendered_subject.as_deref().unwrap_or(""),result.rendered_content.as_deref().unwrap_or(""),&now.to_rfc3339()) {
+            match brevo::prepare(
+                club,
+                &e.id,
+                &p.id,
+                &step.id,
+                e.version,
+                &p.email,
+                result.rendered_subject.as_deref().unwrap_or(""),
+                result.rendered_content.as_deref().unwrap_or(""),
+                &now.to_rfc3339(),
+            ) {
                 Ok(prepared) => {
-                    if !db.lead_scenarios.email_outbox.iter().any(|r|r.id==prepared.id) { db.lead_scenarios.email_outbox.push(prepared); }
+                    if !db
+                        .lead_scenarios
+                        .email_outbox
+                        .iter()
+                        .any(|r| r.id == prepared.id)
+                    {
+                        db.lead_scenarios.email_outbox.push(prepared);
+                    }
                     result.detail = "Email préparé pour Brevo en simulation locale ; aucun appel externe ni livraison. Coordination avec Heitz à valider.".into();
-                },
-                Err(reason) => { result.detail=format!("Simulation seulement ; préparation Brevo bloquée : {reason}"); }
+                }
+                Err(reason) => {
+                    result.detail =
+                        format!("Simulation seulement ; préparation Brevo bloquée : {reason}");
+                }
             }
         }
         e.history.push(result);

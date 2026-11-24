@@ -1,0 +1,12 @@
+import { useEffect, useState } from 'react';
+import { scenarioRequest, type ScenarioWorkspace } from '../../domain/leadScenariosApi';
+import type { ScenarioClubId } from '../../domain/leadScenarioDefinitions';
+import {communicationsCsv} from '../../domain/leadCommunicationsReport';
+export function LeadCommunicationsHistoryView({actorId,clubId}:{actorId:string;clubId:ScenarioClubId|null}) {
+  const [workspace,setWorkspace]=useState<ScenarioWorkspace|null>(null);
+  const [error,setError]=useState('');const [search,setSearch]=useState('');
+  useEffect(()=>{setWorkspace(null);setError('');setSearch('');if(!clubId)return;const controller=new AbortController();void scenarioRequest(actorId,clubId,undefined,undefined,controller.signal).then(data=>{if(!controller.signal.aborted)setWorkspace(data);}).catch(e=>{if(!controller.signal.aborted)setError(e.message);});return()=>controller.abort();},[actorId,clubId]);
+  const rows=workspace?.emailOutbox?.filter(row=>row.payload.subject.toLocaleLowerCase('fr').includes(search.toLocaleLowerCase('fr')))??[];
+  function download(){const url=URL.createObjectURL(new Blob([communicationsCsv(rows.map(row=>({subject:row.payload.subject,createdAt:row.createdAt,clubId:row.clubId})))],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=`preparations-email-${clubId}.csv`;a.click();URL.revokeObjectURL(url);}
+  return <section className="cf-card p-4 space-y-3" aria-label="Historique des échanges"><h2 className="font-bold text-lg">Historique des échanges</h2><p>{clubId==='beynost'?'Beynost':clubId?'Carré de Soie':'Choisissez un club'}</p><p className="text-sm">Emails préparés en simulation, sans livraison réelle. Les SMS, réponses entrantes et événements Brevo ne sont pas encore raccordés à cet historique.</p>{error&&<p role="alert">{error}</p>}<label className="block">Rechercher un objet<input className="w-full rounded-lg border border-slate-500/40 bg-transparent p-3" value={search} onChange={e=>setSearch(e.target.value)}/></label><button className="rounded-lg border p-3 min-h-[44px]" disabled={!rows.length} onClick={download}>Exporter les préparations en CSV</button><ul className="space-y-2">{rows.map(row=><li key={row.id} className="rounded-lg border border-slate-500/30 p-3 break-words"><strong>{row.payload.subject}</strong><p>{new Date(row.createdAt).toLocaleString('fr-FR')} · Simulation, aucun envoi</p></li>)}</ul>{workspace&&!rows.length&&<p>Aucune préparation correspondant à cette recherche.</p>}</section>;
+}

@@ -1,4 +1,5 @@
 import { ScenarioBranchEditor } from './ScenarioBranchEditor';
+import { useLeadDraftGuard } from '../useLeadDraftGuard';
 import { useEffect, useRef, useState } from 'react';
 import { Plus, Save, ArrowUp, ArrowDown, Trash2, GitBranch, RefreshCw } from 'lucide-react';
 import { validateScenarioDefinition, type ScenarioClubId, type ScenarioDefinition, type ScenarioStep, type ScenarioStepType } from '../../domain/leadScenarioDefinitions';
@@ -20,6 +21,7 @@ export function LeadScenariosView({ actorId, clubId, onActivitiesChanged }: { ac
   const [draft, setDraft] = useState<ScenarioDefinition | null>(null);
   const [revision, setRevision] = useState<number | null>(null);
   const [dirty, setDirty] = useState(false);
+  useLeadDraftGuard(dirty);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [busy, setBusy] = useState(false);
