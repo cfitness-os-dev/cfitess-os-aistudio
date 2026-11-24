@@ -1,3 +1,5 @@
+import { confirmLeadDraftNavigation } from '../domain/leadDraftGuard';
+import { HrOrganisationSettingsPanel } from '../components/HrOrganisationSettingsPanel';
 import {
   AlertTriangle,
   Building2,
@@ -148,7 +150,20 @@ export function AdminRightsView({
   onRefreshDashboard,
 }: AdminRightsViewProps) {
   const { isTechnicalMode } = useCfos();
-  const [activeTab, setActiveTab] = useState<AdminTab>('permissions');
+  const [activeTab, setActiveTab] = useState<AdminTab>(() => {
+    const requested = new URLSearchParams(window.location.search).get('rhAdminTab');
+    return ['org_sites','permissions','delegations_security','import_csv','audit','backup'].includes(requested ?? '')
+      ? requested as AdminTab : 'permissions';
+  });
+  function navigateAdminTab(tab: AdminTab) {
+    const navigate = () => {
+      setActiveTab(tab);
+      const url = new URL(window.location.href);
+      url.searchParams.set('rhAdminTab',tab);
+      window.history.replaceState(null,'',url);
+    };
+    if (confirmLeadDraftNavigation(navigate)) navigate();
+  }
   const [statusMsg, setStatusMsg] = useState<{
     kind: 'ok' | 'err';
     text: string;
@@ -938,7 +953,7 @@ export function AdminRightsView({
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => navigateAdminTab(tab.id)}
                 className={`px-3 py-2 rounded-btn text-xs font-medium flex items-center gap-1.5 transition-all ${
                   active
                     ? 'cf-brand-gradient text-white shadow-sm'
@@ -971,7 +986,8 @@ export function AdminRightsView({
       )}
 
       {/* Onglet 1 : Matrice des 6 profils × 44 actions */}
-      {activeTab === 'permissions' && (
+      {activeTab === 'permissions' && !isTechnicalMode && <HrOrganisationSettingsPanel auth={auth} mode="profiles" onRefresh={onRefreshDashboard}/>}
+      {activeTab === 'permissions' && isTechnicalMode && (
         <div className="space-y-4">
           <div className="cf-card-secondary p-3.5 text-xs flex items-start gap-2.5">
             <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
@@ -1161,7 +1177,8 @@ export function AdminRightsView({
         <div className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Fiche ORG01 */}
-            <div className="cf-card p-5 space-y-3">
+            {!isTechnicalMode && <HrOrganisationSettingsPanel auth={auth} mode="settings" onRefresh={onRefreshDashboard}/>}
+            {isTechnicalMode && <div className="cf-card p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <h2 className="font-semibold text-sm">
                 Organisation ({isTechnicalMode ? 'ORG01 — ORG04-32 requis' : 'Société & paramètres généraux'})
@@ -1227,12 +1244,13 @@ export function AdminRightsView({
               </div>
             </div>
 
+            }
             {/* Périmètre ORG02 */}
             <div className="cf-card p-5 space-y-3">
               <h2 className="font-semibold text-sm">
-                Décision périmètre ORG02 (Abonnement & Facturation source)
+                {isTechnicalMode ? 'Décision périmètre ORG02 (Abonnement & Facturation source)' : 'Gestion de la facturation'}
               </h2>
-              <p className="text-xs cf-muted">{orgForm.billingNotice}</p>
+              <p className="text-xs cf-muted">{isTechnicalMode ? orgForm.billingNotice : "Choisissez si la facturation du fournisseur reste une référence ou si une gestion interne par club doit être préparée."}</p>
               <div className="space-y-2 pt-1">
                 <button
                   type="button"
@@ -1244,10 +1262,10 @@ export function AdminRightsView({
                   }`}
                 >
                   <div className="font-semibold">
-                    Exclure la facturation SaaS tiers (Recommandé logiciel interne)
+                    Conserver la facturation du fournisseur comme référence
                   </div>
                   <div className="cf-muted mt-0.5">
-                    Conserve ORG02 uniquement en archive de traçabilité V1.16.
+                    Cette facturation reste gérée dans le logiciel du fournisseur.
                   </div>
                 </button>
                 <button
@@ -1260,7 +1278,7 @@ export function AdminRightsView({
                   }`}
                 >
                   <div className="font-semibold">
-                    Conserver une section facturation multi-clubs CFitness
+                    Préparer une gestion interne par club
                   </div>
                   <div className="cf-muted mt-0.5">
                     Prépare une facturation interne ultérieure par établissement.
@@ -1288,8 +1306,8 @@ export function AdminRightsView({
                   <tbody className="divide-y divide-[var(--cf-border)] cf-mono">
                     <tr>
                       <td className="py-2 pr-4 font-sans">Fréquence badgeage</td>
-                      <td className="py-2 pr-4">{csSite.settings.badgeFrequency}</td>
-                      <td className="py-2">{beySite.settings.badgeFrequency}</td>
+                      <td className="py-2 pr-4">{isTechnicalMode ? csSite.settings.badgeFrequency : (csSite.settings.badgeFrequency === 'each_shift' ? 'À chaque prise de service' : 'Par série de services consécutifs')}</td>
+                      <td className="py-2">{isTechnicalMode ? beySite.settings.badgeFrequency : (beySite.settings.badgeFrequency === 'each_shift' ? 'À chaque prise de service' : 'Par série de services consécutifs')}</td>
                     </tr>
                     <tr>
                       <td className="py-2 pr-4 font-sans">Début de journée</td>
@@ -1300,11 +1318,11 @@ export function AdminRightsView({
                       <td className="py-2 pr-4 font-sans">Alerte pause / Blocage</td>
                       <td className="py-2 pr-4">
                         {csSite.settings.breakAlertHours}h (actif :{' '}
-                        {String(csSite.settings.breakAlertEnabled)})
+                        {csSite.settings.breakAlertEnabled ? 'Oui' : 'Non'})
                       </td>
                       <td className="py-2">
                         {beySite.settings.breakAlertHours}h (actif :{' '}
-                        {String(beySite.settings.breakAlertEnabled)})
+                        {beySite.settings.breakAlertEnabled ? 'Oui' : 'Non'})
                       </td>
                     </tr>
                     <tr>
@@ -1314,25 +1332,25 @@ export function AdminRightsView({
                     </tr>
                     <tr>
                       <td className="py-2 pr-4 font-sans">Disposition alertes</td>
-                      <td className="py-2 pr-4">{csSite.settings.alertsLayout}</td>
-                      <td className="py-2">{beySite.settings.alertsLayout}</td>
+                      <td className="py-2 pr-4">{isTechnicalMode ? csSite.settings.alertsLayout : (csSite.settings.alertsLayout === 'single_list' ? 'Liste unique' : 'Par catégorie')}</td>
+                      <td className="py-2">{isTechnicalMode ? beySite.settings.alertsLayout : (beySite.settings.alertsLayout === 'single_list' ? 'Liste unique' : 'Par catégorie')}</td>
                     </tr>
                     <tr>
                       <td className="py-2 pr-4 font-sans">Module Missions</td>
                       <td className="py-2 pr-4">
-                        {String(csSite.settings.missionsModuleActive)}
+                        {csSite.settings.missionsModuleActive ? 'Oui' : 'Non'}
                       </td>
                       <td className="py-2">
-                        {String(beySite.settings.missionsModuleActive)}
+                        {beySite.settings.missionsModuleActive ? 'Oui' : 'Non'}
                       </td>
                     </tr>
                     <tr>
                       <td className="py-2 pr-4 font-sans">Règles sur rapports</td>
                       <td className="py-2 pr-4">
-                        {String(csSite.settings.reportRulesVisible)}
+                        {csSite.settings.reportRulesVisible ? 'Oui' : 'Non'}
                       </td>
                       <td className="py-2">
-                        {String(beySite.settings.reportRulesVisible)}
+                        {beySite.settings.reportRulesVisible ? 'Oui' : 'Non'}
                       </td>
                     </tr>
                   </tbody>

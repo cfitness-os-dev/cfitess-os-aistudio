@@ -270,6 +270,7 @@ pub fn api_router(state: SharedState) -> Router {
             "/api/shifts/:shift_id",
             patch(patch_shift).delete(delete_shift),
         )
+        .route("/api/hr/organisation/:site_id", get(crate::hr_organisation::get).post(crate::hr_organisation::post))
         .route("/api/admin/profiles", get(get_admin_profiles))
         .route("/api/admin/profiles/:profile_id", put(put_admin_profile))
         .route(
@@ -1966,6 +1967,10 @@ async fn put_admin_profile(
     let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
     let mut db = state.db.write().await;
 
+    if !crate::hr_organisation::organisation_permission(&db, &actor_id, "ORG04-31") {
+        return Err(err_resp(StatusCode::FORBIDDEN, "Les profils sont communs aux clubs : autorisation requise sur chaque club."));
+    }
+
     if let Err(reason) = validate_delegation_update(
         &db,
         &actor_id,
@@ -2065,15 +2070,15 @@ async fn put_admin_delegations(
     headers: HeaderMap,
     Json(payload): Json<PutModuleDelegationsPayload>,
 ) -> Result<Json<Vec<crate::models::ModuleDelegation>>, (StatusCode, Json<Value>)> {
-    let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
+    let (actor_id, _site_id) = resolve_session_actor(&state, &headers).await?;
     let mut db = state.db.write().await;
 
-    let can_edit = crate::rbac::is_admin_employee(&db, &actor_id)
-        || evaluate_permission(&db, &actor_id, &site_id, "ORG04-31", None).allowed;
+    // This endpoint replaces the shared collection, including removals.
+    let can_edit = crate::hr_organisation::organisation_permission(&db,&actor_id,"ORG04-31");
     if !can_edit {
         return Err(err_resp(
             StatusCode::FORBIDDEN,
-            "Accès refusé (403) : modification des délégations réservée à l'administration.",
+            "Les délégations sont communes aux clubs : autorisation requise sur chaque club.",
         ));
     }
 
@@ -2292,41 +2297,43 @@ async fn put_organization(
     headers: HeaderMap,
     Json(patch): Json<UpdateOrganizationPayload>,
 ) -> Result<Json<Organization>, (StatusCode, Json<Value>)> {
-    let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
+    let (actor_id, _site_id) = resolve_session_actor(&state, &headers).await?;
     let mut db = state.db.write().await;
 
-    let check = evaluate_permission(&db, &actor_id, &site_id, "ORG04-32", None);
-    if !check.allowed {
-        return Err(err_resp(StatusCode::FORBIDDEN, check.reason));
+    if !crate::hr_organisation::organisation_permission(&db, &actor_id, "ORG04-32") {
+        return Err(err_resp(StatusCode::FORBIDDEN, "L’organisation est commune aux clubs : autorisation requise sur chaque club."));
     }
 
     let snapshot = db.clone();
-    let prev_name = db.organization.name.clone();
+    let mut candidate = db.organization.clone();
+    let prev_name = candidate.name.clone();
     if let Some(v) = patch.name {
-        db.organization.name = v;
+        candidate.name = v;
     }
     if let Some(v) = patch.legal_name {
-        db.organization.legal_name = v;
+        candidate.legal_name = v;
     }
     if let Some(v) = patch.siren {
-        db.organization.siren = v;
+        candidate.siren = v;
     }
     if let Some(v) = patch.vat_number {
-        db.organization.vat_number = v;
+        candidate.vat_number = v;
     }
     if let Some(v) = patch.sector {
-        db.organization.sector = v;
+        candidate.sector = v;
     }
     if let Some(v) = patch.contact_email {
-        db.organization.contact_email = v;
+        candidate.contact_email = v;
     }
     if let Some(v) = patch.meal_allowance_eur {
-        db.organization.meal_allowance_eur = v;
+        candidate.meal_allowance_eur = v;
     }
     if let Some(v) = patch.billing_notice {
-        db.organization.billing_notice = v;
+        candidate.billing_notice = v;
     }
 
+    crate::hr_organisation::validate_organization(&candidate)?;
+    db.organization = candidate;
     let updated = db.organization.clone();
     append_audit(
         &mut db,
@@ -2722,6 +2729,11 @@ async fn put_employee_site_accesses(
                 format!("Doublon d'établissement dans le payload : {}", acc.site_id),
             ));
         }
+        for ids in [&acc.team_ids,&acc.managed_team_ids,&acc.position_ids] {
+            if ids.iter().collect::<HashSet<_>>().len()!=ids.len() {
+                return Err(err_resp(StatusCode::BAD_REQUEST,"Les équipes et postes ne doivent pas être indiqués plusieurs fois."));
+            }
+        }
         if acc.is_primary {
             primary_count += 1;
         }
@@ -2805,12 +2817,7 @@ async fn put_employee_site_accesses(
     }
 
     // 2. Contrôle différentiel AVANT/APRÈS : tout club ajouté, modifié ou retiré doit être autorisé
-    let is_global_admin = actor
-        .site_accesses
-        .iter()
-        .any(|sa| sa.profile_id == "admin_systeme");
-
-    if !is_global_admin {
+    {
         let mut impacted_sites: HashSet<String> = HashSet::new();
         for old_sa in &target_emp_snapshot.site_accesses {
             let new_sa = payload
@@ -2846,6 +2853,7 @@ async fn put_employee_site_accesses(
                 .unwrap_or(true);
             if profile_added_or_changed
                 && (new_sa.profile_id == "admin_systeme" || new_sa.profile_id == "master_avance")
+                && !crate::rbac::is_owner_or_super_admin(&db,&actor_id,&new_sa.site_id)
             {
                 return Err(err_resp(
                     StatusCode::FORBIDDEN,
@@ -2855,7 +2863,7 @@ async fn put_employee_site_accesses(
         }
 
         for site_id in impacted_sites {
-            let allowed_on_club = actor
+            let allowed_on_club = crate::rbac::is_owner_or_super_admin(&db,&actor_id,&site_id) || (actor
                 .site_accesses
                 .iter()
                 .any(|sa| sa.site_id == site_id)
@@ -2871,7 +2879,7 @@ async fn put_employee_site_accesses(
                                 .map(|p| p.allowed)
                                 .unwrap_or(false)
                     })
-                    .unwrap_or(false);
+                    .unwrap_or(false));
             if !allowed_on_club {
                 return Err(err_resp(
                     StatusCode::FORBIDDEN,
@@ -2881,6 +2889,15 @@ async fn put_employee_site_accesses(
                     ),
                 ));
             }
+        }
+    }
+
+    for site in &db.sites {
+        let currently_owned = db.employees.iter().any(|e| e.active && e.site_accesses.iter().any(|a| a.site_id==site.id && a.profile_id=="admin_systeme"));
+        let remains_owned = db.employees.iter().any(|e| e.active && (if e.id==emp_id {&payload.site_accesses} else {&e.site_accesses})
+            .iter().any(|a| a.site_id==site.id && a.profile_id=="admin_systeme"));
+        if currently_owned && !remains_owned {
+            return Err(err_resp(StatusCode::CONFLICT,"Conservez au moins un propriétaire ou super administrateur actif sur chaque club."));
         }
     }
 

@@ -552,6 +552,11 @@ pub fn validate_delegation_update(
         ));
     }
 
+    if target_profile.scope_editable && next_scope_str != target_profile.scope_selected
+        && !target_profile.scope_options.iter().any(|scope|scope==next_scope_str) {
+        return Err("Ce périmètre n’est pas proposé pour ce profil.".into());
+    }
+
     let next_scope =
         Scope::from_str_strict(next_scope_str).ok_or_else(|| "Portée invalide.".to_string())?;
     let actor_scope =
@@ -579,7 +584,7 @@ pub fn validate_delegation_update(
                 action_id, target_profile.name
             ));
         }
-        if !target_row.editable_control && target_row.checked.unwrap_or(false) != want_checked {
+        if (!target_row.editable_control || target_row.disabled == Some(true)) && target_row.checked.unwrap_or(false) != want_checked {
             return Err(format!(
                 "Contrôle grisé/verrouillé pour {} sur {}.",
                 action_id, target_profile.name
