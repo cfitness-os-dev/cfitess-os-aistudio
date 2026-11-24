@@ -1,3 +1,4 @@
+import type { LeavePolicy } from './hrLeaveRules';
 import type { ClubId } from "../types/cfos";
 import { requestPersonalWorkspace } from "./personalWorkspace";
 
@@ -13,6 +14,7 @@ export interface HrRequest {
   comment: string;
   canDecide: boolean;
   revision: string;
+  policy?: LeavePolicy;
 }
 export interface HrEntry {
   id: string;
@@ -192,10 +194,10 @@ export class HrWorkflowEditor {
   cancel() {
     this.generation++;
   }
-  async load() {
+  async load(preserveRows = false) {
     if (this.state.saving) return;
     const generation = ++this.generation;
-    this.publish({ data: null, loading: true, error: "", message: "" });
+    this.publish({ ...(preserveRows ? {} : {data:null}), loading: true, error: "", message: "" });
     try {
       const data = await this.transport();
       if (this.generation === generation)
@@ -203,6 +205,7 @@ export class HrWorkflowEditor {
     } catch (error) {
       if (this.generation === generation)
         this.publish({
+          data: null,
           loading: false,
           error:
             error instanceof Error ? error.message : "Chargement impossible.",

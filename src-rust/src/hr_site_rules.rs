@@ -102,7 +102,7 @@ pub(crate) fn default_motives_for_site(site_id: &str) -> Vec<SiteAbsenceMotiveCo
         .collect()
 }
 
-fn effective_motives(db: &AppDatabaseState, site_id: &str) -> Vec<SiteAbsenceMotiveConfig> {
+pub(crate) fn effective_motives(db: &AppDatabaseState, site_id: &str) -> Vec<SiteAbsenceMotiveConfig> {
     let stored: Vec<SiteAbsenceMotiveConfig> = db
         .site_absence_motives
         .iter()

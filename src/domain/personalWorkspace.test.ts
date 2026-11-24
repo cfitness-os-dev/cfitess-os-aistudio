@@ -20,6 +20,7 @@ const payload = {
   timeEntries: [],
   leaves: [],
   shifts: [],
+  requestMotives: [],
 };
 test("personal workspace rejects another actor or club before rendering", () => {
   assert.throws(() =>

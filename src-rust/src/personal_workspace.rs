@@ -35,6 +35,11 @@ pub struct Action {
     pub completed: Option<bool>,
     pub selected_option: Option<usize>,
     pub motive: Option<String>,
+    pub motive_id: Option<String>,
+    pub document_ids: Option<Vec<String>>,
+    pub expected_revision: Option<String>,
+    pub start_period: Option<String>,
+    pub end_period: Option<String>,
     pub start_date: Option<String>,
     pub end_date: Option<String>,
     pub comment: Option<String>,
@@ -164,7 +169,11 @@ fn view(db: &AppDatabaseState, actor: &str, club_id: &str, site: &str) -> Value 
         "documents":items(&data,"documents"),"training":training,"progress":items(&data,"progress"),
         "timeEntries":scoped_rows(&data,"timeEntries",club_id),"punchAvailability":availability,"clockingPolicy":{"personalAllowed":policy.personal_allowed,"terminalAllowed":policy.terminal_allowed,"terminalReady":false},"checklists":checklist(db,club_id),
         "shifts":db.shifts.iter().filter(|row|row.employee_id.as_deref()==Some(actor) && row.site_id==site && row.published).collect::<Vec<_>>(),
-        "leaves":db.leave_requests.iter().filter(|row|row.employee_id==actor && row.site_id==site).collect::<Vec<_>>()
+        "requestMotives":crate::hr_leave_policy::motives(db,site).into_iter().filter(|m|m.active&&m.employee_requestable).collect::<Vec<_>>(),
+        "leaves":db.leave_requests.iter().filter(|row|row.employee_id==actor && row.site_id==site).map(|row|{
+            let mut value=serde_json::to_value(row).unwrap();
+            value["policy"]=crate::hr_leave_policy::request_view(db,actor,row);value
+        }).collect::<Vec<_>>()
     })
 }
 
@@ -661,6 +670,10 @@ pub async fn post_workspace_action(
             }
             leave_withdrawal::apply(&mut next, &actor, site, id, action.comment.as_deref().unwrap_or(""))?;
         }
+        "attach_leave_documents" => {
+            if !can_request_leave(&next,&actor,site) {return Err(err_resp(StatusCode::FORBIDDEN,"Votre profil ne permet pas de joindre des justificatifs dans ce club."));}
+            crate::hr_leave_policy::attach_documents(&mut next,&actor,site,id,action.document_ids.as_deref().unwrap_or(&[]),action.expected_revision.as_deref().unwrap_or(""))?;
+        }
         "request_leave" => {
             if !can_request_leave(&next, &actor, site) {
                 return Err(err_resp(
@@ -678,28 +691,19 @@ pub async fn post_workspace_action(
                 return Err(bad("La période d’absence est invalide."));
             }
             let motive = action.motive.as_deref().unwrap_or("");
-            if !["CP", "RTT", "Maladie", "Formation CFA"].contains(&motive) {
-                return Err(bad("Type d’absence invalide."));
-            }
+            let details=crate::hr_leave_policy::prepare_request(&next,&actor,site,action.motive_id.as_deref(),motive,action.document_ids.as_deref().unwrap_or(&[]),start,end,action.start_period.as_deref().unwrap_or("am"),action.end_period.as_deref().unwrap_or("pm"))?;
+            let display_motive=if action.motive_id.is_some(){details.motive_label_at_request.clone()}else{motive.to_string()};
             let comment = action.comment.unwrap_or_default();
             if comment.chars().count() > 1000 {
                 return Err(bad("Commentaire trop long."));
             }
-            if next.leave_requests.iter().any(|r| {
-                r.employee_id == actor
-                    && r.site_id == site
-                    && r.start_date == start
-                    && r.end_date == end
-                    && r.motive == motive
-                    && !matches!(r.status.as_str(), "rejected" | "cancelled")
-            }) {
-                return Err(err_resp(StatusCode::CONFLICT, "Cette demande existe déjà."));
-            }
+            let request_id=row_id();
+            next.leave_policy.requests.insert(request_id.clone(),details);
             next.leave_requests.push(LeaveRequest {
-                id: row_id(),
+                id: request_id,
                 employee_id: actor.clone(),
                 site_id: site.into(),
-                motive: motive.into(),
+                motive: display_motive,
                 start_date: start.into(),
                 end_date: end.into(),
                 status: "pending".into(),

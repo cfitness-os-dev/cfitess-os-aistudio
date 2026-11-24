@@ -77,7 +77,8 @@ fn view(db: &AppDatabaseState, actor: &str, club_id: &str, site: &str) -> Value 
         .map(|row| {
             let mut data = serde_json::to_value(row).unwrap();
             data["employeeName"] = json!(name(db, &row.employee_id));
-            data["revision"] = json!(request_revision(row));
+            data["revision"] = json!(crate::hr_leave_policy::revision(db,row));
+            data["policy"] = crate::hr_leave_policy::request_view(db,actor,row);
             data["canDecide"] = json!(
                 row.status != "cancelled" && row.employee_id != actor && allowed(db, actor, site, &row.employee_id, "ORG04-17")
             );
@@ -168,7 +169,7 @@ pub async fn decide_request(
         return Err(err_resp(StatusCode::CONFLICT, "Cette demande a été retirée par le collaborateur. Elle ne peut plus être traitée."));
     }
     if request.status != payload.expected_status
-        || request_revision(&request) != payload.expected_revision
+        || crate::hr_leave_policy::revision(&db,&request) != payload.expected_revision
     {
         return Err(err_resp(
             StatusCode::CONFLICT,
@@ -183,6 +184,7 @@ pub async fn decide_request(
             "Changement de statut invalide.",
         ));
     }
+    crate::hr_leave_policy::guard_legacy_decision(&db,&actor,&request,&payload.status)?;
     let note = payload.note.trim();
     if note.chars().count() > 1000 || (payload.status != "approved" && note.is_empty()) {
         return Err(err_resp(StatusCode::BAD_REQUEST,"Un motif est obligatoire pour un refus ou une remise en attente (1000 caractères maximum)."));

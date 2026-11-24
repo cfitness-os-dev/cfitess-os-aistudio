@@ -1,3 +1,4 @@
+#[cfg(test)]
 use crate::hr_manager::request_revision;
 use crate::models::LeaveRequest;
 use crate::rbac::{evaluate_permission, PermissionTarget};
@@ -136,7 +137,7 @@ pub async fn patch_leave_request_decision(
     }
 
     if let Some(exp_rev) = &payload.expected_revision {
-        if request_revision(&target) != *exp_rev {
+        if crate::hr_leave_policy::revision(&db,&target) != *exp_rev {
             return Err(err_resp(
                 StatusCode::CONFLICT,
                 "La demande a été modifiée entre-temps (révision obsolète). Actualisez avant de décider.",
@@ -151,6 +152,11 @@ pub async fn patch_leave_request_decision(
         ));
     }
 
+    if next_status=="approved" && payload.expected_revision.is_none()
+        && crate::hr_leave_policy::request_view(&db,&actor_id,&target)["requiresDocument"]==true {
+        return Err(err_resp(StatusCode::CONFLICT,"Actualisez et vérifiez les justificatifs avant de valider."));
+    }
+    crate::hr_leave_policy::guard_legacy_decision(&db,&actor_id,&target,next_status)?;
     let mut next = db.clone();
     let old_status = next.leave_requests[idx].status.clone();
     next.leave_requests[idx].status = next_status.into();

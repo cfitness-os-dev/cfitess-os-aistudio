@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useCfos } from "../../context/CfosContext";
 import { ClockPolicyPanel } from "./ClockPolicyPanel";
 import { TerminalsManagementPanel } from "./TerminalsManagementPanel";
+import { LeaveDecisionPanel, LeavePolicySummary } from './LeaveDecisionPanel';
+import { confirmLeadDraftNavigation } from '../../domain/leadDraftGuard';
+import { useLeadDraftGuard } from '../useLeadDraftGuard';
 import type { ClubId } from "../../types/cfos";
 import {
   csvCell,
@@ -61,6 +64,12 @@ function Workflow({
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [draftEpoch,setDraftEpoch]=useState(0);
+  useLeadDraftGuard(Object.values(notes).some(note=>!!note.trim()));
+  const changeFilter=(change:()=>void)=>{
+    const apply=()=>{setDraftEpoch(value=>value+1);setNotes({});change();};
+    if(confirmLeadDraftNavigation(apply))apply();
+  };
   const requestRows = (state.data?.requests ?? []).filter(
     (row) =>
       row.employeeName
@@ -91,7 +100,12 @@ function Workflow({
               "Type",
               "Début",
               "Fin",
+              "Début de journée",
+              "Fin de journée",
               "Statut",
+              "CP période en cours décomptés",
+              "Reliquat décompté",
+              "RTT décomptés",
               "Commentaire",
             ],
             ...requestRows.map((row) => [
@@ -100,7 +114,12 @@ function Workflow({
               row.motive,
               row.startDate,
               row.endDate,
+              row.policy?.startPeriod==='pm'?'Après-midi':'Matin',
+              row.policy?.endPeriod==='am'?'Fin de matinée':'Fin de journée',
               statusLabel(row.status),
+              row.policy?.activeSettlement?.allocations.cpN??'',
+              row.policy?.activeSettlement?.allocations.cpNMinus1??'',
+              row.policy?.activeSettlement?.allocations.rtt??'',
               row.comment,
             ]),
           ]
@@ -176,7 +195,7 @@ function Workflow({
           <button
             className={button}
             disabled={state.loading || state.saving}
-            onClick={() => void editor.load()}
+            onClick={() => { const refresh=()=>void editor.load(); if(confirmLeadDraftNavigation(refresh))refresh(); }}
           >
             Actualiser les données RH
           </button>
@@ -203,7 +222,7 @@ function Workflow({
         </div>
         <p className="cf-muted text-sm">
           {tab === "requests"
-            ? "Les décisions mettent à jour la demande d’origine. Elles ne débitent pas automatiquement les compteurs de congés."
+            ? "Les décisions mettent à jour la demande d’origine. Pour les motifs associés à un compteur, confirmez les jours à décompter ; toute reprise compense le mouvement enregistré."
             : "Les horaires d’origine restent conservés. Une annotation ne corrige pas automatiquement un horaire ni la paie."}
         </p>
       </header>
@@ -213,7 +232,7 @@ function Workflow({
           <input
             className={input}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {const value=e.target.value;changeFilter(()=>setQuery(value));}}
           />
         </label>
         {tab === "requests" && (
@@ -222,7 +241,7 @@ function Workflow({
             <select
               className={input}
               value={status}
-              onChange={(e) => setStatus(e.target.value)}
+              onChange={(e) => {const value=e.target.value;changeFilter(()=>setStatus(value));}}
             >
               {["all", "En attente", "Validée", "Refusée", "Annulée"].map((value) => (
                 <option key={value} value={value}>
@@ -238,7 +257,7 @@ function Workflow({
             type="date"
             className={input}
             value={start}
-            onChange={(e) => setStart(e.target.value)}
+            onChange={(e) => {const value=e.target.value;changeFilter(()=>setStart(value));}}
           />
         </label>
         <label>
@@ -248,7 +267,7 @@ function Workflow({
             className={input}
             min={start}
             value={end}
-            onChange={(e) => setEnd(e.target.value)}
+            onChange={(e) => {const value=e.target.value;changeFilter(()=>setEnd(value));}}
           />
         </label>
       </div>
@@ -271,7 +290,7 @@ function Workflow({
           </p>
           {tab === "requests"
             ? requestRows.map((row) => (
-                <article className="cf-card p-4 space-y-3" key={row.id}>
+                <article className="cf-card p-4 space-y-3" key={`${row.id}:${draftEpoch}`}>
                   <h3 className="font-bold">
                     {row.employeeName} · {row.motive}
                   </h3>
@@ -281,7 +300,8 @@ function Workflow({
                   <p className="whitespace-pre-wrap break-words">
                     {row.comment}
                   </p>
-                  {row.canDecide ? (
+                  {row.policy && <LeavePolicySummary policy={row.policy} />}
+                  {row.canDecide && row.policy && (row.policy.counterFamily !== 'none' || row.policy.hasActiveSettlement) ? <LeaveDecisionPanel row={row} actorId={actorId} club={club} locked={state.loading||state.saving} onChanged={()=>editor.load(true)} onSimpleDecision={(status,note)=>editor.save({kind:'request',id:row.id,status,expectedStatus:row.status,expectedRevision:row.revision,note})} /> : row.canDecide ? (
                     <div className="space-y-2">
                       <label className="block">
                         Motif pour {row.employeeName}
@@ -310,7 +330,8 @@ function Workflow({
                               key={next}
                               className={button}
                               disabled={
-                                state.saving ||
+                                state.saving || state.loading ||
+                                (next === 'approved' && (row.policy?.missingDocument || row.policy?.active===false || (!!row.policy?.requiresDocument && !row.policy.canViewDocuments))) ||
                                 (next !== "approved" && !notes[row.id]?.trim())
                               }
                               onClick={async () => {

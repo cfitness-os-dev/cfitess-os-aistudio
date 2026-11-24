@@ -277,6 +277,8 @@ pub fn api_router(state: SharedState) -> Router {
         .route("/api/hr/organisation/:site_id", get(crate::hr_organisation::get).post(crate::hr_organisation::post))
         .route("/api/hr/pilotage/:club_id", get(crate::hr_pilotage::get).post(crate::hr_pilotage::post))
         .route("/api/hr/site-rules/:club_id", get(crate::hr_site_rules::get).post(crate::hr_site_rules::post))
+        .route("/api/hr/leave-rules/:club_id", get(crate::hr_leave_policy::get_settings).put(crate::hr_leave_policy::put_settings))
+        .route("/api/hr/leave-rules/:club_id/requests/:request_id/settle", post(crate::hr_leave_policy::settle))
         .route("/api/admin/profiles", get(get_admin_profiles))
         .route("/api/admin/profiles/:profile_id", put(put_admin_profile))
         .route(

@@ -717,6 +717,7 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
     AppDatabaseState {
         lead_scenarios: Default::default(),
         employee_counter_history: vec![],
+        leave_policy: crate::hr_leave_policy::Store::default(),
         site_absence_motives: vec![],
         site_staffing_needs: vec![],
         version: "0.2.0-lot2-fictif".into(),
@@ -2026,6 +2027,7 @@ pub fn create_production_initial_state() -> AppDatabaseState {
     AppDatabaseState {
         lead_scenarios: Default::default(),
         employee_counter_history: vec![],
+        leave_policy: crate::hr_leave_policy::Store::default(),
         site_absence_motives: vec![],
         site_staffing_needs: vec![],
         version: "1.0.0-production".into(),
