@@ -106,7 +106,7 @@ async fn actor(state: &SharedState, headers: &HeaderMap) -> Result<String, Failu
 pub(crate) fn motives(db: &AppDatabaseState, site: &str) -> Vec<SiteAbsenceMotiveConfig> {
     crate::hr_site_rules::effective_motives(db, site)
 }
-fn resolve_motive(db: &AppDatabaseState, row: &LeaveRequest) -> Option<SiteAbsenceMotiveConfig> {
+pub(crate) fn resolve_motive(db: &AppDatabaseState, row: &LeaveRequest) -> Option<SiteAbsenceMotiveConfig> {
     if let Some(details) = db.leave_policy.requests.get(&row.id) {
         return motives(db, &row.site_id)
             .into_iter()

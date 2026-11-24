@@ -10,6 +10,7 @@ export interface AccrualPolicy {
     carryLimit: number | null;
     priorCarryMode: 'keep' | 'expire';
     reference: string;
+    absenceAcquisition?: Record<string, boolean | null>;
 }
 export interface AccrualSnapshot {
     actorId: string;
@@ -17,6 +18,7 @@ export interface AccrualSnapshot {
     revision: string;
     canEdit: boolean;
     policy: AccrualPolicy;
+    motives: Array<{ id: string; label: string; active: boolean }>;
     employees: Array<{
         id: string;
         name: string;
@@ -62,9 +64,13 @@ export interface AccrualPreview {
         expired: number;
         baselineRequired: boolean;
         absenceReviewRequired: boolean;
+        absenceCount: number;
+        unverifiedAbsenceCount: number;
     };
 }
 export function validateAccrualPolicy(p: AccrualPolicy): string | null {
+    if (p.absenceAcquisition !== undefined && (!p.absenceAcquisition || typeof p.absenceAcquisition !== 'object' || Array.isArray(p.absenceAcquisition) || Object.keys(p.absenceAcquisition).length > 1000 || Object.values(p.absenceAcquisition).some(v => v !== null && typeof v !== 'boolean')))
+        return 'Effet des motifs sur l’acquisition invalide.';
     if (typeof p.enabled !== 'boolean' || typeof p.reference !== 'string')
         return 'Règles d’acquisition incomplètes.';
     if (!['unconfigured', 'ouvrables', 'ouvres', 'calendaires'].includes(p.unit) || !['nearest', 'up', 'down'].includes(p.rounding) || !['keep_all', 'limit', 'none'].includes(p.carryMode) || !['keep', 'expire'].includes(p.priorCarryMode))
@@ -91,14 +97,14 @@ function counterValid(v: unknown): v is EmployeeCounter {
 export function validateAccrualSnapshot(value: unknown, actorId: string, club: ClubId): AccrualSnapshot {
     const v = value as AccrualSnapshot;
     const site = club === 'beynost' ? 'club-beynost' : 'club-carre-soie';
-    if (!v || v.actorId !== actorId || v.siteId !== site || typeof v.revision !== 'string' || !/^[a-f0-9]{64}$/.test(v.revision) || typeof v.canEdit !== 'boolean' || !v.policy || validateAccrualPolicy(v.policy) || !Array.isArray(v.employees) || !Array.isArray(v.history) || !v.employees.every(e => typeof e.id === 'string' && typeof e.name === 'string' && typeof e.primary === 'boolean' && counterValid(e.counter)))
+    if (!v || v.actorId !== actorId || v.siteId !== site || typeof v.revision !== 'string' || !/^[a-f0-9]{64}$/.test(v.revision) || typeof v.canEdit !== 'boolean' || !v.policy || validateAccrualPolicy(v.policy) || !Array.isArray(v.motives) || !v.motives.every(m => typeof m.id === 'string' && typeof m.label === 'string' && typeof m.active === 'boolean') || Object.keys(v.policy.absenceAcquisition ?? {}).some(id => !v.motives.some(m => m.id === id)) || !Array.isArray(v.employees) || !Array.isArray(v.history) || !v.employees.every(e => typeof e.id === 'string' && typeof e.name === 'string' && typeof e.primary === 'boolean' && counterValid(e.counter)))
         throw new Error('Les règles ou les droits reçus ne correspondent pas à ce compte et à ce club.');
     return v;
 }
 export function validateAccrualPreview(value: unknown, request: AccrualRequest, club: ClubId): AccrualPreview {
     const v = value as AccrualPreview;
     const p = v?.plan;
-    if (!v || typeof v.revision !== 'string' || !/^[a-f0-9]{64}$/.test(v.revision) || !p || p.employeeId !== request.employeeId || p.kind !== request.kind || p.month !== request.month || p.siteId !== (club === 'beynost' ? 'club-beynost' : 'club-carre-soie') || !counterValid(p.before) || !counterValid(p.after) || typeof p.baselineRequired !== 'boolean' || typeof p.absenceReviewRequired !== 'boolean' || ![p.amount, p.carried, p.expired].every(n => typeof n === 'number' && Number.isFinite(n) && n >= 0))
+    if (!v || typeof v.revision !== 'string' || !/^[a-f0-9]{64}$/.test(v.revision) || !p || p.employeeId !== request.employeeId || p.kind !== request.kind || p.month !== request.month || p.siteId !== (club === 'beynost' ? 'club-beynost' : 'club-carre-soie') || !counterValid(p.before) || !counterValid(p.after) || typeof p.baselineRequired !== 'boolean' || typeof p.absenceReviewRequired !== 'boolean' || !Number.isInteger(p.absenceCount) || p.absenceCount < 0 || !Number.isInteger(p.unverifiedAbsenceCount) || p.unverifiedAbsenceCount < 0 || p.unverifiedAbsenceCount > p.absenceCount || (p.absenceReviewRequired !== (p.absenceCount > 0)) || ![p.amount, p.carried, p.expired].every(n => typeof n === 'number' && Number.isFinite(n) && n >= 0))
         throw new Error('L’aperçu reçu ne correspond pas à l’opération demandée.');
     return v;
 }

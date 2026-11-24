@@ -112,6 +112,11 @@ export function HrLeaveAccrualPanel({ actorId, club }: {
             <label>Reliquat déjà présent<select className={input} value={draft.priorCarryMode} onChange={e => change({ priorCarryMode: e.target.value as AccrualPolicy['priorCarryMode'] })}><option value="keep">Le conserver et ajouter le nouveau report</option><option value="expire">Ne pas le conserver lors de la clôture</option></select></label>
           </div>
           <label className="block">Référence des règles vérifiées<textarea className={input} maxLength={1000} value={draft.reference} onChange={e => change({ reference: e.target.value })}/></label>
+          <details className="cf-card-secondary p-3 rounded-xl">
+            <summary className="cursor-pointer min-h-[44px]">Effet des motifs d’absence sur l’acquisition</summary>
+            <p className="text-sm cf-muted mb-3">Ce réglage est indépendant de l’annualisation et du compteur débité. « Permet » ne garantit pas le taux d’un mois sans absence : vérifiez les taux particuliers et plafonds. « Ne permet pas » bloque le crédit complet ; un prorata doit alors être examiné. Un motif non vérifié ne vaut jamais « Oui ».</p>
+            <div className="space-y-3">{data.motives.map(m => <label key={m.id} className="grid sm:grid-cols-2 gap-2 items-center"><span>{m.label}{m.active ? '' : ' · désactivé'}</span><select className={input} aria-label={`Acquisition pendant ${m.label}`} value={draft.absenceAcquisition?.[m.id] === true ? 'yes' : draft.absenceAcquisition?.[m.id] === false ? 'no' : 'review'} onChange={e => change({ absenceAcquisition: { ...draft.absenceAcquisition, [m.id]: e.target.value === 'review' ? null : e.target.value === 'yes' } })}><option value="review">À vérifier</option><option value="yes">Permet l’acquisition</option><option value="no">Ne permet pas l’acquisition</option></select></label>)}</div>
+          </details>
           <p className="text-sm cf-muted">Les décimales sont conservées entre les mois, puis arrondies sur le cumul. Les mois incomplets de contrat restent à traiter après vérification du prorata. Une acquisition ne calcule pas les effets légaux des absences.</p>
           <button className={button} disabled={busy || !dirty || !!validateAccrualPolicy(draft)}>Enregistrer les règles d’acquisition</button>
           {dirty && <button type="button" className="cf-card-secondary min-h-[44px] px-3 rounded-xl ml-2" onClick={() => { setDraft(data.policy); clearPreview(); }}>Annuler mes changements de règles</button>}
@@ -133,6 +138,7 @@ export function HrLeaveAccrualPanel({ actorId, club }: {
             }}>
         <h4 className="font-bold">Préparer une opération</h4>
         <p className="text-sm cf-muted">Utilisez le club principal du salarié. Son compteur est commun à ses clubs et une acquisition ne peut être enregistrée qu’une fois pour le même mois.</p>
+        <p className="text-sm cf-muted">Les montants prévisionnels d’un mois en cours ou futur ne sont pas des crédits enregistrés. Ce parcours ne crédite que les mois terminés.</p>
         {!data.policy.enabled && <p>Les règles sont désactivées. Vérifiez puis enregistrez leur activation avant de préparer une opération.</p>}
         <fieldset disabled={busy || dirty || !data.policy.enabled} className="grid sm:grid-cols-2 gap-3">
           <label>Collaborateur<select className={input} required value={request.employeeId} onChange={e => selection({ employeeId: e.target.value })}><option value="">Choisir un collaborateur</option>{data.employees.map(e => <option key={e.id} value={e.id} disabled={!e.primary}>{e.name}{e.primary ? '' : ' · club principal différent'}</option>)}</select></label>
@@ -155,6 +161,7 @@ export function HrLeaveAccrualPanel({ actorId, club }: {
                 }}>
         <h4 className="font-bold">Aperçu à vérifier · {data.employees.find(e => e.id === p.employeeId)?.name}</h4><p>Période : {p.periodStart} → {p.periodEnd}</p>
         <p>Acquisition : {days(p.amount)} j · Nouveau report : {days(p.carried)} j · Droits non conservés : {days(p.expired)} j.</p>
+        {p.absenceReviewRequired && <p role="status">{p.absenceCount} absence(s) validée(s) sur le mois, dont {p.unverifiedAbsenceCount} avec un effet sur l’acquisition non vérifié. Contrôlez le taux et les plafonds avant confirmation ; la mention « permet l’acquisition » ne suffit pas à établir un crédit complet.</p>}
         <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr><th className="text-left">Compteur</th><th>Avant</th><th>Après</th></tr></thead><tbody>{[['cpNAcquired', 'CP acquis'], ['cpNTaken', 'CP pris'], ['cpNMinus1Remaining', 'Reliquat']].map(([key, label]) => <tr key={key}><th className="text-left py-2">{label}</th><td className="text-center">{days(p.before[key as keyof typeof p.before])}</td><td className="text-center">{days(p.after[key as keyof typeof p.after])}</td></tr>)}</tbody></table></div>
         {p.kind === 'rollover' && <p>La clôture ouvre la période suivante et conserve les mouvements passés. Une reprise d’absence décomptée sur l’ancien exercice nécessitera une régularisation examinée séparément.</p>}
         <fieldset disabled={busy || dirty} className="space-y-3">

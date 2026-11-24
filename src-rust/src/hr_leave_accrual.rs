@@ -37,6 +37,9 @@ pub struct Policy {
     pub carry_limit: Option<f64>,
     pub prior_carry_mode: String,
     pub reference: String,
+    /// Observed acquisition eligibility, independent of annualization. None is unverified.
+    #[serde(default)]
+    pub absence_acquisition: BTreeMap<String, Option<bool>>,
 }
 impl Default for Policy {
     fn default() -> Self {
@@ -50,6 +53,7 @@ impl Default for Policy {
             carry_limit: None,
             prior_carry_mode: "keep".into(),
             reference: String::new(),
+            absence_acquisition: BTreeMap::new(),
         }
     }
 }
@@ -209,7 +213,14 @@ fn settings(db: &AppDatabaseState, actor: &str, site: &str) -> Value {
         })
         .take(100)
         .collect::<Vec<_>>();
-    json!({"actorId":actor,"siteId":site,"revision":digest(&p),"canEdit":crate::hr_organisation::site_permission(db,actor,site,"ORG04-29"),"policy":p,"employees":people,"history":history})
+    let motives = crate::hr_leave_policy::motives(db, site)
+        .into_iter()
+        .map(|m| json!({"id":m.id,"label":m.label,"active":m.active}))
+        .collect::<Vec<_>>();
+    json!({"actorId":actor,"siteId":site,"revision":settings_revision(db,site),"canEdit":crate::hr_organisation::site_permission(db,actor,site,"ORG04-29"),"policy":p,"motives":motives,"employees":people,"history":history})
+}
+fn settings_revision(db: &AppDatabaseState, site: &str) -> String {
+    digest(&(policy(db, site), crate::hr_leave_policy::motives(db, site)))
 }
 pub async fn get(
     State(s): State<SharedState>,
@@ -249,12 +260,22 @@ pub async fn put(
         ));
     }
     let old = policy(&db, site);
-    if digest(&old) != input.expected_revision {
+    if settings_revision(&db, site) != input.expected_revision {
         return Err(conflict(
             "Les règles ont changé. Actualisez avant de confirmer.",
         ));
     }
     validate(&input.policy)?;
+    let catalogue = crate::hr_leave_policy::motives(&db, site);
+    if input.policy.absence_acquisition.len() > 1000
+        || input
+            .policy
+            .absence_acquisition
+            .keys()
+            .any(|id| !catalogue.iter().any(|m| &m.id == id))
+    {
+        return Err(bad("Un motif d’acquisition ne correspond pas au catalogue de ce club. Actualisez les règles."));
+    }
     let mut next = db.clone();
     next.leave_accrual
         .policies
@@ -302,6 +323,8 @@ struct Plan {
     expired: f64,
     baseline_required: bool,
     absence_review_required: bool,
+    absence_count: usize,
+    unverified_absence_count: usize,
     next_account: Account,
 }
 fn month(raw: &str) -> Result<NaiveDate, Failure> {
@@ -413,6 +436,8 @@ fn plan(
     let taken = scaled(after.cp_n_taken, 100.0, 100.0)?;
     let prior = scaled(after.cp_n_minus1_remaining, 100.0, 100.0)?;
     let mut absence_review = false;
+    let mut absence_count = 0;
+    let mut unverified_absence_count = 0;
     match input.kind.as_str() {
         "accrue" => {
             if !e.active {
@@ -462,12 +487,29 @@ fn plan(
             }
             next.granted_units = total;
             after.cp_n_acquired = (acquired + amount) as f64 / 100.0;
-            absence_review = db.leave_requests.iter().any(|r| {
+            for r in db.leave_requests.iter().filter(|r| {
                 r.employee_id == e.id
                     && r.status == "approved"
                     && r.start_date <= last.to_string()
                     && r.end_date >= first.to_string()
-            });
+            }) {
+                absence_count += 1;
+                let eligible = crate::hr_leave_policy::resolve_motive(db, r).and_then(|m| {
+                    policy(db, &r.site_id)
+                        .absence_acquisition
+                        .get(&m.id)
+                        .copied()
+                        .flatten()
+                });
+                if eligible == Some(false) {
+                    return Err(conflict("Une absence du mois ne permet pas l’acquisition selon les règles de son club. Le crédit de mois complet est bloqué : vérifiez le prorata avant une régularisation."));
+                }
+                if eligible.is_none() {
+                    unverified_absence_count += 1;
+                }
+            }
+            // Eligibility does not establish the rate/ceiling (e.g. sickness).
+            absence_review = absence_count > 0;
         }
         "rollover" => {
             if last != period_end {
@@ -542,6 +584,8 @@ fn plan(
         expired: expired as f64 / 100.0,
         baseline_required: account.active_period.is_none(),
         absence_review_required: absence_review,
+        absence_count,
+        unverified_absence_count,
         next_account: next,
     })
 }
@@ -550,6 +594,14 @@ fn preview_value(db: &AppDatabaseState, site: &str, plan: &Plan) -> Value {
         .leave_requests
         .iter()
         .filter(|r| r.employee_id == plan.employee_id)
+        .map(|r| {
+            (
+                r,
+                db.leave_policy.requests.get(&r.id),
+                crate::hr_leave_policy::resolve_motive(db, r),
+                policy(db, &r.site_id),
+            )
+        })
         .collect::<Vec<_>>();
     let employee = db
         .employees
@@ -762,6 +814,63 @@ mod tests {
             &input(kind, month),
             NaiveDate::from_ymd_opt(2027, 2, 1).unwrap(),
         )
+    }
+    #[test]
+    fn absence_eligibility_is_separate_from_annualization_and_uses_the_absence_club() {
+        let mut db = fixture();
+        db.leave_requests.push(crate::models::LeaveRequest {
+            id: "accrual-absence".into(),
+            employee_id: "emp-chloe".into(),
+            site_id: "club-carre-soie".into(),
+            motive: "Formation".into(),
+            start_date: "2026-10-05".into(),
+            end_date: "2026-10-05".into(),
+            status: "approved".into(),
+            comment: String::new(),
+        });
+        let unknown = calculate(&db, "accrue", "2026-10").unwrap();
+        assert!(unknown.absence_review_required);
+        assert_eq!(unknown.absence_count, 1);
+        assert_eq!(unknown.unverified_absence_count, 1);
+        let old_revision = preview_value(&db, "club-beynost", &unknown)["revision"].clone();
+        let motive = crate::hr_leave_policy::resolve_motive(&db, &db.leave_requests[0]).unwrap();
+        assert!(motive.included_in_annualization);
+        db.leave_accrual
+            .policies
+            .entry("club-carre-soie".into())
+            .or_default()
+            .absence_acquisition
+            .insert(motive.id.clone(), Some(false));
+        assert_eq!(
+            calculate(&db, "accrue", "2026-10").unwrap_err().0,
+            StatusCode::CONFLICT
+        );
+        // A rule set in the primary club cannot override the rule of this absence's club.
+        db.leave_accrual
+            .policies
+            .get_mut("club-beynost")
+            .unwrap()
+            .absence_acquisition
+            .insert(motive.id.clone(), Some(true));
+        assert!(calculate(&db, "accrue", "2026-10").is_err());
+        db.leave_accrual
+            .policies
+            .get_mut("club-carre-soie")
+            .unwrap()
+            .absence_acquisition
+            .insert(motive.id, Some(true));
+        let eligible = calculate(&db, "accrue", "2026-10").unwrap();
+        assert!(eligible.absence_review_required); // Eligibility alone proves neither rate nor ceiling.
+        assert_eq!(eligible.unverified_absence_count, 0);
+        assert_ne!(
+            preview_value(&db, "club-beynost", &eligible)["revision"],
+            old_revision
+        );
+        db.leave_requests[0].status = "rejected".into();
+        assert_eq!(
+            calculate(&db, "accrue", "2026-10").unwrap().absence_count,
+            0
+        );
     }
     #[test]
     fn cumulative_rounding_preserves_fractional_months_without_touching_other_counters() {

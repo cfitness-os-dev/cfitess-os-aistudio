@@ -46,3 +46,11 @@ La suite Rust a d'abord révélé une interférence des tests de sécurité P0 e
 ## Vérifications Skello nécessaires
 
 Voir [le relevé à compléter](skello-acquisition-report-a-verifier.md), avec les preuves existantes, les vues à ouvrir et six cas concrets. Ce lot prépare un moteur contrôlé ; il ne certifie pas une parité complète des acquisitions Skello ni une conformité juridique. Le paramétrage réel reste désactivé jusqu'à vérification des règles des clubs.
+
+## Complément du 25 novembre 2026
+
+Audit Skello réel en lecture seule : voir [relevé détaillé](skello-acquisition-report-releve-2026-11-25.md). Nouveau paramétrage `policy.absenceAcquisition` par identifiant de motif du club (booléen ou null ; défaut vide). Il est indépendant de l’annualisation. L’API refuse les identifiants étrangers ; les aperçus incluent le contexte des motifs et de leurs clubs dans leur empreinte. Une absence validée configurée Non bloque le crédit complet ; Oui conserve la revue du taux/plafond obligatoire. L’aperçu ne publie que `absenceCount` et `unverifiedAbsenceCount`, sans motif médical individuel.
+
+Recette du complément : **151 tests Rust, 137 tests TypeScript et 72 groupes HTTP**, tous passants ; TypeScript et build de production réussis. Les premières tentatives des anciennes recettes des réglages/dossiers échouaient à la connexion des comptes fictifs Master et Sarah parce que leurs variables propres étaient absentes du lancement ; reprise avec leurs identifiants fictifs dédiés, cinq et six groupes respectivement passants. Aucun affaiblissement des contrôles d’authentification. Les résultats du 24 novembre ci-dessus restent les preuves de ce lot antérieur, pas des nombres cumulés.
+
+Contrôle visuel du complément : enregistrement fictif Formation/CP = Oui et Congé sans solde = Non, puis actualisation serveur (valeurs conservées, activation toujours désactivée). Formats 1440×1000, 390×844 et 768×1024 sans débordement horizontal constaté. Captures et mesures dans [les preuves du 25 novembre](recette/skello-conges-2026-11-25/results.json). Ces contrôles du formulaire ne remplacent pas une recette visuelle complète des calculs de prorata.

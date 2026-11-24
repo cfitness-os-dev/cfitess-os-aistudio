@@ -1,5 +1,7 @@
 # Relevé Skello à compléter — acquisition et report des CP
 
+**Mise à jour du 25 novembre :** les paramètres des deux clubs, les périodes CP sur fiches, 66 motifs par club et plusieurs exemples chiffrés ont été relevés. Voir [constats, cas anonymisés et blocages restants](skello-acquisition-report-releve-2026-11-25.md). La liste ci-dessous est le plan initial ; elle ne signifie plus que toutes les vues restent à ouvrir.
+
 But : faire correspondre les calculs de C.Fitness OS aux règles effectivement utilisées dans les deux clubs. Consultation uniquement ; ne pas enregistrer, basculer un réglage ou modifier un compteur dans Skello pour obtenir une preuve.
 
 ## Ce que l'audit a déjà observé

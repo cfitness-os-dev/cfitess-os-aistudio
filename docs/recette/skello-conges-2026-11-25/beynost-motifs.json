@@ -1,0 +1,1010 @@
+[
+  {
+    "acquires": {
+      "locked": true,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": false
+    },
+    "label": "Absence autorisée rémunérée",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": true,
+      "value": false
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Absence pour examens médicaux",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": false,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": true
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Chômage technique",
+    "overtime": "Normales",
+    "requestable": null
+  },
+  {
+    "acquires": {
+      "locked": true,
+      "value": true
+    },
+    "active": {
+      "locked": false,
+      "value": false
+    },
+    "label": "Congé d’ancienneté",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": true,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": true
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Congé de deuil",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": false,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": true,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": false
+    },
+    "label": "Congé de fractionnement",
+    "overtime": "Majorées",
+    "requestable": {
+      "locked": true,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": true,
+      "value": true
+    },
+    "active": {
+      "locked": false,
+      "value": false
+    },
+    "label": "Congé décès d’un beau-père ou d’une belle-mère",
+    "overtime": "Majorées",
+    "requestable": {
+      "locked": true,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": true
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Congé décès d’un descendant en ligne direct",
+    "overtime": "Majorées",
+    "requestable": {
+      "locked": true,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": true
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Congé décès d’un père ou d’une mère",
+    "overtime": "Majorées",
+    "requestable": {
+      "locked": true,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": true
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Congé décès enfant",
+    "overtime": "Majorées",
+    "requestable": {
+      "locked": true,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": true
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Congé décès enfant <25 ans",
+    "overtime": "Majorées",
+    "requestable": {
+      "locked": true,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": true,
+      "value": true
+    },
+    "active": {
+      "locked": false,
+      "value": false
+    },
+    "label": "Congé événementiel",
+    "overtime": "Majorées",
+    "requestable": {
+      "locked": true,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": true,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": false
+    },
+    "label": "Congé individuel formation",
+    "overtime": "Majorées",
+    "requestable": {
+      "locked": true,
+      "value": false
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": true
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Congé mariage / PACS",
+    "overtime": "Majorées",
+    "requestable": {
+      "locked": true,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": true
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Congé naissance",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": true,
+      "value": true
+    }
+  },
+  {
+    "acquires": "Oui",
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Congé payé",
+    "overtime": "Majorées",
+    "requestable": {
+      "locked": true,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": true,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": false
+    },
+    "label": "Congé temps d’habillage",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": true,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": true,
+      "value": true
+    },
+    "active": {
+      "locked": false,
+      "value": false
+    },
+    "label": "Congé trimestriel",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": true,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": true,
+      "value": true
+    },
+    "active": {
+      "locked": false,
+      "value": false
+    },
+    "label": "Délégation du personnel",
+    "overtime": "Majorées",
+    "requestable": {
+      "locked": true,
+      "value": false
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": true
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "École - CFA",
+    "overtime": "Majorées",
+    "requestable": {
+      "locked": false,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": true
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Formation",
+    "overtime": "Majorées",
+    "requestable": {
+      "locked": false,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": true
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Heures d’activité partielle",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": false,
+      "value": false
+    }
+  },
+  {
+    "acquires": {
+      "locked": true,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": false
+    },
+    "label": "Indemnité compensatrice de préavis",
+    "overtime": "Normales",
+    "requestable": null
+  },
+  {
+    "acquires": {
+      "locked": true,
+      "value": true
+    },
+    "active": {
+      "locked": false,
+      "value": false
+    },
+    "label": "Jour Férié",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": true,
+      "value": false
+    }
+  },
+  {
+    "acquires": {
+      "locked": true,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": false
+    },
+    "label": "Journée de défense citoyenneté",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": true,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": true,
+      "value": true
+    },
+    "active": {
+      "locked": false,
+      "value": false
+    },
+    "label": "Récupération JF",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": true,
+      "value": false
+    }
+  },
+  {
+    "acquires": "Oui",
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Repos compensateur",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": false,
+      "value": false
+    }
+  },
+  {
+    "acquires": {
+      "locked": true,
+      "value": true
+    },
+    "active": {
+      "locked": false,
+      "value": false
+    },
+    "label": "Repos compensateur de nuit",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": true,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": true,
+      "value": true
+    },
+    "active": {
+      "locked": false,
+      "value": false
+    },
+    "label": "Repos forfait",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": true,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": true,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": false
+    },
+    "label": "Réunion",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": true,
+      "value": false
+    }
+  },
+  {
+    "acquires": {
+      "locked": true,
+      "value": true
+    },
+    "active": {
+      "locked": false,
+      "value": false
+    },
+    "label": "Réunions CSE/CSSCT",
+    "overtime": "Majorées",
+    "requestable": {
+      "locked": true,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": true,
+      "value": true
+    },
+    "active": {
+      "locked": false,
+      "value": false
+    },
+    "label": "RTT",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": true,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": true,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": false
+    },
+    "label": "Service militaire",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": true,
+      "value": false
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Solde de tout compte",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": false,
+      "value": false
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": true
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Télétravail",
+    "overtime": "Majorées",
+    "requestable": {
+      "locked": false,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": true
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Accident de trajet",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": false,
+      "value": true
+    }
+  },
+  {
+    "acquires": "Oui",
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Accident du travail",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": false,
+      "value": true
+    }
+  },
+  {
+    "acquires": "Oui",
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Arrêt maladie",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": false,
+      "value": true
+    }
+  },
+  {
+    "acquires": "Oui",
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Arrêt maladie prolongé",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": false,
+      "value": true
+    }
+  },
+  {
+    "acquires": "Oui",
+    "active": {
+      "locked": false,
+      "value": false
+    },
+    "label": "Congé adoption",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": true,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": true,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": false
+    },
+    "label": "Congé de présence parentale",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": true,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Congé hospitalisation enfant",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": false,
+      "value": true
+    }
+  },
+  {
+    "acquires": "Oui",
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Congé maternité",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": true,
+      "value": true
+    }
+  },
+  {
+    "acquires": "Oui",
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Congé paternité",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": true,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Congé proche aidant",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": false,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Congé supplémentaire de naissance",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": false,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": true,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": false
+    },
+    "label": "Invalidité permanente",
+    "overtime": "Normales",
+    "requestable": null
+  },
+  {
+    "acquires": "Oui",
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Maladie professionnelle",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": false,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Temps partiel thérapeutique",
+    "overtime": "Normales",
+    "requestable": {
+      "locked": false,
+      "value": false
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Absence autorisée",
+    "overtime": null,
+    "requestable": {
+      "locked": false,
+      "value": false
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Absence entrée sortie",
+    "overtime": null,
+    "requestable": {
+      "locked": false,
+      "value": false
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Absence injustifiée",
+    "overtime": null,
+    "requestable": {
+      "locked": false,
+      "value": false
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Congé décès d’un grand-parent",
+    "overtime": null,
+    "requestable": {
+      "locked": true,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Congé parental",
+    "overtime": null,
+    "requestable": {
+      "locked": false,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Congé pour enfant malade",
+    "overtime": null,
+    "requestable": {
+      "locked": true,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Congé pour garde d’enfant",
+    "overtime": null,
+    "requestable": {
+      "locked": false,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Congé sans solde",
+    "overtime": null,
+    "requestable": {
+      "locked": false,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Départ anticipé",
+    "overtime": null,
+    "requestable": {
+      "locked": false,
+      "value": false
+    }
+  },
+  {
+    "acquires": {
+      "locked": true,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": false
+    },
+    "label": "Grève",
+    "overtime": null,
+    "requestable": {
+      "locked": true,
+      "value": false
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Mise à pied conservatoire",
+    "overtime": null,
+    "requestable": null
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Mise à pied disciplinaire",
+    "overtime": null,
+    "requestable": null
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Récupération",
+    "overtime": null,
+    "requestable": {
+      "locked": false,
+      "value": true
+    }
+  },
+  {
+    "acquires": {
+      "locked": true,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": false
+    },
+    "label": "Suspension de contrat",
+    "overtime": null,
+    "requestable": null
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Astreinte",
+    "overtime": null,
+    "requestable": {
+      "locked": false,
+      "value": false
+    }
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Pause",
+    "overtime": null,
+    "requestable": null
+  },
+  {
+    "acquires": {
+      "locked": false,
+      "value": false
+    },
+    "active": {
+      "locked": false,
+      "value": true
+    },
+    "label": "Repos hebdomadaire",
+    "overtime": null,
+    "requestable": {
+      "locked": false,
+      "value": false
+    }
+  }
+]

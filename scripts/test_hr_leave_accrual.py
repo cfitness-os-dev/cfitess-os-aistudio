@@ -138,6 +138,26 @@ def main():
             assert preview(query(month='2026-09'))[0]==409
             assert preview(query(month='2099-01'))[0]==409
             assert preview(query(kind='rollover',month='2026-09'))[0]==400
+            # Acquisition eligibility is independent from the counter-debit family and annualization.
+            cp_motive=next(m['id'] for m in read()['motives'] if m['label']=='Congé payé')
+            assert unchanged(lambda:rules(dict(ready,absenceAcquisition={'mot-club-carre-soie-cp':True})))[0]==400
+            personal_route='/api/me/workspace/'+club
+            ids={r['id'] for r in ok(call('GET',personal_route,employee))['leaves']}
+            created=ok(call('POST',personal_route,employee,dict(action='request_leave',motive='CP',startDate='2026-10-05',endDate='2026-10-05',comment='Recette fictive acquisition')))
+            absence_id=next(r['id'] for r in created['leaves'] if r['id'] not in ids)
+            row=next(r for r in ok(call('GET','/api/hr/workspace/'+club,admin))['requests'] if r['id']==absence_id)
+            ok(call('POST','/api/hr/workspace/'+club+'/requests/'+absence_id,admin,dict(status='approved',expectedStatus=row['status'],expectedRevision=row['revision'],note='Absence fictive sans compteur configuré')))
+            before_rule=ok(preview())
+            assert before_rule['plan']['absenceCount']==1 and before_rule['plan']['unverifiedAbsenceCount']==1
+            ok(rules(dict(ready,absenceAcquisition={cp_motive:False})))
+            assert unchanged(lambda:preview())[0]==409
+            ok(rules(dict(ready,absenceAcquisition={cp_motive:True})))
+            eligible=ok(preview())
+            assert eligible['plan']['absenceReviewRequired'] and eligible['plan']['unverifiedAbsenceCount']==0
+            assert unchanged(lambda:call('POST',route+club+'/apply',admin,dict(mutation(eligible),absenceReviewed=False)))[0]==400
+            ok(rules(ready))
+            assert unchanged(lambda:apply(eligible))[0]==409
+            checks.append('explicit per-motive eligibility, foreign-club IDs refused, full-credit block on non-acquiring absence, retained review for rates and stale preview rejection')
             p=ok(preview())
             assert p['plan']['amount']==2.08 and p['plan']['before']['cpNAcquired']==0
             assert p['plan']['after']['cpNAcquired']==2.08 and p['plan']['baselineRequired']
