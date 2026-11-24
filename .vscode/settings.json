@@ -292,7 +292,8 @@
     "hmac",
     "webp",
     "nosniff",
-    "SAMEORIGIN"
+    "SAMEORIGIN",
+    "regularise"
   ],
   "cSpell.ignoreRegExpList": [
     "\\bACCES\\b",

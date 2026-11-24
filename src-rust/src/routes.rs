@@ -707,12 +707,49 @@ async fn post_local_auth_login(
     )
 }
 
+fn secret_header_matches(headers: &HeaderMap, header_name: &str, env_vars: &[&str]) -> bool {
+    let Some(provided) = headers
+        .get(header_name)
+        .and_then(|v| v.to_str().ok())
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    else {
+        return false;
+    };
+    env_vars.iter().any(|var| {
+        std::env::var(var)
+            .ok()
+            .map(|v| v.trim().to_string())
+            .filter(|v| !v.is_empty())
+            .is_some_and(|expected| {
+                crate::auth_passwords::constant_time_eq(provided.as_bytes(), expected.as_bytes())
+            })
+    })
+}
+
 async fn post_heitz_gate_check(
     State(state): State<SharedState>,
+    headers: HeaderMap,
     Json(payload): Json<HeitzGateCheckRequest>,
-) -> impl IntoResponse {
+) -> Result<impl IntoResponse, (StatusCode, Json<Value>)> {
+    let token_ok = secret_header_matches(
+        &headers,
+        "x-cfitness-heitz-token",
+        &["CFITNESS_HEITZ_WEBHOOK_SECRET", "HEITZ_WS_TOKEN"],
+    );
+    if !token_ok {
+        let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+        let db = state.db.read().await;
+        if !db.employees.iter().any(|e| e.id == actor_id && e.active) {
+            return Err(err_resp(
+                StatusCode::FORBIDDEN,
+                "Collaborateur inactif ou non autorisé pour le contrôle portillon.",
+            ));
+        }
+    }
+
     if payload.fire_alarm_open {
-        return (
+        return Ok((
             StatusCode::OK,
             Json(HeitzGateCheckResponse {
                 granted: true,
@@ -726,7 +763,7 @@ async fn post_heitz_gate_check(
                 heitz_vm_reachable: true,
                 timestamp: Utc::now().to_rfc3339(),
             }),
-        );
+        ));
     }
 
     if payload.fin_balance_eur < 0.0 {
@@ -736,7 +773,7 @@ async fn post_heitz_gate_check(
             payload.badge_code,
             payload.fin_balance_eur
         );
-        return (
+        return Ok((
             StatusCode::OK,
             Json(HeitzGateCheckResponse {
                 granted: false,
@@ -753,7 +790,7 @@ async fn post_heitz_gate_check(
                 heitz_vm_reachable: true,
                 timestamp: Utc::now().to_rfc3339(),
             }),
-        );
+        ));
     }
 
     let inter_club_note = if payload.home_club_id != payload.club_id {
@@ -762,12 +799,16 @@ async fn post_heitz_gate_check(
         "Accès nominal club d'origine autorisé"
     };
 
-    let qr_token = format!(
-        "HZ-QR-{}-{}-{}",
-        payload.club_id.to_uppercase(),
-        payload.badge_code,
-        Utc::now().timestamp()
-    );
+    let qr_token = {
+        use rand::RngCore;
+        let mut qr_bytes = [0u8; 16];
+        rand::rngs::OsRng.fill_bytes(&mut qr_bytes);
+        format!(
+            "HZ-QR-{}-{}",
+            payload.club_id.to_uppercase(),
+            hex::encode(qr_bytes)
+        )
+    };
 
     // Mise à jour temps réel C.Fitness OS : enregistrement de la venue et remise à zéro du décrochage
     {
@@ -797,7 +838,7 @@ async fn post_heitz_gate_check(
         }
     }
 
-    (
+    Ok((
         StatusCode::OK,
         Json(HeitzGateCheckResponse {
             granted: true,
@@ -811,12 +852,32 @@ async fn post_heitz_gate_check(
             heitz_vm_reachable: false,
             timestamp: Utc::now().to_rfc3339(),
         }),
-    )
+    ))
 }
 
 async fn post_ats_ingest_email(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
     Json(payload): Json<RecruitmentWebhookPayload>,
-) -> impl IntoResponse {
+) -> Result<impl IntoResponse, (StatusCode, Json<Value>)> {
+    let token_ok = secret_header_matches(
+        &headers,
+        "x-cfitness-webhook-token",
+        &["CFITNESS_ATS_WEBHOOK_SECRET", "CFITNESS_INBOUND_WEBHOOK_SECRET"],
+    );
+    if !token_ok {
+        let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
+        let db = state.db.read().await;
+        if !(crate::rbac::is_admin_employee(&db, &actor_id)
+            || crate::rbac::is_manager_employee(&db, &actor_id, Some(&site_id)))
+        {
+            return Err(err_resp(
+                StatusCode::FORBIDDEN,
+                "Accès refusé (403) : ingestion ATS réservée aux managers/administrateurs ou webhook signé.",
+            ));
+        }
+    }
+
     let _ = &payload.subject_line;
     let cv_pdf = payload
         .attachment_pdf
@@ -829,7 +890,7 @@ async fn post_ats_ingest_email(
         cv_pdf
     );
 
-    (
+    Ok((
         StatusCode::CREATED,
         Json(RecruitmentWebhookResponse {
             ok: true,
@@ -840,11 +901,22 @@ async fn post_ats_ingest_email(
             rgpd_acknowledgment_sent: true,
             assigned_kanban_stage: "Reçue",
         }),
-    )
+    ))
 }
 
-async fn get_backup_snapshot_status() -> impl IntoResponse {
-    Json(BackupReplicationStatus {
+async fn get_backup_snapshot_status(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+) -> Result<impl IntoResponse, (StatusCode, Json<Value>)> {
+    let (actor_id, _, _) = require_bearer_session_actor(&state, &headers).await?;
+    let db = state.db.read().await;
+    if !crate::rbac::is_admin_employee(&db, &actor_id) {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Accès refusé (403) : état des réplicas réservé aux administrateurs système.",
+        ));
+    }
+    Ok(Json(BackupReplicationStatus {
         schema_version: "cfos-replica-v1.2",
         primary_server: "10.10.0.10 (Debian 12 Carré de Soie)",
         replicas: [
@@ -858,19 +930,29 @@ async fn get_backup_snapshot_status() -> impl IntoResponse {
         rpo_seconds: 15,
         failover_ready: true,
         timestamp_utc: Utc::now().to_rfc3339(),
-    })
+    }))
 }
 
 async fn post_backup_snapshot_ingest(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
     Json(payload): Json<BackupSnapshotIngestRequest>,
-) -> impl IntoResponse {
+) -> Result<impl IntoResponse, (StatusCode, Json<Value>)> {
+    let (actor_id, _, _) = require_bearer_session_actor(&state, &headers).await?;
+    let db = state.db.read().await;
+    if !crate::rbac::is_admin_employee(&db, &actor_id) {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Accès refusé (403) : ingestion snapshot réservée aux administrateurs système.",
+        ));
+    }
     tracing::info!(
         "Snapshot de secours reçu depuis {} (checksum: {}) — fusion sans perte exécutée",
         payload.origin_device,
         payload.checksum
     );
 
-    (
+    Ok((
         StatusCode::OK,
         Json(json!({
             "ok": true,
@@ -878,7 +960,7 @@ async fn post_backup_snapshot_ingest(
             "checksumVerified": payload.checksum,
             "mergedAt": Utc::now().to_rfc3339(),
         })),
-    )
+    ))
 }
 
 async fn post_local_auth_logout(
@@ -953,6 +1035,34 @@ pub async fn resolve_session_actor(
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "emp-employe-multi".to_string());
     Ok((actor_id, fallback_site))
+}
+
+async fn require_bearer_session_actor(
+    state: &SharedState,
+    headers: &HeaderMap,
+) -> Result<(String, String, String), (StatusCode, Json<Value>)> {
+    let site_id = headers
+        .get("x-cfitness-site-id")
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "club-carre-soie".to_string());
+
+    if let Some(auth_val) = headers.get(header::AUTHORIZATION).and_then(|v| v.to_str().ok()) {
+        if let Some(token) = auth_val.strip_prefix("Bearer ").map(|t| t.trim().to_string()) {
+            let entry = state.sessions.read().await.get(&token).cloned();
+            if let Some((verified_actor, expires_at)) = entry {
+                if Utc::now().timestamp() <= expires_at {
+                    return Ok((verified_actor, site_id, token));
+                }
+                state.sessions.write().await.remove(&token);
+            }
+        }
+    }
+    Err(err_resp(
+        StatusCode::UNAUTHORIZED,
+        "Authentification Bearer serveur obligatoire (401 Unauthorized).",
+    ))
 }
 
 fn extract_actor_site(headers: &HeaderMap) -> (String, String) {
@@ -1037,8 +1147,12 @@ pub struct StripeAppointmentWebhookPayload {
     pub payment_status: Option<String>,
 }
 
-async fn get_lead_registry() -> Json<Value> {
-    Json(json!({
+async fn get_lead_registry(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let _ = resolve_session_actor(&state, &headers).await?;
+    Ok(Json(json!({
         "version": "0.4",
         "date": "2026-11-17",
         "totalFiles": 84,
@@ -1053,7 +1167,7 @@ async fn get_lead_registry() -> Json<Value> {
         "partnersCount": 9,
         "traceabilityGroupsCount": 28,
         "familiesCount": 63
-    }))
+    })))
 }
 
 async fn post_lead_webhook_club_entry(
@@ -1065,18 +1179,41 @@ async fn post_lead_webhook_club_entry(
     let lastname = payload.lastname.unwrap_or_default();
     let firstname = payload.firstname.unwrap_or_default();
 
-    if api_key.trim().is_empty() {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(json!({ "ok": false, "error": "Clé apiKey manquante." })),
-        );
-    }
-    if let Ok(expected_key) = std::env::var("CFITNESS_LEAD_API_KEY") {
-        if !expected_key.trim().is_empty() && api_key.trim() != expected_key.trim() {
-            return (
-                StatusCode::UNAUTHORIZED,
-                Json(json!({ "ok": false, "error": "Clé apiKey invalide (401 Unauthorized)." })),
-            );
+    let configured_key = std::env::var("CFITNESS_LEAD_API_KEY")
+        .ok()
+        .map(|v| v.trim().to_string())
+        .filter(|v| !v.is_empty());
+
+    match configured_key {
+        Some(expected_key) => {
+            if api_key.trim().is_empty()
+                || !crate::auth_passwords::constant_time_eq(
+                    api_key.trim().as_bytes(),
+                    expected_key.as_bytes(),
+                )
+            {
+                return (
+                    StatusCode::UNAUTHORIZED,
+                    Json(json!({ "ok": false, "error": "Clé apiKey invalide (401 Unauthorized)." })),
+                );
+            }
+        }
+        None => {
+            if !is_demo_mode() {
+                return (
+                    StatusCode::UNAUTHORIZED,
+                    Json(json!({
+                        "ok": false,
+                        "error": "CFITNESS_LEAD_API_KEY requis en mode production."
+                    })),
+                );
+            }
+            if api_key.trim().is_empty() {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(json!({ "ok": false, "error": "Clé apiKey manquante." })),
+                );
+            }
         }
     }
     if club.trim().is_empty()
@@ -1249,47 +1386,36 @@ async fn post_stripe_appointment_webhook(
 }
 
 async fn health() -> Json<Value> {
-    let heitz_ws_endpoint = std::env::var("HEITZ_WS_URL")
-        .unwrap_or_else(|_| "http://10.10.0.20:8080/api/heitz-ws".to_string());
-    let yeastar_gateway = std::env::var("YEASTAR_TG400_SIP_GATEWAY")
-        .unwrap_or_else(|_| "10.10.0.14:5060".to_string());
-
     Json(json!({
         "status": "ok",
         "service": "cfitness-os",
-        "version": "1.2.0-v1.16-unified",
         "backend": "rust-axum",
-        "osTarget": "Linux Debian 12 (Bookworm)",
-        "siret": "818 651 317 00013",
-        "siretBeynost": "852 722 529 00025",
-        "website": "https://c.fitness",
-        "clubs": [
-            "Carré de Soie — 2 Rue Jacquard, 69120 Vaulx-en-Velin (04 26 22 55 30)",
-            "Beynost — ZAC des Baterses, 01700 Beynost (04 22 91 36 82)"
-        ],
-        "wireguardTunnel": "CONNECTED (< 3 ms)",
-        "heitzWsEndpoint": heitz_ws_endpoint,
-        "yeastarGsm07Gateway": yeastar_gateway,
-        "rhV116Registry": "91 écrans / 1605 entrées / 117 fichiers références",
-        "leadAuditV04": "84 fichiers / 1682 entrées LEAD / 9 modules + 6 comm + 14 paramètres",
         "timestampUtc": Utc::now().to_rfc3339()
     }))
 }
 
-async fn get_registry() -> impl IntoResponse {
-    (
+async fn get_registry(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+) -> Result<impl IntoResponse, (StatusCode, Json<Value>)> {
+    let _ = resolve_session_actor(&state, &headers).await?;
+    Ok((
         StatusCode::OK,
         [(
             header::CONTENT_TYPE,
             HeaderValue::from_static("application/json; charset=utf-8"),
         )],
         REGISTRY_SUMMARY_JSON,
-    )
+    ))
 }
 
-async fn get_ambiguities(State(state): State<SharedState>) -> Json<Value> {
+async fn get_ambiguities(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let _ = resolve_session_actor(&state, &headers).await?;
     let db = state.db.read().await;
-    Json(json!(db.ambiguities))
+    Ok(Json(json!(db.ambiguities)))
 }
 
 async fn get_session(
@@ -2406,13 +2532,13 @@ async fn get_backup(
     State(state): State<SharedState>,
     headers: HeaderMap,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
+    let (actor_id, site_id, _) = require_bearer_session_actor(&state, &headers).await?;
     let db = state.db.read().await;
     let check = evaluate_permission(&db, &actor_id, &site_id, "ORG04-31", None);
-    if !check.allowed {
+    if !crate::rbac::is_admin_employee(&db, &actor_id) || !check.allowed {
         return Err(err_resp(
             StatusCode::FORBIDDEN,
-            format!("Export sauvegarde refusé : {}", check.reason),
+            format!("Export sauvegarde refusé (admin système requis) : {}", check.reason),
         ));
     }
     let backup_json = serde_json::to_string_pretty(&*db)
@@ -2425,24 +2551,36 @@ async fn post_restore(
     headers: HeaderMap,
     Json(payload): Json<RestoreBackupPayload>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
+    let (actor_id, site_id, current_token) = require_bearer_session_actor(&state, &headers).await?;
+    if payload.backup_json.len() > 10 * 1024 * 1024 {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            "Archive JSON trop volumineuse (10 Mo maximum).",
+        ));
+    }
     let mut db = state.db.write().await;
 
     let check = evaluate_permission(&db, &actor_id, &site_id, "ORG04-31", None);
-    if !check.allowed {
+    if !crate::rbac::is_admin_employee(&db, &actor_id) || !check.allowed {
         return Err(err_resp(
             StatusCode::FORBIDDEN,
-            format!("Restauration refusée : {}", check.reason),
+            format!("Restauration refusée (admin système requis) : {}", check.reason),
         ));
     }
 
     let parsed: AppDatabaseState = serde_json::from_str(&payload.backup_json)
         .map_err(|_| err_resp(StatusCode::BAD_REQUEST, "JSON de sauvegarde illisible."))?;
 
-    if parsed.sites.is_empty() || parsed.employees.is_empty() || parsed.profiles.is_empty() {
+    let has_active_admin = parsed.employees.iter().any(|e| {
+        e.active
+            && e.site_accesses
+                .iter()
+                .any(|a| a.profile_id == "admin_systeme")
+    });
+    if parsed.sites.is_empty() || parsed.employees.is_empty() || parsed.profiles.is_empty() || !has_active_admin {
         return Err(err_resp(
             StatusCode::BAD_REQUEST,
-            "Archive JSON invalide ou incomplète.",
+            "Archive JSON invalide, incomplète ou sans administrateur actif.",
         ));
     }
 
@@ -2453,7 +2591,7 @@ async fn post_restore(
         &mut db,
         &actor_id,
         "Restauration sauvegarde",
-        "Restauration complète d’une sauvegarde fictive (TST28)".into(),
+        "Restauration complète d’une sauvegarde (TST28)".into(),
         "org",
         "Système CFitness OS",
         None,
@@ -2466,6 +2604,14 @@ async fn post_restore(
             format!("Échec persistance restauration : {}", err_msg),
         ));
     }
+    drop(db);
+
+    // Révoquer toutes les autres sessions après restauration de base
+    state
+        .sessions
+        .write()
+        .await
+        .retain(|tok, _| tok == &current_token);
 
     Ok(Json(json!({ "restoredAt": now })))
 }
@@ -3183,6 +3329,20 @@ async fn post_change_password(
             format!("Échec persistance changement mot de passe : {}", err_msg),
         ));
     }
+    drop(db);
+
+    let current_token = headers
+        .get(header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "))
+        .map(str::trim)
+        .map(str::to_string);
+    state.sessions.write().await.retain(|tok, (sid, _)| {
+        if sid != &actor_id {
+            return true;
+        }
+        current_token.as_deref() == Some(tok.as_str())
+    });
 
     Ok(Json(json!({ "changed": true })))
 }
@@ -3388,7 +3548,20 @@ async fn ollama_http_request(
         .map_err(|_| format!("Délai dépassé ({}s) sur Ollama ({}).", timeout_secs, base))?
 }
 
-async fn get_ollama_status() -> Json<Value> {
+async fn get_ollama_status(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    {
+        let db = state.db.read().await;
+        if !db.employees.iter().any(|e| e.id == actor_id && e.active) {
+            return Err(err_resp(
+                StatusCode::FORBIDDEN,
+                "Collaborateur inactif ou non autorisé pour l'assistant IA.",
+            ));
+        }
+    }
     let base_url = ollama_base_url();
     let default_model = ollama_default_model();
     match ollama_http_request("GET", "/api/tags", None, 5).await {
@@ -3402,24 +3575,55 @@ async fn get_ollama_status() -> Json<Value> {
                         .collect()
                 })
                 .unwrap_or_default();
-            Json(json!({
+            Ok(Json(json!({
                 "online": true,
                 "baseUrl": base_url,
                 "defaultModel": default_model,
                 "models": models,
-            }))
+            })))
         }
-        Err(err) => Json(json!({
+        Err(err) => Ok(Json(json!({
             "online": false,
             "baseUrl": base_url,
             "defaultModel": default_model,
             "models": [],
             "error": err,
-        })),
+        }))),
     }
 }
 
-async fn post_ollama_chat(Json(payload): Json<OllamaChatPayload>) -> Json<Value> {
+async fn post_ollama_chat(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Json(payload): Json<OllamaChatPayload>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    {
+        let db = state.db.read().await;
+        if !db.employees.iter().any(|e| e.id == actor_id && e.active) {
+            return Err(err_resp(
+                StatusCode::FORBIDDEN,
+                "Collaborateur inactif ou non autorisé pour l'assistant IA.",
+            ));
+        }
+    }
+    if payload.messages.len() > 30 {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            "Historique de conversation trop long (30 messages maximum).",
+        ));
+    }
+    if payload
+        .system_prompt
+        .as_ref()
+        .is_some_and(|s| s.chars().count() > 16_000)
+    {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            "Le prompt système dépasse la taille maximale autorisée.",
+        ));
+    }
+
     let model = payload
         .model
         .filter(|m| !m.trim().is_empty())
@@ -3430,8 +3634,21 @@ async fn post_ollama_chat(Json(payload): Json<OllamaChatPayload>) -> Json<Value>
         msgs.push(json!({ "role": "system", "content": sys }));
     }
     for m in payload.messages {
+        let role = m.role.trim();
+        if !matches!(role, "user" | "assistant" | "system") {
+            return Err(err_resp(
+                StatusCode::BAD_REQUEST,
+                "Rôle de message IA invalide (user, assistant ou system attendu).",
+            ));
+        }
+        if m.content.chars().count() > 16_000 {
+            return Err(err_resp(
+                StatusCode::BAD_REQUEST,
+                "Un message dépasse la taille maximale autorisée (16 000 caractères).",
+            ));
+        }
         if !m.content.trim().is_empty() {
-            msgs.push(json!({ "role": m.role, "content": m.content }));
+            msgs.push(json!({ "role": role, "content": m.content }));
         }
     }
 
@@ -3457,24 +3674,24 @@ async fn post_ollama_chat(Json(payload): Json<OllamaChatPayload>) -> Json<Value>
                     .get("error")
                     .and_then(|e| e.as_str())
                     .unwrap_or("Réponse vide du modèle Ollama.");
-                Json(json!({
+                Ok(Json(json!({
                     "ok": false,
                     "model": model,
                     "error": err_msg,
-                }))
+                })))
             } else {
-                Json(json!({
+                Ok(Json(json!({
                     "ok": true,
                     "model": model,
                     "reply": reply,
-                }))
+                })))
             }
         }
-        Err(err) => Json(json!({
+        Err(err) => Ok(Json(json!({
             "ok": false,
             "model": model,
             "error": err,
-        })),
+        }))),
     }
 }
 
@@ -5790,9 +6007,11 @@ mod tests {
             });
         }
 
-        // 2. Passage portillon Heitz réussi
+        // 2. Passage portillon Heitz réussi avec session serveur
+        let mario_headers = session_headers(&state, "emp-mario", "club-carre-soie").await;
         let gate_res = post_heitz_gate_check(
             State(state.clone()),
+            mario_headers,
             Json(HeitzGateCheckRequest {
                 club_id: "carre-de-soie".into(),
                 badge_code: "0699001122".into(),
@@ -5803,6 +6022,7 @@ mod tests {
             }),
         )
         .await
+        .expect("Passage portillon authentifié autorisé")
         .into_response();
         assert_eq!(gate_res.status(), StatusCode::OK);
 
@@ -6167,6 +6387,102 @@ mod tests {
         .await
         .into_response();
         assert_eq!(chloe_login.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn security_p0_hardening_enforces_auth_admin_backup_revocation_and_minimal_health() {
+        let state = test_state();
+        std::env::set_var("CFITNESS_STRICT_SESSION", "1");
+
+        // 1. /api/health ne divulgue aucune IP LAN ni téléphone ni SIRET
+        let Json(health_payload) = health().await;
+        let health_text = health_payload.to_string();
+        assert_eq!(health_payload["status"], json!("ok"));
+        assert!(!health_text.contains("10.10.0.20"));
+        assert!(!health_text.contains("10.10.0.14"));
+        assert!(!health_text.contains("818 651 317"));
+
+        // 2. Sans session Bearer, les endpoints sensibles refusent (401)
+        let empty = HeaderMap::new();
+        assert!(matches!(get_ollama_status(State(state.clone()), empty.clone()).await, Err((StatusCode::UNAUTHORIZED, _))));
+        assert!(matches!(
+            post_ollama_chat(State(state.clone()), empty.clone(), Json(OllamaChatPayload::default())).await,
+            Err((StatusCode::UNAUTHORIZED, _))
+        ));
+        assert!(matches!(
+            post_heitz_gate_check(State(state.clone()), empty.clone(), Json(HeitzGateCheckRequest::default())).await,
+            Err((StatusCode::UNAUTHORIZED, _))
+        ));
+        assert!(matches!(get_backup_snapshot_status(State(state.clone()), empty.clone()).await, Err((StatusCode::UNAUTHORIZED, _))));
+        assert!(matches!(
+            post_backup_snapshot_ingest(State(state.clone()), empty.clone(), Json(BackupSnapshotIngestRequest::default())).await,
+            Err((StatusCode::UNAUTHORIZED, _))
+        ));
+        assert!(matches!(
+            post_ats_ingest_email(
+                State(state.clone()),
+                empty.clone(),
+                Json(RecruitmentWebhookPayload {
+                    sender_line: "a@b.fr".into(),
+                    subject_line: "CV".into(),
+                    body_text: "0600".into(),
+                    attachment_pdf: None,
+                }),
+            ).await,
+            Err((StatusCode::UNAUTHORIZED, _))
+        ));
+        assert!(matches!(get_registry(State(state.clone()), empty.clone()).await, Err((StatusCode::UNAUTHORIZED, _))));
+        assert!(matches!(get_ambiguities(State(state.clone()), empty.clone()).await, Err((StatusCode::UNAUTHORIZED, _))));
+        assert!(matches!(get_lead_registry(State(state.clone()), empty.clone()).await, Err((StatusCode::UNAUTHORIZED, _))));
+        assert!(matches!(get_backup(State(state.clone()), empty).await, Err((StatusCode::UNAUTHORIZED, _))));
+
+        // 3. Non-admin (Chloé) est bloqué en 403 sur backup/snapshot même avec Bearer valide
+        let chloe_headers = session_headers(&state, "emp-chloe", "club-beynost").await;
+        assert!(matches!(get_backup(State(state.clone()), chloe_headers.clone()).await, Err((StatusCode::FORBIDDEN, _))));
+        assert!(matches!(
+            get_backup_snapshot_status(State(state.clone()), chloe_headers.clone()).await,
+            Err((StatusCode::FORBIDDEN, _))
+        ));
+
+        // 4. L'admin avec Bearer valide accède au backup et révoque les autres sessions après restore
+        let mario_headers = session_headers(&state, "emp-mario", "club-carre-soie").await;
+        let mario_other = session_headers(&state, "emp-mario", "club-carre-soie").await;
+        let backup_res = get_backup(State(state.clone()), mario_headers.clone()).await.expect("Backup admin OK").0;
+        let backup_json = backup_res["backupJson"].as_str().unwrap().to_string();
+
+        // Un payload trop volumineux ou sans admin actif est refusé en 400
+        let invalid_restore = post_restore(
+            State(state.clone()),
+            mario_headers.clone(),
+            Json(RestoreBackupPayload { backup_json: "{\"sites\":[],\"employees\":[],\"profiles\":[]}".into() }),
+        ).await;
+        assert!(matches!(invalid_restore, Err((StatusCode::BAD_REQUEST, _))));
+
+        let restored = post_restore(
+            State(state.clone()),
+            mario_headers.clone(),
+            Json(RestoreBackupPayload { backup_json }),
+        ).await;
+        assert!(restored.is_ok());
+
+        // La session de Chloé et la deuxième session de Mario sont révoquées ; la session courante de Mario survit
+        assert!(matches!(resolve_session_actor(&state, &chloe_headers).await, Err((StatusCode::UNAUTHORIZED, _))));
+        assert!(matches!(resolve_session_actor(&state, &mario_other).await, Err((StatusCode::UNAUTHORIZED, _))));
+        assert!(resolve_session_actor(&state, &mario_headers).await.is_ok());
+
+        // 5. Validation bornes Ollama chat (messages > 30 ou rôle invalide -> 400)
+        let bad_role = post_ollama_chat(
+            State(state.clone()),
+            mario_headers,
+            Json(OllamaChatPayload {
+                model: None,
+                system_prompt: None,
+                messages: vec![OllamaChatMessage { role: "tool".into(), content: "test".into() }],
+            }),
+        ).await;
+        assert!(matches!(bad_role, Err((StatusCode::BAD_REQUEST, _))));
+
+        std::env::remove_var("CFITNESS_STRICT_SESSION");
     }
 
 }
