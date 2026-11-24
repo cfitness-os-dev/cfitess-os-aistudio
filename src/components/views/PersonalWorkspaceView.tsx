@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import {
   Calendar,
   CheckSquare,
@@ -16,8 +16,9 @@ import {
   type PersonalWorkspace,
 } from "../../domain/personalWorkspace";
 import { statusLabel } from "../../domain/hrWorkflow";
-import { HrEmployeeDossierView } from "./HrEmployeeDossierView";
 import type { ClubId } from "../../types/cfos";
+const HrEmployeeDossierView = lazy(() => import("./HrEmployeeDossierView").then(m => ({ default: m.HrEmployeeDossierView })));
+
 
 const tabs = [
   ["home", "Ma journée", Home],
@@ -246,7 +247,7 @@ function PersonalWorkspaceContent({
       {data && (
         <>
           {tab === "dossier" && (
-            <HrEmployeeDossierView clubId={club} personalOnly />
+            <Suspense fallback={<p role="status">Chargement de votre dossier…</p>}><HrEmployeeDossierView clubId={club} personalOnly /></Suspense>
           )}
           {tab === "home" && (
             <div className="grid lg:grid-cols-2 gap-4">

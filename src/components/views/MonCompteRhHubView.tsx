@@ -1,5 +1,5 @@
 import { confirmLeadDraftNavigation } from '../../domain/leadDraftGuard';
-import { lazy, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import {
   AlertTriangle,
   Building2,
@@ -25,7 +25,7 @@ import { AdminRightsView } from '../../views/AdminRightsView';
 import { DashboardView } from '../../views/DashboardView';
 import { PlanningAndModulesView } from '../../views/PlanningAndModulesView';
 import { PreferencesView } from '../../views/PreferencesView';
-import { HrEmployeeDossierView } from './HrEmployeeDossierView';
+const HrEmployeeDossierView = lazy(() => import('./HrEmployeeDossierView').then(m => ({ default: m.HrEmployeeDossierView })));
 import { MyDayCollaboratorView } from './MyDayCollaboratorView';
 import { PersonalWorkspaceView } from './PersonalWorkspaceView';
 
@@ -650,11 +650,11 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
               )}
 
               {hubTab === 'mon-compte' && activeSection === 'MC02' && effectiveDashboard && (
-                <HrEmployeeDossierView
+                <Suspense fallback={<p role="status">Chargement du dossier RH…</p>}><HrEmployeeDossierView
                   clubId={effectiveClubId}
                   personalOnly={isPersonalSpace}
                   onDossierMutated={() => void refreshAll()}
-                />
+                /></Suspense>
               )}
 
               {hubTab === 'mon-compte' && activeSection === 'MC04' && (
