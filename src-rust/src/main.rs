@@ -9,6 +9,7 @@ mod employee_lifecycle;
 mod heitz_members;
 mod hr_manager;
 mod hr_organisation;
+mod hr_pilotage;
 mod hr_site_rules;
 mod clock_policy;
 #[cfg(test)]
