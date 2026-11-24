@@ -39,7 +39,7 @@ Autorisation actuelle : salarié actif avec profil de gestion de site dans le cl
 
 100 étapes, nom 120 caractères, commentaire 2000, contenu 20000, délai entier 0..525600 par unité : limites proposées C.Fitness OS, non présentées comme des limites Lead. Le brouillon doit être complet pour être enregistré ; aucune sauvegarde automatique de saisie incomplète.
 
-Restent non livrés : connecteurs réels et leurs accusés/réessais, fenêtres horaires et jours ouvrés, réentrée configurable, inscription depuis la fiche commerciale, délégations fines, purge historique/reçus d'opération. L’éditeur dispose maintenant des douze types de blocs et le moteur de branches sans boucle. Les propriétés Lead non observées et les clients email réels restent à valider. La persistance JSON et le verrou concernent un seul processus ; aucune garantie distribuée.
+Les jours et plages horaires sont ajoutés par le [complément horaires](lead-scenarios-horaires.md), avec les limites de ce calendrier. Restent non livrés : connecteurs réels et leurs accusés/réessais, réentrée configurable, inscription depuis la fiche commerciale, délégations fines, purge historique/reçus d'opération. L’éditeur dispose maintenant des douze types de blocs et le moteur de branches sans boucle. Les propriétés Lead non observées et les clients email réels restent à valider. La persistance JSON et le verrou concernent un seul processus ; aucune garantie distribuée.
 
 ## Modèles et options avancées — deuxième lot, complété par le troisième
 

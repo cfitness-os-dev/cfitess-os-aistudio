@@ -450,6 +450,47 @@ def main():
             after=call('GET',endpoint,admin)[1]
             assert after['smsOutbox']==before['smsOutbox'] and after['emailOutbox']==before['emailOutbox'] and after['campaigns']==before['campaigns']
             checks.append('template channel changes are forbidden and inconsistent restored channels reject the campaign simulation without queue or history mutation')
+
+            # Message windows are versioned, validated by the real route and persist on deferral.
+            import datetime as dt
+            from zoneinfo import ZoneInfo
+            stop(proc)
+            fixture=json.loads((folder/'cfitness_state.json').read_text())
+            contact={**fixture['leadProspects'][0],'id':'window-contact','email':'window@example.test','rgpdConsent':True,'isArchived':False,'stage':'Nouveau','leadStatus':'Nouveau','clubId':'carre-de-soie','assignedToId':'emp-maxime'}
+            fixture['leadProspects'].append(contact)
+            (folder/'cfitness_state.json').write_text(json.dumps(fixture))
+            proc=start();admin=login('emp-mario','CFITNESS_TEST_ADMIN_SECRET');employee=login('emp-chloe','CFITNESS_TEST_COMMERCIAL_SECRET')
+            today=dt.datetime.now(dt.timezone.utc).astimezone(ZoneInfo('Europe/Paris')).isoweekday()
+            window=dict(timezone='Europe/Paris',weekdays=[today%7+1],startTime='09:00',endTime='18:00')
+            definition_window={**definition,'name':'Jours et horaires','messageWindow':window}
+            save_window=dict(action='save',scenarioId=None,expectedRevision=None,definition=definition_window)
+            assert call('POST',endpoint,employee,save_window)[0]==403
+            for invalid in [dict(timezone='UTC',weekdays=[1],startTime='09:00',endTime='18:00'),dict(timezone='Europe/Paris',weekdays=[],startTime='09:00',endTime='18:00'),dict(timezone='Europe/Paris',weekdays=[1],startTime='20:00',endTime='09:00')]:
+                assert call('POST',endpoint,admin,{**save_window,'definition':{**definition_window,'messageWindow':invalid}})[0]==422
+            response=call('POST',endpoint,admin,save_window)[1];sid=response['commandResult']['scenarioId']
+            assert call('POST',endpoint,admin,dict(action='publish',scenarioId=sid,expectedRevision=1))[0]==200
+            assert call('POST',endpoint,admin,dict(action='status',scenarioId=sid,expectedRevision=2,active=True,enrollmentLocked=False))[0]==200
+            assert call('POST',endpoint,admin,dict(action='enroll',scenarioId=sid,prospectId='window-contact'))[0]==200
+            before=call('GET',endpoint,admin)[1]
+            enrolled=next(e for e in before['enrollments'] if e['scenarioId']==sid)
+            (folder/'cfitness_state.json.tmp').mkdir()
+            assert call('POST',endpoint,admin,dict(action='run'))[0]==500
+            assert next(e for e in call('GET',endpoint,admin)[1]['enrollments'] if e['scenarioId']==sid)==enrolled
+            (folder/'cfitness_state.json.tmp').rmdir()
+            response=call('POST',endpoint,admin,dict(action='run'))[1]
+            deferred=next(e for e in response['enrollments'] if e['scenarioId']==sid)
+            assert deferred['cursor']==0 and deferred['history'][-1]['status']=='deferred'
+            assert dt.datetime.fromisoformat(deferred['nextAt'])>dt.datetime.now(dt.timezone.utc)
+            assert response['emailOutbox']==before['emailOutbox']
+            # Publish an unrestricted version; the enrolled contact must retain the old hours.
+            assert call('POST',endpoint,admin,{**save_window,'scenarioId':sid,'expectedRevision':3,'definition':{**definition_window,'messageWindow':None}})[0]==200
+            assert call('POST',endpoint,admin,dict(action='publish',scenarioId=sid,expectedRevision=4))[0]==200
+            stop(proc);proc=start();admin=login('emp-mario','CFITNESS_TEST_ADMIN_SECRET')
+            response=call('POST',endpoint,admin,dict(action='run'))[1]
+            restored=next(e for e in response['enrollments'] if e['scenarioId']==sid)
+            assert restored['definition']['messageWindow']==window and restored['version']==1
+            assert restored['nextAt']==deferred['nextAt'] and restored['history']==deferred['history']
+            checks.append('message windows validate through HTTP, defer without cursor/message mutation, roll back on disk failure and retain the published hours across republishing and restart')
         finally:
             if proc.poll() is None:
                 stop(proc)

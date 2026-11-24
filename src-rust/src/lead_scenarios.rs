@@ -16,6 +16,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
+#[path = "lead_message_window.rs"]
+mod message_window;
 type Failure = (StatusCode, Json<Value>);
 #[path = "lead_brevo.rs"]
 mod brevo;
@@ -124,6 +126,8 @@ pub struct Definition {
     pub steps: Vec<Step>,
     #[serde(default)]
     pub exit_rules: Option<ExitRules>,
+    #[serde(default)]
+    pub message_window: Option<message_window::MessageWindow>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -356,6 +360,7 @@ fn sources(db: &AppDatabaseState, club: &str) -> Vec<String> {
 }
 fn validate(d: &Definition, club: &str, db: &AppDatabaseState) -> Result<(), Failure> {
     let bad = |msg: &str| err_resp(StatusCode::UNPROCESSABLE_ENTITY, msg);
+    if d.message_window.as_ref().is_some_and(|w|!message_window::valid(w)) {return Err(bad("Jours ou horaires des messages invalides. Choisissez une plage dans la même journée, en heure de France."));}
     if d.schema_version != 1 || d.club_id != club {
         return Err(bad("Version ou club du scénario invalide."));
     }
@@ -1411,6 +1416,23 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
             db.lead_scenarios.enrollments[idx] = e;
             continue;
         };
+        if matches!(step.kind.as_str(),"email"|"sms"|"whatsapp") {
+            if let Some(window)=&e.definition.message_window {
+                match message_window::next_allowed(window,now) {
+                    Ok(next) if next>now=>{
+                        e.next_at=next.to_rfc3339();
+                        e.history.push(Execution{step_id:step.id.clone(),at:now.to_rfc3339(),status:"deferred".into(),detail:format!("Message reporté au {} (heure de France), selon les jours et horaires du scénario.",next.with_timezone(&chrono_tz::Europe::Paris).format("%d/%m/%Y à %H:%M")),activity_id:None,rendered_subject:None,rendered_content:None,rendered_html:None});
+                        db.lead_scenarios.enrollments[idx]=e;continue;
+                    }
+                    Err(reason)=>{
+                        e.status="stopped".into();
+                        e.history.push(Execution{step_id:step.id.clone(),at:now.to_rfc3339(),status:"stopped".into(),detail:reason,activity_id:None,rendered_subject:None,rendered_content:None,rendered_html:None});
+                        db.lead_scenarios.enrollments[idx]=e;continue;
+                    }
+                    _=>{}
+                }
+            }
+        }
         let mut result = Execution {
             step_id: step.id.clone(),
             at: now.to_rfc3339(),

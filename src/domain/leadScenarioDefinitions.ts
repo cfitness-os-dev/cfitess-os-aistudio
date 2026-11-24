@@ -18,6 +18,7 @@ export interface ScenarioStep {
   emailDocument?: EmailDocument | null;
   whatsapp?: { mode: 'direct' | 'template'; closedAction: 'skip' | 'template' | 'sms'; fallbackTemplateId: string | null; fallbackContent: string | null } | null;
 }
+export interface ScenarioMessageWindow { timezone:'Europe/Paris'; weekdays:number[]; startTime:string; endTime:string }
 export interface ScenarioDefinition {
   schemaVersion: 1;
   clubId: ScenarioClubId;
@@ -27,6 +28,7 @@ export interface ScenarioDefinition {
   enrollmentLocked: boolean;
   conditions: { statusIds: string[]; sourceIds: string[]; requireAssignedCommercial: boolean } | null;
   steps: ScenarioStep[];
+  messageWindow?:ScenarioMessageWindow|null;
   exitRules?: { stopOnReply: boolean; statusIds: string[]; stopIfNoLongerMatches: boolean } | null;
 }
 export interface ScenarioCatalog {
@@ -53,7 +55,16 @@ export function validateScenarioDefinition(input: unknown, catalog: ScenarioCata
   };
   const text = (value: unknown, max: number) => typeof value === 'string' && value.trim().length > 0 && value.length <= max;
   if (!isRecord(input)) return { ok: false, issues: [{ path: '', message: 'Scénario invalide.' }] };
-  fields(input, ['schemaVersion', 'clubId', 'name', 'mode', 'active', 'enrollmentLocked', 'conditions', 'steps', 'exitRules'], '');
+  fields(input, ['schemaVersion', 'clubId', 'name', 'mode', 'active', 'enrollmentLocked', 'conditions', 'steps', 'exitRules', 'messageWindow'], '');
+  if (input.messageWindow !== undefined && input.messageWindow !== null) {
+    const w=input.messageWindow;
+    const clock=(v:unknown):v is string=>typeof v==='string' && /^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(v);
+    if (!isRecord(w)) fail('messageWindow','Jours et horaires des messages invalides.');
+    else {
+      fields(w,['timezone','weekdays','startTime','endTime'],'messageWindow.');
+      if (w.timezone!=='Europe/Paris' || !Array.isArray(w.weekdays) || !w.weekdays.length || w.weekdays.length>7 || new Set(w.weekdays).size!==w.weekdays.length || w.weekdays.some(d=>!Number.isInteger(d)||d<1||d>7) || !clock(w.startTime) || !clock(w.endTime) || w.startTime>=w.endTime) fail('messageWindow','Choisissez des jours et une plage dans la même journée, en heure de France.');
+    }
+  }
   if (input.schemaVersion !== 1) fail('schemaVersion', 'Version de scénario non prise en charge.');
   if (input.clubId !== catalog.clubId || !['carre-de-soie', 'beynost'].includes(String(input.clubId))) fail('clubId', 'Ce scénario appartient à un autre club ou à un club inconnu.');
   if (!text(input.name, 120)) fail('name', 'Indiquez un nom de 1 à 120 caractères.');
