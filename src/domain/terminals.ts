@@ -524,3 +524,227 @@ export async function submitCoursePresence(
 
   return await res.json();
 }
+
+export interface PunchPhotoMetadata {
+  id: string;
+  siteId: string;
+  terminalId: string;
+  terminalLabel?: string;
+  employeeId: string;
+  employeeName?: string;
+  contentType: string;
+  byteSize: number;
+  capturedAt: string;
+  expiresAt: string;
+  consumedAt?: string | null;
+  consumedByEntryId?: string | null;
+  filePresent?: boolean;
+}
+
+export async function fetchClubPhotoPolicy(
+  clubId: ClubId,
+  signal?: AbortSignal
+): Promise<PhotoPolicyMode> {
+  const token = getSessionToken();
+  if (!token) {
+    throw new Error("Reconnectez-vous pour consulter la politique photo du club.");
+  }
+
+  const res = await fetch(`/api/hr/photo-policy/${encodeURIComponent(clubId)}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+    signal,
+  });
+
+  const data = await res.json().catch(() => null);
+  if (res.status === 401 || res.status === 403) {
+    throw new TerminalAccessDenied(
+      data?.error ||
+        data?.message ||
+        "La politique photo du club est réservée au propriétaire ou super administrateur."
+    );
+  }
+  if (!res.ok) {
+    throw new Error(data?.error || data?.message || "Impossible de lire la politique photo du club.");
+  }
+
+  const mode = data?.mode;
+  if (mode === "disabled" || mode === "optional" || mode === "required") {
+    return mode;
+  }
+  return "disabled";
+}
+
+export async function updateClubPhotoPolicy(
+  clubId: ClubId,
+  mode: PhotoPolicyMode
+): Promise<{ siteId: string; mode: PhotoPolicyMode }> {
+  const token = getSessionToken();
+  if (!token) {
+    throw new Error("Reconnectez-vous pour modifier la politique photo du club.");
+  }
+
+  const res = await fetch(`/api/hr/photo-policy/${encodeURIComponent(clubId)}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({ mode }),
+  });
+
+  const data = await res.json().catch(() => null);
+  if (res.status === 401 || res.status === 403) {
+    throw new TerminalAccessDenied(
+      data?.error ||
+        data?.message ||
+        "Modification de la politique photo réservée au propriétaire ou super administrateur."
+    );
+  }
+  if (!res.ok) {
+    throw new Error(data?.error || data?.message || "Échec de mise à jour de la politique photo.");
+  }
+
+  return data;
+}
+
+export async function fetchClubPunchPhotos(
+  clubId: ClubId,
+  signal?: AbortSignal
+): Promise<PunchPhotoMetadata[]> {
+  const token = getSessionToken();
+  if (!token) {
+    throw new Error("Reconnectez-vous pour consulter la galerie photos de pointage.");
+  }
+
+  const res = await fetch(`/api/hr/punch-photos/${encodeURIComponent(clubId)}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+    signal,
+  });
+
+  const data = await res.json().catch(() => null);
+  if (res.status === 401 || res.status === 403) {
+    throw new TerminalAccessDenied(
+      data?.error ||
+        data?.message ||
+        "La galerie photos de pointage est réservée au propriétaire ou super administrateur."
+    );
+  }
+  if (!res.ok) {
+    throw new Error(data?.error || data?.message || "Impossible de charger la galerie photos.");
+  }
+
+  return Array.isArray(data?.photos) ? data.photos : [];
+}
+
+export async function fetchPunchPhotoBlobUrl(
+  clubId: ClubId,
+  photoId: string,
+  signal?: AbortSignal
+): Promise<string> {
+  const token = getSessionToken();
+  if (!token) {
+    throw new Error("Reconnectez-vous pour afficher une photo de pointage.");
+  }
+
+  const res = await fetch(
+    `/api/hr/punch-photos/${encodeURIComponent(clubId)}/${encodeURIComponent(photoId)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      signal,
+    }
+  );
+
+  if (res.status === 401 || res.status === 403) {
+    const data = await res.json().catch(() => null);
+    throw new TerminalAccessDenied(
+      data?.error ||
+        data?.message ||
+        "Consultation photo réservée au propriétaire ou super administrateur."
+    );
+  }
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new Error(data?.error || data?.message || "Photo de pointage indisponible.");
+  }
+
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
+
+export async function deleteClubPunchPhoto(
+  clubId: ClubId,
+  photoId: string
+): Promise<{ status: string; photoId: string; siteId: string; fileDeleted: boolean }> {
+  const token = getSessionToken();
+  if (!token) {
+    throw new Error("Reconnectez-vous pour supprimer une photo de pointage.");
+  }
+
+  const res = await fetch(
+    `/api/hr/punch-photos/${encodeURIComponent(clubId)}/${encodeURIComponent(photoId)}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+    }
+  );
+
+  const data = await res.json().catch(() => null);
+  if (res.status === 401 || res.status === 403) {
+    throw new TerminalAccessDenied(
+      data?.error ||
+        data?.message ||
+        "Suppression photo réservée au propriétaire ou super administrateur."
+    );
+  }
+  if (!res.ok) {
+    throw new Error(data?.error || data?.message || "Échec de suppression de la photo.");
+  }
+
+  return data;
+}
+
+export async function purgeClubPunchPhotos(
+  clubId: ClubId,
+  retentionDays = 30
+): Promise<{ status: string; siteId: string; retentionDays: number; removedCount: number }> {
+  const token = getSessionToken();
+  if (!token) {
+    throw new Error("Reconnectez-vous pour purger les photos de pointage.");
+  }
+
+  const res = await fetch(`/api/hr/punch-photos/${encodeURIComponent(clubId)}/purge`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({ retentionDays }),
+  });
+
+  const data = await res.json().catch(() => null);
+  if (res.status === 401 || res.status === 403) {
+    throw new TerminalAccessDenied(
+      data?.error ||
+        data?.message ||
+        "Purge des photos réservée au propriétaire ou super administrateur."
+    );
+  }
+  if (!res.ok) {
+    throw new Error(data?.error || data?.message || "Échec de la purge des photos.");
+  }
+
+  return data;
+}

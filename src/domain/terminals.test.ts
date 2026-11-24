@@ -292,3 +292,167 @@ test("terminals: resolveKioskPhotoPolicy distinguishes disabled, optional and re
   assert.equal(resolveKioskPhotoPolicy({ photoCaptureAvailable: true }), "optional");
   assert.equal(resolveKioskPhotoPolicy({ photoCaptureAvailable: false }), "disabled");
 });
+
+test("terminals: photo policy and club gallery helpers propagate 403 as TerminalAccessDenied", async () => {
+  const mod = await import("./terminals");
+  const prevFetch = globalThis.fetch;
+  const g = globalThis as Record<string, unknown>;
+  g.__cfos_bearer_token = "tok-karim";
+  g.__cfos_bearer_actor_id = "emp-karim";
+
+  try {
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify({ error: "Accès réservé au propriétaire." }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      })) as typeof fetch;
+
+    await assert.rejects(
+      () => mod.fetchClubPhotoPolicy("carre-de-soie"),
+      (err: unknown) => err instanceof mod.TerminalAccessDenied && /propriétaire/.test(err.message)
+    );
+    await assert.rejects(
+      () => mod.updateClubPhotoPolicy("carre-de-soie", "required"),
+      (err: unknown) => err instanceof mod.TerminalAccessDenied
+    );
+    await assert.rejects(
+      () => mod.fetchClubPunchPhotos("carre-de-soie"),
+      (err: unknown) => err instanceof mod.TerminalAccessDenied
+    );
+    await assert.rejects(
+      () => mod.deleteClubPunchPhoto("carre-de-soie", "photo-1"),
+      (err: unknown) => err instanceof mod.TerminalAccessDenied
+    );
+    await assert.rejects(
+      () => mod.purgeClubPunchPhotos("carre-de-soie", 30),
+      (err: unknown) => err instanceof mod.TerminalAccessDenied
+    );
+  } finally {
+    globalThis.fetch = prevFetch;
+    delete g.__cfos_bearer_token;
+    delete g.__cfos_bearer_actor_id;
+  }
+});
+
+test("terminals: fetchClubPhotoPolicy, updateClubPhotoPolicy, fetchClubPunchPhotos and purge parse payloads", async () => {
+  const mod = await import("./terminals");
+  const prevFetch = globalThis.fetch;
+  const g = globalThis as Record<string, unknown>;
+  g.__cfos_bearer_token = "tok-daniel";
+  g.__cfos_bearer_actor_id = "emp-daniel";
+
+  const seenCalls: Array<{ url: string; method: string; auth: string | null }> = [];
+  try {
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : String(input);
+      const method = init?.method || "GET";
+      const headers = new Headers(init?.headers);
+      seenCalls.push({ url, method, auth: headers.get("Authorization") });
+
+      if (url.startsWith("/api/hr/photo-policy/") && method === "GET") {
+        return new Response(JSON.stringify({ siteId: "club-carre-soie", mode: "required" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.startsWith("/api/hr/photo-policy/") && method === "PUT") {
+        return new Response(JSON.stringify({ siteId: "club-carre-soie", mode: "disabled" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url === "/api/hr/punch-photos/carre-de-soie" && method === "GET") {
+        return new Response(
+          JSON.stringify({
+            siteId: "club-carre-soie",
+            photos: [
+              {
+                id: "p-1",
+                siteId: "club-carre-soie",
+                terminalId: "term-1",
+                terminalLabel: "Tablette Accueil",
+                employeeId: "emp-karim",
+                employeeName: "Karim Benali",
+                contentType: "image/jpeg",
+                byteSize: 2048,
+                capturedAt: "2026-11-24T08:00:00Z",
+                expiresAt: "2026-11-24T08:02:00Z",
+                consumedAt: "2026-11-24T08:00:20Z",
+                consumedByEntryId: "ptg-1",
+                filePresent: true,
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      if (url === "/api/hr/punch-photos/carre-de-soie/purge" && method === "POST") {
+        return new Response(
+          JSON.stringify({ status: "purged", siteId: "club-carre-soie", retentionDays: 30, removedCount: 2 }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      return new Response(JSON.stringify({ status: "deleted", photoId: "p-1", siteId: "club-carre-soie", fileDeleted: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof fetch;
+
+    const policy = await mod.fetchClubPhotoPolicy("carre-de-soie");
+    assert.equal(policy, "required");
+    const updated = await mod.updateClubPhotoPolicy("carre-de-soie", "disabled");
+    assert.equal(updated.mode, "disabled");
+    const photos = await mod.fetchClubPunchPhotos("carre-de-soie");
+    assert.equal(photos.length, 1);
+    assert.equal(photos[0].employeeName, "Karim Benali");
+    const purged = await mod.purgeClubPunchPhotos("carre-de-soie", 30);
+    assert.equal(purged.removedCount, 2);
+    const deleted = await mod.deleteClubPunchPhoto("carre-de-soie", "p-1");
+    assert.equal(deleted.fileDeleted, true);
+
+    assert.ok(seenCalls.every((c) => c.auth === "Bearer tok-daniel"));
+  } finally {
+    globalThis.fetch = prevFetch;
+    delete g.__cfos_bearer_token;
+    delete g.__cfos_bearer_actor_id;
+  }
+});
+
+test("terminals: fetchPunchPhotoBlobUrl uses Bearer auth and surfaces backend error", async () => {
+  const mod = await import("./terminals");
+  const prevFetch = globalThis.fetch;
+  const prevCreateObj = URL.createObjectURL;
+  const g = globalThis as Record<string, unknown>;
+  g.__cfos_bearer_token = "tok-daniel";
+
+  try {
+    URL.createObjectURL = () => "blob:mock-photo-url";
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      assert.equal(headers.get("Authorization"), "Bearer tok-daniel");
+      const url = typeof input === "string" ? input : String(input);
+      if (url.endsWith("/missing")) {
+        return new Response(JSON.stringify({ error: "Preuve photo introuvable." }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(new Blob([new Uint8Array([137, 80, 78, 71])], { type: "image/png" }), {
+        status: 200,
+        headers: { "Content-Type": "image/png" },
+      });
+    }) as typeof fetch;
+
+    const blobUrl = await mod.fetchPunchPhotoBlobUrl("beynost", "photo-ok");
+    assert.equal(blobUrl, "blob:mock-photo-url");
+
+    await assert.rejects(
+      () => mod.fetchPunchPhotoBlobUrl("beynost", "missing"),
+      (err: unknown) => err instanceof Error && /introuvable/.test(err.message)
+    );
+  } finally {
+    globalThis.fetch = prevFetch;
+    URL.createObjectURL = prevCreateObj;
+    delete g.__cfos_bearer_token;
+  }
+});

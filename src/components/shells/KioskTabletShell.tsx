@@ -16,6 +16,8 @@ import {
   LogOut,
   Camera,
   CameraOff,
+  Images,
+  Trash2,
 } from 'lucide-react';
 import { ClubId, PointageType } from '../../types/cfos';
 import { formatPointageType } from '../../domain/rules';
@@ -26,11 +28,16 @@ import {
   captureTerminalPhoto,
   clearKioskEmployeeSession,
   clearStoredTerminalToken,
+  deleteClubPunchPhoto,
+  fetchClubPunchPhotos,
+  fetchPunchPhotoBlobUrl,
   fetchRoomOccurrences,
   fetchTerminalWhoAmI,
   getStoredTerminalToken,
   getVerifiedKioskSession,
   pairTerminal,
+  PunchPhotoMetadata,
+  purgeClubPunchPhotos,
   resolveKioskPhotoPolicy,
   RoomCourseOccurrence,
   setStoredTerminalToken,
@@ -89,9 +96,21 @@ export function KioskTabletShell() {
   const [pairingBusy, setPairingBusy] = useState(false);
 
   // Navigation mode kiosque
-  const [mode, setMode] = useState<'POINTEUSE_RH' | 'SALLE_COURS' | 'VISITEUR_ESSAI'>('POINTEUSE_RH');
+  const [mode, setMode] = useState<
+    'POINTEUSE_RH' | 'SALLE_COURS' | 'VISITEUR_ESSAI' | 'GALERIE_PHOTOS'
+  >('POINTEUSE_RH');
   const [pointageType, setPointageType] = useState<PointageType>('arrivee');
   const [punchBusy, setPunchBusy] = useState(false);
+
+  // Galerie photo privée propriétaire sur tablette (#33)
+  const [galleryPhotos, setGalleryPhotos] = useState<PunchPhotoMetadata[]>([]);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [galleryError, setGalleryError] = useState<string | null>(null);
+  const [galleryDenied, setGalleryDenied] = useState(false);
+  const [galleryBlobUrls, setGalleryBlobUrls] = useState<Record<string, string>>({});
+  const galleryBlobUrlsRef = useRef<Record<string, string>>({});
+  const [galleryBusyId, setGalleryBusyId] = useState<string | null>(null);
+  const [galleryPurging, setGalleryPurging] = useState(false);
 
   // Capture webcam réelle (Lot P3)
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -207,11 +226,22 @@ export function KioskTabletShell() {
     terminalInfo?.siteId === 'club-beynost' ? 'beynost' : 'carre-de-soie';
   const effectivePhotoPolicy = resolveKioskPhotoPolicy(terminalInfo);
 
+  const revokeKioskGalleryUrls = useCallback(() => {
+    Object.values(galleryBlobUrlsRef.current).forEach((url) => URL.revokeObjectURL(url));
+    galleryBlobUrlsRef.current = {};
+    setGalleryBlobUrls({});
+  }, []);
+
   const purgeEmployeeWorkState = useCallback(() => {
     stopCamera();
     setCapturedPhoto(null);
     setCapturedPreviewUrl(null);
     setCameraError(null);
+    revokeKioskGalleryUrls();
+    setGalleryPhotos([]);
+    setGalleryError(null);
+    setGalleryDenied(false);
+    setMode((prev) => (prev === 'GALERIE_PHOTOS' ? 'POINTEUSE_RH' : prev));
     setCheckedItems({
       'chk-sono': false,
       'chk-securite': false,
@@ -219,7 +249,121 @@ export function KioskTabletShell() {
       'chk-climatisation': false,
     });
     setCourseNote('');
-  }, [stopCamera]);
+  }, [stopCamera, revokeKioskGalleryUrls]);
+
+  useEffect(() => {
+    return () => {
+      revokeKioskGalleryUrls();
+    };
+  }, [revokeKioskGalleryUrls]);
+
+  const loadKioskGallery = useCallback(async () => {
+    if (!verifiedSession) {
+      setGalleryPhotos([]);
+      setGalleryDenied(false);
+      return;
+    }
+    setGalleryLoading(true);
+    setGalleryError(null);
+    setGalleryDenied(false);
+    try {
+      const list = await fetchClubPunchPhotos(resolvedClub);
+      setGalleryPhotos(list);
+    } catch (err) {
+      if (err instanceof TerminalAccessDenied) {
+        setGalleryDenied(true);
+        setGalleryPhotos([]);
+        setGalleryError(err.message);
+      } else {
+        setGalleryError(
+          err instanceof Error ? err.message : 'Impossible de charger la galerie photos.'
+        );
+      }
+    } finally {
+      setGalleryLoading(false);
+    }
+  }, [resolvedClub, verifiedSession]);
+
+  useEffect(() => {
+    if (mode === 'GALERIE_PHOTOS' && terminalInfo && verifiedSession) {
+      void loadKioskGallery();
+    }
+  }, [mode, terminalInfo, verifiedSession, loadKioskGallery]);
+
+  const handleViewKioskPhoto = async (photoId: string) => {
+    setGalleryBusyId(photoId);
+    setGalleryError(null);
+    try {
+      const blobUrl = await fetchPunchPhotoBlobUrl(resolvedClub, photoId);
+      const prevUrl = galleryBlobUrlsRef.current[photoId];
+      if (prevUrl) URL.revokeObjectURL(prevUrl);
+      galleryBlobUrlsRef.current[photoId] = blobUrl;
+      setGalleryBlobUrls((prev) => ({ ...prev, [photoId]: blobUrl }));
+    } catch (err) {
+      if (err instanceof TerminalAccessDenied) {
+        setGalleryDenied(true);
+        setGalleryPhotos([]);
+      }
+      setGalleryError(err instanceof Error ? err.message : "Impossible d'afficher cette photo.");
+    } finally {
+      setGalleryBusyId(null);
+    }
+  };
+
+  const handleDeleteKioskPhoto = async (photoId: string) => {
+    setGalleryBusyId(photoId);
+    setGalleryError(null);
+    setStatusMessage(null);
+    try {
+      await deleteClubPunchPhoto(resolvedClub, photoId);
+      const prevUrl = galleryBlobUrlsRef.current[photoId];
+      if (prevUrl) {
+        URL.revokeObjectURL(prevUrl);
+        delete galleryBlobUrlsRef.current[photoId];
+      }
+      setGalleryBlobUrls((prev) => {
+        const next = { ...prev };
+        delete next[photoId];
+        return next;
+      });
+      setGalleryPhotos((prev) => prev.filter((p) => p.id !== photoId));
+      setStatusMessage({
+        type: 'ok',
+        text: 'Preuve photo supprimée du serveur.',
+      });
+    } catch (err) {
+      if (err instanceof TerminalAccessDenied) {
+        setGalleryDenied(true);
+        setGalleryPhotos([]);
+      }
+      setGalleryError(err instanceof Error ? err.message : 'Échec de suppression de la photo.');
+    } finally {
+      setGalleryBusyId(null);
+    }
+  };
+
+  const handlePurgeKioskPhotos = async () => {
+    setGalleryPurging(true);
+    setGalleryError(null);
+    setStatusMessage(null);
+    try {
+      const res = await purgeClubPunchPhotos(resolvedClub, 30);
+      revokeKioskGalleryUrls();
+      await loadKioskGallery();
+      setStatusMessage({
+        type: 'ok',
+        text: `Purge terminée : ${res.removedCount} photo(s) supprimée(s) (rétention ${res.retentionDays}j).`,
+      });
+    } catch (err) {
+      if (err instanceof TerminalAccessDenied) {
+        setGalleryDenied(true);
+        setGalleryPhotos([]);
+      }
+      setGalleryError(err instanceof Error ? err.message : 'Échec de la purge des photos.');
+    } finally {
+      setGalleryPurging(false);
+    }
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -728,6 +872,25 @@ export function KioskTabletShell() {
                 <UserPlus className="w-4 h-4" />
                 Accueil Visiteur
               </button>
+
+              {verifiedSession && (
+                <button
+                  onClick={() => {
+                    setMode('GALERIE_PHOTOS');
+                    setStatusMessage(null);
+                  }}
+                  className={`min-h-[48px] px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 cursor-pointer ${
+                    mode === 'GALERIE_PHOTOS'
+                      ? 'bg-violet-600 text-white shadow-sm'
+                      : isDark
+                      ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  <Images className="w-4 h-4" />
+                  Galerie Photos (Propriétaire)
+                </button>
+              )}
             </div>
 
             {statusMessage && (
@@ -747,7 +910,7 @@ export function KioskTabletShell() {
               </div>
             )}
 
-            {(mode === 'POINTEUSE_RH' || mode === 'SALLE_COURS') && (
+            {(mode === 'POINTEUSE_RH' || mode === 'SALLE_COURS' || mode === 'GALERIE_PHOTOS') && (
               <div
                 className={`border rounded-3xl p-5 space-y-3 ${
                   isDark ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-slate-200 shadow-sm'
@@ -1217,6 +1380,139 @@ export function KioskTabletShell() {
                   Valider mon arrivée à l&apos;accueil
                 </button>
               </form>
+            )}
+          </div>
+        )}
+
+        {mode === 'GALERIE_PHOTOS' && verifiedSession && (
+          <div
+            className={`border rounded-3xl p-6 space-y-4 ${
+              isDark ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-slate-200 shadow-lg'
+            }`}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-bold flex items-center gap-2">
+                  <Images className="w-4 h-4 text-violet-400" />
+                  <span>Galerie privée des preuves photo ({galleryPhotos.length})</span>
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Accès strictement réservé à la session nominative du propriétaire / super administrateur.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => void loadKioskGallery()}
+                  disabled={galleryLoading}
+                  className={`min-h-[40px] px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer border ${
+                    isDark
+                      ? 'bg-slate-900 border-slate-700 text-slate-200 hover:bg-slate-700'
+                      : 'bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-100'
+                  }`}
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${galleryLoading ? 'animate-spin' : ''}`} />
+                  Actualiser
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handlePurgeKioskPhotos()}
+                  disabled={galleryPurging || galleryLoading || galleryDenied}
+                  className="min-h-[40px] px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  {galleryPurging ? 'Purge...' : 'Purger (> 30j)'}
+                </button>
+              </div>
+            </div>
+
+            {galleryDenied ? (
+              <div className="p-4 rounded-2xl bg-rose-950/90 border border-rose-700 text-rose-200 text-xs font-semibold flex items-center gap-2.5">
+                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                <span>
+                  {galleryError ||
+                    'Accès refusé : seule une session propriétaire / super administrateur peut consulter la galerie photo de ce club.'}
+                </span>
+              </div>
+            ) : (
+              <>
+                {galleryError && (
+                  <div className="p-3 rounded-2xl bg-rose-950/90 border border-rose-700 text-rose-200 text-xs font-semibold">
+                    {galleryError}
+                  </div>
+                )}
+
+                {galleryLoading ? (
+                  <div className="text-xs text-slate-400 py-4">
+                    Chargement de la galerie privée...
+                  </div>
+                ) : galleryPhotos.length === 0 ? (
+                  <div className="text-xs text-slate-400 italic py-4">
+                    Aucune photo de pointage enregistrée pour ce club.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {galleryPhotos.map((photo) => {
+                      const blobUrl = galleryBlobUrls[photo.id];
+                      const isBusy = galleryBusyId === photo.id;
+                      return (
+                        <div
+                          key={photo.id}
+                          className={`p-3.5 rounded-2xl border space-y-2.5 text-xs ${
+                            isDark
+                              ? 'bg-slate-900/70 border-slate-700'
+                              : 'bg-slate-50 border-slate-200'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="space-y-0.5">
+                              <div className="font-bold text-sm">
+                                {photo.employeeName || photo.employeeId}
+                              </div>
+                              <div className="text-slate-400">
+                                {photo.terminalLabel || photo.terminalId} ·{' '}
+                                {new Date(photo.capturedAt).toLocaleString('fr-FR', {
+                                  timeZone: 'Europe/Paris',
+                                })}
+                              </div>
+                              <div className="text-slate-400">
+                                {Math.max(1, Math.round(photo.byteSize / 1024))} Ko ·{' '}
+                                {photo.consumedAt ? 'Consommée au pointage' : 'En attente / expirée'}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() => void handleViewKioskPhoto(photo.id)}
+                                className="px-3 py-1.5 rounded-xl font-bold bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white cursor-pointer"
+                              >
+                                {blobUrl ? 'Recharger' : 'Afficher'}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() => void handleDeleteKioskPhoto(photo.id)}
+                                className="px-3 py-1.5 rounded-xl font-bold bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white cursor-pointer flex items-center gap-1"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                Supprimer
+                              </button>
+                            </div>
+                          </div>
+                          {blobUrl && (
+                            <img
+                              src={blobUrl}
+                              alt={`Preuve photo ${photo.employeeName || photo.employeeId}`}
+                              className="w-full max-h-56 object-contain rounded-xl border border-slate-700 bg-black/90"
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

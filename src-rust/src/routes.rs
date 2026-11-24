@@ -194,7 +194,19 @@ pub fn api_router(state: SharedState) -> Router {
         .route("/api/terminals/pair", post(crate::clock_terminals::post_pair_terminal))
         .route("/api/terminals/punch", post(crate::clock_terminals::post_terminal_punch))
         .route("/api/terminals/photo-proof", post(crate::punch_photos::post_capture_punch_photo))
-        .route("/api/hr/punch-photos/:club_id/:photo_id", get(crate::punch_photos::get_punch_photo))
+        .route(
+            "/api/hr/punch-photos/:club_id",
+            get(crate::punch_photos::list_club_punch_photos),
+        )
+        .route(
+            "/api/hr/punch-photos/:club_id/purge",
+            post(crate::punch_photos::post_purge_club_punch_photos),
+        )
+        .route(
+            "/api/hr/punch-photos/:club_id/:photo_id",
+            get(crate::punch_photos::get_punch_photo)
+                .delete(crate::punch_photos::delete_punch_photo),
+        )
         .route("/api/hr/photo-policy/:club_id", get(crate::punch_photos::get_photo_policy).put(crate::punch_photos::put_photo_policy))
         .route("/api/terminals/:club_id", get(crate::clock_terminals::get_club_terminals).post(crate::clock_terminals::post_create_terminal))
         .route("/api/terminals/:club_id/:terminal_id/revoke", post(crate::clock_terminals::post_revoke_terminal))

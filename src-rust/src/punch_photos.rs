@@ -56,6 +56,12 @@ pub struct UpdatePhotoPolicyPayload {
     pub mode: String, // "disabled" | "optional" | "required"
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PurgePhotosPayload {
+    pub retention_days: Option<i64>,
+}
+
 pub(crate) fn club_photo_policy(db: &AppDatabaseState, site_id: &str) -> &'static str {
     match db
         .photo_policy_by_club
@@ -600,6 +606,231 @@ pub async fn get_punch_photo(
         })
 }
 
+fn parse_rfc3339_utc(raw: &str) -> Option<DateTime<Utc>> {
+    DateTime::parse_from_rfc3339(raw)
+        .ok()
+        .map(|dt| dt.with_timezone(&Utc))
+}
+
+/// Liste les métadonnées des photos de pointage d'un club (réservé au propriétaire / super admin, #33).
+pub async fn list_club_punch_photos(
+    State(state): State<SharedState>,
+    Path(raw_club): Path<String>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Failure> {
+    let (_, site_id) = club_site(&raw_club)?;
+    let actor_id = authenticated_employee(&state, &headers).await?;
+    let db = state.db.read().await;
+
+    if !is_owner_or_super_admin(&db, &actor_id, site_id) {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "La galerie des photos de pointage est réservée au propriétaire ou super administrateur.",
+        ));
+    }
+
+    let mut photos: Vec<&PunchPhotoRecord> = db
+        .punch_photos
+        .iter()
+        .filter(|p| p.site_id == site_id)
+        .collect();
+    photos.sort_by(|a, b| b.captured_at.cmp(&a.captured_at));
+
+    let items: Vec<Value> = photos
+        .into_iter()
+        .map(|p| {
+            let employee_name = db
+                .employees
+                .iter()
+                .find(|e| e.id == p.employee_id)
+                .map(|e| format!("{} {}", e.first_name, e.last_name))
+                .unwrap_or_else(|| p.employee_id.clone());
+            let terminal_label = db
+                .clock_terminals
+                .iter()
+                .find(|t| t.id == p.terminal_id)
+                .map(|t| t.label.clone())
+                .unwrap_or_else(|| p.terminal_id.clone());
+            let file_present = photo_disk_path(&state.data_dir, &p.site_id, &p.file_name).exists();
+            json!({
+                "id": p.id,
+                "siteId": p.site_id,
+                "terminalId": p.terminal_id,
+                "terminalLabel": terminal_label,
+                "employeeId": p.employee_id,
+                "employeeName": employee_name,
+                "contentType": p.content_type,
+                "byteSize": p.byte_size,
+                "capturedAt": p.captured_at,
+                "expiresAt": p.expires_at,
+                "consumedAt": p.consumed_at,
+                "consumedByEntryId": p.consumed_by_entry_id,
+                "filePresent": file_present,
+            })
+        })
+        .collect();
+
+    Ok(Json(json!({
+        "siteId": site_id,
+        "photos": items
+    })))
+}
+
+/// Suppression unitaire d'une photo de pointage (réservée au propriétaire / super admin, #33).
+pub async fn delete_punch_photo(
+    State(state): State<SharedState>,
+    Path((raw_club, photo_id)): Path<(String, String)>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Failure> {
+    let (_, site_id) = club_site(&raw_club)?;
+    let actor_id = authenticated_employee(&state, &headers).await?;
+    let mut db = state.db.write().await;
+
+    if !is_owner_or_super_admin(&db, &actor_id, site_id) {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "La suppression des photos de pointage est réservée au propriétaire ou super administrateur.",
+        ));
+    }
+
+    let mut next = db.clone();
+    let Some(idx) = next
+        .punch_photos
+        .iter()
+        .position(|p| p.id == photo_id && p.site_id == site_id)
+    else {
+        return Err(err_resp(StatusCode::NOT_FOUND, "Preuve photo introuvable."));
+    };
+
+    let removed = next.punch_photos.remove(idx);
+    append_audit(
+        &mut next,
+        &actor_id,
+        "PUNCH_PHOTO_DELETED",
+        format!(
+            "Suppression manuelle de la photo de pointage {} ({})",
+            removed.id, removed.employee_id
+        ),
+        site_id,
+        &removed.id,
+        Some(removed.file_name.clone()),
+        None,
+    );
+
+    persist_state(&state.data_dir, &next).map_err(|err| {
+        err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec de persistance avant suppression photo : {err}"),
+        )
+    })?;
+    *db = next;
+    drop(db);
+
+    let disk_path = photo_disk_path(&state.data_dir, &removed.site_id, &removed.file_name);
+    let file_deleted = fs::remove_file(&disk_path).is_ok();
+
+    Ok(Json(json!({
+        "status": "deleted",
+        "photoId": removed.id,
+        "siteId": site_id,
+        "fileDeleted": file_deleted
+    })))
+}
+
+/// Purge manuelle / rétention RGPD des photos d'un club (réservée au propriétaire / super admin, #33).
+pub async fn post_purge_club_punch_photos(
+    State(state): State<SharedState>,
+    Path(raw_club): Path<String>,
+    headers: HeaderMap,
+    Json(payload): Json<PurgePhotosPayload>,
+) -> Result<Json<Value>, Failure> {
+    let retention_days = payload.retention_days.unwrap_or(30);
+    if !(1..=365).contains(&retention_days) {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            "La durée de rétention doit être comprise entre 1 et 365 jours.",
+        ));
+    }
+
+    let (_, site_id) = club_site(&raw_club)?;
+    let actor_id = authenticated_employee(&state, &headers).await?;
+    let mut db = state.db.write().await;
+
+    if !is_owner_or_super_admin(&db, &actor_id, site_id) {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "La purge des photos de pointage est réservée au propriétaire ou super administrateur.",
+        ));
+    }
+
+    let now = Utc::now();
+    let cutoff = now - Duration::days(retention_days);
+    let mut next = db.clone();
+    let mut kept = Vec::with_capacity(next.punch_photos.len());
+    let mut removed_files: Vec<(String, String)> = Vec::new();
+
+    for photo in next.punch_photos.drain(..) {
+        if photo.site_id != site_id {
+            kept.push(photo);
+            continue;
+        }
+        let should_purge = if let Some(consumed_raw) = photo.consumed_at.as_deref() {
+            parse_rfc3339_utc(consumed_raw)
+                .or_else(|| parse_rfc3339_utc(&photo.captured_at))
+                .map(|ts| ts <= cutoff)
+                .unwrap_or(false)
+        } else {
+            parse_rfc3339_utc(&photo.expires_at)
+                .map(|exp| exp <= now)
+                .unwrap_or(true)
+        };
+        if should_purge {
+            removed_files.push((photo.site_id, photo.file_name));
+        } else {
+            kept.push(photo);
+        }
+    }
+    next.punch_photos = kept;
+    let removed_count = removed_files.len();
+
+    if removed_count > 0 {
+        append_audit(
+            &mut next,
+            &actor_id,
+            "PUNCH_PHOTOS_PURGED",
+            format!(
+                "Purge de {removed_count} photo(s) de pointage sur {site_id} (rétention {retention_days}j)"
+            ),
+            site_id,
+            site_id,
+            None,
+            Some(format!(
+                "{{\"removed\":{removed_count},\"retentionDays\":{retention_days}}}"
+            )),
+        );
+    }
+
+    persist_state(&state.data_dir, &next).map_err(|err| {
+        err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec de persistance lors de la purge photo : {err}"),
+        )
+    })?;
+    *db = next;
+    drop(db);
+
+    for (s_id, f_name) in removed_files {
+        let _ = fs::remove_file(photo_disk_path(&state.data_dir, &s_id, &f_name));
+    }
+
+    Ok(Json(json!({
+        "status": "purged",
+        "siteId": site_id,
+        "retentionDays": retention_days,
+        "removedCount": removed_count
+    })))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -787,6 +1018,304 @@ mod tests {
         .await
         .expect("admin must be able to read punch photo");
         assert_eq!(ok_read.status(), StatusCode::OK);
+
+        let _ = fs::remove_dir_all(&state.data_dir);
+    }
+
+    #[tokio::test]
+    async fn list_delete_rollback_and_retention_purge_enforce_owner_rbac() {
+        let state = test_state();
+        fs::create_dir_all(&state.data_dir).unwrap();
+        let term_token_cds = "secret-term-photo-gallery-cds";
+        let term_token_bey = "secret-term-photo-gallery-bey";
+
+        {
+            let mut db = state.db.write().await;
+            db.clock_terminals.push(ClockTerminal {
+                id: "term-photo-gal-cds".into(),
+                site_id: "club-carre-soie".into(),
+                room_id: "accueil".into(),
+                room_label: "Accueil CDS".into(),
+                label: "Tablette Accueil CDS".into(),
+                status: "active".into(),
+                failed_pairing_attempts: 0,
+                pairing_code: None,
+                device_secret_hash: Some(hash_terminal_token(term_token_cds)),
+                created_at: Utc::now().to_rfc3339(),
+                paired_at: Some(Utc::now().to_rfc3339()),
+                last_seen_at: Some(Utc::now().to_rfc3339()),
+            });
+            db.clock_terminals.push(ClockTerminal {
+                id: "term-photo-gal-bey".into(),
+                site_id: "club-beynost".into(),
+                room_id: "accueil".into(),
+                room_label: "Accueil BEY".into(),
+                label: "Tablette Accueil BEY".into(),
+                status: "active".into(),
+                failed_pairing_attempts: 0,
+                pairing_code: None,
+                device_secret_hash: Some(hash_terminal_token(term_token_bey)),
+                created_at: Utc::now().to_rfc3339(),
+                paired_at: Some(Utc::now().to_rfc3339()),
+                last_seen_at: Some(Utc::now().to_rfc3339()),
+            });
+            db.personal_workspace
+                .clock_policies
+                .entry("emp-karim".into())
+                .or_default()
+                .insert(
+                    "carre-de-soie".into(),
+                    crate::clock_policy::ClockPolicy {
+                        personal_allowed: false,
+                        terminal_allowed: true,
+                        revision: "1".into(),
+                        updated_at: Utc::now().to_rfc3339(),
+                        updated_by: "emp-daniel".into(),
+                    },
+                );
+            db.personal_workspace
+                .clock_policies
+                .entry("emp-chloe".into())
+                .or_default()
+                .insert(
+                    "beynost".into(),
+                    crate::clock_policy::ClockPolicy {
+                        personal_allowed: false,
+                        terminal_allowed: true,
+                        revision: "1".into(),
+                        updated_at: Utc::now().to_rfc3339(),
+                        updated_by: "emp-daniel".into(),
+                    },
+                );
+        }
+
+        let headers_karim = auth_headers(&state, "emp-karim", term_token_cds).await;
+        let headers_chloe = auth_headers(&state, "emp-chloe", term_token_bey).await;
+        let headers_daniel = auth_headers(&state, "emp-daniel", term_token_cds).await;
+
+        let valid_png_b64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+        let mut cds_ids = Vec::new();
+        for _ in 0..4 {
+            let Json(cap) = post_capture_punch_photo(
+                State(state.clone()),
+                headers_karim.clone(),
+                Json(CapturePhotoPayload {
+                    image_base64: valid_png_b64.into(),
+                }),
+            )
+            .await
+            .expect("capture cds must succeed");
+            cds_ids.push(cap["photoId"].as_str().unwrap().to_string());
+        }
+        let Json(cap_bey) = post_capture_punch_photo(
+            State(state.clone()),
+            headers_chloe.clone(),
+            Json(CapturePhotoPayload {
+                image_base64: valid_png_b64.into(),
+            }),
+        )
+        .await
+        .expect("capture beynost must succeed");
+        let photo_bey = cap_bey["photoId"].as_str().unwrap().to_string();
+
+        let photo_del = cds_ids[0].clone();
+        let photo_exp = cds_ids[1].clone();
+        let photo_old_consumed = cds_ids[2].clone();
+        let photo_fresh_keep = cds_ids[3].clone();
+
+        // Préparer les états temporels pour la purge (1 expirée non consommée, 1 consommée > 45j, 1 fraîche consommée < 2j)
+        let del_file_name: String;
+        let fresh_file_name: String;
+        let exp_file_name: String;
+        let old_file_name: String;
+        let bey_file_name: String;
+        {
+            let mut db = state.db.write().await;
+            let expired_ts = (Utc::now() - Duration::minutes(10)).to_rfc3339();
+            let old_ts = (Utc::now() - Duration::days(45)).to_rfc3339();
+            let fresh_ts = (Utc::now() - Duration::days(2)).to_rfc3339();
+
+            for rec in db.punch_photos.iter_mut() {
+                if rec.id == photo_exp {
+                    rec.expires_at = expired_ts.clone();
+                } else if rec.id == photo_old_consumed {
+                    rec.consumed_at = Some(old_ts.clone());
+                    rec.consumed_by_entry_id = Some("ptg-old-01".into());
+                } else if rec.id == photo_fresh_keep {
+                    rec.consumed_at = Some(fresh_ts.clone());
+                    rec.consumed_by_entry_id = Some("ptg-fresh-01".into());
+                } else if rec.id == photo_bey {
+                    rec.expires_at = expired_ts.clone();
+                }
+            }
+            del_file_name = db
+                .punch_photos
+                .iter()
+                .find(|p| p.id == photo_del)
+                .unwrap()
+                .file_name
+                .clone();
+            fresh_file_name = db
+                .punch_photos
+                .iter()
+                .find(|p| p.id == photo_fresh_keep)
+                .unwrap()
+                .file_name
+                .clone();
+            exp_file_name = db
+                .punch_photos
+                .iter()
+                .find(|p| p.id == photo_exp)
+                .unwrap()
+                .file_name
+                .clone();
+            old_file_name = db
+                .punch_photos
+                .iter()
+                .find(|p| p.id == photo_old_consumed)
+                .unwrap()
+                .file_name
+                .clone();
+            bey_file_name = db
+                .punch_photos
+                .iter()
+                .find(|p| p.id == photo_bey)
+                .unwrap()
+                .file_name
+                .clone();
+        }
+
+        // 1. Non-propriétaire (Karim) bloqué en 403 sur liste, suppression et purge
+        assert_eq!(
+            list_club_punch_photos(
+                State(state.clone()),
+                Path("carre-de-soie".into()),
+                headers_karim.clone(),
+            )
+            .await
+            .unwrap_err()
+            .0,
+            StatusCode::FORBIDDEN
+        );
+        assert_eq!(
+            delete_punch_photo(
+                State(state.clone()),
+                Path(("carre-de-soie".into(), photo_del.clone())),
+                headers_karim.clone(),
+            )
+            .await
+            .unwrap_err()
+            .0,
+            StatusCode::FORBIDDEN
+        );
+        assert_eq!(
+            post_purge_club_punch_photos(
+                State(state.clone()),
+                Path("carre-de-soie".into()),
+                headers_karim,
+                Json(PurgePhotosPayload {
+                    retention_days: Some(30),
+                }),
+            )
+            .await
+            .unwrap_err()
+            .0,
+            StatusCode::FORBIDDEN
+        );
+
+        // 2. Liste propriétaire isolée par club
+        let Json(list_cds) = list_club_punch_photos(
+            State(state.clone()),
+            Path("carre-de-soie".into()),
+            headers_daniel.clone(),
+        )
+        .await
+        .expect("owner must list club photos");
+        let listed = list_cds["photos"].as_array().unwrap();
+        assert_eq!(listed.len(), 4);
+        assert!(!listed.iter().any(|item| item["id"] == photo_bey));
+
+        // 3. Rollback si persist_state échoue lors de la suppression unitaire (500 + fichier préservé)
+        let tmp_blocker = state.data_dir.join("cfitness_state.json.tmp");
+        fs::create_dir_all(&tmp_blocker).unwrap();
+        let err_disk = delete_punch_photo(
+            State(state.clone()),
+            Path(("carre-de-soie".into(), photo_del.clone())),
+            headers_daniel.clone(),
+        )
+        .await
+        .expect_err("disk failure must abort deletion with 500");
+        assert_eq!(err_disk.0, StatusCode::INTERNAL_SERVER_ERROR);
+        {
+            let db = state.db.read().await;
+            assert!(db.punch_photos.iter().any(|p| p.id == photo_del));
+        }
+        assert!(photo_disk_path(&state.data_dir, "club-carre-soie", &del_file_name).exists());
+        fs::remove_dir_all(&tmp_blocker).unwrap();
+
+        // 4. Suppression unitaire nominale + trace d'audit
+        let Json(del_ok) = delete_punch_photo(
+            State(state.clone()),
+            Path(("carre-de-soie".into(), photo_del.clone())),
+            headers_daniel.clone(),
+        )
+        .await
+        .expect("owner delete must succeed");
+        assert_eq!(del_ok["status"], "deleted");
+        assert_eq!(del_ok["fileDeleted"], true);
+        assert!(!photo_disk_path(&state.data_dir, "club-carre-soie", &del_file_name).exists());
+        {
+            let db = state.db.read().await;
+            assert!(!db.punch_photos.iter().any(|p| p.id == photo_del));
+            assert!(db
+                .audit_log
+                .iter()
+                .any(|a| a.action_type == "PUNCH_PHOTO_DELETED" && a.target_label == photo_del));
+        }
+
+        // 5. Validation borne rétention (0 refusé) puis purge rétention 30j isolée sur carre-de-soie
+        assert_eq!(
+            post_purge_club_punch_photos(
+                State(state.clone()),
+                Path("carre-de-soie".into()),
+                headers_daniel.clone(),
+                Json(PurgePhotosPayload {
+                    retention_days: Some(0),
+                }),
+            )
+            .await
+            .unwrap_err()
+            .0,
+            StatusCode::BAD_REQUEST
+        );
+
+        let Json(purge_ok) = post_purge_club_punch_photos(
+            State(state.clone()),
+            Path("carre-de-soie".into()),
+            headers_daniel,
+            Json(PurgePhotosPayload {
+                retention_days: Some(30),
+            }),
+        )
+        .await
+        .expect("owner retention purge must succeed");
+        assert_eq!(purge_ok["status"], "purged");
+        assert_eq!(purge_ok["removedCount"], 2);
+        assert!(!photo_disk_path(&state.data_dir, "club-carre-soie", &exp_file_name).exists());
+        assert!(!photo_disk_path(&state.data_dir, "club-carre-soie", &old_file_name).exists());
+        assert!(photo_disk_path(&state.data_dir, "club-carre-soie", &fresh_file_name).exists());
+        assert!(photo_disk_path(&state.data_dir, "club-beynost", &bey_file_name).exists());
+        {
+            let db = state.db.read().await;
+            assert!(db.punch_photos.iter().any(|p| p.id == photo_fresh_keep));
+            assert!(db.punch_photos.iter().any(|p| p.id == photo_bey));
+            assert!(!db.punch_photos.iter().any(|p| p.id == photo_exp));
+            assert!(!db.punch_photos.iter().any(|p| p.id == photo_old_consumed));
+            assert!(db
+                .audit_log
+                .iter()
+                .any(|a| a.action_type == "PUNCH_PHOTOS_PURGED" && a.site_id == "club-carre-soie"));
+        }
 
         let _ = fs::remove_dir_all(&state.data_dir);
     }
