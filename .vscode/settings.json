@@ -278,7 +278,19 @@
     "Miribel",
     "categorie",
     "quantite",
-    "testid"
+    "testid",
+    "EXIF",
+    "IHDR",
+    "IDAT",
+    "IEND",
+    "WEBPVP",
+    "réencode",
+    "décodable",
+    "axum",
+    "tokio",
+    "serde",
+    "hmac",
+    "webp"
   ],
   "cSpell.ignoreRegExpList": [
     "\\bACCES\\b",
