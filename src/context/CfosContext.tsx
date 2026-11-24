@@ -1196,6 +1196,9 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
       window.sessionStorage.removeItem('cfos_bearer_actor_id');
       window.sessionStorage.removeItem('cfos_architect_pin_unlocked');
       window.localStorage.removeItem('cfos_architect_pin_unlocked');
+      window.dispatchEvent(
+        new CustomEvent('cfos-bearer-updated', { detail: { employeeId: null, token: null } })
+      );
     } catch {
       // ignore
     }

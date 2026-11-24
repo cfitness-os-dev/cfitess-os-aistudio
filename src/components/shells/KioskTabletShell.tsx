@@ -21,19 +21,24 @@ import { ClubId, PointageType } from '../../types/cfos';
 import { formatPointageType } from '../../domain/rules';
 import { ThemeColorControl } from '../ThemeColorControl';
 import {
+  authenticateKioskEmployee,
   CapturedPhotoProof,
   captureTerminalPhoto,
+  clearKioskEmployeeSession,
   clearStoredTerminalToken,
   fetchRoomOccurrences,
   fetchTerminalWhoAmI,
   getStoredTerminalToken,
+  getVerifiedKioskSession,
   pairTerminal,
+  resolveKioskPhotoPolicy,
   RoomCourseOccurrence,
   setStoredTerminalToken,
   submitCoursePresence,
   submitTerminalPunch,
   TerminalAccessDenied,
   TerminalWhoAmI,
+  VerifiedKioskSession,
 } from '../../domain/terminals';
 
 const OFFICIAL_CHECKLIST = [
@@ -51,7 +56,6 @@ const hhmm = (iso: string) => {
 
 export function KioskTabletShell() {
   const {
-    currentUser,
     employees,
     timeEntries,
     kioskOfflineMode,
@@ -62,6 +66,19 @@ export function KioskTabletShell() {
   } = useCfos();
 
   const isDark = themeMode === 'dark';
+
+  // Session salarié nominative réelle sur borne partagée (sans repli sur employees[0])
+  const [verifiedSession, setVerifiedSession] = useState<VerifiedKioskSession | null>(() =>
+    getVerifiedKioskSession()
+  );
+  const [kioskLoginEmployeeId, setKioskLoginEmployeeId] = useState('');
+  const [kioskLoginSecret, setKioskLoginSecret] = useState('');
+  const [kioskAuthBusy, setKioskAuthBusy] = useState(false);
+  const [kioskAuthError, setKioskAuthError] = useState<string | null>(null);
+
+  const authenticatedEmployee = verifiedSession
+    ? employees.find((e) => e.id === verifiedSession.actorId) ?? null
+    : null;
 
   // État d'appairage matériel
   const [deviceToken, setDeviceToken] = useState<string | null>(() => getStoredTerminalToken());
@@ -188,6 +205,47 @@ export function KioskTabletShell() {
 
   const resolvedClub: ClubId =
     terminalInfo?.siteId === 'club-beynost' ? 'beynost' : 'carre-de-soie';
+  const effectivePhotoPolicy = resolveKioskPhotoPolicy(terminalInfo);
+
+  const purgeEmployeeWorkState = useCallback(() => {
+    stopCamera();
+    setCapturedPhoto(null);
+    setCapturedPreviewUrl(null);
+    setCameraError(null);
+    setCheckedItems({
+      'chk-sono': false,
+      'chk-securite': false,
+      'chk-materiel': false,
+      'chk-climatisation': false,
+    });
+    setCourseNote('');
+  }, [stopCamera]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const syncSession = () => {
+      setVerifiedSession(getVerifiedKioskSession());
+    };
+    window.addEventListener('cfos-bearer-updated', syncSession);
+    window.addEventListener('storage', syncSession);
+    return () => {
+      window.removeEventListener('cfos-bearer-updated', syncSession);
+      window.removeEventListener('storage', syncSession);
+    };
+  }, []);
+
+  useEffect(() => {
+    purgeEmployeeWorkState();
+  }, [verifiedSession?.actorId, purgeEmployeeWorkState]);
+
+  useEffect(() => {
+    if (effectivePhotoPolicy === 'disabled') {
+      stopCamera();
+      setCapturedPhoto(null);
+      setCapturedPreviewUrl(null);
+      setCameraError(null);
+    }
+  }, [effectivePhotoPolicy, stopCamera]);
 
   // Vérification initiale / périodique du jeton terminal
   const verifyTerminal = useCallback(async (token: string) => {
@@ -262,7 +320,8 @@ export function KioskTabletShell() {
         roomLabel: paired.roomLabel,
         label: paired.label,
         status: paired.status,
-        photoCaptureAvailable: false,
+        photoPolicy: paired.photoPolicy,
+        photoCaptureAvailable: paired.photoCaptureAvailable ?? false,
       });
       setPairingTerminalId('');
       setPairingCode('');
@@ -290,20 +349,73 @@ export function KioskTabletShell() {
     });
   };
 
+  const handleKioskEmployeeLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setKioskAuthError(null);
+    setStatusMessage(null);
+    setKioskAuthBusy(true);
+    try {
+      const res = await authenticateKioskEmployee(kioskLoginEmployeeId, kioskLoginSecret);
+      setVerifiedSession({ token: res.sessionToken, actorId: res.employeeId });
+      setKioskLoginSecret('');
+      setStatusMessage({
+        type: 'ok',
+        text: 'Session salarié authentifiée sur cette borne.',
+      });
+    } catch (err) {
+      setKioskAuthError(
+        err instanceof Error ? err.message : 'Identifiant ou code PIN/mot de passe invalide.'
+      );
+    } finally {
+      setKioskAuthBusy(false);
+    }
+  };
+
+  const handleKioskEmployeeLogout = async () => {
+    await clearKioskEmployeeSession();
+    setVerifiedSession(null);
+    purgeEmployeeWorkState();
+    setKioskLoginSecret('');
+    setKioskAuthError(null);
+    setStatusMessage({
+      type: 'ok',
+      text: 'Session salarié fermée. La borne est prête pour le collaborateur suivant.',
+    });
+  };
+
   const handleTerminalPunch = async () => {
-    if (!deviceToken || !currentUser) return;
+    if (!deviceToken || !verifiedSession) return;
+    if (effectivePhotoPolicy === 'required' && !capturedPhoto) {
+      setStatusMessage({
+        type: 'error',
+        text: 'Une preuve photo est obligatoire avant de valider le pointage.',
+      });
+      return;
+    }
     setStatusMessage(null);
     setPunchBusy(true);
     try {
       const res = await submitTerminalPunch(
         deviceToken,
-        currentUser.id,
+        verifiedSession.actorId,
         pointageType,
         capturedPhoto?.photoId
       );
+      setTerminalInfo((prev) =>
+        prev
+          ? {
+              ...prev,
+              photoPolicy: res.photoPolicy ?? prev.photoPolicy,
+              photoCaptureAvailable: res.photoCaptureAvailable,
+            }
+          : prev
+      );
+      const actorDisplay = authenticatedEmployee
+        ? `${authenticatedEmployee.firstName} ${authenticatedEmployee.lastName}`
+        : verifiedSession.actorId;
       setStatusMessage({
         type: 'ok',
-        text: `Pointage « ${formatPointageType(pointageType)} » confirmé pour ${currentUser.firstName} ${currentUser.lastName} sur ${res.entry.roomLabel}${capturedPhoto ? ' (avec preuve photo)' : ''}.`,
+        text: `Pointage « ${formatPointageType(pointageType)} » confirmé pour ${actorDisplay} sur ${res.entry.roomLabel}${capturedPhoto ? ' (avec preuve photo)' : ''}.`,
       });
       setCapturedPhoto(null);
       setCapturedPreviewUrl(null);
@@ -320,7 +432,7 @@ export function KioskTabletShell() {
 
   const handleCoursePresenceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!deviceToken || !currentUser || !selectedOccurrenceId) return;
+    if (!deviceToken || !verifiedSession || !selectedOccurrenceId) return;
     setStatusMessage(null);
     setCourseBusy(true);
     try {
@@ -331,8 +443,8 @@ export function KioskTabletShell() {
       }));
       const res = await submitCoursePresence(deviceToken, {
         occurrenceId: selectedOccurrenceId,
-        coachId: currentUser.id,
-        idempotencyKey: `kiosk-${selectedOccurrenceId}-${currentUser.id}-${Date.now()}`,
+        coachId: verifiedSession.actorId,
+        idempotencyKey: `kiosk-${selectedOccurrenceId}-${verifiedSession.actorId}-${Date.now()}`,
         checklistAnswers,
         note: courseNote.trim() || undefined,
       });
@@ -341,6 +453,12 @@ export function KioskTabletShell() {
         text: res.attendance?.checklistCompleted
           ? 'Présence coach et checklist d’avant-cours validées avec succès.'
           : 'Présence coach enregistrée (checklist partielle).',
+      });
+      setCheckedItems({
+        'chk-sono': false,
+        'chk-securite': false,
+        'chk-materiel': false,
+        'chk-climatisation': false,
       });
       setCourseNote('');
       loadOccurrences();
@@ -629,6 +747,96 @@ export function KioskTabletShell() {
               </div>
             )}
 
+            {(mode === 'POINTEUSE_RH' || mode === 'SALLE_COURS') && (
+              <div
+                className={`border rounded-3xl p-5 space-y-3 ${
+                  isDark ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-slate-200 shadow-sm'
+                }`}
+              >
+                {verifiedSession ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-bold uppercase text-emerald-400 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Session salarié authentifiée
+                      </div>
+                      <div className="text-base font-bold">
+                        {authenticatedEmployee
+                          ? `${authenticatedEmployee.firstName} ${authenticatedEmployee.lastName}`
+                          : verifiedSession.actorId}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleKioskEmployeeLogout}
+                      className={`min-h-[42px] px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer border ${
+                        isDark
+                          ? 'bg-slate-900 hover:bg-rose-950/60 border-slate-700 text-rose-300'
+                          : 'bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-700'
+                      }`}
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      Fermer ma session (salarié suivant)
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleKioskEmployeeLogin} className="space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                        <span>Aucune session salarié authentifiée sur cette borne</span>
+                      </div>
+                    </div>
+                    {kioskAuthError && (
+                      <div className="p-2.5 rounded-xl bg-rose-950/90 border border-rose-700 text-rose-200 text-xs font-semibold">
+                        {kioskAuthError}
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 text-xs">
+                      <select
+                        required
+                        value={kioskLoginEmployeeId}
+                        onChange={(e) => setKioskLoginEmployeeId(e.target.value)}
+                        className={`sm:col-span-5 min-h-[44px] px-3 py-2 rounded-xl border font-semibold ${
+                          isDark
+                            ? 'bg-slate-900 border-slate-700 text-white'
+                            : 'bg-slate-50 border-slate-200 text-slate-900'
+                        }`}
+                      >
+                        <option value="">-- Choisir votre nom --</option>
+                        {employees
+                          .filter((e) => e.role !== 'kiosque')
+                          .map((e) => (
+                            <option key={e.id} value={e.id}>
+                              {e.firstName} {e.lastName}
+                            </option>
+                          ))}
+                      </select>
+                      <input
+                        type="password"
+                        required
+                        value={kioskLoginSecret}
+                        onChange={(e) => setKioskLoginSecret(e.target.value)}
+                        placeholder="Code PIN ou mot de passe"
+                        className={`sm:col-span-4 min-h-[44px] px-3 py-2 rounded-xl border ${
+                          isDark
+                            ? 'bg-slate-900 border-slate-700 text-white'
+                            : 'bg-slate-50 border-slate-200 text-slate-900'
+                        }`}
+                      />
+                      <button
+                        type="submit"
+                        disabled={kioskAuthBusy || !kioskLoginEmployeeId || !kioskLoginSecret}
+                        className="sm:col-span-3 min-h-[44px] px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-bold cursor-pointer"
+                      >
+                        {kioskAuthBusy ? 'Connexion...' : "S'identifier"}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
+
             {mode === 'POINTEUSE_RH' && (
               <div
                 className={`border rounded-3xl p-6 space-y-5 ${
@@ -636,30 +844,36 @@ export function KioskTabletShell() {
                 }`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <div className="text-xs font-bold uppercase text-slate-400">
-                      Session salarié authentifiée
-                    </div>
-                    <div className="text-base font-bold">
-                      {currentUser
-                        ? `${currentUser.firstName} ${currentUser.lastName}`
-                        : 'Aucun utilisateur connecté'}
-                    </div>
+                  <div className="text-xs font-bold uppercase text-slate-400">
+                    Politique photo de la borne
                   </div>
-                  {!terminalInfo.photoCaptureAvailable && !capturedPhoto && !cameraActive && (
+                  {effectivePhotoPolicy === 'disabled' && (
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-slate-500/15 text-slate-400 border border-slate-500/30">
                       <CameraOff className="w-3.5 h-3.5" />
-                      Photo facultative (caméra prête à activer)
+                      Capture photo désactivée pour ce club
+                    </span>
+                  )}
+                  {effectivePhotoPolicy === 'required' && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                      <Camera className="w-3.5 h-3.5" />
+                      Preuve photo obligatoire avant de valider le pointage
+                    </span>
+                  )}
+                  {effectivePhotoPolicy === 'optional' && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-violet-500/15 text-violet-300 border border-violet-500/30">
+                      <Camera className="w-3.5 h-3.5" />
+                      Preuve photo facultative (caméra prête à activer)
                     </span>
                   )}
                 </div>
 
-                {/* Bloc Capture Photo Matérielle (getUserMedia) */}
-                <div
-                  className={`p-4 rounded-2xl border space-y-3 ${
-                    isDark ? 'bg-slate-900/70 border-slate-700' : 'bg-slate-50 border-slate-200'
-                  }`}
-                >
+                {/* Bloc Capture Photo Matérielle (getUserMedia) — masqué si politique disabled */}
+                {effectivePhotoPolicy !== 'disabled' && (
+                  <div
+                    className={`p-4 rounded-2xl border space-y-3 ${
+                      isDark ? 'bg-slate-900/70 border-slate-700' : 'bg-slate-50 border-slate-200'
+                    }`}
+                  >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="text-xs font-bold flex items-center gap-1.5">
                       <Camera className="w-4 h-4 text-violet-400" />
@@ -748,6 +962,7 @@ export function KioskTabletShell() {
                     </div>
                   )}
                 </div>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {(
@@ -776,7 +991,11 @@ export function KioskTabletShell() {
 
                 <button
                   onClick={handleTerminalPunch}
-                  disabled={punchBusy || !currentUser}
+                  disabled={
+                    punchBusy ||
+                    !verifiedSession ||
+                    (effectivePhotoPolicy === 'required' && !capturedPhoto)
+                  }
                   className="w-full min-h-[56px] rounded-2xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-base cursor-pointer transition-colors"
                 >
                   {punchBusy
@@ -892,7 +1111,7 @@ export function KioskTabletShell() {
 
                 <button
                   type="submit"
-                  disabled={courseBusy || !selectedOccurrenceId || !currentUser}
+                  disabled={courseBusy || !selectedOccurrenceId || !verifiedSession}
                   className="w-full min-h-[52px] rounded-2xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-bold text-sm cursor-pointer"
                 >
                   {courseBusy ? 'Validation en cours...' : 'Confirmer présence coach & checklist'}

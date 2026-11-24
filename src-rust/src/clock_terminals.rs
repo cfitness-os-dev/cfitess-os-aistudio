@@ -394,6 +394,8 @@ pub async fn post_pair_terminal(
     let room_id = term.room_id.clone();
     let room_label = term.room_label.clone();
     let label = term.label.clone();
+    let photo_policy = crate::punch_photos::club_photo_policy(&db, &site_id);
+    let photo_capture_available = photo_policy != "disabled";
 
     append_audit(
         &mut next,
@@ -423,7 +425,9 @@ pub async fn post_pair_terminal(
         "roomLabel": room_label,
         "label": label,
         "status": "active",
-        "deviceToken": device_token
+        "deviceToken": device_token,
+        "photoPolicy": photo_policy,
+        "photoCaptureAvailable": photo_capture_available
     })))
 }
 
@@ -541,8 +545,9 @@ pub async fn get_terminal_whoami(
 ) -> Result<Json<Value>, Failure> {
     let db = state.db.read().await;
     let term = authenticate_terminal(&db, &headers).await?;
-    // photoCaptureAvailable : true uniquement pour les terminaux actifs (capacité réelle de prendre une photo)
-    let photo_capture_available = term.status == "active";
+    let photo_policy = crate::punch_photos::club_photo_policy(&db, &term.site_id);
+    // photoCaptureAvailable : true uniquement si terminal actif ET politique photo non désactivée
+    let photo_capture_available = term.status == "active" && photo_policy != "disabled";
     Ok(Json(json!({
         "terminalId": term.id,
         "siteId": term.site_id,
@@ -551,6 +556,7 @@ pub async fn get_terminal_whoami(
         "label": term.label,
         "status": term.status,
         "pairedAt": term.paired_at,
+        "photoPolicy": photo_policy,
         "photoCaptureAvailable": photo_capture_available
     })))
 }
@@ -712,11 +718,12 @@ pub async fn post_terminal_punch(
     })?;
     *db = next;
 
-    // photoCaptureAvailable : cohérent avec quiami — true uniquement si terminal actif
-    let photo_capture_available = term.status == "active";
+    // photoCaptureAvailable : cohérent avec whoami — true uniquement si terminal actif et politique != disabled
+    let photo_capture_available = term.status == "active" && photo_policy != "disabled";
     Ok(Json(json!({
         "status": "recorded",
         "entry": entry,
+        "photoPolicy": photo_policy,
         "photoCaptureAvailable": photo_capture_available
     })))
 }

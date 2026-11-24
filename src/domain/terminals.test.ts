@@ -6,6 +6,10 @@ import {
   revokeTerminal,
   submitCoursePresence,
   submitTerminalPunch,
+  getVerifiedKioskSession,
+  authenticateKioskEmployee,
+  clearKioskEmployeeSession,
+  resolveKioskPhotoPolicy,
   TerminalAccessDenied,
 } from "./terminals";
 
@@ -213,4 +217,78 @@ test("terminals: submitTerminalPunch sends photoProof only when provided", async
     globalThis.fetch = originalFetch;
     delete (globalThis as any).__cfos_bearer_token;
   }
+});
+
+test("terminals: getVerifiedKioskSession requires both token and actorId without fallback", () => {
+  delete (globalThis as any).__cfos_bearer_token;
+  delete (globalThis as any).__cfos_bearer_actor_id;
+  assert.equal(getVerifiedKioskSession(), null);
+
+  (globalThis as any).__cfos_bearer_token = "tok-only";
+  assert.equal(getVerifiedKioskSession(), null);
+
+  (globalThis as any).__cfos_bearer_actor_id = "emp-chloe";
+  assert.deepEqual(getVerifiedKioskSession(), {
+    token: "tok-only",
+    actorId: "emp-chloe",
+  });
+
+  delete (globalThis as any).__cfos_bearer_token;
+  delete (globalThis as any).__cfos_bearer_actor_id;
+});
+
+test("terminals: authenticateKioskEmployee and clearKioskEmployeeSession manage server bearer lifecycle", async () => {
+  delete (globalThis as any).__cfos_bearer_token;
+  delete (globalThis as any).__cfos_bearer_actor_id;
+
+  const calls: string[] = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push(`${init?.method || "GET"} ${String(url)}`);
+    if (String(url).includes("/api/auth/login")) {
+      return new Response(
+        JSON.stringify({
+          sessionToken: "srv-tok-chloe",
+          employee: { id: "emp-chloe" },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  };
+
+  try {
+    const auth = await authenticateKioskEmployee("emp-chloe", "2222");
+    assert.equal(auth.employeeId, "emp-chloe");
+    assert.deepEqual(getVerifiedKioskSession(), {
+      token: "srv-tok-chloe",
+      actorId: "emp-chloe",
+    });
+
+    await clearKioskEmployeeSession();
+    assert.equal(getVerifiedKioskSession(), null);
+    assert.deepEqual(calls, ["POST /api/auth/login", "POST /api/auth/logout"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+    delete (globalThis as any).__cfos_bearer_token;
+    delete (globalThis as any).__cfos_bearer_actor_id;
+  }
+});
+
+test("terminals: resolveKioskPhotoPolicy distinguishes disabled, optional and required", () => {
+  assert.equal(resolveKioskPhotoPolicy(null), "disabled");
+  assert.equal(
+    resolveKioskPhotoPolicy({ photoPolicy: "disabled", photoCaptureAvailable: false }),
+    "disabled"
+  );
+  assert.equal(
+    resolveKioskPhotoPolicy({ photoPolicy: "required", photoCaptureAvailable: true }),
+    "required"
+  );
+  assert.equal(
+    resolveKioskPhotoPolicy({ photoPolicy: "optional", photoCaptureAvailable: true }),
+    "optional"
+  );
+  assert.equal(resolveKioskPhotoPolicy({ photoCaptureAvailable: true }), "optional");
+  assert.equal(resolveKioskPhotoPolicy({ photoCaptureAvailable: false }), "disabled");
 });

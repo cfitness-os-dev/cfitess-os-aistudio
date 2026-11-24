@@ -247,3 +247,95 @@ async fn terminal_failure_revoke_and_club_changes_preserve_original_time_entry()
     );
     std::fs::remove_dir_all(&s.data_dir).unwrap();
 }
+#[tokio::test]
+async fn whoami_and_punch_reflect_effective_photo_policy_disabled_optional_required() {
+    let s = state();
+    let h_chloe = employee(&s, "emp-chloe").await;
+    let h_mario = employee(&s, "emp-mario").await;
+
+    // 1. Par défaut : optional -> photoCaptureAvailable = true
+    let initial = get_terminal_whoami(State(s.clone()), h_chloe.clone())
+        .await
+        .unwrap()
+        .0;
+    assert_eq!(initial["photoPolicy"], "optional");
+    assert_eq!(initial["photoCaptureAvailable"], true);
+
+    // 2. Mode disabled -> photoCaptureAvailable = false, capture refusée 403, pointage sans photo OK
+    let _ = crate::punch_photos::put_photo_policy(
+        State(s.clone()),
+        Path("beynost".into()),
+        h_mario.clone(),
+        Json(crate::punch_photos::UpdatePhotoPolicyPayload {
+            mode: "disabled".into(),
+        }),
+    )
+    .await
+    .unwrap();
+    let disabled_whoami = get_terminal_whoami(State(s.clone()), h_chloe.clone())
+        .await
+        .unwrap()
+        .0;
+    assert_eq!(disabled_whoami["photoPolicy"], "disabled");
+    assert_eq!(disabled_whoami["photoCaptureAvailable"], false);
+
+    let capture_denied = crate::punch_photos::post_capture_punch_photo(
+        State(s.clone()),
+        h_chloe.clone(),
+        Json(crate::punch_photos::CapturePhotoPayload {
+            image_base64: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=".into(),
+        }),
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(capture_denied.0, StatusCode::FORBIDDEN);
+
+    let punch_disabled = punch(&s, &h_chloe, "arrivee", None).await.unwrap().0;
+    assert_eq!(punch_disabled["photoPolicy"], "disabled");
+    assert_eq!(punch_disabled["photoCaptureAvailable"], false);
+
+    // 3. Mode required -> photoCaptureAvailable = true, pointage sans photo refusé 422
+    let _ = crate::punch_photos::put_photo_policy(
+        State(s.clone()),
+        Path("beynost".into()),
+        h_mario.clone(),
+        Json(crate::punch_photos::UpdatePhotoPolicyPayload {
+            mode: "required".into(),
+        }),
+    )
+    .await
+    .unwrap();
+    let required_whoami = get_terminal_whoami(State(s.clone()), h_chloe.clone())
+        .await
+        .unwrap()
+        .0;
+    assert_eq!(required_whoami["photoPolicy"], "required");
+    assert_eq!(required_whoami["photoCaptureAvailable"], true);
+
+    let punch_missing_photo = punch(&s, &h_chloe, "debut_pause", None).await.unwrap_err();
+    assert_eq!(punch_missing_photo.0, StatusCode::UNPROCESSABLE_ENTITY);
+
+    // 4. Retour en mode optional -> pointage sans photo accepté
+    let _ = crate::punch_photos::put_photo_policy(
+        State(s.clone()),
+        Path("beynost".into()),
+        h_mario,
+        Json(crate::punch_photos::UpdatePhotoPolicyPayload {
+            mode: "optional".into(),
+        }),
+    )
+    .await
+    .unwrap();
+    let optional_whoami = get_terminal_whoami(State(s.clone()), h_chloe.clone())
+        .await
+        .unwrap()
+        .0;
+    assert_eq!(optional_whoami["photoPolicy"], "optional");
+    assert_eq!(optional_whoami["photoCaptureAvailable"], true);
+
+    let punch_optional = punch(&s, &h_chloe, "debut_pause", None).await.unwrap().0;
+    assert_eq!(punch_optional["photoPolicy"], "optional");
+    assert_eq!(punch_optional["photoCaptureAvailable"], true);
+
+    std::fs::remove_dir_all(&s.data_dir).unwrap();
+}

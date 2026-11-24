@@ -36,6 +36,8 @@ export interface CreatedTerminalResponse {
   siteId: string;
 }
 
+export type PhotoPolicyMode = "disabled" | "optional" | "required";
+
 export interface PairedTerminalResponse {
   terminalId: string;
   siteId: string;
@@ -44,6 +46,8 @@ export interface PairedTerminalResponse {
   label: string;
   status: string;
   deviceToken: string;
+  photoPolicy?: PhotoPolicyMode;
+  photoCaptureAvailable?: boolean;
 }
 
 export interface TerminalWhoAmI {
@@ -54,6 +58,7 @@ export interface TerminalWhoAmI {
   label: string;
   status: string;
   pairedAt?: string | null;
+  photoPolicy?: PhotoPolicyMode;
   photoCaptureAvailable: boolean;
 }
 
@@ -66,7 +71,26 @@ export interface TerminalPunchResponse {
     photoProofPresent: boolean;
     timestamp: string;
   };
+  photoPolicy?: PhotoPolicyMode;
   photoCaptureAvailable: boolean;
+}
+
+export interface VerifiedKioskSession {
+  token: string;
+  actorId: string;
+}
+
+export function resolveKioskPhotoPolicy(
+  info: Pick<TerminalWhoAmI, "photoPolicy" | "photoCaptureAvailable"> | null
+): PhotoPolicyMode {
+  if (
+    info?.photoPolicy === "disabled" ||
+    info?.photoPolicy === "optional" ||
+    info?.photoPolicy === "required"
+  ) {
+    return info.photoPolicy;
+  }
+  return info?.photoCaptureAvailable ? "optional" : "disabled";
 }
 
 export interface CapturedPhotoProof {
@@ -140,6 +164,112 @@ function getSessionToken(): string | null {
     return window.sessionStorage.getItem("cfos_bearer_token");
   }
   return (globalThis as any).__cfos_bearer_token ?? null;
+}
+
+export function getVerifiedKioskSession(): VerifiedKioskSession | null {
+  let token: string | null = null;
+  let actorId: string | null = null;
+  if (typeof window !== "undefined" && window.sessionStorage) {
+    token = window.sessionStorage.getItem("cfos_bearer_token");
+    actorId = window.sessionStorage.getItem("cfos_bearer_actor_id");
+  } else {
+    token = (globalThis as any).__cfos_bearer_token ?? null;
+    actorId = (globalThis as any).__cfos_bearer_actor_id ?? null;
+  }
+  const cleanToken = typeof token === "string" ? token.trim() : "";
+  const cleanActor = typeof actorId === "string" ? actorId.trim() : "";
+  if (!cleanToken || !cleanActor) {
+    return null;
+  }
+  return { token: cleanToken, actorId: cleanActor };
+}
+
+export async function authenticateKioskEmployee(
+  emailOrId: string,
+  pinOrPassword: string
+): Promise<{ employeeId: string; sessionToken: string }> {
+  const trimmedId = emailOrId.trim();
+  const trimmedSecret = pinOrPassword.trim();
+  if (!trimmedId || !trimmedSecret) {
+    throw new Error("Identifiant et code PIN ou mot de passe requis.");
+  }
+
+  const res = await fetch("/api/auth/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      emailOrId: trimmedId,
+      pinOrPassword: trimmedSecret,
+    }),
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(
+      data?.error || data?.message || "Identifiant ou code PIN/mot de passe invalide."
+    );
+  }
+
+  const sessionToken =
+    typeof data?.sessionToken === "string" ? data.sessionToken.trim() : "";
+  if (!sessionToken) {
+    throw new Error("Réponse de session invalide du serveur.");
+  }
+  const employeeId =
+    typeof data?.employee?.id === "string" && data.employee.id.trim()
+      ? data.employee.id.trim()
+      : typeof data?.employeeId === "string" && data.employeeId.trim()
+        ? data.employeeId.trim()
+        : trimmedId;
+
+  if (typeof window !== "undefined" && window.sessionStorage) {
+    window.sessionStorage.setItem("cfos_bearer_token", sessionToken);
+    window.sessionStorage.setItem("cfos_bearer_actor_id", employeeId);
+    window.sessionStorage.setItem("cfos_local_auth_active", "true");
+    window.sessionStorage.setItem("cfos_local_auth_user_id", employeeId);
+    window.dispatchEvent(
+      new CustomEvent("cfos-bearer-updated", {
+        detail: { employeeId, token: sessionToken },
+      })
+    );
+  } else {
+    (globalThis as any).__cfos_bearer_token = sessionToken;
+    (globalThis as any).__cfos_bearer_actor_id = employeeId;
+  }
+
+  return { employeeId, sessionToken };
+}
+
+export async function clearKioskEmployeeSession(): Promise<void> {
+  const token = getSessionToken();
+  if (token) {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch {
+      // Ignorer les erreurs réseau lors de la fermeture locale
+    }
+  }
+
+  if (typeof window !== "undefined" && window.sessionStorage) {
+    window.sessionStorage.removeItem("cfos_bearer_token");
+    window.sessionStorage.removeItem("cfos_bearer_actor_id");
+    window.sessionStorage.removeItem("cfos_local_auth_active");
+    window.sessionStorage.removeItem("cfos_local_auth_user_id");
+    window.dispatchEvent(
+      new CustomEvent("cfos-bearer-updated", {
+        detail: { employeeId: null, token: null },
+      })
+    );
+  } else {
+    delete (globalThis as any).__cfos_bearer_token;
+    delete (globalThis as any).__cfos_bearer_actor_id;
+  }
 }
 
 export async function fetchClubTerminals(
