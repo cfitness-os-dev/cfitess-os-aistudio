@@ -99,6 +99,7 @@ if [ ! -f "$INSTALL_DIR/.env" ]; then
   INBOUND_SEC="cf_inb_$(gen_secret)"
   HEITZ_SEC="cf_hz_$(gen_secret)"
   HZ_TOKEN="CFOS-HZ-$(gen_secret)"
+  BKP_KEY="cf_bkp_$(gen_secret)"
 
   set_kv() {
     local k="$1"
@@ -118,6 +119,7 @@ if [ ! -f "$INSTALL_DIR/.env" ]; then
   set_kv "CFITNESS_INBOUND_WEBHOOK_SECRET" "$INBOUND_SEC"
   set_kv "CFITNESS_HEITZ_WEBHOOK_SECRET" "$HEITZ_SEC"
   set_kv "HEITZ_WS_TOKEN" "$HZ_TOKEN"
+  set_kv "CFITNESS_BACKUP_SIGNING_KEY" "$BKP_KEY"
   chmod 600 "$INSTALL_DIR/.env"
   echo "  -> .env créé en mode PRODUCTION (CFITNESS_DEMO_MODE=0, secrets générés)."
 else
