@@ -1,4 +1,4 @@
-//! Persistent SMS simulation schedules. No provider transport.
+//! Persistent email/SMS simulation schedules. No provider transport.
 use super::*;
 use chrono::{LocalResult, NaiveDateTime, TimeZone};
 
@@ -72,7 +72,7 @@ pub fn apply(
                 })?;
             if c.revision != *expected_revision
                 || c.archived
-                || c.channel != "sms"
+                || !matches!(c.channel.as_str(), "sms" | "email")
                 || c.simulated_revisions.contains(&c.revision)
                 || c.schedules.iter().any(|s| s.status == "scheduled")
             {
@@ -86,12 +86,12 @@ pub fn apply(
                     t.id == c.template_id
                         && t.club_id == club
                         && !t.archived
-                        && t.message.channel == "sms"
+                        && t.message.channel == c.channel
                 })
                 .ok_or_else(|| {
                     err_resp(
                         StatusCode::CONFLICT,
-                        "Choisissez un modèle SMS disponible dans ce club.",
+                        "Choisissez un modèle du canal de cette campagne, disponible dans ce club.",
                     )
                 })?
                 .message
@@ -187,8 +187,8 @@ pub fn process_due(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) ->
             let c = db.lead_scenarios.campaigns[ci].clone();
             let result = if parsed.is_err()
                 || schedule.timezone != "Europe/Paris"
-                || schedule.message.channel != "sms"
-                || c.channel != "sms"
+                || schedule.message.channel != c.channel
+                || !matches!(c.channel.as_str(), "sms" | "email")
                 || c.revision != schedule.campaign_revision
                 || c.archived
                 || c.simulated_revisions.contains(&c.revision)
