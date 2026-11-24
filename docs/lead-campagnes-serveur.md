@@ -45,4 +45,4 @@ Le premier essai de garde utilisait une confirmation native et a bloqué le navi
 
 Sauvegarder les données avant intégration. Les champs campagnes sont additifs et chargés avec valeurs par défaut ; un retour à un ancien code peut ignorer puis perdre ces données à sa prochaine sauvegarde. Ne pas tester un ancien binaire sur une base nouvelle sans copie préalable.
 
-Complément du 24 novembre : campagnes SMS et filtres de segments ajoutés. La recette courante passe à 119 tests Rust, 106 tests TypeScript et 21 groupes HTTP ; le détail des nouveaux parcours et des limites figure dans [lead-sms-recette.md](lead-sms-recette.md). Les comptes de recette et leurs préférences ne constituent pas une preuve de consentement utilisable en production.
+Complément du 24 novembre : campagnes SMS et filtres de segments ajoutés. La recette courante passe à 121 tests Rust, 112 tests TypeScript et 21 groupes HTTP ; le détail des nouveaux parcours et des limites figure dans [lead-sms-recette.md](lead-sms-recette.md). Les comptes de recette et leurs préférences ne constituent pas une preuve de consentement utilisable en production.

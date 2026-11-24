@@ -18,7 +18,7 @@ Communication → Historique des échanges affiche les préparations email et SM
 
 ## Preuves exécutées
 
-- Contrôles TypeScript et compilation frontend réussis ; 106 tests TypeScript et 119 tests Rust réussis.
+- Contrôles TypeScript et compilation frontend réussis ; 112 tests TypeScript et 121 tests Rust réussis.
 - 21 groupes de recette HTTP sur le véritable serveur Rust, avec données fictives dans un dossier temporaire : authentification, rôles, clubs, segments, consentement distinct, doublons de téléphone, concurrence/version périmée, rejeu, arrêt/redémarrage réel et erreur disque. Les quatre groupes SMS vérifient aussi que le STOP bloque le prochain pas SMS d'un scénario et qu'une simulation SMS n'ajoute pas d'email. Si des données restaurées contiennent un modèle de canal incohérent avec la campagne, la simulation est refusée sans mutation.
 - Navigateur local `127.0.0.1:18127` : création/sauvegarde d'un modèle SMS, campagne ciblant « Relance Biocircuit », zéro éligible sans opt-in ; opt-in fictif motivé puis une préparation ; historique avec prénom/club remplacés ; STOP puis zéro éligible et zéro préparation en nouvelle révision ; campagne absente à Beynost.
 - Parcours observé à 1440×1000, 390×844 et 768×1024. Largeurs document mobile/tablette 383/761 px, égales aux largeurs de défilement. Émulation de dimensions uniquement : pas d'appareil physique ni d'envoi réel. Capture de l'historique mobile dans `docs/evidence/lead-sms/`.
@@ -41,3 +41,5 @@ Les champs `channel` et `segmentIds` ont des valeurs par défaut pour les ancien
 - [Brevo — nombre de caractères SMS](https://help.brevo.com/hc/fr/articles/208718649-Est-on-limit%C3%A9-par-le-nombre-de-caract%C3%A8res-dans-un-SMS) : encodage et seuils. Aucune limite maximale fournisseur ni facture n'est déduite du calcul local.
 - [Brevo — restrictions par pays](https://help.brevo.com/hc/fr/articles/11884482521234-Lignes-directrices-et-restrictions-propres-%C3%A0-chaque-pays-pour-les-campagnes-SMS) : instruction STOP effective à confirmer avant émission en France.
 - [Brevo — API SMS transactionnels](https://developers.brevo.com/docs/transactional-sms-endpoints) : documentation de préparation de la future intégration, aucun appel effectué.
+
+Compatibilité : les commits du développeur 114b8a5 et f5b2df8 ont été intégrés uniquement dans cette branche. Les contrôles automatisés ont été rejoués sur cette combinaison. Les captures et manipulations SMS précèdent cette intégration ; la galerie photo RH livrée par son IA ne reçoit aucune validation visuelle dans ce lot.
