@@ -56,6 +56,8 @@ export function statusLabel(status: string): string {
     case "approved":
     case "valide":
       return "Validée";
+    case "cancelled":
+      return "Annulée";
     case "rejected":
     case "refuse":
       return "Refusée";
