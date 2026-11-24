@@ -12,6 +12,7 @@ export interface ScenarioEnrollment {
   history: Array<{ stepId: string; at: string; status: string; detail: string; activityId: string | null; renderedSubject?: string | null; renderedContent?: string | null; renderedHtml?: string | null }>;
 }
 export interface ScenarioWorkspace {
+  campaignSchedulingAutomatic?:boolean;
   campaigns?: Array<{campaign: LeadCampaign; audience: {eligibleIds: string[]; excluded: Array<{prospectId:string;reason:string}>}} >;
   actorId: string; clubId: ScenarioClubId; simulationOnly: boolean; simulationAvailable: boolean;
   sources: string[]; statusIds: string[]; templates: LeadMessageTemplate[];
@@ -27,6 +28,7 @@ export interface ScenarioWorkspace {
 }
 export interface LeadCampaign {
   id:string;clubId:ScenarioClubId;revision:number;name:string;templateId:string;statusIds:string[];sourceIds:string[];segmentIds:string[];channel:'email'|'sms';archived:boolean;updatedAt:string;simulatedRevisions:number[];
+  schedules?:Array<{id:string;campaignRevision:number;scheduledAt:string;localDateTime:string;timezone:'Europe/Paris';status:'scheduled'|'cancelled'|'simulated'|'failed';actorId:string;createdAt:string;message:LeadMessage;finishedAt:string|null;reason:string|null;cancelledBy:string|null}>;
   runs:Array<{revision:number;at:string;simulationOnly:true;estimatedSegments?:number;outcomes:Array<{prospectId:string;status:string;reason?:string}>}>;
 }
 export async function previewScenarioEmail(actorId: string, clubId: ScenarioClubId, message: LeadMessage, signal?: AbortSignal): Promise<string> {
@@ -39,6 +41,9 @@ export async function previewScenarioEmail(actorId: string, clubId: ScenarioClub
   return payload.html;
 }
 export type ScenarioCommand =
+  | {action:'schedule_campaign';campaignId:string;expectedRevision:number;localDateTime:string;timezone:'Europe/Paris'}
+  | {action:'cancel_campaign_schedule';campaignId:string;expectedRevision:number;scheduleId:string;reason:string}
+  | {action:'run_campaigns'}
   | {action:'set_sms_consent';prospectId:string;granted:boolean;reason:string;expectedRevision:number|null}
   | {action:'stop_sms';prospectId:string;reason:string}
   | {action:'save_campaign';campaignId:string|null;expectedRevision:number|null;name:string;templateId:string;statusIds:string[];sourceIds:string[];segmentIds?:string[]}

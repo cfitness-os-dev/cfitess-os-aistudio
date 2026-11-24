@@ -643,6 +643,7 @@ fn snapshot(db: &AppDatabaseState, club: &str, actor: &str) -> Value {
     json!({"actorId":actor,"clubId":club,"simulationOnly":true,"simulationAvailable":is_demo_mode(),"emailDelivery":brevo::status(),
         "smsPreferences":db.lead_scenarios.sms_preferences.iter().filter(|p|p.club_id==club).collect::<Vec<_>>(),
         "smsOutbox":db.lead_scenarios.sms_outbox.iter().filter(|p|p.club_id==club).collect::<Vec<_>>(),
+        "campaignSchedulingAutomatic":is_demo_mode() && std::env::var("CFITNESS_CAMPAIGNS_WORKER").as_deref()!=Ok("0"),
         "campaigns":db.lead_scenarios.campaigns.iter().filter(|c|c.club_id==club).map(|c|json!({"campaign":c,"audience":campaigns::targets(db,c)})).collect::<Vec<_>>(),
         "emailOutbox":db.lead_scenarios.email_outbox.iter().filter(|r|r.club_id==club).collect::<Vec<_>>(),
         "emailSuppressions":db.lead_scenarios.email_suppressions.iter().filter(|r|r.club_id==club).collect::<Vec<_>>(),
@@ -685,6 +686,19 @@ pub enum Command {
         source_ids: Vec<String>,
         #[serde(default,rename="segmentIds")] segment_ids:Vec<String>,
     },
+    ScheduleCampaign {
+        #[serde(rename="campaignId")] campaign_id:String,
+        #[serde(rename="expectedRevision")] expected_revision:u64,
+        #[serde(rename="localDateTime")] local_date_time:String,
+        timezone:String,
+    },
+    CancelCampaignSchedule {
+        #[serde(rename="campaignId")] campaign_id:String,
+        #[serde(rename="expectedRevision")] expected_revision:u64,
+        #[serde(rename="scheduleId")] schedule_id:String,
+        reason:String,
+    },
+    RunCampaigns {},
     SimulateCampaign {
         #[serde(rename = "campaignId")]
         campaign_id: String,
@@ -850,7 +864,10 @@ fn apply(
     match cmd {
         Command::SetSmsConsent{prospect_id,granted,reason,expected_revision}=>sms::preference(db,club,actor,&prospect_id,granted,false,expected_revision,&reason,now)?,
         Command::StopSms{prospect_id,reason}=>sms::preference(db,club,actor,&prospect_id,false,true,None,&reason,now)?,
-        cmd @ Command::SaveCampaign { .. }
+        cmd @ Command::ScheduleCampaign { .. }
+        | cmd @ Command::CancelCampaignSchedule { .. }
+        | cmd @ Command::RunCampaigns {}
+        | cmd @ Command::SaveCampaign { .. }
         | cmd @ Command::SimulateCampaign { .. }
         | cmd @ Command::ArchiveCampaign { .. } => campaigns::apply(db, club, actor, &cmd, now)?,
         Command::SuppressEmail {
@@ -1656,7 +1673,9 @@ fn process(db: &mut AppDatabaseState, club: &str, now: DateTime<Utc>) -> bool {
 }
 pub fn spawn_worker(state: SharedState) {
     // Explicitly simulation-only; never run a hypothetical provider adapter in production.
-    if !is_demo_mode() || std::env::var("CFITNESS_SCENARIOS_WORKER").as_deref() == Ok("0") {
+    let scenarios_enabled=std::env::var("CFITNESS_SCENARIOS_WORKER").as_deref()!=Ok("0");
+    let campaigns_enabled=std::env::var("CFITNESS_CAMPAIGNS_WORKER").as_deref()!=Ok("0");
+    if !is_demo_mode() || !(scenarios_enabled || campaigns_enabled) {
         return;
     }
     tokio::spawn(async move {
@@ -1668,7 +1687,8 @@ pub fn spawn_worker(state: SharedState) {
             let now = Utc::now();
             let mut changed = false;
             for club in ["carre-de-soie", "beynost"] {
-                changed |= process(&mut next, club, now);
+                if scenarios_enabled {changed |= process(&mut next, club, now);}
+                if campaigns_enabled {changed |= campaigns::process_due(&mut next,club,now);}
             }
             if changed {
                 match persist_state(&state.data_dir, &next) {

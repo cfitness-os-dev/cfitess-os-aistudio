@@ -26,7 +26,7 @@ def main():
         folder = Path(directory)
         env = {**os.environ, 'CFITNESS_BIND_ADDR': f'127.0.0.1:{port}', 'CFITNESS_DATA_DIR': directory,
                'CFITNESS_DEMO_MODE': '1', 'CFITNESS_STRICT_SESSION': '1', 'CFITNESS_AUTOMATION_SCHEDULER': '0',
-               'CFITNESS_SCENARIOS_WORKER': '0', 'CFITNESS_ALLOWED_ORIGINS': base}
+               'CFITNESS_SCENARIOS_WORKER': '0', 'CFITNESS_CAMPAIGNS_WORKER': '0', 'CFITNESS_ALLOWED_ORIGINS': base}
 
         def call(method, path, token=None, body=None, op=None):
             headers = {'Content-Type': 'application/json'}

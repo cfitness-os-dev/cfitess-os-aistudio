@@ -1,5 +1,8 @@
 //! Club-owned campaign drafts and local simulations, sharing scenario auth/atomic storage.
 use super::*;
+#[path = "lead_campaign_schedule.rs"]
+mod schedule;
+pub use schedule::{process_due, ScheduledRun};
 fn bad(message: &str) -> Failure {
     err_resp(StatusCode::UNPROCESSABLE_ENTITY, message)
 }
@@ -27,6 +30,8 @@ pub struct Campaign {
     pub simulated_revisions: Vec<u64>,
     #[serde(default)]
     pub runs: Vec<Value>,
+    #[serde(default)]
+    pub schedules: Vec<ScheduledRun>,
 }
 
 pub fn targets(db: &AppDatabaseState, campaign: &Campaign) -> Value {
@@ -107,6 +112,18 @@ pub fn apply(
     now: DateTime<Utc>,
 ) -> Result<(), Failure> {
     match command {
+        cmd @ Command::ScheduleCampaign { .. } | cmd @ Command::CancelCampaignSchedule { .. } => {
+            return schedule::apply(db, club, actor, cmd, now)
+        }
+        Command::RunCampaigns {} => {
+            if !is_demo_mode() {
+                return Err(err_resp(
+                    StatusCode::CONFLICT,
+                    "Exécution programmée disponible uniquement en démonstration.",
+                ));
+            }
+            process_due(db, club, now);
+        }
         Command::SaveCampaign {
             campaign_id,
             expected_revision,
@@ -166,6 +183,12 @@ pub fn apply(
                         "La campagne a changé ou est archivée. Rechargez-la.",
                     ));
                 }
+                if c.schedules.iter().any(|s| s.status == "scheduled") {
+                    return Err(err_resp(
+                        StatusCode::CONFLICT,
+                        "Annulez la programmation avant de modifier cette campagne.",
+                    ));
+                }
                 if c.channel != channel {
                     return Err(bad(
                         "Le canal d’une campagne enregistrée ne peut pas changer.",
@@ -196,6 +219,7 @@ pub fn apply(
                     updated_at: now.to_rfc3339(),
                     simulated_revisions: vec![],
                     runs: vec![],
+                    schedules: vec![],
                 });
             }
         }
@@ -218,6 +242,12 @@ pub fn apply(
                 return Err(err_resp(
                     StatusCode::CONFLICT,
                     "La campagne a changé ou est archivée. Rechargez-la.",
+                ));
+            }
+            if c.schedules.iter().any(|s| s.status == "scheduled") {
+                return Err(err_resp(
+                    StatusCode::CONFLICT,
+                    "Annulez la programmation avant de simuler ou archiver cette campagne.",
                 ));
             }
             if matches!(command, Command::ArchiveCampaign { .. }) {
@@ -253,90 +283,108 @@ pub fn apply(
                     "Le canal du modèle a changé. Choisissez un modèle du canal de cette campagne.",
                 ));
             }
-            let audience = targets(db, &c);
-            let mut outcomes = vec![];
-            for id in audience["eligibleIds"].as_array().unwrap() {
-                let p = db
-                    .lead_prospects
-                    .iter()
-                    .find(|p| Some(p.id.as_str()) == id.as_str() && p.club_id == club)
-                    .unwrap();
-                let values = messages::context(db, p);
-                let result = messages::render(&message.subject, &values).and_then(|subject| {
-                    messages::render(&messages::text_body(&message), &values)
-                        .map(|text| (subject, text))
-                });
-                if c.channel == "sms" {
-                    match result.and_then(|(_, text)| {
-                        sms::prepare(
-                            club,
-                            &format!("campaign:{}:{}", c.id, c.revision),
-                            &p.id,
-                            &p.phone,
-                            &text,
-                            &now.to_rfc3339(),
-                        )
-                    }) {
-                        Ok(prepared) => {
-                            let estimate = json!(prepared.estimate);
-                            if !db
-                                .lead_scenarios
-                                .sms_outbox
-                                .iter()
-                                .any(|r| r.id == prepared.id)
-                            {
-                                db.lead_scenarios.sms_outbox.push(prepared);
-                            }
-                            outcomes.push(
-                                json!({"prospectId":p.id,"status":"simulated","estimate":estimate}),
-                            );
-                        }
-                        Err(reason) => outcomes
-                            .push(json!({"prospectId":p.id,"status":"excluded","reason":reason})),
-                    }
-                    continue;
-                }
-                match result.and_then(|(subject, text)| {
-                    brevo::prepare(
-                        club,
-                        &format!("campaign:{}:{}", c.id, c.revision),
-                        &p.id,
-                        "campaign-email",
-                        1,
-                        &p.email,
-                        &subject,
-                        &text,
-                        &now.to_rfc3339(),
-                    )
-                    .map_err(str::to_string)
-                }) {
-                    Ok(mut prepared) => {
-                        prepared.payload["tags"] = json!(["cfitness-os", "lead-campaign", club]);
-                        if !db
-                            .lead_scenarios
-                            .email_outbox
-                            .iter()
-                            .any(|r| r.id == prepared.id)
-                        {
-                            db.lead_scenarios.email_outbox.push(prepared);
-                        }
-                        outcomes.push(json!({"prospectId":p.id,"status":"simulated"}));
-                    }
-                    Err(reason) => outcomes
-                        .push(json!({"prospectId":p.id,"status":"excluded","reason":reason})),
-                }
-            }
-            db.lead_scenarios.campaigns[idx]
-                .simulated_revisions
-                .push(c.revision);
-            let estimated_segments: usize = outcomes
-                .iter()
-                .filter_map(|o| o["estimate"]["segments"].as_u64())
-                .map(|v| v as usize)
-                .sum();
-            db.lead_scenarios.campaigns[idx].runs.push(json!({"revision":c.revision,"at":now.to_rfc3339(),"actorId":actor,"message":message,"audience":audience,"outcomes":outcomes,"estimatedSegments":estimated_segments,"simulationOnly":true}));
+            simulate(db, &c, actor, now, &message)?;
         }
         _ => return Err(bad("Commande de campagne invalide.")),
     }
+    Ok(())
+}
+
+fn simulate(
+    db: &mut AppDatabaseState,
+    c: &Campaign,
+    actor: &str,
+    now: DateTime<Utc>,
+    message: &messages::Message,
+) -> Result<(), Failure> {
+    let idx = db
+        .lead_scenarios
+        .campaigns
+        .iter()
+        .position(|row| row.id == c.id && row.club_id == c.club_id)
+        .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Campagne introuvable."))?;
+    let club = c.club_id.as_str();
+    let audience = targets(db, &c);
+    let mut outcomes = vec![];
+    for id in audience["eligibleIds"].as_array().unwrap() {
+        let p = db
+            .lead_prospects
+            .iter()
+            .find(|p| Some(p.id.as_str()) == id.as_str() && p.club_id == club)
+            .unwrap();
+        let values = messages::context(db, p);
+        let result = messages::render(&message.subject, &values).and_then(|subject| {
+            messages::render(&messages::text_body(&message), &values).map(|text| (subject, text))
+        });
+        if c.channel == "sms" {
+            match result.and_then(|(_, text)| {
+                sms::prepare(
+                    club,
+                    &format!("campaign:{}:{}", c.id, c.revision),
+                    &p.id,
+                    &p.phone,
+                    &text,
+                    &now.to_rfc3339(),
+                )
+            }) {
+                Ok(prepared) => {
+                    let estimate = json!(prepared.estimate);
+                    if !db
+                        .lead_scenarios
+                        .sms_outbox
+                        .iter()
+                        .any(|r| r.id == prepared.id)
+                    {
+                        db.lead_scenarios.sms_outbox.push(prepared);
+                    }
+                    outcomes
+                        .push(json!({"prospectId":p.id,"status":"simulated","estimate":estimate}));
+                }
+                Err(reason) => {
+                    outcomes.push(json!({"prospectId":p.id,"status":"excluded","reason":reason}))
+                }
+            }
+            continue;
+        }
+        match result.and_then(|(subject, text)| {
+            brevo::prepare(
+                club,
+                &format!("campaign:{}:{}", c.id, c.revision),
+                &p.id,
+                "campaign-email",
+                1,
+                &p.email,
+                &subject,
+                &text,
+                &now.to_rfc3339(),
+            )
+            .map_err(str::to_string)
+        }) {
+            Ok(mut prepared) => {
+                prepared.payload["tags"] = json!(["cfitness-os", "lead-campaign", club]);
+                if !db
+                    .lead_scenarios
+                    .email_outbox
+                    .iter()
+                    .any(|r| r.id == prepared.id)
+                {
+                    db.lead_scenarios.email_outbox.push(prepared);
+                }
+                outcomes.push(json!({"prospectId":p.id,"status":"simulated"}));
+            }
+            Err(reason) => {
+                outcomes.push(json!({"prospectId":p.id,"status":"excluded","reason":reason}))
+            }
+        }
+    }
+    db.lead_scenarios.campaigns[idx]
+        .simulated_revisions
+        .push(c.revision);
+    let estimated_segments: usize = outcomes
+        .iter()
+        .filter_map(|o| o["estimate"]["segments"].as_u64())
+        .map(|v| v as usize)
+        .sum();
+    db.lead_scenarios.campaigns[idx].runs.push(json!({"revision":c.revision,"at":now.to_rfc3339(),"actorId":actor,"message":message,"audience":audience,"outcomes":outcomes,"estimatedSegments":estimated_segments,"simulationOnly":true}));
     Ok(())
 }
