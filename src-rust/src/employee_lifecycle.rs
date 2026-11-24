@@ -39,7 +39,7 @@ fn parse_club_site(raw: &str) -> Result<(&'static str, &'static str), Failure> {
     }
 }
 
-fn allowed_on_target(
+pub(crate) fn allowed_on_target(
     db: &AppDatabaseState,
     actor_id: &str,
     site_id: &str,

@@ -803,6 +803,8 @@ pub struct SiteStaffingNeed {
 #[serde(rename_all = "camelCase")]
 pub struct AppDatabaseState {
     #[serde(default)]
+    pub leave_policy: crate::hr_leave_policy::Store,
+    #[serde(default)]
     pub lead_scenarios: crate::lead_scenarios::Store,
     #[serde(default)]
     pub personal_workspace: crate::personal_workspace::WorkspaceStore,

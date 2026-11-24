@@ -16,6 +16,10 @@ import {
   type PersonalWorkspace,
 } from "../../domain/personalWorkspace";
 import { statusLabel } from "../../domain/hrWorkflow";
+import { LeaveDocumentsPanel } from './LeaveDocumentsPanel';
+import { LeavePolicySummary } from './LeaveDecisionPanel';
+import { useLeadDraftGuard } from '../useLeadDraftGuard';
+import { confirmLeadDraftNavigation } from '../../domain/leadDraftGuard';
 import type { ClubId } from "../../types/cfos";
 
 const HrEmployeeDossierView = lazy(() =>
@@ -79,12 +83,23 @@ function PersonalWorkspaceContent({
   const [taskCategory, setTaskCategory] = useState("RH & Administratif");
   const [taskFilter, setTaskFilter] = useState("all");
   const [leave, setLeave] = useState({
-    motive: "CP",
+    motive: "",
+    motiveId: "",
+    startPeriod: 'am' as 'am'|'pm',
+    endPeriod: 'pm' as 'am'|'pm',
     startDate: "",
     endDate: "",
     comment: "",
   });
   const [withdrawals, setWithdrawals] = useState<Record<string, string>>({});
+  useLeadDraftGuard(!!leave.startDate || !!leave.endDate || !!leave.comment || Object.values(withdrawals).some(value=>!!value));
+  useEffect(()=>{
+    if(!data)return;
+    if(!data.requestMotives.some(m=>m.id===leave.motiveId)) {
+      const first=data.requestMotives[0];
+      setLeave(previous=>({...previous,motive:first?.label??'',motiveId:first?.id??''}));
+    }
+  },[data,leave.motiveId]);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [consents, setConsents] = useState<Record<string, boolean>>({});
   const mounted = useRef(true);
@@ -217,6 +232,7 @@ function PersonalWorkspaceContent({
             key={key}
             aria-current={tab === key ? "page" : undefined}
             onClick={() => {
+              if(key!==tab && !confirmLeadDraftNavigation(()=>setTab(key)))return;
               setTab(key);
               setError("");
               setSuccess("");
@@ -425,28 +441,29 @@ function PersonalWorkspaceContent({
                   Contactez votre responsable.
                 </p>
               )}
-              <fieldset disabled={busy || loading || !data.canRequestLeave}>
+              {!data.requestMotives.length&&<p>Aucun motif ouvert aux demandes dans ce club. Contactez votre responsable.</p>}
+              <fieldset disabled={busy || loading || !data.canRequestLeave || !data.requestMotives.length}>
                 <form
                   className="space-y-3"
                   onSubmit={async (e) => {
                     e.preventDefault();
-                    await save(
+                    if(await save(
                       { action: "request_leave", ...leave },
                       "Demande enregistrée sur le serveur, en attente de validation.",
-                    );
+                    ))setLeave(previous=>({...previous,startDate:'',endDate:'',comment:''}));
                   }}
                 >
                   <label className="block">
                     Type d’absence
                     <select
                       className={input}
-                      value={leave.motive}
+                      value={leave.motiveId}
                       onChange={(e) =>
-                        setLeave({ ...leave, motive: e.target.value })
+                        setLeave({ ...leave, motiveId: e.target.value, motive:data.requestMotives.find(m=>m.id===e.target.value)?.label??'' })
                       }
                     >
-                      {["CP", "RTT", "Maladie", "Formation CFA"].map((type) => (
-                        <option key={type}>{type}</option>
+                      {data.requestMotives.map((type) => (
+                        <option key={type.id} value={type.id}>{type.label}</option>
                       ))}
                     </select>
                   </label>
@@ -477,6 +494,10 @@ function PersonalWorkspaceContent({
                       />
                     </label>
                   </div>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <label>Début de l’absence<select className={input} value={leave.startPeriod} onChange={e=>setLeave({...leave,startPeriod:e.target.value as 'am'|'pm'})}><option value="am">Dès le matin</option><option value="pm">À partir de l’après-midi</option></select></label>
+                    <label>Fin de l’absence<select className={input} value={leave.endPeriod} onChange={e=>setLeave({...leave,endPeriod:e.target.value as 'am'|'pm'})}><option value="am">À la fin de la matinée</option><option value="pm">À la fin de la journée</option></select></label>
+                  </div>
                   <label className="block">
                     Commentaire facultatif
                     <textarea
@@ -492,6 +513,7 @@ function PersonalWorkspaceContent({
                     La durée décomptée et la validation restent à confirmer par
                     le responsable.
                   </p>
+                  {data.requestMotives.find(m=>m.id===leave.motiveId)?.requiresDocument&&<p>Un justificatif sera nécessaire avant la validation. Vous pourrez joindre une attestation de votre dossier après l’enregistrement de la demande.</p>}
                   <button disabled={busy} className={button}>
                     Envoyer ma demande
                   </button>
@@ -507,6 +529,8 @@ function PersonalWorkspaceContent({
                   </strong>
                   <p>{row.status === "pending" ? "En attente de validation" : statusLabel(row.status)}</p>
                   <p className="whitespace-pre-wrap break-words">{row.comment}</p>
+                  {row.policy&&<LeavePolicySummary policy={row.policy}/>}
+                  {row.status==='pending'&&row.policy&&data.canRequestLeave&&(row.policy.requiresDocument||row.policy.documentIds.length>0||ownDocuments.some(doc=>doc.category==='Attestation'))&&<LeaveDocumentsPanel policy={row.policy} documents={ownDocuments} busy={busy||loading} onSave={(documentIds,expectedRevision)=>save({action:'attach_leave_documents',id:row.id,documentIds,expectedRevision},'Justificatifs de la demande enregistrés.')} />}
                   {row.status === "pending" && data.canRequestLeave && (
                     <form className="space-y-3 mt-3" onSubmit={async e => {
                       e.preventDefault();
