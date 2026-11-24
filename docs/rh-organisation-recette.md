@@ -60,3 +60,13 @@ Une branche de recette séparée `test/rh-lead-settings-compatibility` réunit l
 Résultats réellement exécutés sur cette combinaison : **132 tests Rust, 120 tests TypeScript, builds réussis et 83 groupes HTTP réussis** répartis entre organisation (18), réglages badgeuse (5), scénarios Lead (22), programmation email/SMS (11), espace personnel (12), parcours responsable (7) et retrait d’absence (8). Zéro envoi externe.
 La synthèse machine est dans `evidence/rh-organisation-combinaison-tests.json`. Cette branche est une aide de recette, pas une autorisation de fusion directe ou de déploiement. La recette cumulée est automatisée ; les captures navigateur concernent le lot organisation seul, sans prétendre avoir rejoué visuellement chaque module de la combinaison.
 Le stockage actuel est un fichier JSON avec verrou du processus serveur. La concurrence testée concerne un seul serveur ; une exploitation multi-instance exigerait une autre stratégie de stockage/verrouillage.
+
+## Actualisation après livraison Antigravity
+Pendant la recette, les PR #48, #51, #52 et #53 ont été approuvées/intégrées par le développeur. La branche de ce lot a été synchronisée avec main e58bc30 ; la PR #55 cible désormais main. Son arbre de code correspond exactement à la combinaison 132 Rust /120 TypeScript /83 groupes HTTP déjà testée.
+
+La nouvelle PR #54 d’Antigravity (2d5a28e) a ensuite été ajoutée **uniquement** à la branche de recette test/rh-lead-settings-compatibility. Deux conflits ont été résolus : garder les deux listes de tests dans package.json et conserver son helper de club autorisé ainsi que les protections de requêtes périmées/gardes de navigation dans le hub. Ses écrans dossier ne sont pas inclus dans le delta de #55.
+
+Sur cette seconde combinaison : **134 Rust /124 TypeScript /89 groupes HTTP réussis**, dont les six groupes dossier d’Antigravity exécutés indépendamment avec les variables de fixture propres à chaque profil. Cela valide cette recette automatisée ; ce n’est pas une revue exhaustive de toute la PR #54.
+Une proposition complémentaire, sur la seule branche de recette, charge le dossier à la demande dans les deux lecteurs : le bundle principal RH passe de 507,06 à 477,23 kB, avec un fichier dossier séparé de 30,76 kB. Le build réussit. Les écrans de la combinaison #54 n’ont pas été rejoués visuellement par Codex dans ce lot.
+
+Utiliser la branche de recette comme référence de résolution et de vérification, puis intégrer les PR après revue. Ne pas la déployer ou la fusionner directement sans contrôle de ses commits.
