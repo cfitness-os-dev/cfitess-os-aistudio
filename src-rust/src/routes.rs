@@ -173,10 +173,12 @@ pub struct ChangePasswordPayload {
     pub new_secret: String,
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
 pub struct RestoreBackupPayload {
     pub backup_json: String,
+    pub expected_sha256: Option<String>,
+    pub hmac_signature: Option<String>,
 }
 
 pub fn api_router(state: SharedState) -> Router {
@@ -254,7 +256,7 @@ pub fn api_router(state: SharedState) -> Router {
             "/api/v2/appointment/webhooks/stripe/:club",
             post(post_stripe_appointment_webhook),
         )
-        .route("/api/auth/login", post(post_local_auth_login))
+        .route("/api/auth/login", post(post_local_auth_login_http))
         .route("/api/auth/logout", post(post_local_auth_logout))
         .route("/api/heitz/gate-check", post(post_heitz_gate_check))
         .route("/api/ats/ingest-email", post(post_ats_ingest_email))
@@ -334,6 +336,10 @@ pub fn api_router(state: SharedState) -> Router {
         .route("/api/admin/org02-policy", put(put_org02_policy))
         .route("/api/admin/backup", get(get_backup))
         .route("/api/admin/restore", post(post_restore))
+        .route(
+            "/api/admin/production-readiness",
+            get(get_admin_production_readiness),
+        )
         .route(
             "/api/me/preferences",
             get(get_preferences).put(put_preferences),
@@ -576,34 +582,152 @@ pub(crate) fn verify_employee_secret(
     is_valid_secret_for_employee(emp_id, secret)
 }
 
+const SESSION_COOKIE_NAME: &str = "cfos_session";
+
+pub(crate) fn extract_session_token_from_headers(headers: &HeaderMap) -> Option<String> {
+    if let Some(auth_val) = headers.get(header::AUTHORIZATION).and_then(|v| v.to_str().ok()) {
+        if let Some(token) = auth_val.strip_prefix("Bearer ").map(str::trim) {
+            if !token.is_empty() {
+                return Some(token.to_string());
+            }
+        }
+    }
+    for cookie_hdr in headers.get_all(header::COOKIE) {
+        if let Ok(cookie_str) = cookie_hdr.to_str() {
+            for part in cookie_str.split(';') {
+                let trimmed = part.trim();
+                if let Some((k, v)) = trimmed.split_once('=') {
+                    if k.trim() == SESSION_COOKIE_NAME {
+                        let val = v.trim();
+                        if !val.is_empty() {
+                            return Some(val.to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+fn should_use_secure_cookie(headers: &HeaderMap) -> bool {
+    if !is_demo_mode() || std::env::var("CFITNESS_COOKIE_SECURE").as_deref() == Ok("1") {
+        return true;
+    }
+    headers
+        .get("x-forwarded-proto")
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|v| v.trim().eq_ignore_ascii_case("https"))
+}
+
+fn build_session_set_cookie(token: &str, max_age_secs: i64, secure: bool) -> String {
+    let secure_attr = if secure { "; Secure" } else { "" };
+    if max_age_secs <= 0 || token.is_empty() {
+        format!(
+            "{}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0{}",
+            SESSION_COOKIE_NAME, secure_attr
+        )
+    } else {
+        format!(
+            "{}={}; HttpOnly; SameSite=Strict; Path=/; Max-Age={}{}",
+            SESSION_COOKIE_NAME, token, max_age_secs, secure_attr
+        )
+    }
+}
+
+fn extract_client_ip_rate_key(headers: &HeaderMap) -> Option<String> {
+    if std::env::var("CFITNESS_TRUST_PROXY").as_deref() != Ok("1") {
+        return None;
+    }
+    let forwarded = headers
+        .get("x-forwarded-for")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.split(',').next())
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    let real_ip = headers
+        .get("x-real-ip")
+        .and_then(|v| v.to_str().ok())
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    forwarded
+        .or(real_ip)
+        .map(|ip| format!("ip:{}", ip.to_lowercase()))
+}
+
+fn is_rate_key_blocked(
+    attempts: &mut HashMap<String, (u32, std::time::Instant)>,
+    key: &str,
+    max_attempts: u32,
+) -> bool {
+    if let Some((count, since)) = attempts.get(key).cloned() {
+        if since.elapsed() < std::time::Duration::from_secs(300) {
+            return count >= max_attempts;
+        }
+        attempts.remove(key);
+    }
+    false
+}
+
+fn record_failed_rate_key(
+    attempts: &mut HashMap<String, (u32, std::time::Instant)>,
+    key: &str,
+) -> u32 {
+    let entry = attempts
+        .entry(key.to_string())
+        .or_insert((0, std::time::Instant::now()));
+    if entry.1.elapsed() >= std::time::Duration::from_secs(300) {
+        *entry = (1, std::time::Instant::now());
+    } else {
+        entry.0 += 1;
+    }
+    entry.0
+}
+
 async fn post_local_auth_login(
     State(state): State<SharedState>,
     Json(payload): Json<LocalAuthLoginRequest>,
-) -> impl IntoResponse {
+) -> axum::response::Response {
+    post_local_auth_login_with_headers(State(state), HeaderMap::new(), Json(payload)).await
+}
+
+async fn post_local_auth_login_http(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Json(payload): Json<LocalAuthLoginRequest>,
+) -> axum::response::Response {
+    post_local_auth_login_with_headers(State(state), headers, Json(payload)).await
+}
+
+async fn post_local_auth_login_with_headers(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Json(payload): Json<LocalAuthLoginRequest>,
+) -> axum::response::Response {
     let identifier = payload.email_or_id.trim();
     let secret = payload.pin_or_password.trim();
     let rate_key = identifier.to_lowercase();
+    let ip_rate_key = extract_client_ip_rate_key(&headers);
 
-    // Limitation anti-bruteforce : max 10 tentatives échouées par fenêtre de 300s
+    // Limitation anti-bruteforce : max 10 tentatives échouées par identifiant (et 15 par IP proxy) sur 300s
     {
         let mut attempts = state.login_attempts.write().await;
-        if let Some((count, since)) = attempts.get(&rate_key).cloned() {
-            if since.elapsed() < std::time::Duration::from_secs(300) {
-                if count >= 10 {
-                    return (
-                        StatusCode::TOO_MANY_REQUESTS,
-                        Json(LocalAuthLoginResponse {
-                            authenticated: false,
-                            auth_mode: "LOCAL_SERVER_SESSION_VERIFIED",
-                            role: "rate_limited".to_string(),
-                            session_token: String::new(),
-                            issued_at: Utc::now().to_rfc3339(),
-                        }),
-                    );
-                }
-            } else {
-                attempts.remove(&rate_key);
-            }
+        let id_blocked = !rate_key.is_empty() && is_rate_key_blocked(&mut attempts, &rate_key, 10);
+        let ip_blocked = ip_rate_key
+            .as_deref()
+            .is_some_and(|ipk| is_rate_key_blocked(&mut attempts, ipk, 15));
+        if id_blocked || ip_blocked {
+            return (
+                StatusCode::TOO_MANY_REQUESTS,
+                Json(LocalAuthLoginResponse {
+                    authenticated: false,
+                    auth_mode: "LOCAL_SERVER_SESSION_VERIFIED",
+                    role: "rate_limited".to_string(),
+                    session_token: String::new(),
+                    issued_at: Utc::now().to_rfc3339(),
+                }),
+            )
+                .into_response();
         }
     }
 
@@ -617,7 +741,8 @@ async fn post_local_auth_login(
                 session_token: String::new(),
                 issued_at: Utc::now().to_rfc3339(),
             }),
-        );
+        )
+            .into_response();
     }
 
     let db = state.db.read().await;
@@ -629,6 +754,10 @@ async fn post_local_auth_login(
     });
 
     let Some(emp) = found_emp else {
+        if let Some(ref ipk) = ip_rate_key {
+            let mut attempts = state.login_attempts.write().await;
+            record_failed_rate_key(&mut attempts, ipk);
+        }
         return (
             StatusCode::UNAUTHORIZED,
             Json(LocalAuthLoginResponse {
@@ -638,21 +767,18 @@ async fn post_local_auth_login(
                 session_token: String::new(),
                 issued_at: Utc::now().to_rfc3339(),
             }),
-        );
+        )
+            .into_response();
     };
 
     // Vérification stricte du secret côté serveur (jamais ignoré)
     if !verify_employee_secret(&db, &emp.id, secret) {
         let mut attempts = state.login_attempts.write().await;
-        let entry = attempts
-            .entry(rate_key.clone())
-            .or_insert((0, std::time::Instant::now()));
-        if entry.1.elapsed() >= std::time::Duration::from_secs(300) {
-            *entry = (1, std::time::Instant::now());
-        } else {
-            entry.0 += 1;
+        let count = record_failed_rate_key(&mut attempts, &rate_key);
+        if let Some(ref ipk) = ip_rate_key {
+            record_failed_rate_key(&mut attempts, ipk);
         }
-        tracing::warn!("Échec d'authentification locale pour {} (tentative {})", emp.id, entry.0);
+        tracing::warn!("Échec d'authentification locale pour {} (tentative {})", emp.id, count);
         return (
             StatusCode::UNAUTHORIZED,
             Json(LocalAuthLoginResponse {
@@ -662,7 +788,8 @@ async fn post_local_auth_login(
                 session_token: String::new(),
                 issued_at: Utc::now().to_rfc3339(),
             }),
-        );
+        )
+            .into_response();
     }
 
     state.login_attempts.write().await.remove(&rate_key);
@@ -697,7 +824,8 @@ async fn post_local_auth_login(
         server_role
     );
 
-    (
+    let set_cookie = build_session_set_cookie(&token, 8 * 3600, should_use_secure_cookie(&headers));
+    let mut resp = (
         StatusCode::OK,
         Json(LocalAuthLoginResponse {
             authenticated: true,
@@ -707,6 +835,11 @@ async fn post_local_auth_login(
             issued_at: Utc::now().to_rfc3339(),
         }),
     )
+        .into_response();
+    if let Ok(cookie_hdr) = HeaderValue::from_str(&set_cookie) {
+        resp.headers_mut().insert(header::SET_COOKIE, cookie_hdr);
+    }
+    resp
 }
 
 fn secret_header_matches(headers: &HeaderMap, header_name: &str, env_vars: &[&str]) -> bool {
@@ -968,20 +1101,21 @@ async fn post_backup_snapshot_ingest(
 async fn post_local_auth_logout(
     State(state): State<SharedState>,
     headers: HeaderMap,
-) -> impl IntoResponse {
-    if let Some(auth_val) = headers.get(header::AUTHORIZATION).and_then(|v| v.to_str().ok()) {
-        if let Some(token) = auth_val.strip_prefix("Bearer ").map(|t| t.trim()) {
-            let removed = state.sessions.write().await.remove(token).is_some();
-            return (
-                StatusCode::OK,
-                Json(json!({ "ok": true, "revoked": removed })),
-            );
-        }
+) -> axum::response::Response {
+    let mut removed = false;
+    if let Some(token) = extract_session_token_from_headers(&headers) {
+        removed = state.sessions.write().await.remove(&token).is_some();
     }
-    (
+    let clear_cookie = build_session_set_cookie("", 0, should_use_secure_cookie(&headers));
+    let mut resp = (
         StatusCode::OK,
-        Json(json!({ "ok": true, "revoked": false })),
+        Json(json!({ "ok": true, "revoked": removed })),
     )
+        .into_response();
+    if let Ok(cookie_hdr) = HeaderValue::from_str(&clear_cookie) {
+        resp.headers_mut().insert(header::SET_COOKIE, cookie_hdr);
+    }
+    resp
 }
 
 pub async fn resolve_session_actor(
@@ -995,23 +1129,21 @@ pub async fn resolve_session_actor(
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "club-carre-soie".to_string());
 
-    if let Some(auth_val) = headers.get(header::AUTHORIZATION).and_then(|v| v.to_str().ok()) {
-        if let Some(token) = auth_val.strip_prefix("Bearer ").map(|t| t.trim()) {
-            let entry = state.sessions.read().await.get(token).cloned();
-            if let Some((verified_actor, expires_at)) = entry {
-                if Utc::now().timestamp() <= expires_at {
-                    return Ok((verified_actor, site_id));
-                }
-                state.sessions.write().await.remove(token);
+    if let Some(token) = extract_session_token_from_headers(headers) {
+        let entry = state.sessions.read().await.get(&token).cloned();
+        if let Some((verified_actor, expires_at)) = entry {
+            if Utc::now().timestamp() <= expires_at {
+                return Ok((verified_actor, site_id));
             }
-            return Err(err_resp(
-                StatusCode::UNAUTHORIZED,
-                "Session serveur invalide ou expirée (401 Unauthorized).",
-            ));
+            state.sessions.write().await.remove(&token);
         }
+        return Err(err_resp(
+            StatusCode::UNAUTHORIZED,
+            "Session serveur invalide ou expirée (401 Unauthorized).",
+        ));
     }
 
-    // En production (CFITNESS_STRICT_SESSION=1), toute requête sans Bearer valide est refusée
+    // En production (CFITNESS_STRICT_SESSION=1), toute requête sans Bearer/Cookie valide est refusée
     if std::env::var("CFITNESS_STRICT_SESSION").as_deref() == Ok("1") {
         return Err(err_resp(
             StatusCode::UNAUTHORIZED,
@@ -1021,7 +1153,7 @@ pub async fn resolve_session_actor(
 
     // Mode démo explicite uniquement (CFITNESS_DEMO_MODE=1) : le fallback acteur depuis les
     // en-têtes reste autorisé pour la navigation hors login. Hors mode démo, toute requête sans
-    // session Bearer valide est refusée : aucune identité n'est fournie par le client.
+    // session Bearer/Cookie valide est refusée : aucune identité n'est fournie par le client.
     if std::env::var("CFITNESS_DEMO_MODE").as_deref() != Ok("1") {
         return Err(err_resp(
             StatusCode::UNAUTHORIZED,
@@ -1050,15 +1182,13 @@ async fn require_bearer_session_actor(
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "club-carre-soie".to_string());
 
-    if let Some(auth_val) = headers.get(header::AUTHORIZATION).and_then(|v| v.to_str().ok()) {
-        if let Some(token) = auth_val.strip_prefix("Bearer ").map(|t| t.trim().to_string()) {
-            let entry = state.sessions.read().await.get(&token).cloned();
-            if let Some((verified_actor, expires_at)) = entry {
-                if Utc::now().timestamp() <= expires_at {
-                    return Ok((verified_actor, site_id, token));
-                }
-                state.sessions.write().await.remove(&token);
+    if let Some(token) = extract_session_token_from_headers(headers) {
+        let entry = state.sessions.read().await.get(&token).cloned();
+        if let Some((verified_actor, expires_at)) = entry {
+            if Utc::now().timestamp() <= expires_at {
+                return Ok((verified_actor, site_id, token));
             }
+            state.sessions.write().await.remove(&token);
         }
     }
     Err(err_resp(
@@ -2530,6 +2660,28 @@ async fn put_org02_policy(
     Ok(Json(json!({ "policy": payload.policy })))
 }
 
+fn compute_sha256_hex(data: &[u8]) -> String {
+    use sha2::Digest;
+    let mut hasher = Sha256::new();
+    hasher.update(data);
+    hex::encode(hasher.finalize())
+}
+
+fn compute_backup_hmac_hex(data: &[u8], signing_key: &str) -> String {
+    type HmacSha256 = Hmac<Sha256>;
+    let mut mac = HmacSha256::new_from_slice(signing_key.as_bytes())
+        .expect("HMAC-SHA256 accepte toute taille de clé");
+    mac.update(data);
+    hex::encode(mac.finalize().into_bytes())
+}
+
+fn configured_backup_signing_key() -> Option<String> {
+    std::env::var("CFITNESS_BACKUP_SIGNING_KEY")
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+}
+
 async fn get_backup(
     State(state): State<SharedState>,
     headers: HeaderMap,
@@ -2545,7 +2697,16 @@ async fn get_backup(
     }
     let backup_json = serde_json::to_string_pretty(&*db)
         .map_err(|_| err_resp(StatusCode::INTERNAL_SERVER_ERROR, "Erreur sérialisation JSON."))?;
-    Ok(Json(json!({ "backupJson": backup_json })))
+    let sha256 = compute_sha256_hex(backup_json.as_bytes());
+    let hmac_signature = configured_backup_signing_key()
+        .map(|key| compute_backup_hmac_hex(backup_json.as_bytes(), &key));
+    Ok(Json(json!({
+        "backupJson": backup_json,
+        "sha256": sha256,
+        "hmacSignature": hmac_signature,
+        "signed": hmac_signature.is_some(),
+        "exportedAt": Utc::now().to_rfc3339(),
+    })))
 }
 
 async fn post_restore(
@@ -2559,6 +2720,48 @@ async fn post_restore(
             StatusCode::BAD_REQUEST,
             "Archive JSON trop volumineuse (10 Mo maximum).",
         ));
+    }
+    let actual_sha256 = compute_sha256_hex(payload.backup_json.as_bytes());
+    if let Some(expected_sha) = payload
+        .expected_sha256
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        let normalized_expected = expected_sha.to_lowercase();
+        if !crate::auth_passwords::constant_time_eq(
+            normalized_expected.as_bytes(),
+            actual_sha256.as_bytes(),
+        ) {
+            return Err(err_resp(
+                StatusCode::BAD_REQUEST,
+                "Empreinte SHA-256 de la sauvegarde invalide ou altérée.",
+            ));
+        }
+    }
+    if let Some(signing_key) = configured_backup_signing_key() {
+        let provided_sig = payload
+            .hmac_signature
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .ok_or_else(|| {
+                err_resp(
+                    StatusCode::BAD_REQUEST,
+                    "Signature HMAC-SHA256 obligatoire pour restaurer une sauvegarde (CFITNESS_BACKUP_SIGNING_KEY actif).",
+                )
+            })?
+            .to_lowercase();
+        let expected_sig = compute_backup_hmac_hex(payload.backup_json.as_bytes(), &signing_key);
+        if !crate::auth_passwords::constant_time_eq(
+            provided_sig.as_bytes(),
+            expected_sig.as_bytes(),
+        ) {
+            return Err(err_resp(
+                StatusCode::BAD_REQUEST,
+                "Signature HMAC-SHA256 de la sauvegarde invalide.",
+            ));
+        }
     }
     let mut db = state.db.write().await;
 
@@ -2615,7 +2818,132 @@ async fn post_restore(
         .await
         .retain(|tok, _| tok == &current_token);
 
-    Ok(Json(json!({ "restoredAt": now })))
+    Ok(Json(json!({ "restoredAt": now, "verifiedSha256": actual_sha256 })))
+}
+
+async fn get_admin_production_readiness(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let (actor_id, _, _) = require_bearer_session_actor(&state, &headers).await?;
+    let db = state.db.read().await;
+    if !crate::rbac::is_admin_employee(&db, &actor_id) {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Diagnostic de bascule production réservé aux administrateurs système (403 Forbidden).",
+        ));
+    }
+
+    let demo_disabled = !is_demo_mode();
+    let strict_session = std::env::var("CFITNESS_STRICT_SESSION").as_deref() == Ok("1");
+    let allowed_origins_ok = std::env::var("CFITNESS_ALLOWED_ORIGINS")
+        .ok()
+        .map(|s| {
+            s.split(',')
+                .map(str::trim)
+                .filter(|o| !o.is_empty() && *o != "*")
+                .count()
+        })
+        .unwrap_or(0)
+        > 0;
+    let env_secret_strong = |var: &str| -> bool {
+        std::env::var(var)
+            .ok()
+            .map(|s| s.trim().len() >= 16)
+            .unwrap_or(false)
+    };
+    let lead_api_key_ok = env_secret_strong("CFITNESS_LEAD_API_KEY");
+    let inbound_secret_ok = env_secret_strong("CFITNESS_INBOUND_WEBHOOK_SECRET");
+    let heitz_secret_ok = env_secret_strong("CFITNESS_HEITZ_WEBHOOK_SECRET");
+    let backup_signing_ok = env_secret_strong("CFITNESS_BACKUP_SIGNING_KEY");
+
+    let active_admin_with_hash = db.employees.iter().any(|e| {
+        e.active
+            && e.site_accesses
+                .iter()
+                .any(|sa| sa.profile_id == "admin_systeme")
+            && db
+                .password_hashes_by_employee
+                .get(&e.id)
+                .is_some_and(|h| h.starts_with("pbkdf2_sha256$"))
+    });
+    drop(db);
+
+    let checks = vec![
+        json!({
+            "id": "demo_mode_disabled",
+            "label": "Mode démo désactivé (CFITNESS_DEMO_MODE=0)",
+            "passed": demo_disabled,
+            "severity": "blocker",
+        }),
+        json!({
+            "id": "strict_session_enabled",
+            "label": "Session Bearer/Cookie stricte activée (CFITNESS_STRICT_SESSION=1)",
+            "passed": strict_session,
+            "severity": "blocker",
+        }),
+        json!({
+            "id": "allowed_origins_configured",
+            "label": "Origines CORS verrouillées (CFITNESS_ALLOWED_ORIGINS)",
+            "passed": allowed_origins_ok,
+            "severity": "blocker",
+        }),
+        json!({
+            "id": "active_admin_with_pbkdf2_hash",
+            "label": "Au moins un administrateur actif dispose d'un mot de passe PBKDF2-SHA256",
+            "passed": active_admin_with_hash,
+            "severity": "blocker",
+        }),
+        json!({
+            "id": "lead_api_key_configured",
+            "label": "Clé webhook Lead clubEntry configurée (CFITNESS_LEAD_API_KEY >= 16 car.)",
+            "passed": lead_api_key_ok,
+            "severity": "blocker",
+        }),
+        json!({
+            "id": "inbound_webhook_secret_configured",
+            "label": "Secret webhook réponses entrantes configuré (CFITNESS_INBOUND_WEBHOOK_SECRET >= 16 car.)",
+            "passed": inbound_secret_ok,
+            "severity": "blocker",
+        }),
+        json!({
+            "id": "heitz_webhook_secret_configured",
+            "label": "Secret webhook synchronisation Heitz configuré (CFITNESS_HEITZ_WEBHOOK_SECRET >= 16 car.)",
+            "passed": heitz_secret_ok,
+            "severity": "blocker",
+        }),
+        json!({
+            "id": "backup_signing_key_configured",
+            "label": "Clé HMAC de scellement des sauvegardes configurée (CFITNESS_BACKUP_SIGNING_KEY >= 16 car.)",
+            "passed": backup_signing_ok,
+            "severity": "recommended",
+        }),
+    ];
+
+    let blockers_failed = checks
+        .iter()
+        .filter(|c| c["severity"] == "blocker" && c["passed"] == false)
+        .count();
+    let warnings_count = checks
+        .iter()
+        .filter(|c| c["severity"] == "recommended" && c["passed"] == false)
+        .count();
+
+    Ok(Json(json!({
+        "readyForProduction": blockers_failed == 0,
+        "blockersFailed": blockers_failed,
+        "warningsCount": warnings_count,
+        "demoModeDisabled": demo_disabled,
+        "strictSessionEnabled": strict_session,
+        "allowedOriginsConfigured": allowed_origins_ok,
+        "activeAdminWithPasswordHash": active_admin_with_hash,
+        "leadApiKeyConfigured": lead_api_key_ok,
+        "inboundWebhookSecretConfigured": inbound_secret_ok,
+        "heitzWebhookSecretConfigured": heitz_secret_ok,
+        "backupSigningKeyConfigured": backup_signing_ok,
+        "checks": checks,
+        "checkedAtUtc": Utc::now().to_rfc3339(),
+    })))
 }
 
 #[derive(Deserialize)]
@@ -3287,6 +3615,16 @@ async fn post_change_password(
     Json(payload): Json<ChangePasswordPayload>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let pwd_rate_key = format!("pwd:{}", actor_id.to_lowercase());
+    {
+        let mut attempts = state.login_attempts.write().await;
+        if is_rate_key_blocked(&mut attempts, &pwd_rate_key, 10) {
+            return Err(err_resp(
+                StatusCode::TOO_MANY_REQUESTS,
+                "Trop de tentatives de changement de mot de passe échouées. Réessayez dans 5 minutes.",
+            ));
+        }
+    }
     let mut db = state.db.write().await;
 
     if !db.employees.iter().any(|e| e.id == actor_id && e.active) {
@@ -3297,6 +3635,9 @@ async fn post_change_password(
     let new_secret = payload.new_secret.trim();
 
     if current_secret.is_empty() || !verify_employee_secret(&db, &actor_id, current_secret) {
+        drop(db);
+        let mut attempts = state.login_attempts.write().await;
+        record_failed_rate_key(&mut attempts, &pwd_rate_key);
         return Err(err_resp(
             StatusCode::UNAUTHORIZED,
             "Mot de passe ou code PIN actuel incorrect.",
@@ -3333,12 +3674,8 @@ async fn post_change_password(
     }
     drop(db);
 
-    let current_token = headers
-        .get(header::AUTHORIZATION)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|v| v.strip_prefix("Bearer "))
-        .map(str::trim)
-        .map(str::to_string);
+    state.login_attempts.write().await.remove(&pwd_rate_key);
+    let current_token = extract_session_token_from_headers(&headers);
     state.sessions.write().await.retain(|tok, (sid, _)| {
         if sid != &actor_id {
             return true;
@@ -6456,14 +6793,20 @@ mod tests {
         let invalid_restore = post_restore(
             State(state.clone()),
             mario_headers.clone(),
-            Json(RestoreBackupPayload { backup_json: "{\"sites\":[],\"employees\":[],\"profiles\":[]}".into() }),
+            Json(RestoreBackupPayload {
+                backup_json: "{\"sites\":[],\"employees\":[],\"profiles\":[]}".into(),
+                ..Default::default()
+            }),
         ).await;
         assert!(matches!(invalid_restore, Err((StatusCode::BAD_REQUEST, _))));
 
         let restored = post_restore(
             State(state.clone()),
             mario_headers.clone(),
-            Json(RestoreBackupPayload { backup_json }),
+            Json(RestoreBackupPayload {
+                backup_json,
+                ..Default::default()
+            }),
         ).await;
         assert!(restored.is_ok());
 
@@ -6487,4 +6830,162 @@ mod tests {
         std::env::remove_var("CFITNESS_STRICT_SESSION");
     }
 
+    #[tokio::test]
+    async fn security_p1_hardening_enforces_httponly_cookie_proxy_ratelimit_hmac_backup_and_prod_readiness() {
+        let state = test_state();
+        std::env::set_var("CFITNESS_STRICT_SESSION", "1");
+
+        // 1. Login derrière HTTPS émet un cookie cfos_session HttpOnly; SameSite=Strict; Secure
+        let mut login_hdrs = HeaderMap::new();
+        login_hdrs.insert("x-forwarded-proto", HeaderValue::from_static("https"));
+        let login_resp = post_local_auth_login_with_headers(
+            State(state.clone()),
+            login_hdrs,
+            Json(LocalAuthLoginRequest {
+                email_or_id: "emp-mario".into(),
+                pin_or_password: "1010".into(),
+                role_requested: String::new(),
+            }),
+        )
+        .await;
+        assert_eq!(login_resp.status(), StatusCode::OK);
+        let set_cookie_str = login_resp
+            .headers()
+            .get(header::SET_COOKIE)
+            .and_then(|v| v.to_str().ok())
+            .expect("Set-Cookie cfos_session attendu")
+            .to_string();
+        assert!(set_cookie_str.contains("cfos_session=cfos_"));
+        assert!(set_cookie_str.contains("HttpOnly"));
+        assert!(set_cookie_str.contains("SameSite=Strict"));
+        assert!(set_cookie_str.contains("Secure"));
+
+        let cookie_pair = set_cookie_str.split(';').next().unwrap().to_string();
+        let mut cookie_headers = HeaderMap::new();
+        cookie_headers.insert(
+            header::COOKIE,
+            HeaderValue::from_str(&cookie_pair).unwrap(),
+        );
+        cookie_headers.insert(
+            "x-cfitness-site-id",
+            HeaderValue::from_static("club-carre-soie"),
+        );
+
+        // 2. Authentification par cookie HttpOnly seul fonctionne sous CFITNESS_STRICT_SESSION=1
+        let resolved = resolve_session_actor(&state, &cookie_headers)
+            .await
+            .expect("Cookie cfos_session valide");
+        assert_eq!(resolved.0, "emp-mario");
+
+        // 3. Signature HMAC-SHA256 et empreinte SHA-256 des sauvegardes
+        std::env::set_var("CFITNESS_BACKUP_SIGNING_KEY", "cf_bkp_secret_signing_key_2026_prod");
+        let backup_payload = get_backup(State(state.clone()), cookie_headers.clone())
+            .await
+            .expect("Export backup signée")
+            .0;
+        assert_eq!(backup_payload["signed"], json!(true));
+        let bkp_json = backup_payload["backupJson"].as_str().unwrap().to_string();
+        let bkp_sha = backup_payload["sha256"].as_str().unwrap().to_string();
+        let bkp_hmac = backup_payload["hmacSignature"].as_str().unwrap().to_string();
+
+        // Restauration sans signature HMAC alors que CFITNESS_BACKUP_SIGNING_KEY est actif -> 400
+        let missing_sig = post_restore(
+            State(state.clone()),
+            cookie_headers.clone(),
+            Json(RestoreBackupPayload {
+                backup_json: bkp_json.clone(),
+                expected_sha256: Some(bkp_sha.clone()),
+                hmac_signature: None,
+            }),
+        )
+        .await;
+        assert!(matches!(missing_sig, Err((StatusCode::BAD_REQUEST, _))));
+
+        // Restauration avec signature HMAC altérée -> 400
+        let tampered_sig = post_restore(
+            State(state.clone()),
+            cookie_headers.clone(),
+            Json(RestoreBackupPayload {
+                backup_json: bkp_json.clone(),
+                expected_sha256: Some(bkp_sha.clone()),
+                hmac_signature: Some("0000000000000000000000000000000000000000000000000000000000000000".into()),
+            }),
+        )
+        .await;
+        assert!(matches!(tampered_sig, Err((StatusCode::BAD_REQUEST, _))));
+
+        // Restauration avec SHA-256 et HMAC valides -> 200 OK
+        let valid_restore = post_restore(
+            State(state.clone()),
+            cookie_headers.clone(),
+            Json(RestoreBackupPayload {
+                backup_json: bkp_json,
+                expected_sha256: Some(bkp_sha),
+                hmac_signature: Some(bkp_hmac),
+            }),
+        )
+        .await;
+        assert!(valid_restore.is_ok());
+
+        // 4. Diagnostic /api/admin/production-readiness réservé à l'admin
+        let chloe_headers = session_headers(&state, "emp-chloe", "club-beynost").await;
+        assert!(matches!(
+            get_admin_production_readiness(State(state.clone()), chloe_headers).await,
+            Err((StatusCode::FORBIDDEN, _))
+        ));
+        let readiness = get_admin_production_readiness(State(state.clone()), cookie_headers.clone())
+            .await
+            .expect("Readiness admin OK")
+            .0;
+        assert!(readiness["checks"].is_array());
+        assert_eq!(readiness["strictSessionEnabled"], json!(true));
+        assert_eq!(readiness["backupSigningKeyConfigured"], json!(true));
+
+        // 5. Rate-limit par IP via X-Forwarded-For sous CFITNESS_TRUST_PROXY=1
+        std::env::set_var("CFITNESS_TRUST_PROXY", "1");
+        let mut proxy_hdrs = HeaderMap::new();
+        proxy_hdrs.insert("x-forwarded-for", HeaderValue::from_static("203.0.113.77"));
+        for idx in 0..15 {
+            let r = post_local_auth_login_with_headers(
+                State(state.clone()),
+                proxy_hdrs.clone(),
+                Json(LocalAuthLoginRequest {
+                    email_or_id: format!("unknown-user-{}", idx),
+                    pin_or_password: "wrong".into(),
+                    role_requested: String::new(),
+                }),
+            )
+            .await;
+            assert_eq!(r.status(), StatusCode::UNAUTHORIZED);
+        }
+        let ip_limited = post_local_auth_login_with_headers(
+            State(state.clone()),
+            proxy_hdrs,
+            Json(LocalAuthLoginRequest {
+                email_or_id: "emp-sarah".into(),
+                pin_or_password: "3141".into(),
+                role_requested: String::new(),
+            }),
+        )
+        .await;
+        assert_eq!(ip_limited.status(), StatusCode::TOO_MANY_REQUESTS);
+
+        // 6. Logout par cookie révoque la session et purge le cookie (Max-Age=0)
+        let logout_resp = post_local_auth_logout(State(state.clone()), cookie_headers.clone()).await;
+        assert_eq!(logout_resp.status(), StatusCode::OK);
+        let clear_cookie_str = logout_resp
+            .headers()
+            .get(header::SET_COOKIE)
+            .and_then(|v| v.to_str().ok())
+            .expect("Set-Cookie clear attendu");
+        assert!(clear_cookie_str.contains("Max-Age=0"));
+        assert!(matches!(
+            resolve_session_actor(&state, &cookie_headers).await,
+            Err((StatusCode::UNAUTHORIZED, _))
+        ));
+
+        std::env::remove_var("CFITNESS_TRUST_PROXY");
+        std::env::remove_var("CFITNESS_BACKUP_SIGNING_KEY");
+        std::env::remove_var("CFITNESS_STRICT_SESSION");
+    }
 }

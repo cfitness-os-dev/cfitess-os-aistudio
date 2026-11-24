@@ -54,6 +54,13 @@ use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 async fn security_headers_middleware(req: Request<Body>, next: Next) -> Response {
+    let is_api_route = req.uri().path().starts_with("/api/");
+    let is_https_forwarded = req
+        .headers()
+        .get("x-forwarded-proto")
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|v| v.trim().eq_ignore_ascii_case("https"));
+
     let mut res = next.run(req).await;
     let headers = res.headers_mut();
     headers.insert(
@@ -76,6 +83,19 @@ async fn security_headers_middleware(req: Request<Body>, next: Next) -> Response
             "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; media-src 'self' blob:; frame-src 'self'; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'",
         ),
     );
+    if is_api_route && !headers.contains_key(header::CACHE_CONTROL) {
+        headers.insert(
+            header::CACHE_CONTROL,
+            HeaderValue::from_static("no-store, no-cache, must-revalidate"),
+        );
+        headers.insert(header::PRAGMA, HeaderValue::from_static("no-cache"));
+    }
+    if !is_demo_mode() || is_https_forwarded {
+        headers.insert(
+            header::STRICT_TRANSPORT_SECURITY,
+            HeaderValue::from_static("max-age=31536000; includeSubDomains"),
+        );
+    }
     res
 }
 
@@ -145,6 +165,7 @@ async fn main() {
                         header::AUTHORIZATION,
                         header::CONTENT_TYPE,
                         header::ACCEPT,
+                        header::COOKIE,
                         HeaderName::from_static("x-cfitness-actor-id"),
                         HeaderName::from_static("x-cfitness-site-id"),
                         HeaderName::from_static("x-terminal-id"),
