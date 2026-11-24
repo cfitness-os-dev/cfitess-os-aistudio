@@ -63,11 +63,7 @@ pub struct PurgePhotosPayload {
 }
 
 pub(crate) fn club_photo_policy(db: &AppDatabaseState, site_id: &str) -> &'static str {
-    match db
-        .photo_policy_by_club
-        .get(site_id)
-        .map(String::as_str)
-    {
+    match db.photo_policy_by_club.get(site_id).map(String::as_str) {
         None => "optional",
         Some("optional") => "optional",
         Some("required") => "required",
@@ -84,8 +80,7 @@ pub async fn get_photo_policy(
     let (_, site_id) = club_site(&raw_club)?;
     let actor_id = authenticated_employee(&state, &headers).await?;
     let db = state.db.read().await;
-    if !is_owner_or_super_admin(&db, &actor_id, site_id)
-    {
+    if !is_owner_or_super_admin(&db, &actor_id, site_id) {
         return Err(err_resp(
             StatusCode::FORBIDDEN,
             "Les réglages photo de la badgeuse sont réservés au propriétaire ou super administrateur.",
@@ -118,8 +113,7 @@ pub async fn put_photo_policy(
     };
 
     let mut db = state.db.write().await;
-    if !is_owner_or_super_admin(&db, &actor_id, site_id)
-    {
+    if !is_owner_or_super_admin(&db, &actor_id, site_id) {
         return Err(err_resp(
             StatusCode::FORBIDDEN,
             "Seul le propriétaire ou un super administrateur peut modifier la politique photo du club.",
@@ -277,6 +271,7 @@ fn decode_and_sanitize_image(bytes: &[u8]) -> Option<(&'static str, &'static str
 }
 
 /// Vérifie qu'un flux d'octets est une vraie image décodable (JPEG, PNG ou WebP).
+#[cfg(test)]
 fn detect_image_format(bytes: &[u8]) -> Option<(&'static str, &'static str)> {
     decode_and_sanitize_image(bytes).map(|(ct, ext, _)| (ct, ext))
 }
@@ -335,7 +330,10 @@ pub async fn post_capture_punch_photo(
     };
 
     let Some(employee) = db.employees.iter().find(|e| e.id == actor_id) else {
-        return Err(err_resp(StatusCode::NOT_FOUND, "Collaborateur introuvable."));
+        return Err(err_resp(
+            StatusCode::NOT_FOUND,
+            "Collaborateur introuvable.",
+        ));
     };
     if !employee.active || !can_access_site_scope(&db, &actor_id, &terminal.site_id) {
         return Err(err_resp(
@@ -472,7 +470,10 @@ pub async fn post_capture_punch_photo(
     // Suppression disque des captures expirées uniquement APRÈS succès de persist_state
     for old_path in expired_files_to_remove {
         if let Err(err) = fs::remove_file(&old_path) {
-            tracing::warn!("Suppression fichier photo expiré {:?} échouée : {err}", old_path);
+            tracing::warn!(
+                "Suppression fichier photo expiré {:?} échouée : {err}",
+                old_path
+            );
         }
     }
 
@@ -531,7 +532,12 @@ pub(crate) fn consume_punch_photo(
 
     let expires = DateTime::parse_from_rfc3339(&record.expires_at)
         .map(|dt| dt.with_timezone(&Utc))
-        .map_err(|_| err_resp(StatusCode::CONFLICT, "Horodatage d'expiration photo invalide."))?;
+        .map_err(|_| {
+            err_resp(
+                StatusCode::CONFLICT,
+                "Horodatage d'expiration photo invalide.",
+            )
+        })?;
     if Utc::now() > expires {
         return Err(err_resp(
             StatusCode::CONFLICT,
@@ -569,8 +575,7 @@ pub async fn get_punch_photo(
     let actor_id = authenticated_employee(&state, &headers).await?;
     let db = state.db.read().await;
 
-    if !is_owner_or_super_admin(&db, &actor_id, site_id)
-    {
+    if !is_owner_or_super_admin(&db, &actor_id, site_id) {
         return Err(err_resp(
             StatusCode::FORBIDDEN,
             "La consultation des photos de pointage est réservée au propriétaire ou super administrateur.",
@@ -931,9 +936,13 @@ mod tests {
         assert_eq!(truncated_jpeg.0, StatusCode::BAD_REQUEST);
 
         // 1c. Rejet des contre-exemples d'octets nuls / CRC invalides / VP8X sans pixels
-        let fake_jpeg = [0xff, 0xd8, 0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xd9];
+        let fake_jpeg = [
+            0xff, 0xd8, 0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xd9,
+        ];
         assert!(detect_image_format(&fake_jpeg).is_none());
-        let fake_webp = [b'R', b'I', b'F', b'F', 8, 0, 0, 0, b'W', b'E', b'B', b'P', 0, 0, 0, 0];
+        let fake_webp = [
+            b'R', b'I', b'F', b'F', 8, 0, 0, 0, b'W', b'E', b'B', b'P', 0, 0, 0, 0,
+        ];
         assert!(detect_image_format(&fake_webp).is_none());
         let mut fake_vp8x = b"RIFF".to_vec();
         fake_vp8x.extend_from_slice(&22u32.to_le_bytes());
