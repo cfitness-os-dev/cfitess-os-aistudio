@@ -32,13 +32,13 @@ import {
 const CLUB_DEFAULT_ROOMS: Record<ClubId, Array<{ id: string; label: string }>> = {
   "carre-de-soie": [
     { id: "room-cours-soie", label: "Salle Cours Collectifs" },
-    { id: "room-inbody-soie", label: "Salle Bilan InBody" },
+    { id: "room-inbody-soie", label: "Salle Bilan Technogym Checkup (Mywellness)" },
     { id: "room-accueil-soie", label: "Accueil / Borne Kiosque" },
     { id: "room-plateau-soie", label: "Plateau Musculation" },
   ],
   beynost: [
     { id: "room-salle-a", label: "Salle Cours Collectifs A" },
-    { id: "room-salle-b", label: "Salle Bilan InBody" },
+    { id: "room-salle-b", label: "Salle Bilan Technogym Checkup (Mywellness)" },
     { id: "room-accueil-bey", label: "Accueil / Borne Kiosque" },
     { id: "room-plateau-bey", label: "Plateau Cardio & Muscu" },
   ],
