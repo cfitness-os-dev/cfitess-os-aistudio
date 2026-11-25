@@ -901,7 +901,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isAuthenticated || typeof window === 'undefined') return;
     let cancelled = false;
-    setState(previous => ({ ...previous, heitzMembers: [] }));
+    setState(previous => ({ ...previous, heitzMembers: [], heitzKpiTickets: [] }));
     const siteHeader =
       primaryAuthorizedClub === 'beynost' ? 'club-beynost' : 'club-carre-soie';
     const headers: Record<string, string> = {
@@ -941,7 +941,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
         const rows = (await response.json()) as HeitzMember[];
         if (!cancelled && Array.isArray(rows)) setState(previous => ({ ...previous, heitzMembers: rows }));
       })
-      .catch(() => { if (!cancelled) setState(previous => ({ ...previous, heitzMembers: [] })); });
+      .catch(() => { if (!cancelled) setState(previous => ({ ...previous, heitzMembers: [], heitzKpiTickets: [] })); });
 
     fetchWithStaleSessionRecovery('/api/heitz/live-overview')
       .then(async response => {
@@ -982,29 +982,11 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
           qrTokenGenerated: p.badgeCode,
           readerType: 'RFID_MIFARE_HEITZ',
         }));
-        const realTickets: HeitzKpiTicket[] = (live.recentTickets ?? []).map(t => ({
-          id: t.idTicket,
-          number: t.ticketNumber || String(t.idTicket),
-          clubId: t.clubId,
-          idCenter: t.clubId === 'beynost' ? 4967 : 3845,
-          dateIso: t.date ? t.date.slice(0, 10) : new Date().toISOString().slice(0, 10),
-          idClient: 0,
-          clientName: 'Client Heitz Cloud',
-          articleId: 1,
-          articleName: 'Ticket Heitz TPV',
-          articleCategory: 2,
-          amountTtcEur: Number(t.amountTtcEur || 0),
-          paymentMethodName: 'CB TPV',
-          idEmpSeller: t.idEmpSeller || 0,
-          sellerEmployeeId: 'emp-mario',
-          sellerName: t.sellerName || 'Accueil C.Fitness',
-          silaeCommissionEur: 0,
-          ticketState: 1,
-        }));
         setState(previous => ({
           ...previous,
           accessEvents: realAccessEvents,
-          heitzKpiTickets: realTickets,
+          // A recent ticket preview is not a reconciled payment ledger.
+          heitzKpiTickets: [],
         }));
       })
       .catch(() => {

@@ -1,0 +1,45 @@
+# Heitz — point de reprise partagé
+
+Avant de reprendre une intégration Heitz, un audit de couverture ou une demande d’accès/documentation, consulter ce registre puis les sources indiquées. Mettre à jour la ligne concernée après chaque livraison ; la disponibilité documentaire, le développement et la validation réelle sont des états distincts.
+
+## Décisions de Daniel à conserver
+
+- Heitz reste la référence pour les adhérents, abonnements, contrats, finances et accès. Une écriture OS doit utiliser une opération fournisseur documentée, attendre son résultat puis relire Heitz. Sinon, proposer un accès à l’interface web appropriée ; aucune réussite locale présentée comme une opération Heitz.
+- Objectif : couvrir toutes les possibilités de l’API réellement accessible, avec une matrice par fonction. Une fonction non commencée reste dans le registre ; elle ne devient pas « non exposée » parce que le code actuel ne la traite pas.
+- Priorité recouvrement : suivi quotidien, rapprochement des règlements/rejets/échéances/avoirs, contrats et CGV effectivement applicables, dossier pour le contentieux et fiche compréhensible au téléphone ou au club.
+- Paiement signalé et contestation suspendent la poursuite des relances jusqu’à contrôle. Un solde, un ticket, un abonnement actif ou un fichier PDF présent ne prouvent pas respectivement un encaissement ou une signature.
+- Session réelle Heitz autorisée en consultation uniquement. Développement sur branche et données fictives ; aucune modification Heitz, aucun envoi ou déploiement autorisés par ce lot. Les sollicitations périodiques restent arrêtées.
+
+## Sources disponibles — vérification du 25 novembre 2026
+
+| Source | État constaté et usage |
+| --- | --- |
+| [Documentation HZ.WS publique](https://documenter.getpostman.com/view/24519/SVfMUAnB) | Accessible dans Chrome. Déplier les rubriques de navigation pour charger leurs détails. Documents, abonnements et échéanciers relus directement pendant ce lot. |
+| [Index officiel Heitz](https://heitzsystem.com/documentation-webservice/) | Référence d’entrée déjà identifiée. |
+| [Catalogue initial](heitz-public-api-catalogue-2026-11-25.json) | Extraction antérieure partielle, surtout planning/sportif. Ses 144 paires candidates ne constituent pas l’inventaire total de la documentation. |
+| [Complément des lectures documentaires](heitz-lectures-documentees-2026-11-25.json) | Routes et champs confirmés dans les sections publiques, sans recopier les exemples de personnes. Complément ciblé, non inventaire global. |
+| [Audit historique](heitz-api-couverture-2026-11-25.md) | Constat daté de code ancien ; lire avec les corrections et mises à jour ci-dessous. |
+| [Recouvrement et fiche d’échange](recouvrement-fiche-echange-2026-11-25.md) | PR #74 approuvée et fusionnée. Références humaines, contexte IA serveur et suspension. |
+| [Recette de collecte](heitz-collecte-fiabilisation-2026-11-25.md) | Résultats et limites du lot présent. |
+
+**Correction du diagnostic documentaire :** une ancienne extraction incomplète ne signifie pas que la documentation n’existe pas. Reprendre les sections publiques et les archives déjà disponibles avant de solliciter à nouveau Daniel ou le fournisseur. Une réponse d’exemple absente ne signifie pas que l’endpoint ne renvoie aucune donnée.
+
+## Couverture et prochaine reprise
+
+| Fonction | État / prochaine action |
+| --- | --- |
+| Lecteur adhérents/soldes/passages/FMI/collaborateurs/salles/tickets | Code existant. Pagination/préservation corrigées PR #70/#72 ; montants et tickets durcis dans le présent lot. Recette sur doubles locaux, pas qualification complète chez Heitz. |
+| Recouvrement factuel | PR #74 fusionnée ; ajouts chat/contacts PR #75/#77 reçus dans la base ec0a7ca. Les références de pièces ne contiennent pas les originaux. |
+| Échéancier prévisionnel | GET `/api/userScheduledPayments/provisional`, paramètre `idClient`, exemple JSON disponible. **Documenté ; lecteur métier OS à développer.** Le prévisionnel ne prouve aucun encaissement. |
+| Échéancier d’affichage | GET `/api/userScheduledPayments/display`, `idClient` signalé administrateur uniquement. Exemple contenant des montants déjà formatés en texte ; ne pas les traiter comme des nombres bruts. **Documenté ; à développer/qualifier.** |
+| Abonnements | GET `/api/userSubscriptions?idClient=...`, GET `/api/userSubscriptions/:id`, GET `/api/userSubscriptions/:id/config?detail=1`. La liste est décrite comme active : ne pas l’appeler historique contractuel complet. **Documenté ; à développer/qualifier.** |
+| Documents clients | GET `/api/userDocument` documenté. Les paramètres de ciblage/pagination et le schéma de réponse détaillé ne sont pas montrés dans le bloc GET relu. **Documenté ; préciser le ciblage avant collecte de pièces.** |
+| Contrat signé / CGV applicables / fichier original | Rapprocher les fonctions d’abonnement et document avec les métadonnées de version, signature, client et accès au fichier. L’écran web propose des PDF et une action de signature ; aucune signature ni disponibilité API des originaux ne sont déduites de cela. |
+| Règlements effectués / rejets / factures / avoirs / annulations | Écrans web observés en lecture. Reprendre les autres sections publiques de l’API et confirmer les schémas avant développement ; aucun rapprochement complet connecté à ce stade. |
+| Autres familles API | Continuer le catalogue public au-delà des sections déjà analysées. Conserver pour chaque fonction : documentée → développée → testée sur double → testée chez Heitz → validée métier. Aucun pourcentage global avant catalogue borné. |
+
+Demander au fournisseur uniquement les précisions restantes après cette reprise : droits/version effectifs par centre, schémas non décrits, pagination/filtrage, signification des montants et accès aux originaux/signatures. Vérifier la relation entre le web observé WS 2.1.4-beta.187 et la version du service configuré. Des clés ou mots de passe réels n’ont pas été utilisés pour les essais de ce lot.
+
+## Coordination
+
+Ticket [#68](https://github.com/cfitness-os-dev/cfitess-os-aistudio/issues/68) pour la couverture Heitz ; [#21](https://github.com/cfitness-os-dev/cfitess-os-aistudio/issues/21) pour les livraisons. Réserver les fichiers avant modifications simultanées. Publier branche/commit, périmètre testé, limites et opérations non exécutées. Un commentaire, une fusion et un déploiement sont trois événements à vérifier séparément.

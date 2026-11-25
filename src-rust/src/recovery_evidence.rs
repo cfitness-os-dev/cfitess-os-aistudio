@@ -97,7 +97,11 @@ fn fingerprint(c: &RecoveryCaseRecord, k: &Kind) -> String {
     match k {
         Kind::Contract | Kind::Terms => digest(&(&c.member_id, &c.club_id, &c.contract_label)),
         Kind::DebtDetail | Kind::Payments => {
-            digest(&(&c.member_id, &c.club_id, c.amount_due_eur, &c.billed_months))
+            match &c.source_balance_revision {
+                Some(revision) => digest(&(&c.member_id, &c.club_id, c.amount_due_eur, &c.billed_months, revision)),
+                // Preserve compatibility for manually reviewed legacy dossiers.
+                None => digest(&(&c.member_id, &c.club_id, c.amount_due_eur, &c.billed_months)),
+            }
         }
         Kind::Reminders => digest(&(
             &c.member_id,

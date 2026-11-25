@@ -43,7 +43,6 @@ import {
   Video,
 } from 'lucide-react';
 import { NavSection, ShellMode } from '../../types/cfos';
-import { computeHeitzKpiSummary } from '../../domain/rules';
 import { ClubCamerasWallPanel } from '../ClubCamerasWallPanel';
 
 const SAAS_REPLACED_COMPARISON = [
@@ -407,7 +406,6 @@ export function DashboardView() {
     phoneLines,
     shifts,
     heitzMembers,
-    heitzKpiTickets,
     accessEvents,
     callLogs,
     checklists,
@@ -483,7 +481,6 @@ export function DashboardView() {
     0
   );
 
-  const heitzKpi = computeHeitzKpiSummary(heitzKpiTickets, clubFilter);
   const clubPassages = filterByClub(accessEvents);
 
   // Dynamic values based on clubFilter and periodFilter
@@ -2115,100 +2112,11 @@ export function DashboardView() {
             </div>
           </div>
 
-          {/* Synthèse Chiffre d'Affaires Heitz & Primes Vendeurs Silae */}
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 space-y-4 shadow-2xs">
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-wider text-violet-600">
-                  Suivi Financier &amp; Commercial Consolidé (Heitz ↔ Silae)
-                </div>
-                <h2 className="text-sm sm:text-base font-bold text-slate-900 mt-0.5">
-                  Chiffre d&apos;Affaires Encaissé, Ventilation par Moyen de Paiement &amp; Primes Vendeurs
-                </h2>
-              </div>
-              <span className="px-3 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 font-mono text-xs font-bold">
-                {heitzKpi.ticketsCount} encaissements · {heitzKpi.totalRevenueTtcEur.toFixed(2)} € TTC
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 text-xs">
-              <div className="lg:col-span-5 p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                <div className="font-bold text-slate-900">
-                  Ventilation du Chiffre d&apos;Affaires
-                </div>
-
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div className="p-2.5 rounded-lg bg-white border border-slate-200">
-                    <div className="text-[10px] text-slate-500 uppercase font-semibold">
-                      Abonnements Club
-                    </div>
-                    <div className="text-base font-extrabold text-slate-900 font-mono tabular-nums mt-0.5">
-                      {heitzKpi.subscriptionsRevenueEur.toFixed(2)} €
-                    </div>
-                  </div>
-                  <div className="p-2.5 rounded-lg bg-white border border-slate-200">
-                    <div className="text-[10px] text-slate-500 uppercase font-semibold">
-                      Boutique &amp; Caisse TPV
-                    </div>
-                    <div className="text-base font-extrabold text-slate-900 font-mono tabular-nums mt-0.5">
-                      {heitzKpi.tpvArticlesRevenueEur.toFixed(2)} €
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5 pt-2 border-t border-slate-200/80">
-                  {heitzKpi.byPaymentMethod.map((pm) => (
-                    <div
-                      key={pm.method}
-                      className="flex items-center justify-between font-mono text-[11px]"
-                    >
-                      <span className="text-slate-700 font-semibold">
-                        {pm.method} ({pm.count})
-                      </span>
-                      <span className="font-bold text-slate-900 tabular-nums">
-                        {pm.totalEur.toFixed(2)} €
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="lg:col-span-7 p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-bold text-slate-900">
-                    Performance Vendeurs &amp; Commissions Silae
-                  </span>
-                  <span className="px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-900 font-mono text-[11px] font-bold">
-                    Total Primes : +{heitzKpi.totalSilaeCommissionsEur.toFixed(2)} € · {clubPassages.length} passages portillons
-                  </span>
-                </div>
-
-                <div className="space-y-2">
-                  {heitzKpi.byEmployeeSeller.map((seller) => (
-                    <div
-                      key={seller.employeeId}
-                      className="p-2.5 rounded-lg bg-white border border-slate-200 flex flex-wrap items-center justify-between gap-2"
-                    >
-                      <div>
-                        <div className="font-bold text-slate-900">{seller.sellerName}</div>
-                        <div className="text-[11px] text-slate-500">
-                          {seller.subscriptionsSold} abonnement(s) signé(s) · {seller.ticketsCount} encaissement(s)
-                        </div>
-                      </div>
-                      <div className="text-right font-mono tabular-nums">
-                        <div className="font-bold text-slate-900">
-                          CA : {seller.revenueTtcEur.toFixed(2)} €
-                        </div>
-                        <div className="text-[11px] font-semibold text-emerald-700">
-                          Prime Silae : +{seller.silaeCommissionEur.toFixed(2)} €
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
+          <section className="cf-card p-5 space-y-3" aria-label="Rapprochement des encaissements Heitz">
+            <h2 className="font-bold">Suivi des encaissements</h2>
+            <p className="cf-muted text-sm">Le rapprochement des règlements, des moyens de paiement et des primes vendeurs reste à connecter à Heitz. Les tickets récents ne suffisent pas à établir ces indicateurs.</p>
+            <button type="button" className="cf-brand-gradient text-white px-4 py-2 rounded-xl min-h-[44px]" onClick={() => setActiveSection("devices", "adherents")}>Consulter les dossiers Heitz</button>
+          </section>
         </div>
       )}
 

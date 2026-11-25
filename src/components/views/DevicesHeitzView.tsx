@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCfos } from '../../context/CfosContext';
+import { describeHeitzCollection } from '../../domain/heitzCollection';
 import { HeitzMembersPanel } from './HeitzMembersPanel';
 import {
   QrCode,
@@ -244,7 +245,7 @@ export function DevicesHeitzView() {
       setImportReport('Connecteur Mywellness en attente de clé API Technogym.');
       return;
     }
-    setImportReport('Synchronisation HeitzSystem Cloud en cours (centres #3845 Carré de Soie & #4967 Beynost)…');
+    setImportReport('Collecte Heitz en cours pour les clubs autorisés…');
     const siteHeader = selectedClubGate === 'beynost' ? 'club-beynost' : 'club-carre-soie';
     const headers: Record<string, string> = {
       'x-cfitness-actor-id': currentUser.id,
@@ -270,9 +271,7 @@ export function DevicesHeitzView() {
           setImportReport(`Erreur synchronisation Heitz Cloud : ${payload.error || `HTTP ${res.status}`}`);
           return;
         }
-        setImportReport(
-          `Synchronisation Heitz Cloud réussie : ${payload.syncedMembersCount ?? 0} adhérents réels (Carré de Soie #3845 : ${payload.carreDeSoieMembers ?? 0}, Beynost #4967 : ${payload.beynostMembers ?? 0}) · FMI : ${payload.entriesToday ?? 0} entrées aujourd’hui.`
-        );
+        setImportReport(describeHeitzCollection(payload));
       })
       .catch(() => {
         setImportReport('Impossible de joindre /api/heitz/sync-live.');
@@ -1772,8 +1771,9 @@ export function DevicesHeitzView() {
                   {/* Recent Validated TPV Tickets */}
                   <div className="pt-2 border-t border-slate-100 space-y-1">
                     <div className="text-[10px] font-bold uppercase text-slate-400">
-                      Derniers achats encaissés (NF525) :
+                      Tickets locaux — règlement à vérifier :
                     </div>
+                    {!heitzKpiTickets.length && <p className="text-xs cf-muted">Les règlements ne sont pas encore rapprochés. Consultez le dossier Heitz.</p>}
                     {heitzKpiTickets.slice(0, 3).map((tk) => (
                       <div
                         key={tk.id}

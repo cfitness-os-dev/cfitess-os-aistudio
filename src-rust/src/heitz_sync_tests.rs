@@ -12,9 +12,15 @@ use tokio::{
 
 #[test]
 fn club_ids_are_not_guessed_from_a_member_identifier() {
-    assert_eq!(infer_club_id_from_heitz_id(38450001234, Some(9999)), "unassigned");
+    assert_eq!(
+        infer_club_id_from_heitz_id(38450001234, Some(9999)),
+        "unassigned"
+    );
     assert_eq!(infer_club_id_from_heitz_id(38450001234, None), "unassigned");
-    assert_eq!(infer_club_id_from_heitz_id(100, Some(3845)), "carre-de-soie");
+    assert_eq!(
+        infer_club_id_from_heitz_id(100, Some(3845)),
+        "carre-de-soie"
+    );
     assert_eq!(infer_club_id_from_heitz_id(100, Some(4967)), "beynost");
 }
 
@@ -102,6 +108,7 @@ async fn pagination_failures_empty_results_disk_failure_and_restart_preserve_loc
                         let mut rows = (start..(start+120).min(241)).map(|i| {
                             let mut row = json!({"id":100+i,"firstName":"Fictif","lastName":format!("Test{}",i),"type":0,
                                 "idCenter":if phase==7 {9999}else{3845},"_finBalance":if i==0 {if phase==1 {-55.0}else if phase==10 {0.0}else{-40.0}}else{0.0},"_subscriptions":[]});
+                            if phase==14 && i==0 { row["finBalance"]=json!(0); }
                             if phase==9 && i==0 { row.as_object_mut().unwrap().remove("_finBalance"); }
                             if phase==11 && i==0 { row.as_object_mut().unwrap().remove("id"); }
                             if phase==12 && i==0 { row["id"]=json!(0); } row
@@ -111,6 +118,8 @@ async fn pagination_failures_empty_results_disk_failure_and_restart_preserve_loc
                         }
                         json!(rows)
                     }
+                } else if first.contains("/api/ticket") && phase == 15 {
+                    json!([{"id":1,"creationIdCenter":3845}])
                 } else if first.contains("/api/fmi/date/") {
                     if phase == 5 {
                         status = "503 Service Unavailable";
@@ -201,7 +210,7 @@ async fn pagination_failures_empty_results_disk_failure_and_restart_preserve_loc
         assert_eq!(m.technogym_moves30d, 734);
         assert_eq!(m.mywellness_member_id.as_deref(), Some("local-link"));
     }
-    for phase in [2, 3, 4, 9, 11, 12, 13] {
+    for phase in [2, 3, 4, 9, 11, 12, 13, 14] {
         let memory = serde_json::to_value(&*state.db.read().await).unwrap();
         let disk = std::fs::read(folder.join("cfitness_state.json")).unwrap();
         mode.store(phase, Ordering::SeqCst);
@@ -238,6 +247,10 @@ async fn pagination_failures_empty_results_disk_failure_and_restart_preserve_loc
         disk
     );
     std::fs::remove_dir(blocker).unwrap();
+    mode.store(15, Ordering::SeqCst);
+    let partial_financial = run_heitz_live_sync(&state, "service-test").await.unwrap();
+    assert!(partial_financial.partial_sync);
+    assert!(partial_financial.financial_collection["ticketsRead"].is_null());
     mode.store(5, Ordering::SeqCst);
     let partial = run_heitz_live_sync(&state, "service-test").await.unwrap();
     assert!(partial.partial_sync && !partial.warnings.is_empty());
@@ -274,7 +287,40 @@ async fn pagination_failures_empty_results_disk_failure_and_restart_preserve_loc
     assert!(debt
         .last_action_note
         .contains("Suivi local fictif conservé"));
+    let settled_revision = debt.source_balance_revision.clone();
+    assert!(settled_revision.is_some());
     drop(db);
+    mode.store(1, Ordering::SeqCst);
+    run_heitz_live_sync(&state, "service-test").await.unwrap();
+    let reopened = state
+        .db
+        .read()
+        .await
+        .recovery_cases
+        .iter()
+        .find(|r| r.member_id == "hz-100")
+        .unwrap()
+        .clone();
+    assert_eq!(reopened.status, "a_relancer");
+    assert_eq!(reopened.amount_due_eur, 55.0);
+    assert_eq!(reopened.relance_count, 4);
+    assert!(reopened
+        .last_action_note
+        .contains("rapprochement nécessaire"));
+    assert_ne!(reopened.source_balance_revision, settled_revision);
+    run_heitz_live_sync(&state, "service-test").await.unwrap();
+    assert_eq!(
+        state
+            .db
+            .read()
+            .await
+            .recovery_cases
+            .iter()
+            .find(|r| r.member_id == "hz-100")
+            .unwrap()
+            .source_balance_revision,
+        reopened.source_balance_revision
+    );
     server.abort();
     std::fs::remove_dir_all(folder).unwrap();
 }

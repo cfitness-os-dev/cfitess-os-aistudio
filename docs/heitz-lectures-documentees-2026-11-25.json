@@ -1,0 +1,14 @@
+{
+  "source": "https://documenter.getpostman.com/view/24519/SVfMUAnB",
+  "verifiedOn": "2026-11-25",
+  "scope": "Targeted direct browser reading of public documentation, not a complete API inventory",
+  "vendorCallsExecuted": false,
+  "requests": [
+    {"method":"GET","path":"/api/userScheduledPayments/provisional","queryFields":["idClient"],"exampleResponseFields":["date","valuePayment","valueSale","valuePoints"],"semanticLimit":"Provisional schedule; not payment receipt","osStatus":"documented_not_integrated"},
+    {"method":"GET","path":"/api/userScheduledPayments/display","queryFields":["idClient"],"requirementsObserved":"idClient target parameter marked admin only","exampleResponseFields":["id","next","last","label","totalSale","totalPayment","totalPoints","access","period","processManually"],"semanticLimit":"totalSale and totalPayment shown as formatted strings; not a reconciled numeric ledger","osStatus":"documented_not_integrated"},
+    {"method":"GET","path":"/api/userSubscriptions","queryFields":["idClient"],"semanticLimit":"Documented as active subscriptions, not full historical contract/signature coverage","responseSchemaConfirmed":false,"osStatus":"documented_not_integrated"},
+    {"method":"GET","path":"/api/userSubscriptions/:id","responseSchemaConfirmed":false,"osStatus":"documented_not_integrated"},
+    {"method":"GET","path":"/api/userSubscriptions/:id/config","queryFields":["detail"],"documentedDetailExample":1,"responseSchemaConfirmed":false,"osStatus":"documented_not_integrated"},
+    {"method":"GET","path":"/api/userDocument","versionLabelObserved":"12.6","queryFieldsConfirmed":[],"responseSchemaConfirmed":false,"semanticLimit":"GET block does not specify client targeting, pagination or signature/original-file metadata","osStatus":"documented_targeting_to_qualify"}
+  ]
+}

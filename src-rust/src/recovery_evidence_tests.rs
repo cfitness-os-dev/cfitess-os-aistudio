@@ -207,6 +207,13 @@ async fn changed_balance_invalidates_financial_references_and_assistant_revision
     assert!(prompt.contains("40.0"));
     assert!(prompt.contains("Aucun texte de CGV"));
     assert!(!prompt.contains("Contrôle fictif de recette"));
+    // The original amount returning is a new balance episode, not the old proof.
+    db.recovery_cases[0].amount_due_eur = c.amount_due_eur;
+    db.recovery_cases[0].source_balance_revision = Some("new-source-balance".into());
+    let reopened = db.recovery_cases[0].clone();
+    assert!(!current(&db, &reopened, &Kind::Payments));
+    assert!(!current(&db, &reopened, &Kind::DebtDetail));
+    assert!(current(&db, &reopened, &Kind::Contract));
     drop(db);
     std::fs::remove_dir_all(&s.data_dir).unwrap();
 }

@@ -1,4 +1,4 @@
-use crate::models::{HeitzMemberRecord, RecoveryCaseRecord, SiteKpis};
+use crate::models::{HeitzMemberRecord, RecoveryCaseRecord};
 use crate::rbac::{
     can_access_finances, can_access_recovery, can_access_site_scope, is_admin_employee,
     is_manager_employee,
@@ -355,6 +355,7 @@ pub struct HeitzSyncSummary {
     pub entries_today: i64,
     pub current_present: i64,
     pub synced_at_utc: String,
+    pub financial_collection: Value,
 }
 
 pub async fn run_heitz_live_sync(
@@ -495,37 +496,13 @@ pub async fn run_heitz_live_sync_scoped(
     })
     .await;
 
-    let mut rev_cds = 0.0f64;
-    let mut rev_bey = 0.0f64;
-    let tickets_complete = match &tickets_res {
-        Ok(t_arr) => {
-            for t in t_arr {
-                let amount = t
-                    .get("printTotal")
-                    .and_then(|v| v.as_f64())
-                    .or_else(|| t.get("_ticketTotal").and_then(|v| v.as_f64()))
-                    .unwrap_or(0.0);
-                let siret = t.get("siret").and_then(|v| v.as_str()).unwrap_or("");
-                let ctr = t
-                    .get("creationIdCenter")
-                    .and_then(|v| v.as_i64())
-                    .unwrap_or(0);
-                if ctr == bey_center || siret.starts_with("852722529") {
-                    rev_bey += amount.max(0.0);
-                } else if ctr == cds_center || siret.starts_with("818651317") {
-                    rev_cds += amount.max(0.0);
-                }
-            }
-            true
-        }
-        Err(err) => {
-            partial_sync = true;
-            warnings.push(format!("Tickets TPV Heitz indisponibles : {}", err));
-            false
-        }
+    let ticket_count = match tickets_res.and_then(|v| crate::heitz_collection::tickets(&json!(v), cds_center, bey_center, allow_cds, allow_bey)) {
+        Ok(rows) => Some(rows.len()),
+        Err(err) => { partial_sync = true; warnings.push(format!("Tickets Heitz non confirmés : {}", err)); None }
     };
 
-    let synced_at_utc = now.to_rfc3339();
+    // Local collection completion time, not the business effective date of a payment.
+    let synced_at_utc = Utc::now().to_rfc3339();
     let mut seen_ids: HashSet<i64> = HashSet::new();
     let mut incoming_members: Vec<HeitzMemberRecord> = Vec::new();
 
@@ -577,11 +554,7 @@ pub async fn run_heitz_live_sync_scoped(
             continue;
         }
 
-        let fin_balance = u
-            .get("_finBalance")
-            .and_then(|v| v.as_f64())
-            .or_else(|| u.get("finBalance").and_then(|v| v.as_f64()))
-            .ok_or("Solde Heitz absent ou invalide : impossible de confirmer un solde nul.")?;
+        let fin_balance = crate::heitz_collection::amount(&u, &["_finBalance", "finBalance"])?;
 
         let subs = u.get("_subscriptions").and_then(|v| v.as_array());
         let mut sub_label = String::from("Adhérent Heitz");
@@ -746,7 +719,15 @@ pub async fn run_heitz_live_sync_scoped(
                     updated.phone = member.phone.clone();
                     updated.email = member.email.clone().unwrap_or_default();
                     updated.contract_label = member.subscription_name.clone();
-                    updated.amount_due_eur = member.fin_balance_eur.abs();
+                    let amount = member.fin_balance_eur.abs();
+                    if updated.source_balance_revision.is_none() || updated.amount_due_eur != amount {
+                        updated.source_balance_revision = Some(format!("heitz-balance-{:032x}",rand::random::<u128>()));
+                    }
+                    if updated.status == "regularise" && updated.amount_due_eur == 0.0 {
+                        updated.status = "a_relancer".into();
+                        updated.last_action_note = format!("{} · Nouveau solde débiteur observé dans Heitz ({}) — rapprochement nécessaire",updated.last_action_note,today);
+                    }
+                    updated.amount_due_eur = amount;
                     updated.source_provenance = Some("HeitzSystem Cloud".to_string());
                     updated.last_synced_at_utc = Some(synced_at_utc.clone());
                     preserved_count += 1;
@@ -754,12 +735,15 @@ pub async fn run_heitz_live_sync_scoped(
                 } else {
                     // Conserve l'historique d'un dossier suivi localement dont la dette est soldée
                     let mut settled = rc.clone();
+                    if settled.source_balance_revision.is_none() || settled.amount_due_eur != 0.0 {
+                        settled.source_balance_revision = Some(format!("heitz-balance-{:032x}",rand::random::<u128>()));
+                    }
                     settled.amount_due_eur = 0.0;
                     settled.status = "regularise".to_string();
                     settled.last_synced_at_utc = Some(synced_at_utc.clone());
-                    if !settled.last_action_note.contains("Solde revenu à 0 €") {
+                    if !settled.last_action_note.contains("Solde Heitz non débiteur observé") {
                         settled.last_action_note = format!(
-                            "{} · Solde revenu à 0 € sur Heitz Cloud ({})",
+                            "{} · Solde Heitz non débiteur observé sur Heitz Cloud ({})",
                             settled.last_action_note, today
                         );
                     }
@@ -807,6 +791,7 @@ pub async fn run_heitz_live_sync_scoped(
                 ),
                 overdue_days_known: Some(false),
                 compliance_verified: Some(false),
+                source_balance_revision: Some(format!("heitz-balance-{:032x}",rand::random::<u128>())),
                 source_provenance: Some("HeitzSystem Cloud".to_string()),
                 last_synced_at_utc: Some(synced_at_utc.clone()),
             });
@@ -816,43 +801,11 @@ pub async fn run_heitz_live_sync_scoped(
 
         // Club legal settings belong to organisation settings, not a reader sync.
 
-        // KPI mis à jour uniquement si la lecture paginée des tickets a réussi intégralement
-        if tickets_complete {
-            let period_label = format!("Sync Heitz Cloud ({})", today);
-            if allow_cds {
-                if let Some(kpi_cds) = db.kpis.iter_mut().find(|k| k.site_id == "club-carre-soie") {
-                    kpi_cds.period_label = period_label.clone();
-                    kpi_cds.revenue_eur = Some(rev_cds);
-                } else {
-                    db.kpis.push(SiteKpis {
-                        site_id: "club-carre-soie".into(),
-                        period_label: period_label.clone(),
-                        revenue_eur: Some(rev_cds),
-                        productivity_per_hour: None,
-                        payroll_mass_eur: None,
-                        worked_hours: None,
-                        retention_rate_pct: None,
-                        monthly_target_eur: None,
-                    });
-                }
-            }
-            if allow_bey {
-                if let Some(kpi_bey) = db.kpis.iter_mut().find(|k| k.site_id == "club-beynost") {
-                    kpi_bey.period_label = period_label;
-                    kpi_bey.revenue_eur = Some(rev_bey);
-                } else {
-                    db.kpis.push(SiteKpis {
-                        site_id: "club-beynost".into(),
-                        period_label,
-                        revenue_eur: Some(rev_bey),
-                        productivity_per_hour: None,
-                        payroll_mass_eur: None,
-                        worked_hours: None,
-                        retention_rate_pct: None,
-                        monthly_target_eur: None,
-                    });
-                }
-            }
+        // Tickets have no validated accounting period and do not establish payment.
+        // Preserve existing KPI provenance; never replace revenue with a ticket sum.
+        if crate::heitz_collection::invalidate_legacy_revenue(&mut db.kpis,allow_cds,allow_bey)>0 {
+            partial_sync=true;
+            warnings.push("Ancien total de tickets retiré de l’indicateur de chiffre d’affaires : période comptable non confirmée.".into());
         }
 
         let active_rec = db
@@ -921,6 +874,7 @@ pub async fn run_heitz_live_sync_scoped(
         rooms_count,
         entries_today,
         current_present,
+        financial_collection: json!({"balancesRead":cds_count+bey_count,"ticketsRead":ticket_count,"paymentsCollected":false,"contractsCollected":false,"termsCollected":false,"revenueCalculated":false}),
         synced_at_utc,
     })
 }
@@ -1182,46 +1136,10 @@ pub async fn get_heitz_live_overview(
         )
         .await
         {
-            Ok(tickets_raw) => {
-                if let Some(arr) = tickets_raw.as_array() {
-                    for t in arr {
-                        let siret = t.get("siret").and_then(|v| v.as_str()).unwrap_or("");
-                        let ctr = t
-                            .get("creationIdCenter")
-                            .and_then(|v| v.as_i64())
-                            .unwrap_or(0);
-                        let club_id = if ctr == bey_center || siret.starts_with("852722529") {
-                            "beynost"
-                        } else if ctr == cds_center || siret.starts_with("818651317") {
-                            "carre-de-soie"
-                        } else {
-                            "unassigned"
-                        };
-                        if (club_id == "carre-de-soie" && !can_fin_cds)
-                            || (club_id == "beynost" && !can_fin_bey)
-                            || (club_id == "unassigned" && !(can_fin_cds && can_fin_bey))
-                        {
-                            continue;
-                        }
-                        let amount = t
-                            .get("printTotal")
-                            .and_then(|v| v.as_f64())
-                            .or_else(|| t.get("_ticketTotal").and_then(|v| v.as_f64()))
-                            .unwrap_or(0.0);
-                        recent_tickets.push(json!({
-                            "idTicket": t.get("id").and_then(|v| v.as_i64()).unwrap_or(0),
-                            "ticketNumber": t.get("number").and_then(|v| v.as_str()).unwrap_or(""),
-                            "clubId": club_id,
-                            "date": t.get("date").and_then(|v| v.as_str()).unwrap_or(""),
-                            "sellerName": t.get("sellerName").and_then(|v| v.as_str()).unwrap_or("Accueil C.Fitness"),
-                            "idEmpSeller": t.get("sellerIdEmp").and_then(|v| v.as_i64()).unwrap_or(0),
-                            "operation": t.get("operation").and_then(|v| v.as_str()).unwrap_or("Vente"),
-                            "amountTtcEur": amount,
-                            "status": t.get("status").and_then(|v| v.as_str()).unwrap_or("NORMAL"),
-                        }));
-                    }
-                }
-            }
+            Ok(tickets_raw) => match crate::heitz_collection::tickets(&tickets_raw,cds_center,bey_center,can_fin_cds,can_fin_bey) {
+                Ok(rows) => recent_tickets = rows,
+                Err(err) => warnings.push(format!("Tickets TPV non confirmés : {}",err)),
+            },
             Err(err) => warnings.push(format!("Tickets TPV indisponibles : {}", err)),
         }
     }
@@ -1562,6 +1480,7 @@ mod tests {
             last_action_note: "Relance manuelle déjà envoyée".into(),
             overdue_days_known: Some(true),
             compliance_verified: Some(true),
+            source_balance_revision: None,
             source_provenance: Some("Manuel + Heitz".into()),
             last_synced_at_utc: None,
         });
@@ -1586,6 +1505,7 @@ mod tests {
             last_action_note: "A garder absolument".into(),
             overdue_days_known: Some(true),
             compliance_verified: Some(false),
+            source_balance_revision: None,
             source_provenance: None,
             last_synced_at_utc: None,
         });
@@ -1601,6 +1521,7 @@ mod tests {
         std::env::set_var("HEITZ_DEV_ID", "test-dev-id");
         std::env::set_var("HEITZ_DEV_KEY", "test-dev-key");
 
+        let kpis_before=serde_json::to_value(&state.db.read().await.kpis).unwrap();
         // 1. Synchro complète avec >240 adhérents, >100 passages, >60 tickets, centre inconnu et FMI=0
         let summary = run_heitz_live_sync(&state, "system-heitz-sync")
             .await
@@ -1635,9 +1556,10 @@ mod tests {
             // Dossier manuel conservé
             assert!(db.recovery_cases.iter().any(|r| r.id == "rec-manual-keep"));
 
-            // KPI mis à jour avec les vrais tickets (>60 tickets : 58 CDS * 10 = 580, 57 BEY * 10 = 570)
-            let kpi_cds = db.kpis.iter().find(|k| k.site_id == "club-carre-soie").unwrap();
-            assert_eq!(kpi_cds.revenue_eur, Some(580.0));
+            // Ticket totals do not establish a verified revenue period or payment.
+            assert_eq!(serde_json::to_value(&db.kpis).unwrap(),kpis_before);
+            assert_eq!(summary.financial_collection["ticketsRead"],115);
+            assert_eq!(summary.financial_collection["paymentsCollected"],false);
         }
 
         // 2. Panne partielle FMI : partial_sync=true, avertissement explicite, données adhérents/recouvrement préservées

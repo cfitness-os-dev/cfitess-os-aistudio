@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   Activity,
   Eye,
@@ -27,6 +27,7 @@ import {
   selectedHeitzMember,
   type HeitzStatusFilter,
 } from '../../domain/heitzCrm';
+import { describeHeitzCollection } from '../../domain/heitzCollection';
 import { HeitzCrmEditor } from '../../domain/heitzCrmEditor';
 
 interface HeitzLiveOverviewPayload {
@@ -57,11 +58,11 @@ interface HeitzLiveOverviewPayload {
   }>;
   recentTickets?: Array<{
     idTicket: number;
-    ticketNumber: string;
+    ticketNumber: string | null;
     clubId: string;
-    date: string;
-    sellerName: string;
-    operation: string;
+    date: string | null;
+    sellerName: string | null;
+    operation: string | null;
     amountTtcEur: number;
   }>;
   rooms?: Array<{
@@ -122,24 +123,33 @@ export function HeitzMembersPanel() {
   const [importOpen, setImportOpen] = useState(false);
   const [inputError, setInputError] = useState<string | null>(null);
   const [liveOverview, setLiveOverview] = useState<HeitzLiveOverviewPayload | null>(null);
+  const liveContext = `${currentUser.id}:${siteId}`;
+  const activeLiveContext = useRef(liveContext);
+  activeLiveContext.current = liveContext;
+  const liveReadVersion = useRef(0);
   const [syncingLive, setSyncingLive] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   const loadLiveOverview = useCallback(async () => {
+    if (activeLiveContext.current !== liveContext) return;
+    const requestVersion = ++liveReadVersion.current;
+    setLiveOverview(null);
     try {
       const res = await fetch('/api/heitz/live-overview', {
         headers: buildHeitzHeaders(currentUser.id, siteId),
       });
       if (!res.ok) return;
       const payload = (await res.json()) as HeitzLiveOverviewPayload;
-      setLiveOverview(payload);
+      if (requestVersion === liveReadVersion.current && activeLiveContext.current === liveContext) setLiveOverview(payload);
     } catch {
       // ignore offline in unit tests
     }
-  }, [currentUser.id, siteId]);
+  }, [currentUser.id, siteId, liveContext]);
 
   useEffect(() => {
+    setSyncMessage(null); setInputError(null); setSyncingLive(false);
     void loadLiveOverview();
+    return () => { liveReadVersion.current += 1; };
   }, [loadLiveOverview]);
 
   async function triggerLiveSync() {
@@ -159,18 +169,17 @@ export function HeitzMembersPanel() {
         entriesToday?: number;
         error?: string;
       };
+      if (activeLiveContext.current !== liveContext) return;
       if (!res.ok || !payload.ok) {
         throw new Error(payload.error || `Erreur serveur HTTP ${res.status}`);
       }
-      setSyncMessage(
-        `Synchronisation Heitz Cloud réussie : ${payload.syncedMembersCount ?? 0} adhérents réels (Carré de Soie #3845 : ${payload.carreDeSoieMembers ?? 0}, Beynost #4967 : ${payload.beynostMembers ?? 0}) · FMI aujourd’hui : ${payload.entriesToday ?? 0} entrées.`
-      );
+      setSyncMessage(describeHeitzCollection(payload));
       await editor.load();
       await loadLiveOverview();
     } catch (err) {
-      setInputError(err instanceof Error ? err.message : 'Échec de synchronisation Heitz Cloud.');
+      if (activeLiveContext.current === liveContext) setInputError(err instanceof Error ? err.message : 'Échec de synchronisation Heitz Cloud.');
     } finally {
-      setSyncingLive(false);
+      if (activeLiveContext.current === liveContext) setSyncingLive(false);
     }
   }
 
@@ -378,10 +387,10 @@ export function HeitzMembersPanel() {
               ))}
             </div>
           )}
-          {canSeeFinancialAmount && Boolean(liveOverview.recentTickets?.length) && (
+          {canSeeFinancialAmount && Boolean(liveOverview.recentTickets?.some(t => t.clubId === club)) && (
             <div className="text-xs cf-muted flex flex-wrap items-center gap-2 pt-1 border-t border-slate-700/30">
               <span>Derniers tickets TPV (accès Direction / Finances) :</span>
-              {liveOverview.recentTickets?.slice(0, 3).map(t => (
+              {liveOverview.recentTickets?.filter(t => t.clubId === club).slice(0, 3).map(t => (
                 <span key={t.idTicket} className="cf-card-secondary px-2 py-0.5 rounded">
                   #{t.ticketNumber || t.idTicket} · {t.operation} ·{' '}
                   <strong>{t.amountTtcEur.toFixed(2)} € TTC</strong>
