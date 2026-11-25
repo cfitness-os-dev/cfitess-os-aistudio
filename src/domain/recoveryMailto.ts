@@ -88,11 +88,11 @@ export function describeMemberRecoveryChannels(input: {
   let recommendedChannelLabel =
     'Aucun canal direct (coordonnées manquantes ou masquées)';
   if (emailDeliverable && phoneDeliverable) {
-    recommendedChannelLabel = 'Envoi possible : E-mail & Téléphone / SMS';
+    recommendedChannelLabel = 'Coordonnées disponibles : e-mail et téléphone';
   } else if (emailDeliverable) {
-    recommendedChannelLabel = 'Envoi possible : E-mail uniquement';
+    recommendedChannelLabel = 'Coordonnée disponible : e-mail';
   } else if (phoneDeliverable) {
-    recommendedChannelLabel = 'Envoi possible : Téléphone / SMS uniquement';
+    recommendedChannelLabel = 'Coordonnée disponible : téléphone';
   }
 
   return {

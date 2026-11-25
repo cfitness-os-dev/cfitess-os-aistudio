@@ -42,6 +42,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix='heitz-collection-',dir=os.environ['TMPDIR']) as directory:
         statefile=Path(directory)/'cfitness_state.json'
         env={**os.environ,'CFITNESS_BIND_ADDR':f'127.0.0.1:{port}','CFITNESS_DATA_DIR':directory,'CFITNESS_DEMO_MODE':'1','CFITNESS_STRICT_SESSION':'1','CFITNESS_HEITZ_WORKER':'0','CFITNESS_AUTOMATION_SCHEDULER':'0','CFITNESS_SCENARIOS_WORKER':'0','CFITNESS_CAMPAIGNS_WORKER':'0','HEITZ_DEV_ID':'fictive-id','HEITZ_DEV_KEY':'fictive-key','HEITZ_WS_URL':f'http://127.0.0.1:{stub.server_port}','HEITZ_CENTER_ID_CDS':'3845','HEITZ_CENTER_ID_BEY':'4967','OLLAMA_BASE_URL':'http://127.0.0.1:9'}
+        env["CFITNESS_HEITZ_LOOPBACK_TESTS"]="1"
         def call(method,path,token=None,body=None):
             headers={'Content-Type':'application/json','x-cfitness-site-id':'club-carre-soie'}
             if token:headers['Authorization']='Bearer '+token

@@ -32,6 +32,7 @@ export type SourceSection<T> = {
     completeHistoryVerified: false;
 };
 export interface HeitzRecoveryReadings {
+    simulated?: boolean;
     actorId: string;
     caseId: string;
     clubId: ClubId;
@@ -56,6 +57,7 @@ const text = (v: unknown) => v === null || typeof v === 'string';
 const section = (s: SourceSection<unknown>, valid: (r: Record<string, unknown>) => boolean) => !!s && s.completeHistoryVerified === false && (s.status === 'unavailable' ? s.items === null && typeof s.message === 'string' : s.status === 'loaded' && Array.isArray(s.items) && s.items.length <= 2000 && s.items.every(r => r && typeof r === 'object' && valid(r as Record<string, unknown>)));
 export function validateHeitzRecoveryReadings(value: unknown, actor: string, id: string, club: ClubId, revision: string): HeitzRecoveryReadings {
     const v = value as HeitzRecoveryReadings;
+    if (v && v.simulated !== undefined && typeof v.simulated !== 'boolean') throw new Error('État de simulation non confirmé.');
     if (!v || v.actorId !== actor || v.caseId !== id || v.clubId !== club || v.revision !== revision || !date(v.collectedAtUtc) || typeof v.partial !== 'boolean' || v.paymentsCollected !== false || v.contractOriginalsCollected !== false || v.termsOriginalsCollected !== false || v.signatureStatus !== 'not_checked' || v.documents?.status !== 'targeting_to_qualify' || typeof v.documents.message !== 'string' || typeof v.notice !== 'string' || !section(v.provisional, r => date(r.date) && ['valuePayment', 'valueSale', 'valuePoints'].every(k => typeof r[k] === 'number' && Number.isFinite(r[k]))) || !section(v.display, r => typeof r.id === 'number' && Number.isSafeInteger(r.id) && r.id > 0 && ['label', 'totalSale', 'totalPayment', 'totalPoints', 'access', 'period'].every(k => text(r[k])) && [r.next, r.last].every(d => d === null || date(d)) && (r.processManually === null || typeof r.processManually === 'boolean')) || !section(v.subscriptions, r => typeof r.id === 'number' && Number.isSafeInteger(r.id) && r.id > 0 && text(r.accessLabel)) || v.partial !== [v.provisional, v.display, v.subscriptions].some(s => s.status === 'unavailable'))
         throw new Error('Les sources reçues ne correspondent pas au dossier et au club demandés. Actualisez le dossier.');
     for (const s of [v.display, v.subscriptions])

@@ -54,6 +54,7 @@ def main():
         env['CFITNESS_HEITZ_CRM_ROOT_CDS']='https://heitz.example.test/app/heitz/3845/crm/'
         # Deliberate centre mismatch: it must never yield a link to the wrong club.
         env['CFITNESS_HEITZ_CRM_ROOT_BEY']='https://heitz.example.test/app/heitz/3845/crm/'
+        env["CFITNESS_HEITZ_LOOPBACK_TESTS"]="1"
         def call(method,path,token=None,body=None):
             headers={'Content-Type':'application/json','x-cfitness-site-id':'club-carre-soie'}
             if token:headers['Authorization']='Bearer '+token
@@ -81,6 +82,7 @@ def main():
             assert call('POST','/api/heitz/sync-live',admin)[0]==200
             code,cases=call('GET','/api/recovery/cases',admin);assert code==200
             c=next(c for c in cases if c['memberId']=='hz-501')
+            assert c['contractLabel']=='', 'A generic membership label must not be presented as a contract'
             route='/api/recovery/cases/'+c['id']
             def evidence():
                 code,v=call('GET',route+'/evidence',admin);assert code==200;return v
@@ -98,9 +100,8 @@ def main():
             code,unconfigured=call('GET',other_access,admin)
             assert code==200 and not unconfigured['configured'] and unconfigured['urls'] is None
             code,access_value=call('GET',access,admin)
-            assert code==200 and access_value['configured']
-            assert access_value['urls']['documents']=='https://heitz.example.test/app/heitz/3845/crm/#/app/client/501/document'
-            assert access_value['urls']['financial'].endswith('/501/financial')
+            assert code==200 and not access_value['configured'] and access_value['demoOffline']
+            assert access_value['urls'] is None
             assert not requests and statefile.read_bytes()==before
             assert call('GET','/api/recovery/cases/'+other['id']+'/heitz-readings?revision='+other_evidence['revision'],sarah)[0]==403
             assert not requests
@@ -123,7 +124,8 @@ def main():
             code,m=call('GET','/api/recovery/cases/'+manual['id']+'/evidence',admin);assert code==200
             count=len(requests)
             assert call('GET','/api/recovery/cases/'+manual['id']+'/heitz-readings?revision='+m['revision'],admin)[0]==409
-            assert call('GET','/api/recovery/cases/'+manual['id']+'/heitz-access-links?revision='+m['revision'],admin)[0]==409
+            code,links=call('GET','/api/recovery/cases/'+manual['id']+'/heitz-access-links?revision='+m['revision'],admin)
+            assert code==200 and links['urls'] is None and links['demoOffline']
             assert len(requests)==count
             import concurrent.futures
             phase[0]=4;revision=evidence()['revision']
@@ -140,6 +142,21 @@ def main():
             assert all(ids==['501'] for ids in read_ids)
             assert not any(path=='/api/userDocument' for _,path in requests)
             assert all(method=='GET' or (method=='POST' and path=='/api/developer/getToken') for method,path in requests)
+            # Public demo: populated credentials and a forced worker/live flag still make zero calls.
+            stop(proc);proc=None
+            env['CFITNESS_HEITZ_LOOPBACK_TESTS']='0'
+            env['CFITNESS_HEITZ_LIVE_READS_ENABLED']='1'
+            env['CFITNESS_HEITZ_WORKER']='1'
+            requests.clear();proc=start()
+            admin=login('emp-mario',os.environ['CFITNESS_TEST_ADMIN_SECRET'])
+            assert call('POST','/api/heitz/sync-live',admin)[0]==403
+            assert call('GET','/api/heitz/live-overview',admin)[1]['configured'] is False
+            integration=call('GET','/api/heitz/integration',admin)[1]
+            assert not integration['liveReadEnabled'] and all(v is None for v in integration['webUrls'].values())
+            code,simulated=reading(token=admin)
+            assert code==200 and simulated['simulated'] and not simulated['paymentsCollected']
+            assert simulated['signatureStatus']=='not_checked'
+            assert not requests
             print('PASS: reader and access-link auth/club/revision/identity, mismatched centre returns no links, links without provider requests or disk changes, manual identity rejected, 3 documented GET queries, forecast not receipt, failure not empty, projection privacy, changed dossier and revoked session discarded, no document scan or provider write')
         finally:
             if proc is not None:stop(proc)

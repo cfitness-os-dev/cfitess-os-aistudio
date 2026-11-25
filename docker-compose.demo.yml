@@ -1,0 +1,38 @@
+# Standalone demo. Never combine with the production compose file or its data volume.
+services:
+  cfitness-demo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_DEMO_MODE: "true"
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:18888:8080"
+    environment:
+      CFITNESS_ENV: demo
+      CFITNESS_DEMO_MODE: "1"
+      CFITNESS_STRICT_SESSION: "1"
+      CFITNESS_BIND_ADDR: 0.0.0.0:8080
+      CFITNESS_DATA_DIR: /var/lib/cfitness-demo
+      CFITNESS_FRONTEND_DIR: /app/dist
+      CFITNESS_HEITZ_LIVE_READS_ENABLED: "0"
+      CFITNESS_HEITZ_LOOPBACK_TESTS: "0"
+      CFITNESS_HEITZ_WORKER: "0"
+      CFITNESS_AUTOMATION_SCHEDULER: "0"
+      CFITNESS_SCENARIOS_WORKER: "0"
+      CFITNESS_CAMPAIGNS_WORKER: "0"
+      HEITZ_WS_URL: http://127.0.0.1:9
+      HEITZ_DEV_ID: ""
+      HEITZ_DEV_KEY: ""
+      HEITZ_WS_TOKEN: ""
+      CFITNESS_HEITZ_WEB_URL_CDS: ""
+      CFITNESS_HEITZ_WEB_URL_BEY: ""
+      CFITNESS_HEITZ_CRM_ROOT_CDS: ""
+      CFITNESS_HEITZ_CRM_ROOT_BEY: ""
+      OLLAMA_BASE_URL: http://127.0.0.1:9
+      BACKUP_SECONDARY_NODES: ""
+    volumes:
+      - cfitness_demo_review_20261125:/var/lib/cfitness-demo
+volumes:
+  cfitness_demo_review_20261125:

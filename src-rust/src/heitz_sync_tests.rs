@@ -140,6 +140,8 @@ async fn pagination_failures_empty_results_disk_failure_and_restart_preserve_loc
         }
     });
     let _env = EnvRestore::set(&[
+        ("CFITNESS_DEMO_MODE", "1".into()),
+        ("CFITNESS_HEITZ_LOOPBACK_TESTS", "1".into()),
         ("HEITZ_WS_URL", format!("http://{}", address)),
         ("HEITZ_DEV_ID", "fictive-id".into()),
         ("HEITZ_DEV_KEY", "fictive-key".into()),

@@ -57,7 +57,36 @@ pub fn heitz_credentials() -> Option<(String, String)> {
 }
 
 pub fn is_heitz_live_configured() -> bool {
-    heitz_credentials().is_some()
+    is_heitz_network_allowed() && heitz_credentials().is_some()
+}
+
+fn network_allowed(base: &str, demo: bool, live: bool, loopback_test: bool) -> bool {
+    if !demo { return live; }
+    loopback_test && base.strip_prefix("http://")
+        .and_then(|v| v.parse::<std::net::SocketAddr>().ok())
+        .is_some_and(|v| v.ip().is_loopback() && v.port() > 0)
+}
+pub fn heitz_demo_offline() -> bool {
+    is_demo_mode() || matches!(std::env::var("CFITNESS_DEMO_MODE").as_deref(), Ok("1") | Ok("true"))
+}
+#[cfg(test)]
+mod offline_tests {
+    use super::network_allowed;
+    #[test]
+    fn demo_rejects_remote_sources_even_when_the_live_switch_is_on() {
+        for url in ["https://heitz.example.test", "http://192.168.1.120:8080", "http://127.0.0.1.evil.test:80", "http://localhost:8080", "http://127.0.0.1:8080/path"] {
+            assert!(!network_allowed(url,true,true,true));
+        }
+        assert!(!network_allowed("http://127.0.0.1:8080",true,true,false));
+        assert!(network_allowed("http://127.0.0.1:8080",true,false,true));
+        assert!(!network_allowed("https://heitz.example.test",false,false,false));
+        assert!(network_allowed("https://heitz.example.test",false,true,false));
+    }
+}
+pub fn is_heitz_network_allowed() -> bool {
+    network_allowed(&heitz_base_url(), heitz_demo_offline(),
+        std::env::var("CFITNESS_HEITZ_LIVE_READS_ENABLED").as_deref() == Ok("1"),
+        std::env::var("CFITNESS_HEITZ_LOOPBACK_TESTS").as_deref() == Ok("1"))
 }
 
 pub fn is_heitz_worker_enabled() -> bool {
@@ -74,6 +103,9 @@ pub fn is_heitz_worker_enabled() -> bool {
 }
 
 pub(crate) async fn heitz_http_request(method: &str, path: &str, auth_token: Option<&str>, json_body: Option<&str>, timeout_secs: u64) -> Result<Value, String> {
+    if !is_heitz_network_allowed() {
+        return Err("Les connexions à Heitz sont désactivées pour cet environnement.".into());
+    }
     crate::heitz_transport::request(heitz_base_url(), method, path, auth_token, json_body, timeout_secs).await
 }
 
@@ -601,7 +633,7 @@ pub async fn run_heitz_live_sync_scoped(
                     updated.club_id = member.home_club_id.clone();
                     updated.phone = member.phone.clone();
                     updated.email = member.email.clone().unwrap_or_default();
-                    updated.contract_label = member.subscription_name.clone();
+                    updated.contract_label = crate::heitz_collection::recovery_contract_label(&member.subscription_name);
                     let amount = member.fin_balance_eur.abs();
                     if updated.source_balance_revision.is_none() || updated.amount_due_eur != amount {
                         updated.source_balance_revision = Some(format!("heitz-balance-{:032x}",rand::random::<u128>()));
@@ -655,7 +687,7 @@ pub async fn run_heitz_live_sync_scoped(
                 club_id: member.home_club_id.clone(),
                 phone: member.phone.clone(),
                 email: member.email.clone().unwrap_or_default(),
-                contract_label: member.subscription_name.clone(),
+                contract_label: crate::heitz_collection::recovery_contract_label(&member.subscription_name),
                 amount_due_eur: member.fin_balance_eur.abs(),
                 days_overdue: 0,
                 unpaid_reason: "Solde débiteur HeitzSystem Cloud (motif détaillé non exposé par l'API)".to_string(),
@@ -782,6 +814,9 @@ pub async fn post_heitz_sync_live(
         }
         (cds, bey)
     };
+    if !is_heitz_network_allowed() {
+        return Err(err_resp(StatusCode::FORBIDDEN, "Les connexions à Heitz sont désactivées pour cet environnement."));
+    }
     match run_heitz_live_sync_scoped(&state, &actor_id, allow_cds, allow_bey).await {
         Ok(summary) => Ok(Json(summary)),
         Err(err) => Err(err_resp(StatusCode::BAD_GATEWAY, err)),
@@ -1403,6 +1438,7 @@ mod tests {
         std::env::set_var("HEITZ_WS_URL", format!("http://{}", addr));
         std::env::set_var("HEITZ_DEV_ID", "test-dev-id");
         std::env::set_var("HEITZ_DEV_KEY", "test-dev-key");
+        std::env::set_var("CFITNESS_HEITZ_LOOPBACK_TESTS", "1");
 
         let kpis_before=serde_json::to_value(&state.db.read().await.kpis).unwrap();
         // 1. Synchro complète avec >240 adhérents, >100 passages, >60 tickets, centre inconnu et FMI=0
@@ -1575,6 +1611,7 @@ mod tests {
         std::env::remove_var("HEITZ_WS_URL");
         std::env::remove_var("HEITZ_DEV_ID");
         std::env::remove_var("HEITZ_DEV_KEY");
+        std::env::remove_var("CFITNESS_HEITZ_LOOPBACK_TESTS");
         let _ = std::fs::remove_dir_all(&tmp);
     }
 }

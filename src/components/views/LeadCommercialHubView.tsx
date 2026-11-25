@@ -2739,7 +2739,7 @@ export function LeadCommercialHubView({
                 <div className="cf-card p-4 space-y-3 text-xs">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <h3 className="text-sm font-extrabold">Ventes (`/sales`) — Filtre date sur fin d’abonnement</h3>
+                      <h3 className="text-sm font-extrabold">Ventes liées aux abonnements</h3>
                       <p className="cf-muted">
                         Critère : <strong>Se termine après / Se termine avant</strong> (données locales consultables par club).
                       </p>

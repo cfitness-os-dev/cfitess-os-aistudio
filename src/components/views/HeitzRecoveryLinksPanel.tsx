@@ -24,6 +24,6 @@ export function HeitzRecoveryLinksPanel({ actorId, caseId, club, revision, disab
         ['financial', 'Règlements et rejets'], ['subscriptions', 'Abonnements et accès'], ['documents', 'Contrats et documents'],
       ] as const).map(([key, label]) => <a key={key} href={urls[key]} target="_blank" rel="noopener noreferrer" className="inline-flex items-center cf-brand-gradient text-white px-3 py-2 min-h-[44px] rounded-xl">{label}<span className="sr-only"> — ouvre Heitz dans un nouvel onglet</span></a>)}</div>
       <p className="text-xs cf-muted">{data.notice}</p>
-    </> : <p role="status">L’adresse du dossier Heitz de ce club reste à confirmer par un administrateur. Aucun accès n’est inventé.</p>}
+    </> : <p role="status">{data.demoOffline ? 'Démonstration sur données fictives : les accès à Heitz sont désactivés.' : 'L’adresse du dossier Heitz de ce club reste à confirmer par un administrateur. Aucun accès n’est inventé.'}</p>}
   </section>;
 }
