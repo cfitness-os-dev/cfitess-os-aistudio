@@ -1,7 +1,7 @@
 # Reports exceptionnels de congés — lot du 25 novembre 2026
 
 Branche : `feat/rh-exceptional-carryover-tracking`, depuis `590e31d` de la PR #65.
-Ce lot dépend de #65 ; il est proposé séparément et ne doit pas être fusionné vers main avant intégration ou rebase de cette dépendance. Aucun déploiement effectué.
+La PR #65 a été approuvée puis fusionnée par pinto1230766 le 25 novembre à 09 h 46 (Paris), commit main ff172dd. Ce main, incluant aussi sa PR #66 Heitz, a été intégré uniquement dans notre branche séparée (80e952a). La PR #67 cible désormais main ; aucune fusion vers main ni aucun déploiement effectués par Codex.
 
 ## Fonctionnement livré
 
@@ -55,7 +55,7 @@ Environnement : serveur Rust réel en boucle locale uniquement, répertoires neu
 
 | Niveau | Résultat constaté |
 | --- | --- |
-| TypeScript | 143 tests réussis, dont 5 nouveaux contrats de suivi |
+| TypeScript | 144 tests réussis sur le main combiné, dont 5 nouveaux contrats de suivi |
 | Rust | 152 tests réussis |
 | Compilation | contrôle TypeScript et build Vite réussis ; compilation Rust réussie |
 | Serveur HTTP | 84 groupes réussis sur les 10 recettes ci-dessous, dont 6 nouveaux groupes de suivi |
@@ -68,6 +68,8 @@ Recettes : `test_hr_leave_carry.py` (6), `test_hr_leave_accrual.py` (6), `test_h
 La première relance du dossier salarié utilisait par défaut le secret fictif du commercial pour Sarah ; elle a été rejouée avec les secrets dédiés Sarah/Master/Maxime/lecture seule. Aucun changement d’authentification pour contourner ce refus. Les avertissements du cache de l’éditeur de liens macOS n’ont pas empêché compilation ni tests.
 
 La recette nouvelle vérifie notamment les refus de droits, le club principal, l’auto-traitement interdit, les bornes et dates, les périodes doublonnées, le total supérieur au N-1, les versions périmées, la double soumission, l’échec disque, le rapprochement après correction du compteur, l’information à renouveler, la protection de clôture et la tenue après redémarrage réel.
+
+Les 152 tests Rust, 144 TypeScript et build ont été rejoués après intégration du nouveau main ff172dd. Les parcours navigateur et captures portent sur notre lot RH avant cette intégration Heitz, qui ne modifie aucun fichier RH.
 
 Captures : `recette/reports-exceptionnels-2026-11-25/`. Les tailles sont des simulations de navigateur ; pas une validation sur tous les téléphones ou tablettes physiques.
 
