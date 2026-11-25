@@ -1329,9 +1329,7 @@ mod sync_tests;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{
-        ContractSummary, Employee, EmployeeCounter, EmployeeSiteAccess, SensitiveBankInfo,
-    };
+    use crate::models::{Employee, EmployeeSiteAccess, SensitiveBankInfo, ContractSummary, EmployeeCounter};
     use crate::routes::SharedAppState;
     use crate::seed::try_load_or_init_state;
     use axum::http::header;
@@ -1340,19 +1338,14 @@ mod tests {
     use tokio::net::TcpListener;
     use tokio::sync::RwLock;
 
-    fn test_headers(
-        state_sessions: &mut HashMap<String, (String, i64)>,
-        actor_id: &str,
-    ) -> HeaderMap {
+
+    fn test_headers(state_sessions: &mut HashMap<String, (String, i64)>, actor_id: &str) -> HeaderMap {
         let token = format!(
             "hl-session-{}-{}",
             actor_id,
             Utc::now().timestamp_nanos_opt().unwrap_or_default()
         );
-        state_sessions.insert(
-            token.clone(),
-            (actor_id.to_string(), Utc::now().timestamp() + 3600),
-        );
+        state_sessions.insert(token.clone(), (actor_id.to_string(), Utc::now().timestamp() + 3600));
         let mut h = HeaderMap::new();
         h.insert(
             header::AUTHORIZATION,
@@ -1391,16 +1384,12 @@ mod tests {
                     let first_line = req.lines().next().unwrap_or("");
                     let path_part = first_line.split_whitespace().nth(1).unwrap_or("/");
 
-                    if fu.load(std::sync::atomic::Ordering::Relaxed)
-                        && path_part.starts_with("/api/users/search")
-                    {
+                    if fu.load(std::sync::atomic::Ordering::Relaxed) && path_part.starts_with("/api/users/search") {
                         let resp = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}";
                         let _ = socket.write_all(resp.as_bytes()).await;
                         return;
                     }
-                    if ff.load(std::sync::atomic::Ordering::Relaxed)
-                        && path_part.starts_with("/api/fmi/date/")
-                    {
+                    if ff.load(std::sync::atomic::Ordering::Relaxed) && path_part.starts_with("/api/fmi/date/") {
                         let resp = "HTTP/1.1 503 Service Unavailable\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}";
                         let _ = socket.write_all(resp.as_bytes()).await;
                         return;
@@ -1506,8 +1495,7 @@ mod tests {
                             r##"{"internalIn":{"H24":836},"internalOut":{"H24":597},"internalPresent":{"H18":305,"H20":239}}"##.to_string()
                         }
                     } else if path_part.starts_with("/api/employee/list") {
-                        r##"[{"id":384502580009,"firstName":"DANIEL","lastName":"CARVALHO"}]"##
-                            .to_string()
+                        r##"[{"id":384502580009,"firstName":"DANIEL","lastName":"CARVALHO"}]"##.to_string()
                     } else if path_part.starts_with("/api/planning/configuration/rooms") {
                         r##"[{"id":384502580175,"label":"BOX CROSSFIT","color":"#c0c0c0","dontUse":false,"creationIdCtr":3845}]"##.to_string()
                     } else if path_part.starts_with("/api/ticket") {
@@ -1618,37 +1606,17 @@ mod tests {
             .await
             .expect("Sync complète OK");
         assert!(!summary.partial_sync);
-        assert_eq!(
-            summary.synced_members_count, 256,
-            "Pagination >240 adhérents hors compte technique"
-        );
-        assert_eq!(
-            summary.unassigned_center_members, 1,
-            "Centre inconnu détecté explicitement"
-        );
-        assert_eq!(
-            summary.current_present, 0,
-            "FMI présence 0 à l'heure courante conservée"
-        );
+        assert_eq!(summary.synced_members_count, 256, "Pagination >240 adhérents hors compte technique");
+        assert_eq!(summary.unassigned_center_members, 1, "Centre inconnu détecté explicitement");
+        assert_eq!(summary.current_present, 0, "FMI présence 0 à l'heure courante conservée");
 
         {
             let db = state.db.read().await;
-            let unknown_member = db
-                .heitz_members
-                .iter()
-                .find(|m| m.id == "hz-9999000012345")
-                .unwrap();
+            let unknown_member = db.heitz_members.iter().find(|m| m.id == "hz-9999000012345").unwrap();
             assert_eq!(unknown_member.home_club_id, "unassigned");
 
-            let nicolas = db
-                .heitz_members
-                .iter()
-                .find(|m| m.id == "hz-3845031974405")
-                .unwrap();
-            assert!(
-                !nicolas.rfid_bluetooth_enabled,
-                "Pas de badge physique -> false"
-            );
+            let nicolas = db.heitz_members.iter().find(|m| m.id == "hz-3845031974405").unwrap();
+            assert!(!nicolas.rfid_bluetooth_enabled, "Pas de badge physique -> false");
             assert_eq!(nicolas.loyalty_points, 0, "Aucune fidélité inventée");
             assert_eq!(nicolas.technogym_moves30d, 0, "Aucun MOVE inventé");
             assert_eq!(nicolas.loyalty_points_known, Some(false));
@@ -1662,28 +1630,19 @@ mod tests {
             assert_eq!(nicolas_rec.status, "mise_en_demeure");
             assert_eq!(nicolas_rec.relance_count, 2);
             assert_eq!(nicolas_rec.amount_due_eur, 39.90);
-            assert_eq!(
-                nicolas_rec.last_action_note,
-                "Relance manuelle déjà envoyée"
-            );
+            assert_eq!(nicolas_rec.last_action_note, "Relance manuelle déjà envoyée");
 
             // Dossier manuel conservé
             assert!(db.recovery_cases.iter().any(|r| r.id == "rec-manual-keep"));
 
             // KPI mis à jour avec les vrais tickets (>60 tickets : 58 CDS * 10 = 580, 57 BEY * 10 = 570)
-            let kpi_cds = db
-                .kpis
-                .iter()
-                .find(|k| k.site_id == "club-carre-soie")
-                .unwrap();
+            let kpi_cds = db.kpis.iter().find(|k| k.site_id == "club-carre-soie").unwrap();
             assert_eq!(kpi_cds.revenue_eur, Some(580.0));
         }
 
         // 2. Panne partielle FMI : partial_sync=true, avertissement explicite, données adhérents/recouvrement préservées
         fail_fmi.store(true, std::sync::atomic::Ordering::Relaxed);
-        let partial = run_heitz_live_sync(&state, "system-heitz-sync")
-            .await
-            .unwrap();
+        let partial = run_heitz_live_sync(&state, "system-heitz-sync").await.unwrap();
         assert!(partial.partial_sync);
         assert!(!partial.warnings.is_empty());
         fail_fmi.store(false, std::sync::atomic::Ordering::Relaxed);
@@ -1692,9 +1651,7 @@ mod tests {
         let before_count = state.db.read().await.heitz_members.len();
         let before_rec = state.db.read().await.recovery_cases.len();
         fail_users.store(true, std::sync::atomic::Ordering::Relaxed);
-        assert!(run_heitz_live_sync(&state, "system-heitz-sync")
-            .await
-            .is_err());
+        assert!(run_heitz_live_sync(&state, "system-heitz-sync").await.is_err());
         assert_eq!(state.db.read().await.heitz_members.len(), before_count);
         assert_eq!(state.db.read().await.recovery_cases.len(), before_rec);
         fail_users.store(false, std::sync::atomic::Ordering::Relaxed);
@@ -1785,9 +1742,8 @@ mod tests {
             .filter(|m| m.home_club_id == "beynost")
             .cloned()
             .collect();
-        let Json(scoped_summary) = post_heitz_sync_live(State(state.clone()), mix_headers)
-            .await
-            .unwrap();
+        let Json(scoped_summary) =
+            post_heitz_sync_live(State(state.clone()), mix_headers).await.unwrap();
         assert_eq!(scoped_summary.beynost_members, 0);
         let bey_after: Vec<HeitzMemberRecord> = state
             .db
