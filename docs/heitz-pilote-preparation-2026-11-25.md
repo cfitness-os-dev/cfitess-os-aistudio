@@ -4,7 +4,7 @@ Ce lot prépare le périmètre Heitz/recouvrement ; il ne constitue pas la réce
 
 ## Livraisons et calendrier
 
-Au début de cette reprise : PR #81 ouverte, sans revue publiée. Aucune réponse au calendrier du pilote trouvée sur #21/#68. Branche `feat/heitz-pilot-preflight` basée sur `4bb19a5` ; la base est la branche #81 tant qu’elle n’est pas fusionnée. Ne pas déduire un déploiement d’une fusion.
+Au début de cette reprise : PR #81 ouverte, sans revue publiée. Pendant le lot, #81 a été fusionnée puis son auteur a indiqué « Vérifié, compilé et intégré automatiquement dans main », sans revue GitHub détaillée. Aucune réponse au calendrier du pilote trouvée sur #21/#68 au dernier contrôle. Branche feat/heitz-pilot-preflight désormais alignée sur main 5d7bb22 ; les ajouts amont depuis la base 4bb19a5 sont uniquement deux archives .temp de suivi, sans changement applicatif. Ne pas déduire un déploiement d’une fusion.
 
 ## Ce qui a été préparé et essayé localement
 
