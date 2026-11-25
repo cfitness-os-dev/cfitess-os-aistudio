@@ -111,7 +111,7 @@ fn fingerprint(c: &RecoveryCaseRecord, k: &Kind) -> String {
         )),
     }
 }
-fn revision(db: &AppDatabaseState, c: &RecoveryCaseRecord) -> String {
+pub(crate) fn revision(db: &AppDatabaseState, c: &RecoveryCaseRecord) -> String {
     digest(&(
         c,
         db.recovery_evidence

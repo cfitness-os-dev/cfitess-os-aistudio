@@ -30,9 +30,9 @@ Avant de reprendre une intégration Heitz, un audit de couverture ou une demande
 | --- | --- |
 | Lecteur adhérents/soldes/passages/FMI/collaborateurs/salles/tickets | Code existant. Pagination/préservation corrigées PR #70/#72 ; montants et tickets durcis dans le présent lot. Recette sur doubles locaux, pas qualification complète chez Heitz. |
 | Recouvrement factuel | PR #74 fusionnée ; ajouts chat/contacts PR #75/#77 reçus dans la base ec0a7ca. Les références de pièces ne contiennent pas les originaux. |
-| Échéancier prévisionnel | GET `/api/userScheduledPayments/provisional`, paramètre `idClient`, exemple JSON disponible. **Documenté ; lecteur métier OS à développer.** Le prévisionnel ne prouve aucun encaissement. |
-| Échéancier d’affichage | GET `/api/userScheduledPayments/display`, `idClient` signalé administrateur uniquement. Exemple contenant des montants déjà formatés en texte ; ne pas les traiter comme des nombres bruts. **Documenté ; à développer/qualifier.** |
-| Abonnements | GET `/api/userSubscriptions?idClient=...`, GET `/api/userSubscriptions/:id`, GET `/api/userSubscriptions/:id/config?detail=1`. La liste est décrite comme active : ne pas l’appeler historique contractuel complet. **Documenté ; à développer/qualifier.** |
+| Échéancier prévisionnel | GET `/api/userScheduledPayments/provisional`, paramètre `idClient`, exemple JSON disponible. **Lecteur à la demande développé et testé sur double local ; réponse réelle à qualifier.** Le prévisionnel ne prouve aucun encaissement. |
+| Échéancier d’affichage | GET `/api/userScheduledPayments/display`, `idClient` signalé administrateur uniquement. Exemple contenant des montants déjà formatés en texte ; ne pas les traiter comme des nombres bruts. **Lecteur à la demande développé et testé sur double local ; réponse et droits fournisseur réels à qualifier.** |
+| Abonnements | GET `/api/userSubscriptions?idClient=...`, GET `/api/userSubscriptions/:id`, GET `/api/userSubscriptions/:id/config?detail=1`. La liste est décrite comme active : ne pas l’appeler historique contractuel complet. **Liste active développée avec projection limitée identifiant/libellé, testée sur double ; schéma fournisseur réel à qualifier. Détail et config non raccordés ; detail=1 décrit les horaires d’accès, pas les CGV.** |
 | Documents clients | GET `/api/userDocument` documenté. Les paramètres de ciblage/pagination et le schéma de réponse détaillé ne sont pas montrés dans le bloc GET relu. **Documenté ; préciser le ciblage avant collecte de pièces.** |
 | Contrat signé / CGV applicables / fichier original | Rapprocher les fonctions d’abonnement et document avec les métadonnées de version, signature, client et accès au fichier. L’écran web propose des PDF et une action de signature ; aucune signature ni disponibilité API des originaux ne sont déduites de cela. |
 | Règlements effectués / rejets / factures / avoirs / annulations | Écrans web observés en lecture. Reprendre les autres sections publiques de l’API et confirmer les schémas avant développement ; aucun rapprochement complet connecté à ce stade. |
@@ -43,3 +43,15 @@ Demander au fournisseur uniquement les précisions restantes après cette repris
 ## Coordination
 
 Ticket [#68](https://github.com/cfitness-os-dev/cfitess-os-aistudio/issues/68) pour la couverture Heitz ; [#21](https://github.com/cfitness-os-dev/cfitess-os-aistudio/issues/21) pour les livraisons. Réserver les fichiers avant modifications simultanées. Publier branche/commit, périmètre testé, limites et opérations non exécutées. Un commentaire, une fusion et un déploiement sont trois événements à vérifier séparément.
+
+## Livraison lecteurs par dossier — 25 novembre 2026
+
+PR #79 approuvée puis fusionnée par pinto1230766, base main a958862. Suite sur branche feat/heitz-recovery-readers : GET interne /api/recovery/cases/:case_id/heitz-readings?revision=..., trois GET fournisseur documentés, authentification existante réutilisée. Aucun enregistrement métier, téléchargement de fichier, relance ou déploiement.
+
+La lecture exige une session authentifiée, le droit recouvrement du club et un dossier issu de la synchronisation Heitz. Un dossier manuel ne permet pas de choisir un identifiant fournisseur. Droits, identité et révision sont recontrôlés après les réponses. Le club est celui du rapprochement OS synchronisé ; cela ne remplace pas une qualification des droits fournisseur et de la fraîcheur de rattachement.
+
+Sources indépendantes : échec, données mal formées ou liste supérieure à 2000 lignes donnent indisponible, jamais zéro ou liste vide implicite. Historique complet toujours non certifié. Les montants texte restent texte ; aucune devise ni signature déduite. Aucun endpoint global de documents appelé faute de ciblage confirmé.
+
+Validation : 169 tests Rust, 159 tests TypeScript, typage et builds ; recette HTTP sur double local avec absence de modification du fichier persistant, refus hors club avant appel fournisseur, identité manuelle refusée, réponse périmée rejetée, trois GET observés et absence de téléchargement documentaire. Interface parcourue avec données fictives sur ordinateur, 390×844 et 768×1024 ; panneau sans débordement horizontal aux deux petites tailles. Aucun appel au vrai Heitz pendant ces essais.
+
+Prochaine qualification : règlements effectivement encaissés et leurs annulations/rejets, schéma réel des abonnements, ciblage des documents et accès aux originaux, version et signature des contrats/CGV. Continuer les sources disponibles ; ne pas assimiler échéancier, abonnement ou PDF à une preuve de règlement ou de consentement.
