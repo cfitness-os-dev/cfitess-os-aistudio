@@ -54,6 +54,58 @@ export function isDeliverableMemberEmail(raw?: string | null): raw is string {
   return domain.includes('.') && !domain.startsWith('.') && !domain.endsWith('.');
 }
 
+export function isDeliverableMemberPhone(raw?: string | null): raw is string {
+  if (!raw) return false;
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed.includes('*') || /[\r\n]/.test(trimmed)) {
+    return false;
+  }
+  const digits = trimmed.replace(/\D/g, '');
+  return digits.length >= 8 && digits.length <= 15;
+}
+
+export interface MemberRecoveryChannelInfo {
+  emailDeliverable: boolean;
+  emailMasked: boolean;
+  emailLabel: string;
+  phoneDeliverable: boolean;
+  phoneMasked: boolean;
+  phoneLabel: string;
+  recommendedChannelLabel: string;
+}
+
+export function describeMemberRecoveryChannels(input: {
+  email?: string | null;
+  phone?: string | null;
+}): MemberRecoveryChannelInfo {
+  const rawEmail = (input.email || '').trim();
+  const rawPhone = (input.phone || '').trim();
+  const emailDeliverable = Boolean(isDeliverableMemberEmail(rawEmail));
+  const phoneDeliverable = Boolean(isDeliverableMemberPhone(rawPhone));
+  const emailMasked = rawEmail.length > 0 && !emailDeliverable && rawEmail.includes('*');
+  const phoneMasked = rawPhone.length > 0 && !phoneDeliverable && rawPhone.includes('*');
+
+  let recommendedChannelLabel =
+    'Aucun canal direct (coordonnées manquantes ou masquées)';
+  if (emailDeliverable && phoneDeliverable) {
+    recommendedChannelLabel = 'Envoi possible : E-mail & Téléphone / SMS';
+  } else if (emailDeliverable) {
+    recommendedChannelLabel = 'Envoi possible : E-mail uniquement';
+  } else if (phoneDeliverable) {
+    recommendedChannelLabel = 'Envoi possible : Téléphone / SMS uniquement';
+  }
+
+  return {
+    emailDeliverable,
+    emailMasked,
+    emailLabel: rawEmail || 'Aucun e-mail',
+    phoneDeliverable,
+    phoneMasked,
+    phoneLabel: rawPhone || 'Aucun téléphone',
+    recommendedChannelLabel,
+  };
+}
+
 export function buildClubRecoveryMailto(
   input: BuildClubRecoveryMailtoInput
 ): ClubRecoveryMailtoLink | null {

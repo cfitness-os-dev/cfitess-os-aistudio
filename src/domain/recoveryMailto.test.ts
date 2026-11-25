@@ -2,8 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildClubRecoveryMailto,
+  describeMemberRecoveryChannels,
   getClubRecoveryMailbox,
   isDeliverableMemberEmail,
+  isDeliverableMemberPhone,
 } from './recoveryMailto.ts';
 
 test('getClubRecoveryMailbox returns official club Microsoft 365 addresses', () => {
@@ -63,5 +65,47 @@ test('buildClubRecoveryMailto refuses paused cases, masked RGPD emails, empty bo
       body: '   ',
     }),
     null
+  );
+});
+
+test('isDeliverableMemberPhone and describeMemberRecoveryChannels detect contact channels and RGPD masking', () => {
+  assert.equal(isDeliverableMemberPhone('06 18 44 22 90'), true);
+  assert.equal(isDeliverableMemberPhone('+33 6 12 34 56 78'), true);
+  assert.equal(isDeliverableMemberPhone('06 ** ** 11 45'), false);
+  assert.equal(isDeliverableMemberPhone(''), false);
+  assert.equal(isDeliverableMemberPhone('1234'), false);
+
+  const both = describeMemberRecoveryChannels({
+    email: 'camille@example.fr',
+    phone: '06 18 44 22 90',
+  });
+  assert.equal(both.emailDeliverable, true);
+  assert.equal(both.phoneDeliverable, true);
+  assert.equal(both.emailMasked, false);
+  assert.equal(both.phoneMasked, false);
+  assert.equal(both.recommendedChannelLabel, 'Envoi possible : E-mail & Téléphone / SMS');
+
+  const maskedAndPhone = describeMemberRecoveryChannels({
+    email: 'c***@example.fr',
+    phone: '06 18 44 22 90',
+  });
+  assert.equal(maskedAndPhone.emailDeliverable, false);
+  assert.equal(maskedAndPhone.emailMasked, true);
+  assert.equal(maskedAndPhone.phoneDeliverable, true);
+  assert.equal(
+    maskedAndPhone.recommendedChannelLabel,
+    'Envoi possible : Téléphone / SMS uniquement'
+  );
+
+  const missingBoth = describeMemberRecoveryChannels({
+    email: '',
+    phone: '06 ** ** 11 45',
+  });
+  assert.equal(missingBoth.emailDeliverable, false);
+  assert.equal(missingBoth.phoneMasked, true);
+  assert.equal(missingBoth.emailLabel, 'Aucun e-mail');
+  assert.equal(
+    missingBoth.recommendedChannelLabel,
+    'Aucun canal direct (coordonnées manquantes ou masquées)'
   );
 });

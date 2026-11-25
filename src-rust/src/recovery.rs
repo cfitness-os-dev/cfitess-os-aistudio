@@ -1,4 +1,6 @@
-use crate::models::RecoveryCaseRecord;
+use crate::models::{
+    RecoveryCaseChatHistory, RecoveryCaseRecord, RecoveryChatMessageRecord,
+};
 use crate::rbac::{can_access_module_action, can_access_site_scope};
 use crate::routes::{
     append_audit, authorized_clubs_for_actor, err_resp, resolve_session_actor, SharedState,
@@ -42,6 +44,12 @@ pub struct UpdateRecoveryStatusPayload {
 #[serde(rename_all = "camelCase")]
 pub struct RecordRecoveryRelancePayload {
     pub note: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PutRecoveryCaseChatPayload {
+    pub messages: Vec<RecoveryChatMessageRecord>,
 }
 
 fn normalize_club_id(raw: &str) -> Option<&'static str> {
@@ -377,6 +385,124 @@ pub async fn post_recovery_case_relance(
     Ok(Json(updated))
 }
 
+pub async fn get_recovery_case_chat(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Path(raw_case_id): Path<String>,
+) -> Result<Json<RecoveryCaseChatHistory>, (StatusCode, Json<Value>)> {
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let db = state.db.read().await;
+    let case_id = raw_case_id.trim().to_string();
+
+    let Some(case_rec) = db.recovery_cases.iter().find(|rc| rc.id == case_id) else {
+        return Err(err_resp(
+            StatusCode::NOT_FOUND,
+            format!("Dossier recouvrement introuvable : {}", case_id),
+        ));
+    };
+    if !crate::recovery_evidence::allowed(&db, &actor_id, case_rec, false) {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Accès refusé (403) : consultation du chat de ce dossier non autorisée.",
+        ));
+    }
+
+    let entry = db
+        .recovery_chat_histories
+        .get(&case_id)
+        .cloned()
+        .unwrap_or_else(|| RecoveryCaseChatHistory {
+            case_id,
+            updated_at: String::new(),
+            updated_by: String::new(),
+            messages: Vec::new(),
+        });
+    Ok(Json(entry))
+}
+
+pub async fn put_recovery_case_chat(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Path(raw_case_id): Path<String>,
+    Json(payload): Json<PutRecoveryCaseChatPayload>,
+) -> Result<Json<RecoveryCaseChatHistory>, (StatusCode, Json<Value>)> {
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let mut db = state.db.write().await;
+    let case_id = raw_case_id.trim().to_string();
+
+    let Some(case_rec) = db.recovery_cases.iter().find(|rc| rc.id == case_id) else {
+        return Err(err_resp(
+            StatusCode::NOT_FOUND,
+            format!("Dossier recouvrement introuvable : {}", case_id),
+        ));
+    };
+    if !crate::recovery_evidence::allowed(&db, &actor_id, case_rec, false) {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Accès refusé (403) : enregistrement du chat de ce dossier non autorisé.",
+        ));
+    }
+
+    if payload.messages.len() > 50 {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            "Historique de chat trop long (50 messages maximum).",
+        ));
+    }
+
+    let mut cleaned_messages = Vec::with_capacity(payload.messages.len());
+    for msg in payload.messages {
+        let role = msg.role.trim();
+        if !matches!(role, "user" | "assistant") {
+            return Err(err_resp(
+                StatusCode::BAD_REQUEST,
+                "Rôle de message invalide (user ou assistant attendu).",
+            ));
+        }
+        let content = msg.content.trim();
+        if content.is_empty() || content.chars().count() > 16_000 {
+            return Err(err_resp(
+                StatusCode::BAD_REQUEST,
+                "Chaque message enregistré doit contenir entre 1 et 16 000 caractères.",
+            ));
+        }
+        cleaned_messages.push(RecoveryChatMessageRecord {
+            role: role.to_string(),
+            content: content.to_string(),
+        });
+    }
+
+    let snapshot = db.clone();
+    let entry = if cleaned_messages.is_empty() {
+        db.recovery_chat_histories.remove(&case_id);
+        RecoveryCaseChatHistory {
+            case_id: case_id.clone(),
+            updated_at: String::new(),
+            updated_by: String::new(),
+            messages: Vec::new(),
+        }
+    } else {
+        let item = RecoveryCaseChatHistory {
+            case_id: case_id.clone(),
+            updated_at: Utc::now().to_rfc3339(),
+            updated_by: actor_id.clone(),
+            messages: cleaned_messages,
+        };
+        db.recovery_chat_histories.insert(case_id.clone(), item.clone());
+        item
+    };
+
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        *db = snapshot;
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Échec persistance chat recouvrement : {}", err_msg),
+        ));
+    }
+
+    Ok(Json(entry))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -552,6 +678,84 @@ mod tests {
         .await
         .unwrap_err();
         assert_eq!(st, StatusCode::BAD_REQUEST);
+        let _ = std::fs::remove_dir_all(&state.data_dir);
+    }
+
+    #[tokio::test]
+    async fn recovery_case_chat_save_reload_and_clear_persisted() {
+        let state = test_state();
+        let admin_headers = session_headers(&state, "emp-mario", "club-carre-soie").await;
+        let max_headers = session_headers(&state, "emp-maxime", "club-carre-soie").await;
+
+        let Json(cases) = get_recovery_cases(State(state.clone()), admin_headers.clone())
+            .await
+            .expect("dossiers accessibles");
+        let case_id = cases[0].id.clone();
+
+        // Un collaborateur non autorisé sur Recouvrement reçoit 403
+        assert_eq!(
+            get_recovery_case_chat(
+                State(state.clone()),
+                max_headers.clone(),
+                Path(case_id.clone()),
+            )
+            .await
+            .unwrap_err()
+            .0,
+            StatusCode::FORBIDDEN
+        );
+
+        let Json(initial) = get_recovery_case_chat(
+            State(state.clone()),
+            admin_headers.clone(),
+            Path(case_id.clone()),
+        )
+        .await
+        .expect("lecture chat initial");
+        assert!(initial.messages.is_empty());
+
+        let Json(saved) = put_recovery_case_chat(
+            State(state.clone()),
+            admin_headers.clone(),
+            Path(case_id.clone()),
+            Json(PutRecoveryCaseChatPayload {
+                messages: vec![
+                    RecoveryChatMessageRecord {
+                        role: "user".into(),
+                        content: "Prépare une relance amiable".into(),
+                    },
+                    RecoveryChatMessageRecord {
+                        role: "assistant".into(),
+                        content: "Bonjour, merci de régulariser votre dossier.".into(),
+                    },
+                ],
+            }),
+        )
+        .await
+        .expect("sauvegarde chat");
+        assert_eq!(saved.messages.len(), 2);
+        assert!(!saved.updated_at.is_empty());
+
+        let reloaded = load_or_init_state(&state.data_dir);
+        let persisted = reloaded
+            .recovery_chat_histories
+            .get(&case_id)
+            .expect("historique chat persisté sur disque");
+        assert_eq!(persisted.messages.len(), 2);
+        assert_eq!(persisted.messages[0].role, "user");
+
+        let Json(cleared) = put_recovery_case_chat(
+            State(state.clone()),
+            admin_headers,
+            Path(case_id.clone()),
+            Json(PutRecoveryCaseChatPayload { messages: vec![] }),
+        )
+        .await
+        .expect("effacement chat");
+        assert!(cleared.messages.is_empty());
+
+        let reloaded_after_clear = load_or_init_state(&state.data_dir);
+        assert!(!reloaded_after_clear.recovery_chat_histories.contains_key(&case_id));
         let _ = std::fs::remove_dir_all(&state.data_dir);
     }
 }

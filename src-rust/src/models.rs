@@ -635,6 +635,23 @@ pub struct RecoveryCaseRecord {
     pub last_synced_at_utc: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct RecoveryChatMessageRecord {
+    pub role: String,
+    pub content: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct RecoveryCaseChatHistory {
+    pub case_id: String,
+    pub updated_at: String,
+    pub updated_by: String,
+    #[serde(default)]
+    pub messages: Vec<RecoveryChatMessageRecord>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MissionRecord {
@@ -876,6 +893,8 @@ pub struct AppDatabaseState {
     pub recovery_cases: Vec<RecoveryCaseRecord>,
     #[serde(default)]
     pub recovery_evidence: crate::recovery_evidence::Store,
+    #[serde(default)]
+    pub recovery_chat_histories: HashMap<String, RecoveryCaseChatHistory>,
     #[serde(default)]
     pub stock_items: Vec<StockItemRecord>,
     #[serde(default)]
