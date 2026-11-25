@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import type { HeitzMember } from '../types/cfos';
 import {
   describeHeitzAccessStatus,
+  describeHeitzLastVisit,
   filterHeitzMembers,
   filterHeitzMembersByStatus,
+  isHeitzDropout,
   maskRgpdEmail,
   maskRgpdPhone,
   parseHeitzSnapshot,
@@ -103,4 +105,14 @@ test('RGPD helpers mask contact details, pseudonymize passages and restrict debt
   assert.equal(filterHeitzMembersByStatus(all, 'OK').length, 1);
   assert.equal(filterHeitzMembersByStatus(all, 'UNPAID').length, 1);
   assert.equal(filterHeitzMembersByStatus(all, 'INACTIVE').length, 1);
+});
+
+test('unknown Heitz visit dates are not displayed as zero or counted as inactivity', () => {
+  const unknown = { ...member('UNKNOWN', 'carre-de-soie'), daysSinceLastWorkout: 0, lastWorkoutKnown: false };
+  assert.equal(describeHeitzLastVisit(unknown), 'Dernier passage à vérifier dans Heitz');
+  assert.equal(isHeitzDropout(unknown, 15), false);
+
+  const known = { ...unknown, daysSinceLastWorkout: 15, lastWorkoutKnown: true };
+  assert.equal(describeHeitzLastVisit(known), 'Dernier passage : il y a 15j');
+  assert.equal(isHeitzDropout(known, 15), true);
 });

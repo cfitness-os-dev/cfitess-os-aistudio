@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { NavSection, ShellMode } from '../../types/cfos';
 import { ClubCamerasWallPanel } from '../ClubCamerasWallPanel';
+import { isHeitzDropout } from '../../domain/heitzCrm';
 
 const SAAS_REPLACED_COMPARISON = [
   {
@@ -473,7 +474,7 @@ export function DashboardView() {
 
   const activeLinesCount = clubLines.filter((l) => l.activeAgentId !== null).length;
   const unpaidCount = clubMembers.filter((m) => m.finBalanceEur < 0).length;
-  const inactiveCount = clubMembers.filter((m) => m.daysSinceLastWorkout >= 15).length;
+  const inactiveCount = clubMembers.filter((m) => isHeitzDropout(m, 15)).length;
   const completedChecklistCount = clubChecklists.filter((c) => Boolean(c.checkedBy)).length;
 
   const totalAnnualSavings = SAAS_REPLACED_COMPARISON.reduce(
