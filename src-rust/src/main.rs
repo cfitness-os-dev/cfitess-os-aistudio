@@ -14,6 +14,7 @@ mod hr_pilotage;
 mod hr_site_rules;
 mod hr_leave_policy;
 mod hr_leave_accrual;
+mod hr_leave_carry;
 mod clock_policy;
 #[cfg(test)]
 mod clock_policy_tests;

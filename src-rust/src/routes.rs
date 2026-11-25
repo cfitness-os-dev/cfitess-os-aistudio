@@ -281,6 +281,7 @@ pub fn api_router(state: SharedState) -> Router {
         .route("/api/hr/leave-accrual/:club_id", get(crate::hr_leave_accrual::get).put(crate::hr_leave_accrual::put))
         .route("/api/hr/leave-accrual/:club_id/preview", post(crate::hr_leave_accrual::preview))
         .route("/api/hr/leave-accrual/:club_id/apply", post(crate::hr_leave_accrual::apply))
+        .route("/api/hr/carryovers/:club_id", get(crate::hr_leave_carry::get).post(crate::hr_leave_carry::post))
         .route("/api/hr/leave-rules/:club_id/requests/:request_id/settle", post(crate::hr_leave_policy::settle))
         .route("/api/admin/profiles", get(get_admin_profiles))
         .route("/api/admin/profiles/:profile_id", put(put_admin_profile))
