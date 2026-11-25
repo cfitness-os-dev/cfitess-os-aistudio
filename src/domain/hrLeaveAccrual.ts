@@ -1,5 +1,6 @@
 import type { ClubId } from '../types/cfos';
 import type { EmployeeCounter } from './hrEmployeeDossier';
+export interface VerifiedCredit { days: number; reference: string }
 export interface AccrualPolicy {
     enabled: boolean;
     unit: 'unconfigured' | 'ouvrables' | 'ouvres' | 'calendaires';
@@ -40,12 +41,14 @@ export interface AccrualSnapshot {
         expired: number;
         reason: string;
         timestamp: string;
+        verifiedCredit?: VerifiedCredit | null;
     }>;
 }
 export interface AccrualRequest {
     employeeId: string;
     kind: 'accrue' | 'rollover';
     month: string;
+    verifiedCredit?: VerifiedCredit;
 }
 export interface AccrualPreview {
     revision: string;
@@ -66,7 +69,11 @@ export interface AccrualPreview {
         absenceReviewRequired: boolean;
         absenceCount: number;
         unverifiedAbsenceCount: number;
+        verifiedCredit?: VerifiedCredit | null;
     };
+}
+export function validateVerifiedCredit(credit: VerifiedCredit): string | null {
+    return !credit || typeof credit.days !== 'number' || !Number.isFinite(credit.days) || credit.days < 0 || credit.days > 100 || Math.abs(credit.days * 100 - Math.round(credit.days * 100)) > 1e-6 || typeof credit.reference !== 'string' || !credit.reference.trim() || credit.reference.length > 1000 ? 'Renseignez un montant vérifié entre 0 et 100 jours (deux décimales) et sa référence de calcul.' : null;
 }
 export function validateAccrualPolicy(p: AccrualPolicy): string | null {
     if (p.absenceAcquisition !== undefined && (!p.absenceAcquisition || typeof p.absenceAcquisition !== 'object' || Array.isArray(p.absenceAcquisition) || Object.keys(p.absenceAcquisition).length > 1000 || Object.values(p.absenceAcquisition).some(v => v !== null && typeof v !== 'boolean')))
@@ -104,6 +111,8 @@ export function validateAccrualSnapshot(value: unknown, actorId: string, club: C
 export function validateAccrualPreview(value: unknown, request: AccrualRequest, club: ClubId): AccrualPreview {
     const v = value as AccrualPreview;
     const p = v?.plan;
+    if (request.verifiedCredit ? !p?.verifiedCredit || validateVerifiedCredit(p.verifiedCredit) || p.verifiedCredit.days !== request.verifiedCredit.days || p.verifiedCredit.reference !== request.verifiedCredit.reference || p.amount !== request.verifiedCredit.days : p?.verifiedCredit != null)
+        throw new Error('Le montant ou la référence de calcul reçus ne correspondent pas à votre demande.');
     if (!v || typeof v.revision !== 'string' || !/^[a-f0-9]{64}$/.test(v.revision) || !p || p.employeeId !== request.employeeId || p.kind !== request.kind || p.month !== request.month || p.siteId !== (club === 'beynost' ? 'club-beynost' : 'club-carre-soie') || !counterValid(p.before) || !counterValid(p.after) || typeof p.baselineRequired !== 'boolean' || typeof p.absenceReviewRequired !== 'boolean' || !Number.isInteger(p.absenceCount) || p.absenceCount < 0 || !Number.isInteger(p.unverifiedAbsenceCount) || p.unverifiedAbsenceCount < 0 || p.unverifiedAbsenceCount > p.absenceCount || (p.absenceReviewRequired !== (p.absenceCount > 0)) || ![p.amount, p.carried, p.expired].every(n => typeof n === 'number' && Number.isFinite(n) && n >= 0))
         throw new Error('L’aperçu reçu ne correspond pas à l’opération demandée.');
     return v;
@@ -125,7 +134,11 @@ export async function saveAccrualPolicy(actor: string, club: ClubId, expectedRev
         throw new Error(error);
     return validateAccrualSnapshot(await call(actor, club, 'PUT', '', { expectedRevision, policy }), actor, club);
 }
-export async function previewAccrual(actor: string, club: ClubId, request: AccrualRequest) { return validateAccrualPreview(await call(actor, club, 'POST', '/preview', request), request, club); }
+export async function previewAccrual(actor: string, club: ClubId, request: AccrualRequest) {
+    if (request.verifiedCredit && (request.kind !== 'accrue' || validateVerifiedCredit(request.verifiedCredit)))
+        throw new Error('Vérifiez le montant proratisé et sa référence avant de calculer l’aperçu.');
+    return validateAccrualPreview(await call(actor, club, 'POST', '/preview', request), request, club);
+}
 export async function applyAccrual(actor: string, club: ClubId, input: {
     request: AccrualRequest;
     expectedPreview: string;
@@ -134,6 +147,7 @@ export async function applyAccrual(actor: string, club: ClubId, input: {
     periodReviewed: boolean;
     confirmLoss: boolean;
     reason: string;
+    calculationConfirmed?: boolean;
 }) {
     const v = await call(actor, club, 'POST', '/apply', input);
     if (!v || typeof v !== 'object' || !('operationId' in v) || typeof v.operationId !== 'string' || !('employeeId' in v) || v.employeeId !== input.request.employeeId || !('snapshot' in v))

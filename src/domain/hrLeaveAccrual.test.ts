@@ -1,8 +1,20 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validateAccrualPolicy, validateAccrualPreview, validateAccrualSnapshot, type AccrualPolicy } from './hrLeaveAccrual';
+import { validateAccrualPolicy, validateAccrualPreview, validateAccrualSnapshot, validateVerifiedCredit, type AccrualPolicy } from './hrLeaveAccrual';
 const policy: AccrualPolicy = { enabled: false, unit: 'unconfigured', monthlyDays: null, rounding: 'nearest', periodStartMonth: null, carryMode: 'keep_all', carryLimit: null, priorCarryMode: 'keep', reference: '' };
 const ready: AccrualPolicy = { ...policy, enabled: true, unit: 'ouvrables', monthlyDays: 2.0833, periodStartMonth: 6, reference: 'Règles fictives vérifiées' };
+test('verified prorata is explicit and cannot be replaced by another amount or calculation reference', () => {
+    assert.equal(validateVerifiedCredit({ days: 2.18, reference: 'Calcul vérifié' }), null);
+    assert.equal(validateVerifiedCredit({ days: 0, reference: 'Mois sans acquisition vérifié' }), null);
+    for (const value of [{ days: NaN, reference: 'x' }, { days: -1, reference: 'x' }, { days: 2.181, reference: 'x' }, { days: 2.18, reference: '' }]) assert.ok(validateVerifiedCredit(value));
+    const request = { employeeId: 'employee', kind: 'accrue' as const, month: '2026-10', verifiedCredit: { days: 2.18, reference: 'Calcul vérifié' } };
+    const counter = { cpNAcquired: 0, cpNTaken: 0, cpNMinus1Remaining: 0 };
+    const plan = { ...request, siteId: 'club-beynost', before: counter, after: { ...counter, cpNAcquired: 2.18 }, amount: 2.18, carried: 0, expired: 0, baselineRequired: true, absenceReviewRequired: false, absenceCount: 0, unverifiedAbsenceCount: 0 };
+    const preview = { revision: 'c'.repeat(64), plan };
+    assert.deepEqual(validateAccrualPreview(preview, request, 'beynost'), preview);
+    for (const patch of [{ verifiedCredit: null }, { verifiedCredit: { days: 2.18, reference: 'Autre calcul' } }, { verifiedCredit: { days: 2.38, reference: 'Calcul vérifié' } }, { amount: 2.38 }]) assert.throws(() => validateAccrualPreview({ ...preview, plan: { ...plan, ...patch } }, request, 'beynost'));
+    assert.throws(() => validateAccrualPreview(preview, { employeeId: 'employee', kind: 'accrue', month: '2026-10' }, 'beynost'));
+});
 test('leave acquisition is opt-in and requires an explicitly verified rate, unit, period and reference', () => {
     assert.equal(validateAccrualPolicy(policy), null);
     assert.equal(validateAccrualPolicy(ready), null);

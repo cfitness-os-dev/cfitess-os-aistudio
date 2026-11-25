@@ -83,6 +83,8 @@ pub struct Operation {
     pub reason: String,
     pub history_id: String,
     pub policy: Policy,
+    #[serde(default)]
+    pub verified_credit: Option<VerifiedCredit>,
 }
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -301,10 +303,18 @@ pub async fn put(
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct VerifiedCredit {
+    pub days: f64,
+    pub reference: String,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct PreviewInput {
     pub employee_id: String,
     pub kind: String,
     pub month: String,
+    #[serde(default)]
+    pub verified_credit: Option<VerifiedCredit>,
 }
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -325,6 +335,7 @@ struct Plan {
     absence_review_required: bool,
     absence_count: usize,
     unverified_absence_count: usize,
+    verified_credit: Option<VerifiedCredit>,
     next_account: Account,
 }
 fn month(raw: &str) -> Result<NaiveDate, Failure> {
@@ -378,6 +389,17 @@ fn plan(
         return Err(conflict(
             "Les règles d’acquisition sont désactivées. Vérifiez-les avant toute opération.",
         ));
+    }
+    if let Some(credit) = &input.verified_credit {
+        let units = scaled(credit.days, 100.0, 100.0)?;
+        let maximum = (scaled(p.monthly_days.unwrap(), 10000.0, 100.0)? + 99) / 100;
+        if input.kind != "accrue"
+            || units > maximum
+            || credit.reference.trim().is_empty()
+            || credit.reference.chars().count() > 1000
+        {
+            return Err(bad("Le montant vérifié est réservé à une acquisition mensuelle, entre zéro et le taux complet arrondi au centième supérieur, avec une référence de calcul obligatoire."));
+        }
     }
     let first = month(&input.month)?;
     let last = next_month(first).pred_opt().unwrap();
@@ -456,7 +478,16 @@ fn plan(
                         .map_err(|_| conflict("Date de fin de contrat à vérifier."))
                 })
                 .transpose()?;
-            if from > first || until.is_some_and(|d| d < last) {
+            if until.is_some_and(|d| d < from) {
+                return Err(conflict("Les dates du contrat sont incohérentes."));
+            }
+            if from > last || until.is_some_and(|d| d < first) {
+                return Err(conflict(
+                    "Le mois demandé ne recoupe pas la période du contrat.",
+                ));
+            }
+            if (from > first || until.is_some_and(|d| d < last)) && input.verified_credit.is_none()
+            {
                 return Err(conflict("Mois incomplet de contrat : le prorata doit être vérifié, il n’est pas inventé par ce moteur."));
             }
             if db.leave_requests.iter().any(|r| {
@@ -478,7 +509,11 @@ fn plan(
             // Exact 1/10000-day accumulation prevents 2.0833 rounding to 2.08 every month.
             next.exact_units = next
                 .exact_units
-                .checked_add(scaled(p.monthly_days.unwrap(), 10000.0, 100.0)?)
+                .checked_add(if let Some(credit) = &input.verified_credit {
+                    scaled(credit.days, 100.0, 100.0)? * 100
+                } else {
+                    scaled(p.monthly_days.unwrap(), 10000.0, 100.0)?
+                })
                 .ok_or_else(|| conflict("Cumul d’acquisition incohérent."))?;
             let total = rounded(next.exact_units, &p.rounding);
             amount = total - next.granted_units;
@@ -501,7 +536,7 @@ fn plan(
                         .copied()
                         .flatten()
                 });
-                if eligible == Some(false) {
+                if eligible == Some(false) && input.verified_credit.is_none() {
                     return Err(conflict("Une absence du mois ne permet pas l’acquisition selon les règles de son club. Le crédit de mois complet est bloqué : vérifiez le prorata avant une régularisation."));
                 }
                 if eligible.is_none() {
@@ -586,6 +621,7 @@ fn plan(
         absence_review_required: absence_review,
         absence_count,
         unverified_absence_count,
+        verified_credit: input.verified_credit.clone(),
         next_account: next,
     })
 }
@@ -649,6 +685,8 @@ pub struct ApplyInput {
     pub period_reviewed: bool,
     pub confirm_loss: bool,
     pub reason: String,
+    #[serde(default)]
+    pub calculation_confirmed: bool,
 }
 pub async fn apply(
     State(s): State<SharedState>,
@@ -681,6 +719,11 @@ pub async fn apply(
     if plan.absence_review_required && !input.absence_reviewed {
         return Err(bad(
             "Vérifiez les effets des absences avant de confirmer ce crédit de mois complet.",
+        ));
+    }
+    if plan.verified_credit.is_some() && !input.calculation_confirmed {
+        return Err(bad(
+            "Confirmez la vérification du montant proratisé et de sa référence de calcul.",
         ));
     }
     if plan.kind == "rollover" && !input.period_reviewed {
@@ -725,7 +768,16 @@ pub async fn apply(
                 "Clôture et report"
             },
             plan.month,
-            reason
+            if let Some(credit) = &plan.verified_credit {
+                format!(
+                    "{} — Montant vérifié {} j : {}",
+                    reason,
+                    credit.days,
+                    credit.reference.trim()
+                )
+            } else {
+                reason.to_string()
+            }
         ),
         before: plan.before.clone(),
         after: plan.after.clone(),
@@ -747,6 +799,7 @@ pub async fn apply(
         reason: reason.into(),
         history_id,
         policy: policy(&db, site),
+        verified_credit: plan.verified_credit.clone(),
     });
     append_audit(
         &mut next,
@@ -804,6 +857,7 @@ mod tests {
             employee_id: "emp-chloe".into(),
             kind: kind.into(),
             month: month.into(),
+            verified_credit: None,
         }
     }
     fn calculate(db: &AppDatabaseState, kind: &str, month: &str) -> Result<Plan, Failure> {
@@ -814,6 +868,55 @@ mod tests {
             &input(kind, month),
             NaiveDate::from_ymd_opt(2027, 2, 1).unwrap(),
         )
+    }
+    #[test]
+    fn explicitly_verified_partial_credit_is_bounded_and_kept_in_the_preview() {
+        let mut db = fixture();
+        db.leave_accrual
+            .policies
+            .get_mut("club-beynost")
+            .unwrap()
+            .monthly_days = Some(2.5);
+        db.employees
+            .iter_mut()
+            .find(|e| e.id == "emp-chloe")
+            .unwrap()
+            .contract
+            .effective_from = "2026-01-15".into();
+        assert!(calculate(&db, "accrue", "2026-01").is_err());
+        for days in [2.18, 2.38, 0.0] {
+            let mut request = input("accrue", "2026-01");
+            request.verified_credit = Some(VerifiedCredit {
+                days,
+                reference: "Calcul fictif vérifié, aucune formule déduite".into(),
+            });
+            let p = plan(
+                &db,
+                "emp-mario",
+                "club-beynost",
+                &request,
+                NaiveDate::from_ymd_opt(2027, 2, 1).unwrap(),
+            )
+            .unwrap();
+            assert_eq!(p.amount, days);
+            assert_eq!(p.after.cp_n_acquired, days);
+            assert_eq!(p.verified_credit.unwrap().days, days);
+        }
+        for days in [-0.01, 2.51, 2.181] {
+            let mut request = input("accrue", "2026-01");
+            request.verified_credit = Some(VerifiedCredit {
+                days,
+                reference: "Calcul fictif".into(),
+            });
+            assert!(plan(
+                &db,
+                "emp-mario",
+                "club-beynost",
+                &request,
+                NaiveDate::from_ymd_opt(2027, 2, 1).unwrap()
+            )
+            .is_err());
+        }
     }
     #[test]
     fn absence_eligibility_is_separate_from_annualization_and_uses_the_absence_club() {
@@ -985,6 +1088,7 @@ mod tests {
             employee_id: "emp-maxime".into(),
             kind: "accrue".into(),
             month: "2026-10".into(),
+            verified_credit: None,
         };
         assert!(plan(
             &db,

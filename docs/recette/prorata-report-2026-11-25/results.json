@@ -1,0 +1,53 @@
+{
+  "date": "2026-11-25",
+  "branch": "feat/rh-leave-accrual-carryover",
+  "base": "a226eac",
+  "rust": 152,
+  "typescript": 138,
+  "httpGroups": 73,
+  "lint": "passed",
+  "productionBuild": "passed",
+  "browser": {
+    "desktop": {
+      "viewport": "1440x1000",
+      "contentWidth": 1433
+    },
+    "mobile": {
+      "viewport": "390x844",
+      "contentWidth": 383
+    },
+    "tablet": {
+      "viewport": "768x1024",
+      "contentWidth": 761
+    }
+  },
+  "browserFlow": "fictional 2.18 credit; required calculation acknowledgement; tablet apply; server refresh preserves operation and reference",
+  "skelloReadOnly": true,
+  "observedClosedPeriodReconciliation": {
+    "case": "C anonymized",
+    "periodAcquired": 29.64,
+    "takenWithinPeriod": 19,
+    "closingBalance": 10.64,
+    "nextPeriodPriorBalanceDebits": [
+      1,
+      1,
+      8.64
+    ]
+  },
+  "unresolvedHistoricalDiscrepancy": {
+    "case": "A anonymized",
+    "monthlyTotal": 29.9,
+    "summary": 30.26,
+    "difference": 0.36
+  },
+  "realPostClosureCancellation": "not observed; owner knows no example",
+  "externalSends": 0,
+  "deployed": false,
+  "automaticLegalProrata": false,
+  "sources": [
+    "https://help.skello.io/fr/articles/3704253-comment-suivre-les-compteurs-de-conges-payes-sur-skello",
+    "https://help.skello.io/fr/articles/7042367-comment-parametrer-les-compteurs-de-conges-payes",
+    "https://help.skello.io/fr/articles/8698960-quels-compteurs-sont-accessibles-sur-l-application-mobile-skello",
+    "https://help.skello.io/fr/articles/12752558-comment-gerer-l-arret-maladie-et-acquisition-de-conges-payes-sur-skello"
+  ]
+}

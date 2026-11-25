@@ -243,6 +243,48 @@ def main():
             assert own['counter']['cpNMinus1Remaining']==1 and own['counter']['cpNAcquired']==0
             assert any('Clôture et report' in h['reason'] for h in own['counterHistory'])
             checks.append('real restart preserves credits/rollovers/history; changing a synthetic primary-club fixture cannot credit the same employee/month twice')
+            # A second fresh data directory keeps partial-month fixtures independent.
+            stop(proc)
+            folder=folder/'verified-prorata';folder.mkdir()
+            statefile=folder/'cfitness_state.json'
+            env['CFITNESS_DATA_DIR']=str(folder)
+            proc=start();admin=login('emp-mario','CFITNESS_TEST_ADMIN_SECRET')
+            ready=dict(read()['policy'],enabled=True,unit='ouvrables',monthlyDays=2.5,periodStartMonth=11,reference='Règles fictives du calcul vérifié')
+            ok(rules(ready));ok(adjustment(cpNAcquired=0,cpNTaken=0,cpNMinus1Remaining=0))
+            assert preview()[0]==409 # October 18 start: no guessed full-month credit.
+            q=dict(query(),verifiedCredit=dict(days=2.18,reference='Calcul fictif déjà contrôlé, entrée en cours de mois'))
+            p=ok(preview(q));assert p['plan']['amount']==2.18 and p['plan']['verifiedCredit']==q['verifiedCredit']
+            for invalid in [dict(days=-1,reference='x'),dict(days=2.51,reference='x'),dict(days=2.181,reference='x'),dict(days=2.18,reference='')]:
+                assert unchanged(lambda:preview(dict(q,verifiedCredit=invalid)))[0]==400
+            assert unchanged(lambda:preview(dict(q,month='2026-09')))[0]==409
+            assert unchanged(lambda:preview(dict(q,kind='rollover')))[0]==400
+            body=dict(mutation(p,q),calculationConfirmed=True)
+            assert unchanged(lambda:call('POST',route+club+'/apply',admin,dict(body,calculationConfirmed=False)))[0]==400
+            assert unchanged(lambda:call('POST',route+club+'/apply',admin,dict(body,baselineConfirmed=False)))[0]==400
+            changed=dict(q,verifiedCredit=dict(days=2.18,reference='Autre justificatif'))
+            assert unchanged(lambda:call('POST',route+club+'/apply',admin,dict(body,request=changed)))[0]==409
+            blocker=folder/'cfitness_state.json.tmp';blocker.mkdir();before_disk=statefile.read_bytes()
+            try:
+                assert call('POST',route+club+'/apply',admin,body)[0]==500
+                assert statefile.read_bytes()==before_disk and read()['history']==[]
+            finally:blocker.rmdir()
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+                statuses=list(pool.map(lambda _:call('POST',route+club+'/apply',admin,body)[0],range(2)))
+            assert sorted(statuses)==[200,409]
+            assert preview()[0]==409 # No full-month addition after a verified partial credit.
+            history=read()['history'];assert history[0]['verifiedCredit']==q['verifiedCredit']
+            own_token=login('emp-chloe','CFITNESS_TEST_COMMERCIAL_SECRET')
+            dossier=ok(call('GET','/api/me/dossier/'+club,own_token,site=site))['dossier']
+            assert dossier['counter']['cpNAcquired']==2.18
+            assert any(q['verifiedCredit']['reference'] in h['reason'] for h in dossier['counterHistory'])
+            ok(rules(ready,c='carre-de-soie'))
+            zero=dict(query(employee_id='emp-maxime'),verifiedCredit=dict(days=0,reference='Mois à zéro confirmé sur données fictives'))
+            zp=ok(preview(zero,c='carre-de-soie'))
+            ok(call('POST',route+'carre-de-soie/apply',admin,dict(mutation(zp,zero),calculationConfirmed=True)))
+            assert preview(query(employee_id='emp-maxime'),c='carre-de-soie')[0]==409
+            stop(proc);proc=start();admin=login('emp-mario','CFITNESS_TEST_ADMIN_SECRET')
+            assert read()['history']==history and preview(q)[0]==409
+            checks.append('verified partial/zero credit with mandatory calculation reference and acknowledgement; amount bounds, contract overlap, stale reference, disk rollback, concurrency, own history and restart')
         finally:
             if proc.poll() is None:stop(proc)
     print(json.dumps(dict(passed=len(checks),checks=checks,externalSends=0),ensure_ascii=False,indent=2))

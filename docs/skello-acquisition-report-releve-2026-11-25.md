@@ -53,3 +53,7 @@ Améliorations conservées : aperçu avant toute perte de droits, motif obligato
 ## Preuves
 
 Voir `recette/skello-conges-2026-11-25/` : deux captures de paramètres, deux catalogues complets et résultats de recette du complément. Les preuves de dossiers nominatifs ne sont pas publiées.
+
+## Complément proratas et période clôturée
+
+Voir [le contrôle approfondi du 25 novembre](skello-proratas-report-complement-2026-11-25.md) : rapprochement chiffré du report, écart historique restant à expliquer, aide officielle sur la maladie et ses limites, parcours de montant proratisé vérifié, nouveaux tests et captures. Il précise les observations et limites du présent relevé ; aucun automatisme de prorata ni de report exceptionnel n’est présumé terminé.

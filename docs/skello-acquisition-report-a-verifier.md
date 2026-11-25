@@ -42,3 +42,7 @@ Pour chaque cas : noter le club, le type de contrat, les dates de référence, l
 Configuration explicite, désactivée par défaut ; taux mensuel à quatre décimales ; arrondi sur le cumul ; aperçu et confirmation du mois complet ; conservation/report plafonné/non-report ; traitement distinct du reliquat antérieur ; journal anti-doublon commun aux clubs ; clôture protégée contre une compensation sur le mauvais exercice.
 
 Les opérations du lot sont manuelles après aperçu. Le prorata d'un mois incomplet n'est pas inventé. L'effet légal des absences, les échéances automatiques d'expiration, les droits supplémentaires, la réouverture de période et la consolidation multi-contrats restent à spécifier à partir de ces contrôles. Aucune règle de perte de droits n'est activée par défaut.
+
+## Complément proratas et période clôturée
+
+Voir [le contrôle approfondi du 25 novembre](skello-proratas-report-complement-2026-11-25.md) : rapprochement chiffré du report, écart historique restant à expliquer, aide officielle sur la maladie et ses limites, parcours de montant proratisé vérifié, nouveaux tests et captures. Il précise les observations et limites du présent relevé ; aucun automatisme de prorata ni de report exceptionnel n’est présumé terminé.

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ClubId } from '../../types/cfos';
-import { loadAccrual, saveAccrualPolicy, previewAccrual, applyAccrual, validateAccrualPolicy, type AccrualPolicy, type AccrualSnapshot, type AccrualPreview, type AccrualRequest } from '../../domain/hrLeaveAccrual';
+import { loadAccrual, saveAccrualPolicy, previewAccrual, applyAccrual, validateAccrualPolicy, validateVerifiedCredit, type AccrualPolicy, type AccrualSnapshot, type AccrualPreview, type AccrualRequest } from '../../domain/hrLeaveAccrual';
 import { useLeadDraftGuard } from '../useLeadDraftGuard';
 import { confirmLeadDraftNavigation } from '../../domain/leadDraftGuard';
 const numberFormat = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 4 });
@@ -19,6 +19,7 @@ export function HrLeaveAccrualPanel({ actorId, club }: {
     const [baseline, setBaseline] = useState(false);
     const [reviewed, setReviewed] = useState(false);
     const [loss, setLoss] = useState(false);
+    const [calculationReviewed, setCalculationReviewed] = useState(false);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
     const [notice, setNotice] = useState('');
@@ -27,7 +28,7 @@ export function HrLeaveAccrualPanel({ actorId, club }: {
     const dirty = !!data && !!draft && JSON.stringify(data.policy) !== JSON.stringify(draft);
     useLeadDraftGuard(dirty || !!reason.trim());
     function adopt(value: AccrualSnapshot) { setData(value); setDraft(value.policy); setRequest(prev => ({ ...prev, employeeId: value.employees.some(e => e.id === prev.employeeId) ? prev.employeeId : value.employees.find(e => e.primary)?.id ?? '' })); }
-    function clearPreview() { setPreview(null); setBaseline(false); setReviewed(false); setLoss(false); }
+    function clearPreview() { setPreview(null); setBaseline(false); setReviewed(false); setLoss(false); setCalculationReviewed(false); }
     useEffect(() => {
         mounted.current = true;
         const controller = new AbortController();
@@ -133,6 +134,7 @@ export function HrLeaveAccrualPanel({ actorId, club }: {
                         setBaseline(false);
                         setReviewed(false);
                         setLoss(false);
+                        setCalculationReviewed(false);
                     }
                 });
             }}>
@@ -142,15 +144,17 @@ export function HrLeaveAccrualPanel({ actorId, club }: {
         {!data.policy.enabled && <p>Les règles sont désactivées. Vérifiez puis enregistrez leur activation avant de préparer une opération.</p>}
         <fieldset disabled={busy || dirty || !data.policy.enabled} className="grid sm:grid-cols-2 gap-3">
           <label>Collaborateur<select className={input} required value={request.employeeId} onChange={e => selection({ employeeId: e.target.value })}><option value="">Choisir un collaborateur</option>{data.employees.map(e => <option key={e.id} value={e.id} disabled={!e.primary}>{e.name}{e.primary ? '' : ' · club principal différent'}</option>)}</select></label>
-          <label>Opération<select className={input} value={request.kind} onChange={e => selection({ kind: e.target.value as AccrualRequest['kind'] })}><option value="accrue">Acquisition d’un mois complet</option><option value="rollover">Clôture de période et report</option></select></label>
+          <label>Opération<select className={input} value={request.kind} onChange={e => selection({ kind: e.target.value as AccrualRequest['kind'], verifiedCredit: undefined })}><option value="accrue">Acquisition mensuelle</option><option value="rollover">Clôture de période et report</option></select></label>
           <label>{request.kind === 'accrue' ? 'Mois à créditer' : 'Dernier mois de la période à clôturer'}<input className={input} type="month" required value={request.month} onChange={e => selection({ month: e.target.value })}/></label>
-          <button className={button} disabled={busy || !request.employeeId || !request.month}>Calculer l’aperçu sans enregistrer</button>
+          {request.kind === 'accrue' && <label className="flex gap-3 items-start sm:col-span-2"><input type="checkbox" checked={!!request.verifiedCredit} onChange={e => selection({ verifiedCredit: e.target.checked ? { days: NaN, reference: '' } : undefined })}/><span>Utiliser un montant proratisé vérifié</span></label>}
+          {request.verifiedCredit && <><label>Jours à créditer après vérification<input className={input} type="number" required min="0" max="100" step="0.01" value={Number.isFinite(request.verifiedCredit.days) ? request.verifiedCredit.days : ''} onChange={e => selection({ verifiedCredit: { ...request.verifiedCredit!, days: e.target.value === '' ? NaN : Number(e.target.value) } })}/></label><label>Référence du calcul proratisé<textarea className={input} required maxLength={1000} value={request.verifiedCredit.reference} onChange={e => selection({ verifiedCredit: { ...request.verifiedCredit!, reference: e.target.value } })}/></label><p className="text-sm cf-muted sm:col-span-2">Saisissez le résultat d’un calcul déjà vérifié. Le logiciel ne déduit pas le prorata du contrat ou du motif d’absence. Le montant doit rester dans le taux du mois complet ; les droits supplémentaires se régularisent séparément. Un crédit nul est également enregistré et empêche un double crédit du même mois.</p></>}
+          <button className={button} disabled={busy || !request.employeeId || !request.month || (!!request.verifiedCredit && !!validateVerifiedCredit(request.verifiedCredit))}>Calculer l’aperçu sans enregistrer</button>
         </fieldset>
       </form>
       {preview && p && <form className="cf-card p-4 space-y-3" onSubmit={e => {
                     e.preventDefault();
                     void work(async () => {
-                        const value = await applyAccrual(actorId, club, { request, expectedPreview: preview.revision, baselineConfirmed: baseline, absenceReviewed: reviewed, periodReviewed: reviewed, confirmLoss: loss, reason });
+                        const value = await applyAccrual(actorId, club, { request, expectedPreview: preview.revision, baselineConfirmed: baseline, absenceReviewed: reviewed, periodReviewed: reviewed, confirmLoss: loss, reason, calculationConfirmed: calculationReviewed });
                         if (mounted.current) {
                             adopt(value);
                             clearPreview();
@@ -161,20 +165,22 @@ export function HrLeaveAccrualPanel({ actorId, club }: {
                 }}>
         <h4 className="font-bold">Aperçu à vérifier · {data.employees.find(e => e.id === p.employeeId)?.name}</h4><p>Période : {p.periodStart} → {p.periodEnd}</p>
         <p>Acquisition : {days(p.amount)} j · Nouveau report : {days(p.carried)} j · Droits non conservés : {days(p.expired)} j.</p>
+        {p.verifiedCredit && <p className="whitespace-pre-wrap break-words">Montant proratisé vérifié : {days(p.verifiedCredit.days)} j. Référence : {p.verifiedCredit.reference}</p>}
         {p.absenceReviewRequired && <p role="status">{p.absenceCount} absence(s) validée(s) sur le mois, dont {p.unverifiedAbsenceCount} avec un effet sur l’acquisition non vérifié. Contrôlez le taux et les plafonds avant confirmation ; la mention « permet l’acquisition » ne suffit pas à établir un crédit complet.</p>}
         <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr><th className="text-left">Compteur</th><th>Avant</th><th>Après</th></tr></thead><tbody>{[['cpNAcquired', 'CP acquis'], ['cpNTaken', 'CP pris'], ['cpNMinus1Remaining', 'Reliquat']].map(([key, label]) => <tr key={key}><th className="text-left py-2">{label}</th><td className="text-center">{days(p.before[key as keyof typeof p.before])}</td><td className="text-center">{days(p.after[key as keyof typeof p.after])}</td></tr>)}</tbody></table></div>
         {p.kind === 'rollover' && <p>La clôture ouvre la période suivante et conserve les mouvements passés. Une reprise d’absence décomptée sur l’ancien exercice nécessitera une régularisation examinée séparément.</p>}
         <fieldset disabled={busy || dirty} className="space-y-3">
           {p.baselineRequired && <label className="flex gap-3 items-start"><input type="checkbox" checked={baseline} onChange={e => setBaseline(e.target.checked)}/><span>{p.kind === 'accrue' ? 'J’ai vérifié les soldes de reprise : ils ne comprennent pas déjà cette acquisition mensuelle.' : 'J’ai vérifié que les soldes présentés correspondent bien à la période à clôturer.'}</span></label>}
           {p.kind === 'rollover' && <label className="flex gap-3 items-start"><input type="checkbox" checked={reviewed} onChange={e => setReviewed(e.target.checked)}/><span>J’ai vérifié que toutes les acquisitions, absences et corrections de la période sont comptabilisées.</span></label>}
-          {p.absenceReviewRequired && <label className="flex gap-3 items-start"><input type="checkbox" checked={reviewed} onChange={e => setReviewed(e.target.checked)}/><span>J’ai vérifié les absences du mois : le crédit de mois complet affiché est applicable. Si un prorata est nécessaire, je ne confirme pas cette opération.</span></label>}
+          {p.absenceReviewRequired && <label className="flex gap-3 items-start"><input type="checkbox" checked={reviewed} onChange={e => setReviewed(e.target.checked)}/><span>{p.verifiedCredit ? 'J’ai vérifié les absences du mois, leurs taux et plafonds : le montant proratisé affiché les prend en compte.' : 'J’ai vérifié les absences du mois : le crédit de mois complet affiché est applicable. Si un prorata est nécessaire, je ne confirme pas cette opération.'}</span></label>}
+          {p.verifiedCredit && <label className="flex gap-3 items-start"><input type="checkbox" checked={calculationReviewed} onChange={e => setCalculationReviewed(e.target.checked)}/><span>Je confirme avoir vérifié le calcul proratisé et sa référence ; ce montant ne provient pas d’un calcul automatique du logiciel.</span></label>}
           {p.expired > 0 && <label className="flex gap-3 items-start"><input type="checkbox" checked={loss} onChange={e => setLoss(e.target.checked)}/><span>Je confirme explicitement les {days(p.expired)} jours non conservés selon les règles vérifiées.</span></label>}
           <label className="block">Motif de l’opération<textarea className={input} required maxLength={1000} value={reason} onChange={e => setReason(e.target.value)}/></label>
-          <button className={button} disabled={busy || dirty || !reason.trim() || (p.baselineRequired && !baseline) || (p.kind === 'rollover' && !reviewed) || (p.absenceReviewRequired && !reviewed) || (p.expired > 0 && !loss)}>Confirmer l’opération sur le compteur</button>
+          <button className={button} disabled={busy || dirty || !reason.trim() || (p.baselineRequired && !baseline) || (p.kind === 'rollover' && !reviewed) || (p.absenceReviewRequired && !reviewed) || (!!p.verifiedCredit && !calculationReviewed) || (p.expired > 0 && !loss)}>Confirmer l’opération sur le compteur</button>
           <button type="button" className="cf-card-secondary min-h-[44px] px-3 rounded-xl ml-2" disabled={busy} onClick={() => { clearPreview(); setReason(''); }}>Abandonner l’aperçu</button>
         </fieldset>
       </form>}
-      <section className="cf-card p-4 space-y-3"><h4 className="font-bold">Historique des acquisitions et reports</h4>{!data.history.length && <p>Aucune opération enregistrée dans ce club.</p>}{data.history.map(o => <article key={o.id} className="cf-card-secondary rounded-xl p-3"><strong>{data.employees.find(e => e.id === o.employeeId)?.name} · {o.kind === 'accrue' ? 'Acquisition' : 'Clôture et report'} · {o.month}</strong><p>Crédit : {days(o.amount)} j · Report : {days(o.carried)} j · Non conservés : {days(o.expired)} j.</p><p className="whitespace-pre-wrap break-words">{o.reason}</p></article>)}</section>
+      <section className="cf-card p-4 space-y-3"><h4 className="font-bold">Historique des acquisitions et reports</h4>{!data.history.length && <p>Aucune opération enregistrée dans ce club.</p>}{data.history.map(o => <article key={o.id} className="cf-card-secondary rounded-xl p-3"><strong>{data.employees.find(e => e.id === o.employeeId)?.name} · {o.kind === 'accrue' ? 'Acquisition' : 'Clôture et report'} · {o.month}</strong><p>Crédit : {days(o.amount)} j · Report : {days(o.carried)} j · Non conservés : {days(o.expired)} j.</p><p className="whitespace-pre-wrap break-words">{o.reason}</p>{o.verifiedCredit && <p className="whitespace-pre-wrap break-words">Montant proratisé vérifié : {days(o.verifiedCredit.days)} j · {o.verifiedCredit.reference}</p>}</article>)}</section>
     </>}
   </section>;
 }
