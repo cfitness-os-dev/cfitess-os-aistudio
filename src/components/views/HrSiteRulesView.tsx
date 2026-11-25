@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Building2,
   CalendarClock,
@@ -32,7 +32,10 @@ import {
 } from '../../domain/hrSiteRules';
 import type { ClubId } from '../../types/cfos';
 
-type RulesTab = 'rules' | 'counters' | 'absences' | 'needs' | 'accrual' | 'carryovers';
+const ClockPolicyPanel = lazy(() => import('./ClockPolicyPanel').then(module => ({ default: module.ClockPolicyPanel })));
+const TerminalsManagementPanel = lazy(() => import('./TerminalsManagementPanel').then(module => ({ default: module.TerminalsManagementPanel })));
+
+type RulesTab = 'rules' | 'counters' | 'absences' | 'needs' | 'accrual' | 'carryovers' | 'clock';
 
 interface HrSiteRulesViewProps {
   clubId: ClubId;
@@ -320,14 +323,15 @@ export function HrSiteRulesView({ clubId, onMutated }: HrSiteRulesViewProps) {
           <nav aria-label="Rubriques des paramètres de l’établissement" className="flex flex-wrap gap-2">
             {(
               [
-                ['rules', 'Règles, alertes & badgeuse'],
+                ['rules', 'Règles et alertes'],
+                ['clock', 'Badgeuses et tablettes'],
                 ['counters', 'Compteurs & annualisation'],
                 ['accrual', 'Acquisition et report'],
                 ['carryovers', 'Reports exceptionnels'],
                 ['absences', `Motifs d’absence (${snapshot.motives.length})`],
                 ['needs', `Besoins en personnel (${snapshot.staffingNeeds.length})`],
               ] as const
-            ).map(([id, label]) => (
+            ).filter(([id]) => id !== 'clock' || snapshot.capabilities.canEditBadgeSettings).map(([id, label]) => (
               <button
                 key={id}
                 type="button"
@@ -342,6 +346,13 @@ export function HrSiteRulesView({ clubId, onMutated }: HrSiteRulesViewProps) {
               </button>
             ))}
           </nav>
+          {tab === 'clock' && snapshot.capabilities.canEditBadgeSettings && <Suspense fallback={<p role="status">Chargement des réglages de pointage…</p>}>
+            <section className="space-y-4" aria-label="Réglages des badgeuses et tablettes">
+              <p className="cf-card p-4 text-sm cf-muted">Ces réglages sont réservés au propriétaire ou au super administrateur du club. Le suivi quotidien reste dans Pointages et temps de travail.</p>
+              <ClockPolicyPanel key={`clock:${currentUser.id}:${clubId}`} actor={currentUser.id} club={clubId} />
+              <TerminalsManagementPanel key={`terminals:${currentUser.id}:${clubId}`} actor={currentUser.id} club={clubId} />
+            </section>
+          </Suspense>}
           {tab === 'accrual' && <HrLeaveAccrualPanel key={`${currentUser.id}:${clubId}`} actorId={currentUser.id} club={clubId} />}
           {tab === 'carryovers' && <HrLeaveCarryPanel key={`${currentUser.id}:${clubId}`} actorId={currentUser.id} club={clubId} />}
 

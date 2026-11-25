@@ -1,3 +1,5 @@
+import { statusLabel } from '../domain/hrWorkflow';
+import { hrFileStatusLabel, regimeLabel } from '../domain/hrEmployeeDossier';
 import {
   AlertCircle,
   CalendarClock,
@@ -16,6 +18,10 @@ import { useCfos } from '../context/CfosContext';
 
 interface DashboardViewProps {
   dashboard: DashboardPayload;
+  managementOnly?: boolean;
+  onOpenRequests?: () => void;
+  onOpenTime?: () => void;
+  onOpenEmployees?: () => void;
   onOpenPlanning: () => void;
   onOpenPreferences: () => void;
 }
@@ -29,6 +35,10 @@ export function DashboardView({
   dashboard,
   onOpenPlanning,
   onOpenPreferences,
+  managementOnly = false,
+  onOpenRequests,
+  onOpenTime,
+  onOpenEmployees,
 }: DashboardViewProps) {
   const { isTechnicalMode } = useCfos();
   const {
@@ -57,6 +67,7 @@ export function DashboardView({
 
   return cleanUiTree(
     <div className="space-y-6">
+      {!managementOnly && <>
       {/* En-tête synthétique collaborateur */}
       <div className="cf-card p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
@@ -96,7 +107,7 @@ export function DashboardView({
             onClick={onOpenPreferences}
             className="cf-card-secondary text-xs font-medium px-4 py-2.5 rounded-btn hover:border-violet-500/60"
           >
-            Mes préférences & flux .ics
+            Mes préférences
           </button>
         </div>
       </div>
@@ -106,7 +117,7 @@ export function DashboardView({
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-wider cf-muted flex items-center gap-2">
             <UserCheck className="w-4 h-4 text-violet-400" />
-            Mon espace collaborateur (Portée personnelle)
+            Mon espace personnel
           </h2>
           {isTechnicalMode && (
             <span className="text-xs cf-mono cf-muted">TST01 • TST02</span>
@@ -119,7 +130,7 @@ export function DashboardView({
             <div className="flex items-center justify-between">
               <div className="font-semibold text-sm flex items-center gap-2">
                 <CalendarClock className="w-4 h-4 text-cyan-400" />
-                Mes shifts publiés ({myShifts.length})
+                Mes horaires publiés ({myShifts.length})
               </div>
               <span className="text-[11px] cf-mono cf-muted">
                 Durée nette déduite de la pause
@@ -128,7 +139,7 @@ export function DashboardView({
 
             {myShifts.length === 0 ? (
               <div className="cf-card-secondary p-4 text-xs cf-muted">
-                Aucun shift planifié sur le périmètre sélectionné ({session.activeSiteId}).
+                Aucun horaire planifié dans ce club.
               </div>
             ) : (
               <div className="space-y-2.5">
@@ -233,7 +244,7 @@ export function DashboardView({
                     <div className="flex items-center justify-between font-medium">
                       <span>{req.motive}</span>
                       <span className="cf-mono text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">
-                        {req.status}
+                        {statusLabel(req.status)}
                       </span>
                     </div>
                     <div className="cf-muted mt-0.5">
@@ -247,13 +258,14 @@ export function DashboardView({
         </div>
       </section>
 
+      </>}
       {/* Bloc 2 : Espace Gestion & Pilotage (conditionné par RBAC serveur) */}
       {canManageTeam ? (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase tracking-wider cf-muted flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-emerald-400" />
-              Espace Gestion & Pilotage ({session.activeProfile.name})
+              Suivi des équipes
             </h2>
             {isTechnicalMode && (
               <span className="text-xs cf-mono text-emerald-400">
@@ -264,7 +276,9 @@ export function DashboardView({
 
           {/* KPIs multi-sites avec distinction explicite null vs 0 € (TST24) */}
           {kpis.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <details className="cf-card p-4">
+              <summary className="cursor-pointer text-sm font-semibold">Indicateurs RH du périmètre autorisé</summary>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               {kpis.map((kpi) => {
                 const club = siteById.get(kpi.siteId);
                 return (
@@ -325,6 +339,7 @@ export function DashboardView({
                 );
               })}
             </div>
+            </details>
           )}
 
           {/* Validations équipe, Anomalies badgeuse, Alertes dossiers */}
@@ -332,7 +347,7 @@ export function DashboardView({
             <div className="cf-card p-4 space-y-2.5">
               {(() => {
                 const pendingTeamRequests = teamRequests.filter(
-                  (req) => req.status === 'pending'
+                  (req) => statusLabel(req.status) === 'En attente'
                 );
                 return (
                   <>
@@ -347,10 +362,10 @@ export function DashboardView({
                         <div key={req.id} className="cf-card-secondary p-3 text-xs space-y-1">
                           <div className="flex justify-between font-medium">
                             <span>{req.motive}</span>
-                            <span className="cf-mono text-amber-300">{req.status}</span>
+                            <span className="cf-mono text-amber-300">{statusLabel(req.status)}</span>
                           </div>
                           <div className="cf-muted">
-                            {req.startDate} → {req.endDate} ({req.siteId})
+                            {req.startDate} → {req.endDate} · {siteById.get(req.siteId)?.name ?? 'Club non renseigné'}
                           </div>
                         </div>
                       ))
@@ -358,6 +373,7 @@ export function DashboardView({
                   </>
                 );
               })()}
+              {onOpenRequests && <button type="button" className="cf-brand-gradient text-white min-h-11 px-3 py-2 rounded-xl text-xs font-semibold" onClick={onOpenRequests}>Traiter les demandes d’absence</button>}
             </div>
 
             <div className="cf-card p-4 space-y-2.5">
@@ -385,6 +401,7 @@ export function DashboardView({
                   </div>
                 ))
               )}
+              {onOpenTime && <button type="button" className="cf-brand-gradient text-white min-h-11 px-3 py-2 rounded-xl text-xs font-semibold" onClick={onOpenTime}>Vérifier les pointages</button>}
             </div>
 
             <div className="cf-card p-4 space-y-2.5">
@@ -398,15 +415,18 @@ export function DashboardView({
                     {emp.firstName} {emp.lastName}
                   </div>
                   <div className="cf-mono text-[11px] text-rose-300">
-                    Statut : {emp.hrFileStatus}
+                    Statut : {hrFileStatusLabel(emp.hrFileStatus)}
                   </div>
                 </div>
               ))}
+              {onOpenEmployees && <button type="button" className="cf-brand-gradient text-white min-h-11 px-3 py-2 rounded-xl text-xs font-semibold" onClick={onOpenEmployees}>Compléter les dossiers RH</button>}
             </div>
           </div>
 
           {/* Tableau des collaborateurs visibles + démonstration du masquage serveur TST33 */}
-          <div className="cf-card p-4 space-y-3">
+          <details className="cf-card p-4 space-y-3">
+            <summary className="cursor-pointer text-sm font-semibold">Consulter les collaborateurs ({visibleEmployees.length})</summary>
+            {onOpenEmployees && <button type="button" className="cf-brand-gradient text-white min-h-11 px-3 py-2 rounded-xl text-xs font-semibold" onClick={onOpenEmployees}>Ouvrir les dossiers des collaborateurs</button>}
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="font-semibold text-sm flex items-center gap-2">
                 <Shield className="w-4 h-4 text-violet-400" />
@@ -444,7 +464,7 @@ export function DashboardView({
                           </span>
                         </td>
                         <td className="py-2.5 pr-3 cf-mono">
-                          {emp.contract?.contractType} ({emp.contract?.regime})
+                          {emp.contract?.contractType} ({emp.contract?.regime ? regimeLabel(emp.contract.regime) : 'Non renseigné'})
                         </td>
                         <td className="py-2.5 pr-3">
                           {emp.contract?.monthlyGrossEur != null ? (
@@ -478,7 +498,7 @@ export function DashboardView({
                                 : 'bg-rose-500/15 text-rose-300'
                             }`}
                           >
-                            {emp.hrFileStatus}
+                            {hrFileStatusLabel(emp.hrFileStatus)}
                           </span>
                         </td>
                       </tr>
@@ -486,7 +506,7 @@ export function DashboardView({
                 </tbody>
               </table>
             </div>
-          </div>
+          </details>
         </section>
       ) : (
         <div className="cf-card-secondary p-4 text-xs cf-muted flex items-center gap-2">

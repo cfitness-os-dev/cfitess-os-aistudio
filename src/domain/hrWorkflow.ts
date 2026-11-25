@@ -56,15 +56,23 @@ export function csvCell(value: unknown): string {
 export function statusLabel(status: string): string {
   switch (status.toLowerCase()) {
     case "approved":
+    case "accepted":
     case "valide":
+    case "validée":
       return "Validée";
     case "cancelled":
+    case "canceled":
+    case "annule":
       return "Annulée";
     case "rejected":
+    case "refused":
     case "refuse":
       return "Refusée";
-    default:
+    case "pending":
+    case "en_attente":
       return "En attente";
+    default:
+      return "À vérifier";
   }
 }
 export function entryDay(timestamp: string): string {

@@ -91,6 +91,14 @@ test("withdrawn leave is a distinct final label in manager filters and exports",
   assert.equal(statusLabel("approved"), "Validée");
 });
 
+test('existing accepted leave is never counted as pending in manager filters or exports', () => {
+  const requests = [{ status: 'pending' }, { status: 'accepted' }, { status: 'approved' }, { status: 'unrecognized_status' }];
+  assert.deepEqual(requests.filter(row => statusLabel(row.status) === 'En attente'), [{ status: 'pending' }]);
+  assert.equal(statusLabel('accepted'), statusLabel('approved'));
+  assert.equal(statusLabel('refused'), 'Refusée');
+  assert.equal(statusLabel('unrecognized_status'), 'À vérifier');
+});
+
 test('refresh after a linked counter decision keeps mounted drafts until updated rows arrive, but clears inaccessible rows on failure',async()=>{
   let finish!: (data:HrWorkspace)=>void;
   let calls=0;
