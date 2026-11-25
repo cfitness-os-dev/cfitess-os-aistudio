@@ -1,0 +1,46 @@
+{
+  "date": "2026-11-25",
+  "branch": "feat/rh-leave-accrual-carryover",
+  "base": "a226eac",
+  "rust": 151,
+  "typescript": 137,
+  "httpGroups": 72,
+  "lint": "passed",
+  "productionBuild": "passed",
+  "browser": {
+    "desktop": {
+      "viewport": "1440x1000",
+      "contentWidth": 1433
+    },
+    "mobile": {
+      "viewport": "390x844",
+      "contentWidth": 383
+    },
+    "tablet": {
+      "viewport": "768x1024",
+      "contentWidth": 761,
+      "historyHeadingBottom": 778.78
+    }
+  },
+  "browserFlow": "save fictional formation=true, CP=true, unpaid=false; server refresh preserves all; acquisition remains disabled",
+  "skello": {
+    "readOnly": true,
+    "clubs": 2,
+    "motivesPerClub": 66,
+    "differencesObserved": 0,
+    "rate": 2.5,
+    "unit": "ouvrables",
+    "periodStart": "2026-06-01",
+    "periodEnd": "2027-05-31",
+    "priorDisplayedAvailableUntil": "2027-05-31",
+    "partialFormula": "unverified"
+  },
+  "externalSends": 0,
+  "deployed": false,
+  "limits": [
+    "no legal prorata formula inferred",
+    "no automatic expiry or real club activation",
+    "N1 deadline observed but not yet enforced by OS",
+    "not complete Skello parity"
+  ]
+}

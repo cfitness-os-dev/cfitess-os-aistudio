@@ -1,0 +1,130 @@
+[
+  {
+    "script": "test_hr_leave_accrual.py",
+    "exitCode": 0,
+    "groups": 5,
+    "checks": [
+      "opt-in policy, authentication, scoped rights, primary-club restriction, validation, stale edits and failed-write rollback",
+      "explicit per-motive eligibility, foreign-club IDs refused, full-credit block on non-acquiring absence, retained review for rates and stale preview rejection",
+      "side-effect-free preview, full-month eligibility, explicit baseline, stale hash, failed credit write and concurrent anti-double-credit",
+      "capped rollover, explicit expiry confirmation, pending requests, stale policy/balance, disk rollback and old-period compensation protection",
+      "real restart preserves credits/rollovers/history; changing a synthetic primary-club fixture cannot credit the same employee/month twice"
+    ]
+  },
+  {
+    "script": "test_hr_leave_rules.py",
+    "exitCode": 0,
+    "groups": 11,
+    "checks": [
+      "authenticated scoped settings, read-only refusals, safe defaults, stale and cross-club rules refused",
+      "configured catalogue replaces hard-coded motives; inactive, manager-only and overlapping requests refused; cancellation/rejection releases dates",
+      "half-day boundaries persist, adjacent morning/afternoon requests coexist, full-day overlap and inverted boundaries refused",
+      "CP split atomically updates request/counter/ledger; precision, balances, self-approval and legacy bypass refused; double approval has one winner",
+      "reversal applies compensating deltas, preserves later adjustments, detects stale counters and keeps history on reapproval",
+      "RTT debit and compensation preserve CP/annualization; recorded allocations survive subsequent policy changes",
+      "document-required motives can be filed pending; missing proof, foreign ownership, nonexistent and duplicate proofs block approval",
+      "owned attestation reads on both sides; changed proof invalidates stale approval; approved proof cannot be replaced",
+      "legacy approval requires a current proof-aware revision; no bypass by omitting it",
+      "failed decision or rule write preserves memory/disk/audit and never confirms success",
+      "rules, active/reversed ledger, canonical counters and audit history survive a real restart without duplicate debit"
+    ]
+  },
+  {
+    "script": "test_hr_organisation.py",
+    "exitCode": 0,
+    "groups": 18,
+    "checks": [
+      "session, unknown club and unauthorized club refused",
+      "canonical snapshot is scoped and excludes employee/payroll/session data",
+      "team creation trims names, rejects duplicates/stale replay and remains isolated by club",
+      "rename uses stable team id; invalid names and cross-club ids refused",
+      "positions retain stable references, validate colour/break, deactivate and reject cross-club edits",
+      "new teams are usable by canonical employee assignments; in-use deletion and duplicate memberships refused",
+      "unused team deletion succeeds without touching other teams",
+      "managed-team references alone block deletion until explicitly removed, separately from employee membership",
+      "club identity persists with strict fields; unrelated timeclock/planning settings unchanged",
+      "organization is canonical across clubs and invalid legacy/new writes preserve persisted state",
+      "profile changes are shared explicitly and use existing non-elevation/locked-row/scope validation",
+      "disk failure rolls back configuration, memory and audit; no false confirmed save",
+      "concurrent edits with one revision have one winner, preventing lost updates",
+      "real restart preserves club/organization/teams/positions/rights and audit",
+      "Master club delegation may manage teams but cannot edit global organization/profiles/delegations through legacy or new APIs",
+      "single-club owner cannot edit another club identity, assignments or elevated profiles",
+      "last active owner of a club cannot be removed through employee access edits",
+      "disabled controls remain locked on new and legacy profile APIs even if a restored editability flag is inconsistent"
+    ]
+  },
+  {
+    "script": "test_hr_site_rules.py",
+    "exitCode": 0,
+    "groups": 5,
+    "checks": [
+      "bearer token mandatory on /api/hr/site-rules/:club_id (401 on forged header)",
+      "employee, readonly and planner denied (403)",
+      "emp-master scoped to Carré de Soie only and blocked (403) from owner-only badge settings",
+      "full CRUD rules, counters, owner badge settings, motives and staffing needs succeed for Beynost",
+      "concurrent race (200/409), disk rollback, restart durability and club isolation verified"
+    ]
+  },
+  {
+    "script": "test_hr_employee_dossier.py",
+    "exitCode": 0,
+    "groups": 6,
+    "checks": [
+      "bearer authentication required on dossier routes (401 on forged header)",
+      "authorized dossier/contract/counter edit reads identically from HR and personal views with before/after history",
+      "employee, readonly, out-of-team and out-of-club actors are denied (403) and sensitive fields are absent from redacted responses",
+      "same collaborator on two clubs respects distinct permissions per club (master_avance CS ok vs lecture_seule_avancee Beynost 403)",
+      "stale revision returns 409 and disk failure preserves memory, file bytes and audit",
+      "dossier, contract, counters and adjustment history survive a real server restart"
+    ]
+  },
+  {
+    "script": "test_hr_manager_workflows.py",
+    "exitCode": 0,
+    "groups": 7,
+    "checks": [
+      "session and club boundaries enforced",
+      "personal request appears in manager view; employee sees only own requests",
+      "manager decision is visible to employee; self/cross-club/stale decisions refused",
+      "reason required; old revision refused even after status cycles back to pending",
+      "manager annotation reaches employee without modifying original timestamp/type",
+      "failed manager saves preserve memory, disk and audit",
+      "restart and independent logins preserve decisions and review visible on both sides"
+    ]
+  },
+  {
+    "script": "test_personal_workspace.py",
+    "exitCode": 0,
+    "groups": 12,
+    "checks": [
+      "session required and unknown/unauthorized clubs refused",
+      "identity derives from session; no quiz answer in GET or client actor override",
+      "task creation/completion persisted, invisible and unmodifiable by another actor",
+      "wrong quiz answer rejected; chosen correct answer persists progress",
+      "leave validates dates, refuses duplicate, writes canonical RH table",
+      "club checklist persists and cannot cross club boundary",
+      "own notification read confirmed by server",
+      "server timestamps ordered arrival/break/resume/departure",
+      "demo acknowledgement needs consent and document ownership; not a real signature",
+      "failed persistence preserves memory, disk and audit",
+      "restart and new session preserve all confirmed workspace changes",
+      "production mode starts without fictional workspace rows and refuses simulated signatures"
+    ]
+  },
+  {
+    "script": "test_personal_leave_withdrawal.py",
+    "exitCode": 0,
+    "groups": 8,
+    "checks": [
+      "session, own employee and club isolation enforced; forged actor field refused",
+      "withdrawal reason required and bounded without changing the pending request",
+      "failed persistence preserves personal/manager memory, file and audit",
+      "withdrawal visible in both views, audited and terminal on both manager decision routes",
+      "withdrawn request does not debit counters or block a new request for the same period",
+      "employee cannot withdraw an approved or rejected request",
+      "eight concurrent withdrawal/manager-decision races have exactly one winner and coherent views",
+      "withdrawals and race results persist across a real server restart"
+    ]
+  }
+]

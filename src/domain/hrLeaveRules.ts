@@ -7,6 +7,7 @@ export interface LeaveAllocations {
 }
 export interface LeavePolicy {
     requestRevision: string;
+    closedCounterPeriod:boolean;
     startPeriod: 'am' | 'pm';
     endPeriod: 'am' | 'pm';
     motiveId: string | null;

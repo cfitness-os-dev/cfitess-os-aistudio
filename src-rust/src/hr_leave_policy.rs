@@ -71,6 +71,8 @@ pub struct Allocations {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Settlement {
+    #[serde(default)]
+    pub counter_epoch: u64,
     pub id: String,
     pub allocations: Allocations,
     pub family: String,
@@ -104,7 +106,7 @@ async fn actor(state: &SharedState, headers: &HeaderMap) -> Result<String, Failu
 pub(crate) fn motives(db: &AppDatabaseState, site: &str) -> Vec<SiteAbsenceMotiveConfig> {
     crate::hr_site_rules::effective_motives(db, site)
 }
-fn resolve_motive(db: &AppDatabaseState, row: &LeaveRequest) -> Option<SiteAbsenceMotiveConfig> {
+pub(crate) fn resolve_motive(db: &AppDatabaseState, row: &LeaveRequest) -> Option<SiteAbsenceMotiveConfig> {
     if let Some(details) = db.leave_policy.requests.get(&row.id) {
         return motives(db, &row.site_id)
             .into_iter()
@@ -222,6 +224,9 @@ pub(crate) fn prepare_request(
             .find(|m| alias(&m.label) == alias(label))
     }
     .ok_or_else(|| bad("Choisissez un motif d’absence disponible dans ce club."))?;
+    if rule(db, site, &chosen.id) == "cp" {
+        crate::hr_leave_accrual::ensure_open(db, employee, start)?;
+    }
     if !chosen.active || !chosen.employee_requestable {
         return Err(err_resp(
             StatusCode::FORBIDDEN,
@@ -313,6 +318,9 @@ fn docs_complete(db: &AppDatabaseState, row: &LeaveRequest) -> bool {
 }
 fn approval_gate(db: &AppDatabaseState, actor: &str, row: &LeaveRequest) -> Result<(), Failure> {
     if let Some(motive) = resolve_motive(db, row) {
+        if rule(db, &row.site_id, &motive.id) == "cp" {
+            crate::hr_leave_accrual::ensure_open(db, &row.employee_id, &row.start_date)?;
+        }
         if !motive.active {
             return Err(conflict(
                 "Ce motif a été désactivé. Vérifiez la demande avant de décider.",
@@ -373,7 +381,11 @@ pub(crate) fn request_view(db: &AppDatabaseState, actor: &str, row: &LeaveReques
     let can_view_docs = actor == row.employee_id
         || target.is_some_and(|e| allowed_on_target(db, actor, &row.site_id, e, "ORG04-14"));
     let can_counter = target.is_some_and(|e| counter_permission(db, actor, &row.site_id, e));
-    let can_settle = actor != row.employee_id
+    let closed_period = active_settlement(db, &row.id).is_some_and(|s| {
+        s.family == "cp" && s.counter_epoch != crate::hr_leave_accrual::epoch(db, &row.employee_id)
+    });
+    let can_settle = !closed_period
+        && actor != row.employee_id
         && target.is_some_and(|e| allowed_on_target(db, actor, &row.site_id, e, "ORG04-17"))
         && can_counter;
     let docs = if can_view_docs {
@@ -386,6 +398,7 @@ pub(crate) fn request_view(db: &AppDatabaseState, actor: &str, row: &LeaveReques
     };
     json!({
         "requestRevision":revision(db,row),
+        "closedCounterPeriod":closed_period,
         "startPeriod":details.map(|d|d.start_period.as_str()).unwrap_or("am"),
         "endPeriod":details.map(|d|d.end_period.as_str()).unwrap_or("pm"),
         "motiveId":motive.as_ref().map(|m|&m.id),"active":motive.as_ref().map(|m|m.active),
@@ -632,6 +645,11 @@ pub async fn settle(
             }
             let record = active_settlement(&db, &id)
                 .ok_or_else(|| conflict("Aucun décompte actif à compenser."))?;
+            if record.family == "cp"
+                && record.counter_epoch != crate::hr_leave_accrual::epoch(&db, &row.employee_id)
+            {
+                return Err(conflict("La période de ce décompte est clôturée. Une régularisation manuelle doit être examinée ; les compteurs du nouvel exercice ne seront pas modifiés."));
+            }
             let status = payload.next_status.as_deref().unwrap_or("");
             if !matches!(status, "pending" | "rejected") {
                 return Err(bad(
@@ -695,6 +713,7 @@ pub async fn settle(
         record.reversed_history_id = Some(history_id.clone());
     } else {
         ledger.push(Settlement {
+            counter_epoch: crate::hr_leave_accrual::epoch(&db, &row.employee_id),
             id: format!("leave-settle-{:032x}", rand::random::<u128>()),
             allocations,
             family,
@@ -873,6 +892,7 @@ mod tests {
         db.leave_policy.settlements.insert(
             row.id.clone(),
             vec![Settlement {
+                counter_epoch: 0,
                 id: "s".into(),
                 allocations: Allocations {
                     cp_n: 1.0,
