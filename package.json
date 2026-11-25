@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "lint": "tsc --noEmit",
-    "test": "tsx --test src/domain/rules.test.ts src/domain/leadSettings.test.ts src/domain/heitzCrm.test.ts src/domain/personalWorkspace.test.ts src/domain/hrWorkflow.test.ts src/domain/hrEmployeeDossier.test.ts src/domain/hrOrganisation.test.ts src/domain/hrSiteRules.test.ts src/domain/hrPilotage.test.ts src/domain/clockPolicy.test.ts src/domain/terminals.test.ts src/domain/leadScenarioDefinitions.test.ts src/domain/leadScenariosApi.test.ts src/domain/leadMessageTemplates.test.ts src/domain/leadBlocksBranches.test.ts src/domain/leadDraftGuard.test.ts src/domain/leadCommunicationsReport.test.ts src/domain/leadSms.test.ts src/domain/leadProspectScenarios.test.ts src/domain/hrLeaveRules.test.ts src/domain/hrLeaveAccrual.test.ts",
+    "test": "tsx --test src/domain/rules.test.ts src/domain/leadSettings.test.ts src/domain/heitzCrm.test.ts src/domain/personalWorkspace.test.ts src/domain/hrWorkflow.test.ts src/domain/hrEmployeeDossier.test.ts src/domain/hrOrganisation.test.ts src/domain/hrSiteRules.test.ts src/domain/hrPilotage.test.ts src/domain/clockPolicy.test.ts src/domain/terminals.test.ts src/domain/leadScenarioDefinitions.test.ts src/domain/leadScenariosApi.test.ts src/domain/leadMessageTemplates.test.ts src/domain/leadBlocksBranches.test.ts src/domain/leadDraftGuard.test.ts src/domain/leadCommunicationsReport.test.ts src/domain/leadSms.test.ts src/domain/leadProspectScenarios.test.ts src/domain/hrLeaveRules.test.ts src/domain/hrLeaveAccrual.test.ts src/domain/hrLeaveCarry.test.ts",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview"
   },

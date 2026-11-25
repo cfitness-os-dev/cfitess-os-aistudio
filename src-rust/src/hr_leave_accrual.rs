@@ -90,6 +90,8 @@ pub struct Operation {
 #[serde(rename_all = "camelCase")]
 pub struct Store {
     #[serde(default)]
+    pub carryovers: crate::hr_leave_carry::Store,
+    #[serde(default)]
     pub policies: BTreeMap<String, Policy>,
     #[serde(default)]
     pub accounts: BTreeMap<String, Account>,
@@ -115,14 +117,14 @@ pub(crate) fn ensure_open(db: &AppDatabaseState, id: &str, start: &str) -> Resul
     }
     Ok(())
 }
-fn site(raw: &str) -> Result<&'static str, Failure> {
+pub(crate) fn site(raw: &str) -> Result<&'static str, Failure> {
     match raw {
         "beynost" | "club-beynost" => Ok("club-beynost"),
         "carre-de-soie" | "club-carre-soie" => Ok("club-carre-soie"),
         _ => Err(bad("Club inconnu.")),
     }
 }
-async fn actor(state: &SharedState, h: &HeaderMap) -> Result<String, Failure> {
+pub(crate) async fn actor(state: &SharedState, h: &HeaderMap) -> Result<String, Failure> {
     if !h
         .get("authorization")
         .and_then(|v| v.to_str().ok())
@@ -142,13 +144,13 @@ fn policy(db: &AppDatabaseState, site: &str) -> Policy {
         .cloned()
         .unwrap_or_default()
 }
-fn can_target(db: &AppDatabaseState, actor: &str, site: &str, e: &Employee) -> bool {
+pub(crate) fn can_target(db: &AppDatabaseState, actor: &str, site: &str, e: &Employee) -> bool {
     actor != e.id
         && allowed_on_target(db, actor, site, e, "ORG04-16")
         && (allowed_on_target(db, actor, site, e, "ORG04-08")
             || allowed_on_target(db, actor, site, e, "ORG04-12"))
 }
-fn can_read(db: &AppDatabaseState, actor: &str, site: &str) -> bool {
+pub(crate) fn can_read(db: &AppDatabaseState, actor: &str, site: &str) -> bool {
     can_access_site_scope(db, actor, site)
         && evaluate_permission(db, actor, site, "ORG04-28", None).allowed
 }
@@ -584,6 +586,9 @@ fn plan(
             } else {
                 0
             };
+            if old < prior && crate::hr_leave_carry::protected_days(db, &e.id) > 0.0 {
+                return Err(conflict("Un report exceptionnel est encore suivi pour ce salarié. Sa perte ne peut pas être confirmée : rapprochez et traitez ce suivi avant la clôture."));
+            }
             expired = remaining - carried + prior - old;
             if old + carried > 10000 {
                 return Err(conflict("Le report dépasserait la borne du reliquat. Vérifiez les soldes avant de clôturer."));
@@ -652,6 +657,12 @@ fn preview_value(db: &AppDatabaseState, site: &str, plan: &Plan) -> Value {
         &employee.contract,
         &employee.site_accesses,
         employee.active,
+        db.leave_accrual
+            .carryovers
+            .records
+            .iter()
+            .filter(|r| r.employee_id == plan.employee_id)
+            .collect::<Vec<_>>(),
     ));
     json!({"revision":revision,"plan":plan})
 }
