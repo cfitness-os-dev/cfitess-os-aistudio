@@ -368,6 +368,11 @@ pub fn api_router(state: SharedState) -> Router {
             post(crate::recovery::post_recovery_case_relance),
         )
         .route(
+            "/api/recovery/cases/:case_id/chat",
+            get(crate::recovery::get_recovery_case_chat)
+                .put(crate::recovery::put_recovery_case_chat),
+        )
+        .route(
             "/api/stocks",
             get(crate::stocks::get_stocks).post(crate::stocks::post_stock_item),
         )

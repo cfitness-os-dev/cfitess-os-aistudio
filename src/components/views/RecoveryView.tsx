@@ -10,12 +10,16 @@ import {
   FileWarning,
   Lock,
   Mail,
+  MessageSquare,
+  Phone,
   Plus,
   RefreshCw,
+  Save,
   Scale,
   Send,
   ShieldCheck,
   Sparkles,
+  Trash2,
   Users,
   XCircle,
 } from 'lucide-react';
@@ -23,7 +27,11 @@ import { useCfos } from '../../context/CfosContext';
 import { RecoveryEvidencePanel } from './RecoveryEvidencePanel';
 import { confirmLeadDraftNavigation } from '../../domain/leadDraftGuard';
 import { fetchRecoveryEvidence, recoveryFollowupCsv, type RecoveryEvidenceSnapshot } from '../../domain/recoveryEvidence';
-import { buildClubRecoveryMailto, getClubRecoveryMailbox } from '../../domain/recoveryMailto';
+import {
+  buildClubRecoveryMailto,
+  describeMemberRecoveryChannels,
+  getClubRecoveryMailbox,
+} from '../../domain/recoveryMailto';
 import type { ClubId, RecoveryCase, RecoveryCaseStatus } from '../../types/cfos';
 
 async function recoveryFetchJson<T>(
@@ -111,6 +119,31 @@ interface ChatMsg {
   content: string;
 }
 
+interface ChatThreadState {
+  messages: ChatMsg[];
+  updatedAt?: string | null;
+  saved: boolean;
+}
+
+function isTransientChatNotice(content: string): boolean {
+  return (
+    content.startsWith('Erreur IA locale') ||
+    content.startsWith('Impossible de contacter') ||
+    content === 'Génération annulée en cours de route.'
+  );
+}
+
+function loadLocalChatThreads(actorId: string): Record<string, ChatThreadState> {
+  try {
+    const raw = window.localStorage.getItem(`cfos_recovery_chat_${actorId}`);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, ChatThreadState>;
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 export function RecoveryView() {
   const {
     clubFilter,
@@ -167,9 +200,73 @@ export function RecoveryView() {
   const [ollamaError, setOllamaError] = useState<string | null>(null);
   const [checkingOllama, setCheckingOllama] = useState(false);
 
+  const chatNoticeTimerRef = useRef<number | null>(null);
   const [chatInput, setChatInput] = useState('');
-  const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
+  const [chatStore, setChatStore] = useState<{
+    actorId: string;
+    threads: Record<string, ChatThreadState>;
+  }>(() => ({
+    actorId: currentUser.id,
+    threads: loadLocalChatThreads(currentUser.id),
+  }));
   const [sendingChat, setSendingChat] = useState(false);
+  const [savingChat, setSavingChat] = useState(false);
+  const [chatNotice, setChatNotice] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+
+  const chatThreadsByCase =
+    chatStore.actorId === currentUser.id ? chatStore.threads : {};
+
+  useEffect(() => {
+    setChatStore((prev) =>
+      prev.actorId === currentUser.id
+        ? prev
+        : {
+            actorId: currentUser.id,
+            threads: loadLocalChatThreads(currentUser.id),
+          }
+    );
+  }, [currentUser.id]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        `cfos_recovery_chat_${chatStore.actorId}`,
+        JSON.stringify(chatStore.threads)
+      );
+    } catch {
+      // ignore storage quota errors
+    }
+  }, [chatStore]);
+
+  const updateCaseChatThread = (
+    caseId: string,
+    updater: (prev: ChatThreadState | undefined) => ChatThreadState
+  ) => {
+    setChatStore((prev) => {
+      const baseThreads =
+        prev.actorId === currentUser.id
+          ? prev.threads
+          : loadLocalChatThreads(currentUser.id);
+      return {
+        actorId: currentUser.id,
+        threads: {
+          ...baseThreads,
+          [caseId]: updater(baseThreads[caseId]),
+        },
+      };
+    });
+  };
+
+  const showChatBanner = (kind: 'ok' | 'err', text: string) => {
+    setChatNotice({ kind, text });
+    if (chatNoticeTimerRef.current !== null) {
+      window.clearTimeout(chatNoticeTimerRef.current);
+    }
+    chatNoticeTimerRef.current = window.setTimeout(() => {
+      setChatNotice(null);
+      chatNoticeTimerRef.current = null;
+    }, 3000);
+  };
 
   const checkOllamaStatus = async () => {
     setCheckingOllama(true);
@@ -264,24 +361,71 @@ export function RecoveryView() {
     filteredCases[0] ||
     null;
 
+  const selectedChannels = useMemo(
+    () => (selectedCase ? describeMemberRecoveryChannels(selectedCase) : null),
+    [selectedCase]
+  );
+  const selectedThread = selectedCase ? chatThreadsByCase[selectedCase.id] : undefined;
+  const chatMessages = selectedThread?.messages ?? [];
+
   useEffect(() => {
     chatEpoch.current += 1;
     chatAbortRef.current?.abort();
     chatAbortRef.current = null;
-    setChatMessages([]);
     setSendingChat(false);
     setCopiedMsgIdx(null);
     setEvidenceContext(null);
     setCaseActionReference('');
+    setChatNotice(null);
+
+    let cancelled = false;
+    const caseId = selectedCase?.id;
+    if (caseId && canAccessRecovery) {
+      void recoveryFetchJson<{
+        caseId: string;
+        updatedAt?: string;
+        messages?: ChatMsg[];
+      }>(
+        `/api/recovery/cases/${encodeURIComponent(caseId)}/chat`,
+        currentUser.id,
+        activeSiteId
+      )
+        .then((serverChat) => {
+          if (cancelled || !Array.isArray(serverChat?.messages)) return;
+          updateCaseChatThread(caseId, (prev) => {
+            if (prev && !prev.saved && prev.messages.length > 0) {
+              return prev;
+            }
+            if (serverChat.messages!.length === 0 && prev && prev.messages.length === 0) {
+              return prev;
+            }
+            return {
+              messages: serverChat.messages!,
+              updatedAt: serverChat.updatedAt || null,
+              saved: true,
+            };
+          });
+        })
+        .catch(() => {
+          // Conserve le cache local en cas d'indisponibilité réseau ponctuelle
+        });
+    }
+
     return () => {
+      cancelled = true;
       chatAbortRef.current?.abort();
       chatAbortRef.current = null;
       if (copyTimerRef.current !== null) {
         window.clearTimeout(copyTimerRef.current);
         copyTimerRef.current = null;
       }
+      if (chatNoticeTimerRef.current !== null) {
+        window.clearTimeout(chatNoticeTimerRef.current);
+        chatNoticeTimerRef.current = null;
+      }
     };
-  }, [selectedCase?.id, currentUser.id, activeSiteId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCase?.id, currentUser.id, activeSiteId, canAccessRecovery]);
 
   const activeCases = clubCases.filter((c) => c.status !== 'regularise');
   const totalDueEur = activeCases.reduce((sum, c) => sum + c.amountDueEur, 0);
@@ -457,11 +601,89 @@ export function RecoveryView() {
     }
   };
 
+  const persistChatToServer = async (
+    caseId: string,
+    messagesToSave: ChatMsg[],
+    showBanner: boolean
+  ) => {
+    const cleanMessages = messagesToSave
+      .filter((m) => !isTransientChatNotice(m.content) && m.content.trim().length > 0)
+      .slice(-50);
+    setSavingChat(true);
+    try {
+      const saved = await recoveryFetchJson<{
+        caseId: string;
+        updatedAt?: string;
+        messages?: ChatMsg[];
+      }>(
+        `/api/recovery/cases/${encodeURIComponent(caseId)}/chat`,
+        currentUser.id,
+        activeSiteId,
+        {
+          method: 'PUT',
+          body: JSON.stringify({ messages: cleanMessages }),
+        }
+      );
+      updateCaseChatThread(caseId, () => ({
+        messages: Array.isArray(saved.messages) ? saved.messages : cleanMessages,
+        updatedAt: saved.updatedAt || null,
+        saved: true,
+      }));
+      if (showBanner) {
+        showChatBanner('ok', 'Conversation enregistrée sur le serveur.');
+      }
+    } catch (err) {
+      if (showBanner) {
+        showChatBanner(
+          'err',
+          err instanceof Error ? err.message : 'Échec de l’enregistrement du chat.'
+        );
+      }
+    } finally {
+      setSavingChat(false);
+    }
+  };
+
+  const clearCaseChat = async (caseId: string) => {
+    cancelOllamaAgent();
+    setSavingChat(true);
+    try {
+      await recoveryFetchJson(
+        `/api/recovery/cases/${encodeURIComponent(caseId)}/chat`,
+        currentUser.id,
+        activeSiteId,
+        {
+          method: 'PUT',
+          body: JSON.stringify({ messages: [] }),
+        }
+      );
+      updateCaseChatThread(caseId, () => ({
+        messages: [],
+        updatedAt: null,
+        saved: true,
+      }));
+      showChatBanner('ok', 'Chat effacé pour ce dossier.');
+    } catch (err) {
+      showChatBanner(
+        'err',
+        err instanceof Error ? err.message : 'Impossible d’effacer le chat côté serveur.'
+      );
+    } finally {
+      setSavingChat(false);
+    }
+  };
+
   const askOllamaAgent = async (promptText: string) => {
     if (!selectedCase || !promptText.trim() || sendingChat) return;
+    const targetCase = selectedCase;
+    const currentMessages = chatThreadsByCase[targetCase.id]?.messages ?? [];
     const nextUserMsg: ChatMsg = { role: 'user', content: promptText.trim() };
-    const nextHistory = [...chatMessages, nextUserMsg];
-    setChatMessages(nextHistory);
+    const nextHistory = [...currentMessages, nextUserMsg];
+    updateCaseChatThread(targetCase.id, (prev) => ({
+      messages: nextHistory,
+      updatedAt: prev?.updatedAt ?? null,
+      saved: false,
+    }));
     setChatInput('');
     setSendingChat(true);
 
@@ -471,15 +693,22 @@ export function RecoveryView() {
     chatAbortRef.current = controller;
 
     try {
-      const context = await fetchRecoveryEvidence(currentUser.id, selectedCase.id, selectedCase.clubId);
+      const context = await fetchRecoveryEvidence(currentUser.id, targetCase.id, targetCase.clubId);
       if (chatEpoch.current !== epoch) return;
       if (controller.signal.aborted) {
-        setChatMessages((prev) => [
-          ...prev,
-          { role: 'assistant', content: 'Génération annulée en cours de route.' },
-        ]);
+        updateCaseChatThread(targetCase.id, (prev) => ({
+          messages: [
+            ...(prev?.messages ?? nextHistory),
+            { role: 'assistant', content: 'Génération annulée en cours de route.' },
+          ],
+          updatedAt: prev?.updatedAt ?? null,
+          saved: false,
+        }));
         return;
       }
+      const apiMessages = nextHistory
+        .filter((m) => !isTransientChatNotice(m.content))
+        .slice(-20);
       const data = await recoveryFetchJson<{
         ok?: boolean;
         reply?: string;
@@ -489,22 +718,35 @@ export function RecoveryView() {
         signal: controller.signal,
         body: JSON.stringify({
           model: selectedModel,
-          recoveryCaseId: selectedCase.id,
+          recoveryCaseId: targetCase.id,
           expectedCaseRevision: context.revision,
-          messages: nextHistory.slice(-20),
+          messages: apiMessages,
         }),
       });
       if (chatEpoch.current !== epoch) return;
       if (data.ok && data.reply) {
-        setChatMessages((prev) => [...prev, { role: 'assistant', content: data.reply! }]);
+        const finalHistory: ChatMsg[] = [
+          ...nextHistory,
+          { role: 'assistant', content: data.reply },
+        ];
+        updateCaseChatThread(targetCase.id, (prev) => ({
+          messages: finalHistory,
+          updatedAt: prev?.updatedAt ?? null,
+          saved: false,
+        }));
+        void persistChatToServer(targetCase.id, finalHistory, false);
       } else {
-        setChatMessages((prev) => [
-          ...prev,
-          {
-            role: 'assistant',
-            content: `Erreur IA locale : ${data.error || 'Aucune réponse reçue d’Ollama.'}`,
-          },
-        ]);
+        updateCaseChatThread(targetCase.id, (prev) => ({
+          messages: [
+            ...(prev?.messages ?? nextHistory),
+            {
+              role: 'assistant',
+              content: `Erreur IA locale : ${data.error || 'Aucune réponse reçue d’Ollama.'}`,
+            },
+          ],
+          updatedAt: prev?.updatedAt ?? null,
+          saved: false,
+        }));
       }
     } catch (error) {
       if (chatEpoch.current !== epoch) return;
@@ -512,17 +754,21 @@ export function RecoveryView() {
         controller.signal.aborted ||
         (error instanceof DOMException && error.name === 'AbortError') ||
         (error instanceof Error && error.name === 'AbortError');
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: isAbort
-            ? 'Génération annulée en cours de route.'
-            : error instanceof Error
-              ? error.message
-              : 'L’assistant n’a pas pu relire les données du dossier.',
-        },
-      ]);
+      updateCaseChatThread(targetCase.id, (prev) => ({
+        messages: [
+          ...(prev?.messages ?? nextHistory),
+          {
+            role: 'assistant',
+            content: isAbort
+              ? 'Génération annulée en cours de route.'
+              : error instanceof Error
+                ? error.message
+                : 'L’assistant n’a pas pu relire les données du dossier.',
+          },
+        ],
+        updatedAt: prev?.updatedAt ?? null,
+        saved: false,
+      }));
     } finally {
       if (chatAbortRef.current === controller) {
         chatAbortRef.current = null;
@@ -854,6 +1100,8 @@ export function RecoveryView() {
               {filteredCases.map((rc) => {
                 const active = selectedCase?.id === rc.id;
                 const meta = STATUS_META[rc.status];
+                const channels = describeMemberRecoveryChannels(rc);
+                const caseChatCount = chatThreadsByCase[rc.id]?.messages.length ?? 0;
                 return (
                   <div
                     key={rc.id}
@@ -893,6 +1141,51 @@ export function RecoveryView() {
                     <div className="text-xs">
                       <span className="font-semibold text-amber-400">Motif :</span>{' '}
                       {rc.unpaidReason}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                      <span
+                        className={`px-2 py-0.5 rounded flex items-center gap-1 ${
+                          channels.emailDeliverable
+                            ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                            : channels.emailMasked
+                            ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                            : 'bg-slate-500/15 text-slate-300 border border-slate-500/30'
+                        }`}
+                      >
+                        <Mail className="w-3 h-3 shrink-0" />
+                        <span>
+                          {channels.emailDeliverable
+                            ? `Mail : ${channels.emailLabel}`
+                            : channels.emailMasked
+                            ? `Mail masqué : ${channels.emailLabel}`
+                            : 'Aucun e-mail'}
+                        </span>
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded flex items-center gap-1 ${
+                          channels.phoneDeliverable
+                            ? 'bg-sky-500/15 text-sky-300 border border-sky-500/30'
+                            : channels.phoneMasked
+                            ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                            : 'bg-slate-500/15 text-slate-300 border border-slate-500/30'
+                        }`}
+                      >
+                        <Phone className="w-3 h-3 shrink-0" />
+                        <span>
+                          {channels.phoneDeliverable
+                            ? `Tél / SMS : ${channels.phoneLabel}`
+                            : channels.phoneMasked
+                            ? `Tél masqué : ${channels.phoneLabel}`
+                            : 'Aucun téléphone'}
+                        </span>
+                      </span>
+                      {caseChatCount > 0 && (
+                        <span className="px-2 py-0.5 rounded flex items-center gap-1 bg-violet-500/15 text-violet-300 border border-violet-500/30">
+                          <MessageSquare className="w-3 h-3 shrink-0" />
+                          <span>Chat IA ({caseChatCount} msg)</span>
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 text-[11px] cf-muted">
@@ -1109,6 +1402,55 @@ export function RecoveryView() {
               Périmètre strict C.Fitness OS &amp; droit général du recouvrement. L’assistant relit les données du serveur sans inventer de clause CGV.
             </p>
 
+            {selectedCase && selectedChannels && (
+              <div className="p-2.5 rounded-xl border border-[var(--cf-border)] cf-card-secondary text-[11px] space-y-1.5">
+                <div className="font-semibold text-xs flex flex-wrap items-center justify-between gap-2">
+                  <span>Canaux de contact adhérent</span>
+                  <span className="text-[11px] text-violet-300 font-semibold">
+                    {selectedChannels.recommendedChannelLabel}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <span
+                    className={`px-2 py-0.5 rounded flex items-center gap-1 ${
+                      selectedChannels.emailDeliverable
+                        ? 'bg-emerald-500/15 text-emerald-300'
+                        : selectedChannels.emailMasked
+                        ? 'bg-amber-500/15 text-amber-300'
+                        : 'bg-slate-500/15 text-slate-300'
+                    }`}
+                  >
+                    <Mail className="w-3 h-3 shrink-0" />
+                    <span>
+                      {selectedChannels.emailDeliverable
+                        ? `Mail : ${selectedChannels.emailLabel} (envoi club prêt)`
+                        : selectedChannels.emailMasked
+                        ? `Mail masqué (${selectedChannels.emailLabel})`
+                        : 'Mail : indisponible'}
+                    </span>
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 rounded flex items-center gap-1 ${
+                      selectedChannels.phoneDeliverable
+                        ? 'bg-sky-500/15 text-sky-300'
+                        : selectedChannels.phoneMasked
+                        ? 'bg-amber-500/15 text-amber-300'
+                        : 'bg-slate-500/15 text-slate-300'
+                    }`}
+                  >
+                    <Phone className="w-3 h-3 shrink-0" />
+                    <span>
+                      {selectedChannels.phoneDeliverable
+                        ? `Tél / SMS : ${selectedChannels.phoneLabel}`
+                        : selectedChannels.phoneMasked
+                        ? `Tél masqué (${selectedChannels.phoneLabel})`
+                        : 'Tél / SMS : indisponible'}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Raccourcis métier 1-clic */}
             <div className="flex flex-wrap gap-1.5 text-[11px]">
               <button
@@ -1123,6 +1465,19 @@ export function RecoveryView() {
               >
                 <Sparkles className="w-3 h-3" />
                 <span>Mail relance amiable</span>
+              </button>
+              <button
+                type="button"
+                disabled={sendingChat || !selectedCase || !evidenceContext || evidenceContext.followupPaused}
+                onClick={() =>
+                  void askOllamaAgent(
+                    `Rédige un SMS court et courtois (maximum 320 caractères) pour ${selectedCase?.memberName} concernant son impayé de ${selectedCase?.amountDueEur.toFixed(2)} € (${selectedCase?.unpaidReason}), en l'invitant à contacter le club, sans inventer de lien ni de frais.`
+                  )
+                }
+                className="px-2.5 py-1.5 rounded-lg bg-sky-600/20 border border-sky-500/40 text-sky-300 hover:bg-sky-600/30 font-semibold flex items-center gap-1 cursor-pointer disabled:opacity-50"
+              >
+                <Phone className="w-3 h-3" />
+                <span>SMS / Message court</span>
               </button>
               <button
                 type="button"
@@ -1150,6 +1505,75 @@ export function RecoveryView() {
               </button>
             </div>
 
+            {/* Barre de sauvegarde / effacement du chat par dossier */}
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+              <div className="flex flex-wrap items-center gap-2 cf-muted">
+                <span>
+                  {chatMessages.length} message(s) sur ce dossier
+                </span>
+                {chatMessages.length > 0 && (
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                      selectedThread?.saved
+                        ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                        : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                    }`}
+                  >
+                    {selectedThread?.saved
+                      ? selectedThread.updatedAt
+                        ? `Enregistré (${new Date(selectedThread.updatedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })})`
+                        : 'Enregistré'
+                      : 'Modification locale non enregistrée'}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={
+                    !selectedCase ||
+                    savingChat ||
+                    sendingChat ||
+                    chatMessages.filter((m) => !isTransientChatNotice(m.content)).length === 0
+                  }
+                  onClick={() =>
+                    selectedCase && void persistChatToServer(selectedCase.id, chatMessages, true)
+                  }
+                  className="px-2.5 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-semibold inline-flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                >
+                  <Save className="w-3 h-3" />
+                  <span>{savingChat ? 'Enregistrement...' : 'Enregistrer'}</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={!selectedCase || savingChat || chatMessages.length === 0}
+                  onClick={() => selectedCase && void clearCaseChat(selectedCase.id)}
+                  className="px-2.5 py-1 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-rose-300 font-semibold inline-flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  <span>Effacer le chat</span>
+                </button>
+              </div>
+            </div>
+
+            {chatNotice && (
+              <div
+                role={chatNotice.kind === 'err' ? 'alert' : 'status'}
+                className={`px-3 py-2 rounded-xl border text-[11px] flex items-center gap-1.5 ${
+                  chatNotice.kind === 'ok'
+                    ? 'bg-emerald-950/35 border-emerald-500/40 text-emerald-200'
+                    : 'bg-rose-950/40 border-rose-500/40 text-rose-200'
+                }`}
+              >
+                {chatNotice.kind === 'ok' ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                )}
+                <span>{chatNotice.text}</span>
+              </div>
+            )}
+
             {/* Historique conversation Ollama (hauteur doublée vers le bas) */}
             <div className="flex-1 min-h-[520px] max-h-[760px] overflow-y-auto space-y-2.5 p-3 rounded-xl bg-black/20 border border-[var(--cf-border)] text-xs">
               {chatMessages.length === 0 ? (
@@ -1159,10 +1583,7 @@ export function RecoveryView() {
                 </div>
               ) : (
                 chatMessages.map((msg, idx) => {
-                  const isErrorOrCancel =
-                    msg.content.startsWith('Erreur IA locale') ||
-                    msg.content.startsWith('Impossible de contacter') ||
-                    msg.content === 'Génération annulée en cours de route.';
+                  const isErrorOrCancel = isTransientChatNotice(msg.content);
                   const mailto =
                     msg.role === 'assistant' && !isErrorOrCancel && selectedCase
                       ? buildClubRecoveryMailto({

@@ -732,6 +732,7 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
 
     AppDatabaseState {
         lead_scenarios: Default::default(),
+        recovery_chat_histories: HashMap::new(),
         employee_counter_history: vec![],
         leave_policy: crate::hr_leave_policy::Store::default(),
         leave_accrual: crate::hr_leave_accrual::Store::default(),
@@ -2044,6 +2045,7 @@ pub fn create_production_initial_state() -> AppDatabaseState {
 
     AppDatabaseState {
         lead_scenarios: Default::default(),
+        recovery_chat_histories: HashMap::new(),
         employee_counter_history: vec![],
         leave_policy: crate::hr_leave_policy::Store::default(),
         leave_accrual: crate::hr_leave_accrual::Store::default(),
