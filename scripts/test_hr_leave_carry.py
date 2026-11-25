@@ -131,6 +131,12 @@ def main():
             assert not any(k in json.dumps(initial) for k in ['salaryGross', 'iban', 'sessionToken'])
             checks.append('bearer required, employee/read-only/self refused, primary club enforced, sensitive fields absent')
 
+            own_route = '/api/me/carryovers/'
+            assert call('GET', own_route+club)[0] == 401
+            assert call('GET', own_route+'unknown', employee)[0] == 400
+            assert call('GET', own_route+'carre-de-soie', employee)[0] == 403
+            assert ok(call('GET', own_route+club, employee))['items'] == []
+
             ok(adjust(7))
             before = json.loads(statefile.read_text())
             for patch in [dict(days=-1), dict(days=0), dict(days=2.001), dict(sourceEnd='2026-02-30'), dict(availableUntil='2024-01-01'), dict(reference='')]:
@@ -146,6 +152,12 @@ def main():
             after = json.loads(statefile.read_text())
             assert before['employees'] == after['employees'] and before['leaveRequests'] == after['leaveRequests']
             case_id = row()['cases'][0]['record']['id']
+            own = ok(call('GET', own_route+club+'?employeeId=emp-mario', employee))
+            assert own['actorId'] == 'emp-chloe' and own['priorBalance'] == 7
+            assert own['items'][0]['id'] == case_id and len(own['items']) == 1
+            assert not any(k in own['items'][0] for k in ['reference','reason','notice','balanceSignature','employeeId','actorId','history'])
+            assert ok(call('GET', own_route+club, admin))['items'] == []
+            assert call('POST', own_route+club, employee, body(create))[0] == 405
             checks.append('period and amount validation, overlap prevention, total bounded by N1, stale version rejected, no counter or absence mutation')
 
             notice = dict(action='notice', id=case_id, notifiedOn='2026-11-24', medium='remise', evidence='Référence de remise fictive')
@@ -174,6 +186,8 @@ def main():
             second_id = next(c['record']['id'] for c in row()['cases'] if c['record']['id'] != case_id)
             ok(adjust(1))
             assert all(c['balanceChanged'] for c in row()['cases'])
+            own = ok(call('GET', own_route+club, employee))
+            assert own['priorBalance'] == 1 and all(c['balanceChanged'] for c in own['items'])
             unchanged(lambda: send(dict(action='extend', id=case_id, availableUntil='2027-07-31')), 409)
             unchanged(lambda: send(notice), 409)
             unchanged(lambda: send(dict(action='reconcile', id=case_id, remainingDays=3)), 400)
@@ -216,6 +230,15 @@ def main():
             assert disk['employees'] == reloaded['employees']
             assert row()['priorBalance'] == 1
             checks.append('real restart preserves dossiers, notice/extension/reconciliation history and canonical N1')
+            employee = login('emp-chloe', 'CFITNESS_TEST_COMMERCIAL_SECRET')
+            own = ok(call('GET', own_route+club, employee))
+            assert own['priorBalance'] == 1 and len(own['items']) == 2
+            assert all(r['status'] == 'closed' and r['reviewedRemainingDays'] == 0 for r in own['items'])
+            assert not any(key in json.dumps(own) for key in ['Échéance fictive vérifiée','Référence de remise fictive','Contrôle fictif vérifié','balanceSignature','employeeId','reason','evidence','notice','history'])
+            multi = login('emp-maxime', 'CFITNESS_TEST_MAXIME_SECRET')
+            for c in ['beynost','carre-de-soie']:
+                assert ok(call('GET', own_route+c, multi))['actorId'] == 'emp-maxime'
+            checks.append('personal read-only projection follows the real session across clubs and restart; no internal notes/evidence, foreign dossier or write endpoint')
         finally:
             if proc.poll() is None:
                 stop(proc)

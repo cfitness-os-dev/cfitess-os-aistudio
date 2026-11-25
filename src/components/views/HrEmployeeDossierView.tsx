@@ -32,6 +32,7 @@ import {
   type SiteAccessUpdateInput,
 } from '../../domain/hrEmployeeDossier';
 import type { ClubId } from '../../types/cfos';
+import { PersonalCarryPanel } from './PersonalCarryPanel';
 
 type DossierTab = 'identity' | 'contract' | 'counters';
 
@@ -1114,6 +1115,8 @@ export function HrEmployeeDossierView({
                       <CalendarClock className="w-4 h-4 shrink-0 text-cyan-400" />
                       Les valeurs affichées proviennent du référentiel serveur. Aucune acquisition ou déduction automatique non validée n’est appliquée.
                     </p>
+
+                    {personalOnly && selected.id === currentUser.id && <PersonalCarryPanel key={`${currentUser.id}:${clubId}`} actorId={currentUser.id} club={clubId} />}
 
                     {!personalOnly && selected.permissions.canEditCounters && (
                       <form
