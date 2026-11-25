@@ -168,7 +168,9 @@
     "httponly",
     "HttpOnly",
     "ratelimit",
-    "hdrs"
+    "hdrs",
+    "bodypump",
+    "idemp"
   ],
   "ignorePaths": [
     "node_modules/**",
