@@ -42,6 +42,8 @@ Demander au fournisseur uniquement les précisions restantes après cette repris
 
 ## Coordination
 
+Suite du 25 novembre : [qualification règlements/documents et accès directs](heitz-reglements-documents-qualification-2026-11-25.md). PR #80 sans relecture lors de la reprise, puis approuvée/fusionnée pendant le lot ; complément basé sur main e490d31. Trois accès web par dossier synchronisé, configurés explicitement par club, développés sans appel fournisseur. Les précisions HZR01–02 / HZD01–03 remplacent une demande générale répétitive de documentation. Aucune collecte d’originaux ou d’encaissements certifiée par ce lot.
+
 Ticket [#68](https://github.com/cfitness-os-dev/cfitess-os-aistudio/issues/68) pour la couverture Heitz ; [#21](https://github.com/cfitness-os-dev/cfitess-os-aistudio/issues/21) pour les livraisons. Réserver les fichiers avant modifications simultanées. Publier branche/commit, périmètre testé, limites et opérations non exécutées. Un commentaire, une fusion et un déploiement sont trois événements à vérifier séparément.
 
 ## Livraison lecteurs par dossier — 25 novembre 2026

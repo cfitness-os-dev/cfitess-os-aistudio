@@ -51,6 +51,9 @@ def main():
     with tempfile.TemporaryDirectory(prefix='heitz-readers-',dir=os.environ['TMPDIR']) as directory:
         statefile=Path(directory)/'cfitness_state.json'
         env={**os.environ,'CFITNESS_BIND_ADDR':f'127.0.0.1:{port}','CFITNESS_DATA_DIR':directory,'CFITNESS_DEMO_MODE':'1','CFITNESS_STRICT_SESSION':'1','CFITNESS_HEITZ_WORKER':'0','CFITNESS_AUTOMATION_SCHEDULER':'0','CFITNESS_SCENARIOS_WORKER':'0','CFITNESS_CAMPAIGNS_WORKER':'0','HEITZ_DEV_ID':'fictive-id','HEITZ_DEV_KEY':'fictive-key','HEITZ_WS_URL':f'http://127.0.0.1:{stub.server_port}','HEITZ_CENTER_ID_CDS':'3845','HEITZ_CENTER_ID_BEY':'4967','OLLAMA_BASE_URL':'http://127.0.0.1:9'}
+        env['CFITNESS_HEITZ_CRM_ROOT_CDS']='https://heitz.example.test/app/heitz/3845/crm/'
+        # Deliberate centre mismatch: it must never yield a link to the wrong club.
+        env['CFITNESS_HEITZ_CRM_ROOT_BEY']='https://heitz.example.test/app/heitz/3845/crm/'
         def call(method,path,token=None,body=None):
             headers={'Content-Type':'application/json','x-cfitness-site-id':'club-carre-soie'}
             if token:headers['Authorization']='Bearer '+token
@@ -86,6 +89,19 @@ def main():
             other=next(row for row in cases if row['memberId']=='hz-502')
             code,other_evidence=call('GET','/api/recovery/cases/'+other['id']+'/evidence',admin);assert code==200
             requests.clear();before=statefile.read_bytes()
+            access=route+'/heitz-access-links?revision='+evidence()['revision']
+            assert call('GET',access)[0]==401
+            assert call('GET',access,employee)[0]==403
+            assert call('GET',route+'/heitz-access-links?revision=old',admin)[0]==409
+            other_access='/api/recovery/cases/'+other['id']+'/heitz-access-links?revision='+other_evidence['revision']
+            assert call('GET',other_access,sarah)[0]==403
+            code,unconfigured=call('GET',other_access,admin)
+            assert code==200 and not unconfigured['configured'] and unconfigured['urls'] is None
+            code,access_value=call('GET',access,admin)
+            assert code==200 and access_value['configured']
+            assert access_value['urls']['documents']=='https://heitz.example.test/app/heitz/3845/crm/#/app/client/501/document'
+            assert access_value['urls']['financial'].endswith('/501/financial')
+            assert not requests and statefile.read_bytes()==before
             assert call('GET','/api/recovery/cases/'+other['id']+'/heitz-readings?revision='+other_evidence['revision'],sarah)[0]==403
             assert not requests
             assert call('GET',route+'/heitz-readings?revision=x')[0]==401
@@ -107,6 +123,7 @@ def main():
             code,m=call('GET','/api/recovery/cases/'+manual['id']+'/evidence',admin);assert code==200
             count=len(requests)
             assert call('GET','/api/recovery/cases/'+manual['id']+'/heitz-readings?revision='+m['revision'],admin)[0]==409
+            assert call('GET','/api/recovery/cases/'+manual['id']+'/heitz-access-links?revision='+m['revision'],admin)[0]==409
             assert len(requests)==count
             import concurrent.futures
             phase[0]=4;revision=evidence()['revision']
@@ -117,7 +134,7 @@ def main():
             assert all(ids==['501'] for ids in read_ids)
             assert not any(path=='/api/userDocument' for _,path in requests)
             assert all(method=='GET' or (method=='POST' and path=='/api/developer/getToken') for method,path in requests)
-            print('PASS: reader auth and club rights, stale revision, canonical source identity, manual identity rejected, 3 documented GET queries, forecast not receipt, source failure not empty, projection privacy, read-only disk state, changed dossier discarded, no document scan or provider write')
+            print('PASS: reader and access-link auth/club/revision/identity, mismatched centre returns no links, links without provider requests or disk changes, manual identity rejected, 3 documented GET queries, forecast not receipt, failure not empty, projection privacy, changed dossier discarded, no document scan or provider write')
         finally:
             if proc is not None:stop(proc)
             stub.shutdown();stub.server_close()

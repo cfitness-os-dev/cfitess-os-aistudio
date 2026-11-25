@@ -9,6 +9,7 @@ mod employee_lifecycle;
 mod heitz_live;
 mod heitz_collection;
 mod heitz_recovery_readers;
+mod heitz_recovery_links;
 mod recovery_evidence;
 mod heitz_members;
 mod hr_manager;

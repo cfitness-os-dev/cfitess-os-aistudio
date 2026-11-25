@@ -19,7 +19,7 @@ pub struct ReadingQuery {
     revision: String,
 }
 
-fn source_id(db: &AppDatabaseState, c: &RecoveryCaseRecord) -> Result<i64, Failure> {
+pub(crate) fn source_id(db: &AppDatabaseState, c: &RecoveryCaseRecord) -> Result<i64, Failure> {
     let raw = c.member_id.strip_prefix("hz-").ok_or_else(|| {
         err_resp(
             StatusCode::CONFLICT,
