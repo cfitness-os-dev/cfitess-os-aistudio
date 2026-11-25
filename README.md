@@ -174,3 +174,7 @@ Pour exécuter et tester les fonctionnalités en toute étanchéité sans touche
    - Les modifications apportées et les fichiers touchés.
    - Les preuves de tests exécutés.
    - Les limites ou suites prévues.
+
+## Reprise du travail sur Heitz
+
+Pour compléter l’API Heitz, reprendre un audit ou demander des documents/accès, consulter d’abord [le registre partagé des sources, décisions et états de couverture](docs/HEITZ_REPRISE.md). Il distingue la documentation déjà accessible, les lecteurs développés et les validations restant à effectuer.

@@ -633,6 +633,9 @@ pub struct RecoveryCaseRecord {
     pub source_provenance: Option<String>,
     #[serde(default)]
     pub last_synced_at_utc: Option<String>,
+    /// Changes on each observed balance transition, even when an old amount returns.
+    #[serde(default)]
+    pub source_balance_revision: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
