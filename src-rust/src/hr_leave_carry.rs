@@ -150,6 +150,49 @@ pub async fn get(
             .date_naive(),
     )))
 }
+
+/// Personal projection intentionally excludes internal reasons, references,
+/// medical evidence, actor identities, signatures and manager history.
+pub async fn get_mine(
+    State(s): State<SharedState>,
+    Path(raw): Path<String>,
+    h: HeaderMap,
+) -> Result<Json<Value>, Failure> {
+    let actor = crate::hr_leave_accrual::actor(&s, &h).await?;
+    let site = crate::hr_leave_accrual::site(&raw)?;
+    let db = s.db.read().await;
+    if !crate::rbac::can_access_site_scope(&db, &actor, site) {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Cet établissement est hors de votre périmètre.",
+        ));
+    }
+    let employee = db
+        .employees
+        .iter()
+        .find(|e| e.id == actor && e.active && e.site_accesses.iter().any(|a| a.site_id == site))
+        .ok_or_else(|| err_resp(StatusCode::FORBIDDEN, "Votre dossier n’est pas disponible."))?;
+    let today = Utc::now()
+        .with_timezone(&chrono_tz::Europe::Paris)
+        .date_naive()
+        .to_string();
+    let items = db
+        .leave_accrual
+        .carryovers
+        .records
+        .iter()
+        .filter(|r| r.employee_id == actor)
+        .map(|r| {
+            json!({"id":r.id,"sourceStart":r.source_start,"sourceEnd":r.source_end,
+            "initialDays":r.initial_days,"reviewedRemainingDays":r.remaining_days,
+            "availableUntil":r.available_until,"status":r.status,"reviewedAt":r.updated_at,
+            "balanceChanged":r.status=="open" && r.balance_signature!=balance_signature(employee),
+            "deadlinePassed":r.status=="open" && r.available_until<today})
+        })
+        .collect::<Vec<_>>();
+    Ok(Json(json!({"actorId":actor,"siteId":site,"asOf":today,
+        "priorBalance":employee.counter.cp_n_minus1_remaining,"items":items})))
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(
     tag = "action",

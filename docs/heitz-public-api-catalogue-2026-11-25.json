@@ -1,0 +1,1040 @@
+{
+  "retrievedOn": "2026-11-25",
+  "source": "https://documenter.getpostman.com/view/24519/SVfMUAnB",
+  "officialIndex": "https://heitzsystem.com/documentation-webservice/",
+  "scope": "Partial rendered public documentation; 147 request headings (144 distinct method/path candidates), duplicates and deprecated variants possible; navigation-only families not enumerated; no claim of total API coverage.",
+  "requestHeadings": 147,
+  "requests": [
+    {
+      "group": "As Developer",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/developer/getToken",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "As Client",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/auth/signin",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/center",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/center/:id/info",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": ">= 1.9.0-rc.74",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/center/:id/operatingHours",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": ">= 1.9.0-rc.74",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/center/:id/exceptionsForDates",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": ">= 1.9.0-rc.74",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/center/:id/schedule/operatingHoursForPeriod",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": ">= 1.9.0-rc.74",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/center/:id/operatingHoursExceptions",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "@PLANNING",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/planning/browse",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "@PLANNING",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/planning/browse",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "@PLANNING",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/planning/tasks",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "@PLANNING",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/planning/tasks/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "@PLANNING",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/planning/tasks",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "@PLANNING",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/planning/groups",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "@PLANNING",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/planning/rooms",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "@PLANNING",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/planning/coaches",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "@PLANNING",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/planning/book/:id/cancel",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "@PLANNING",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/planning/book",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "@PLANNING",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/planning/book",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "@PLANNING",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/planning/book/:id/confirm",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "@PLANNING",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/planning/store/tasksForArticle",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "@PLANNING",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/planning/store/articlesForEvent",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "@PLANNING",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/planning/store/articlesForTask",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "@PLANNING",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/planning/bookSession/browse",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/tepParams",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/tepParams",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepBilan",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepBilan/list",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepBilan",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepBilan/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepBilan",
+      "method": "DELETE",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepBilan/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepBilan",
+      "method": "PUT",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepBilan/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepBilan",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepBilan",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepMeasures",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepMeasures/stackByDate",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepMeasures",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepMeasures/lastMeasures",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepMeasures",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepMeasures/compare",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepMeasures",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepMeasures/browse",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepMeasures",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "deprecated": true,
+      "pathCandidate": "/api/userTepMeasures",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepMeasures",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepMeasures/measure",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepMeasures",
+      "method": "DELETE",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepMeasures/measure/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepMeasures",
+      "method": "PUT",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepMeasures/measure/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepMeasures",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepMeasures/measure/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepMotivation",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepMotivation/list",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepMotivation",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepMotivation/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepMotivation",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepMotivation",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepMotivation",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepMotivation/:id/sendByEmail",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepMotivation",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepMotivation/:id/ownersEmail",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepMotivation",
+      "method": "PUT",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepMotivation/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepMotivation",
+      "method": "DELETE",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepMotivation/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepProfil",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepProfil/list",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepProfil",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepProfil/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepProfil",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepProfil",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepProfil",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepProfil/:id/sendByEmail",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepProfil",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepProfil/sendByEmail",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepProfil",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepProfil/:id/ownersEmail",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepProfil",
+      "method": "PUT",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepProfil/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userTepProfil",
+      "method": "DELETE",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userTepProfil/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/exercises",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/exercises",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/exercises",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/exercises/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/exercises",
+      "method": "PUT",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/exercises/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/exercises",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/exercises/generator",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/exercises",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/exercises",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/exercises",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/exercises/:id/photo",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/oneRepMax",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/oneRepMax",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/exerciseGroup",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/exerciseGroup",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/exerciseGroup",
+      "method": "PUT",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/exerciseGroup",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/exerciseGroup",
+      "method": "DELETE",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/exerciseGroup",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/exerciseGroup",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/exerciseGroup",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/exerciseGroupLink",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/exerciseGroupLink",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/exerciseGroupLink",
+      "method": "DELETE",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/exerciseGroupLink",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/exerciseGroupLink",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/exerciseGroupLink",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanTemplate",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanTemplate",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanTemplate",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanTemplate",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanTemplate",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanTemplate/copy/from/client",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanTemplate",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanTemplate/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanTemplate",
+      "method": "PUT",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanTemplate/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanTemplate",
+      "method": "DELETE",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanTemplate/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanTemplate",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanTemplate/:id/tags",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanTemplate",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanTemplate/:id/tags",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanTemplate",
+      "method": "DELETE",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanTemplate/:id/tags",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanTemplate",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "incompleteDocumentation": true,
+      "pathCandidate": "/api/workoutPlanTemplate/:id/days(todo)",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanTemplate",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanTemplate/:id/join",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanTemplate",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanTemplate/:id/days",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanTemplate",
+      "method": "DELETE",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanTemplate/:id/days",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanDayTemplate",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanDayTemplate",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanDayTemplate",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanDayTemplate",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanDayTemplate",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanDayTemplate/:id/sequence",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanDayTemplate",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanDayTemplate/:id/plan",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanDayTemplate",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanDayTemplate/:id/tags",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanDayTemplate",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanDayTemplate/:id/tags",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanDayTemplate",
+      "method": "DELETE",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanDayTemplate/:id/tags",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanSequenceTemplate",
+      "method": "DELETE",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanTemplateSequence/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanSequenceTemplate",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanTemplateSequence/:id/addExercises",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanTags",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanTags",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanTags",
+      "method": "DELETE",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanTags/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanTags",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanTags",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlan",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlan",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlan",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlan/stats",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlan",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlan",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlan",
+      "method": "DELETE",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlan/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlan",
+      "method": "PUT",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlan/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlan",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlan/:id/sendByEmail",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlan",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlan/:id/days",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlan",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlan/:id/days",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlan",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlan/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlan",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlan/:id/countSessions",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlan",
+      "method": "PUT",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlan/:id/reoroder",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlanDay",
+      "method": "PUT",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlanDay/:id/reorder",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlanDay",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlanDay/:id/sequence",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlanDay",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlanDay/:id/sequence",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlanDay",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlanDay/:id/reorder",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlanDay",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlanDay/:id/sequence",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlanDay",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlanDay/:id/plan",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlanDay",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlanDay/:id/sessions",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlanDay",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlanDay/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlanDay",
+      "method": "PUT",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlanDay/:id/configureSets",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlanDay",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlanDay/:id/countSessions",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlanDay",
+      "method": "DELETE",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlanDay/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlanSequence",
+      "method": "DELETE",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlanSequence/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlanSequence",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlanSequence/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlanSequence",
+      "method": "PUT",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlanSequence/:id/reorder",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlanSequence",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlanSequence/:id/addExercises",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlanSequence",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlanSequence/:id/generator",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlanSequence",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlanSequence/:id/sets",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlanDetail",
+      "method": "DELETE",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlanDetail/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlanDetail",
+      "method": "PUT",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlanDetail/:id/setSeries",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userWorkoutPlanDetail",
+      "method": "PUT",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkoutPlanDetail/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/activitiesSport",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/activitiesSport",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/exerciseLevel",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/exerciseLevel",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/exerciseLevel",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/exerciseLevel",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/coach",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/coach/userWorkouts/browse",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/coach",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userWorkouts/stats",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/activityLog",
+      "method": "PUT",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/activityLog/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/activityLog",
+      "method": "DELETE",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/activityLog/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/activityLog",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/activityLog/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/activityLog",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/activityLog/list",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/activityLog",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/activityLog/stats",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/activityLog",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/activityLog",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanTemplateDetail",
+      "method": "DELETE",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanTemplateDetail/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanTemplateDetail",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanTemplateDetail/:id/setSeries",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutPlanTemplateDetail",
+      "method": "PUT",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutPlanTemplateDetail/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutSession",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutSession/list",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutSession",
+      "method": "PUT",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutSession/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutSession",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutSession/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutSession",
+      "method": "DELETE",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutSession/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutSession",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutSession",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutSession",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutSession/:id/log",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/workoutSession",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/workoutSession/:id/log",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userMedicalCertificate (>=12.6)",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userMedicalCertificate",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userMedicalCertificate (>=12.6)",
+      "method": "GET",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userMedicalCertificate/:id",
+      "requiresPathConfirmation": true
+    },
+    {
+      "group": "/userMedicalCertificate (>=12.6)",
+      "method": "POST",
+      "status": "documentation_only_not_production_verified",
+      "pathCandidate": "/api/userMedicalCertificate",
+      "requiresPathConfirmation": true
+    }
+  ]
+}
