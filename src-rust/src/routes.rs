@@ -4013,13 +4013,25 @@ async fn post_ollama_chat(
         ));
     }
 
+    const GENERIC_CFOS_SCOPE_PROMPT: &str = "Tu es l'assistant interne de C.Fitness OS. Réponds en français uniquement. Tu es strictement limité au périmètre du projet C.Fitness OS (fonctionnalités du logiciel, dossiers et suivi recouvrement) et aux informations juridiques générales publiques du recouvrement en France. Refuse poliment toute question hors périmètre sans lien avec C.Fitness ou le recouvrement, et n'invente aucune clause contractuelle ni donnée absente.";
+
     let case_chat = payload.recovery_case_id.is_some();
     let system_prompt = match (&payload.recovery_case_id, &payload.expected_case_revision) {
         (Some(id), Some(revision)) => {
             let db = state.db.read().await;
             Some(crate::recovery_evidence::assistant_prompt(&db, &actor_id, id, revision)?)
         }
-        (None, None) => payload.system_prompt.clone(),
+        (None, None) => {
+            let extra = payload
+                .system_prompt
+                .as_deref()
+                .map(str::trim)
+                .filter(|s| !s.is_empty());
+            Some(match extra {
+                Some(s) => format!("{}\n{}", GENERIC_CFOS_SCOPE_PROMPT, s),
+                None => GENERIC_CFOS_SCOPE_PROMPT.to_string(),
+            })
+        }
         _ => return Err(err_resp(StatusCode::BAD_REQUEST,"Actualisez le dossier avant de consulter son assistant.")),
     };
     let model = payload
