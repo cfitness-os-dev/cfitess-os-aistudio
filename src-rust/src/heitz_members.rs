@@ -1,5 +1,8 @@
 use crate::models::HeitzMemberRecord;
-use crate::rbac::{can_access_site_scope, can_access_module_action, is_admin_employee, is_manager_employee};
+use crate::rbac::{
+    can_access_finances, can_access_module_action, can_access_recovery, can_access_site_scope,
+    is_admin_employee, is_manager_employee,
+};
 use crate::routes::{append_audit, err_resp, resolve_session_actor, SharedState};
 use crate::seed::persist_state;
 use axum::extract::{Path, State};
@@ -69,10 +72,26 @@ pub async fn get_heitz_members(
     let rows: Vec<HeitzMemberRecord> = db
         .heitz_members
         .iter()
-        .filter(|m| {
-            normalize_club_id(&m.home_club_id).is_some_and(|club| can_access_site_scope(&db, &actor_id, club_to_site_id(&club)))
+        .filter_map(|m| {
+            let club = normalize_club_id(&m.home_club_id)?;
+            let site = club_to_site_id(&club);
+            if !can_access_site_scope(&db, &actor_id, site) {
+                return None;
+            }
+            let can_see_financial_balance = is_admin_employee(&db, &actor_id)
+                || is_manager_employee(&db, &actor_id, Some(site))
+                || can_access_finances(&db, &actor_id, Some(site))
+                || can_access_recovery(&db, &actor_id, Some(site));
+            let mut sanitized = m.clone();
+            if !can_see_financial_balance {
+                // RGPD Art. 5.1.c (Minimisation) & Art. 32 (Besoin d'en connaître) :
+                // un collaborateur non habilité Finances/Recouvrement conserve uniquement
+                // l'indicateur binaire fin_balance_state (1 = à jour, 0 = vérification accueil requise),
+                // sans exposition du montant monétaire exact de la dette.
+                sanitized.fin_balance_eur = 0.0;
+            }
+            Some(sanitized)
         })
-        .cloned()
         .collect();
     Ok(Json(rows))
 }
@@ -344,6 +363,9 @@ mod tests {
         let before = serde_json::to_value(&*state.db.read().await).unwrap();
         let Json(visible) = get_heitz_members(State(state.clone()), commercial.clone()).await.unwrap();
         assert!(visible.iter().all(|m| m.home_club_id == "beynost"));
+        let imported_bey = visible.iter().find(|m| m.badge_code == "VISIBLE-BEY").unwrap();
+        assert_eq!(imported_bey.fin_balance_eur, 0.0, "RGPD: exact debt amount is redacted for commercial without recovery/finance delegation");
+        assert_eq!(imported_bey.fin_balance_state, 0, "RGPD: binary indicator of verification required is preserved");
         assert_eq!(post_heitz_members_import(State(state.clone()), commercial.clone(),
             Json(batch(vec![row("beynost", "PRIVATE-CDS")]))).await.unwrap_err().0, StatusCode::FORBIDDEN);
         for badge in ["PRIVATE-CDS", "VISIBLE-BEY"] {
