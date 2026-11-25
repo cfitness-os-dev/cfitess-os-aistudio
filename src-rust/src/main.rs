@@ -7,6 +7,7 @@ mod course_attendance;
 mod employee_import;
 mod employee_lifecycle;
 mod heitz_live;
+mod recovery_evidence;
 mod heitz_members;
 mod hr_manager;
 mod hr_organisation;

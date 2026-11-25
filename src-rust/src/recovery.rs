@@ -1,5 +1,5 @@
 use crate::models::RecoveryCaseRecord;
-use crate::rbac::{can_access_module_action, is_admin_employee};
+use crate::rbac::{can_access_module_action, can_access_site_scope};
 use crate::routes::{
     append_audit, authorized_clubs_for_actor, err_resp, resolve_session_actor, SharedState,
 };
@@ -74,8 +74,7 @@ pub async fn get_recovery_cases(
     let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
     let db = state.db.read().await;
 
-    let allowed = is_admin_employee(&db, &actor_id)
-        || can_access_module_action(&db, &actor_id, Some(&site_id), "recovery", "view");
+    let allowed = can_access_module_action(&db, &actor_id, Some(&site_id), "recovery", "view");
     if !allowed {
         return Err(err_resp(
             StatusCode::FORBIDDEN,
@@ -87,7 +86,7 @@ pub async fn get_recovery_cases(
     let visible: Vec<RecoveryCaseRecord> = db
         .recovery_cases
         .iter()
-        .filter(|rc| clubs.contains(&rc.club_id))
+        .filter(|rc| clubs.contains(&rc.club_id) && crate::recovery_evidence::allowed(&db, &actor_id, rc, false))
         .cloned()
         .collect();
     Ok(Json(visible))
@@ -123,9 +122,8 @@ pub async fn post_recovery_case(
     let target_site_id = club_to_site_id(club_id);
 
     let clubs = authorized_clubs_for_actor(&db, &actor_id);
-    let can_edit = is_admin_employee(&db, &actor_id)
-        || (clubs.contains(club_id)
-            && can_access_module_action(&db, &actor_id, Some(target_site_id), "recovery", "edit"));
+    let can_edit = clubs.contains(club_id) && can_access_site_scope(&db, &actor_id, target_site_id)
+            && can_access_module_action(&db, &actor_id, Some(target_site_id), "recovery", "edit");
     if !can_edit {
         return Err(err_resp(
             StatusCode::FORBIDDEN,
@@ -133,9 +131,9 @@ pub async fn post_recovery_case(
         ));
     }
 
-    let has_signed = payload.has_signed_contract.unwrap_or(true);
-    let has_id_rib = payload.has_id_and_rib.unwrap_or(true);
-    let has_cgv = payload.has_cgv_accepted.unwrap_or(true);
+    let has_signed = payload.has_signed_contract.unwrap_or(false);
+    let has_id_rib = payload.has_id_and_rib.unwrap_or(false);
+    let has_cgv = payload.has_cgv_accepted.unwrap_or(false);
     let missing_docs = payload.missing_docs.unwrap_or_else(|| {
         let mut docs = Vec::new();
         if !has_signed {
@@ -175,18 +173,18 @@ pub async fn post_recovery_case(
             .unwrap_or("Abonnement C.Fitness")
             .to_string(),
         amount_due_eur: (payload.amount_due_eur * 100.0).round() / 100.0,
-        days_overdue: payload.days_overdue.unwrap_or(1),
+        days_overdue: payload.days_overdue.unwrap_or(0),
         unpaid_reason: payload
             .unpaid_reason
             .as_deref()
             .map(str::trim)
             .filter(|s| !s.is_empty())
-            .unwrap_or("Rejet prélèvement SEPA")
+            .unwrap_or("Motif à vérifier auprès de la source")
             .to_string(),
         billed_months: payload
             .billed_months
             .filter(|m| !m.is_empty())
-            .unwrap_or_else(|| vec![Utc::now().format("%Y-%m").to_string()]),
+            .unwrap_or_default(),
         has_signed_contract: has_signed,
         has_id_and_rib: has_id_rib,
         has_cgv_accepted: has_cgv,
@@ -201,7 +199,7 @@ pub async fn post_recovery_case(
             .unwrap_or("Dossier ouvert dans C.Fitness OS.")
             .to_string(),
         overdue_days_known: Some(payload.days_overdue.is_some()),
-        compliance_verified: Some(payload.has_signed_contract.is_some() || payload.has_id_and_rib.is_some() || payload.has_cgv_accepted.is_some()),
+        compliance_verified: Some(payload.has_signed_contract.is_some() && payload.has_id_and_rib.is_some() && payload.has_cgv_accepted.is_some()),
         source_provenance: Some("Saisie manuelle C.Fitness OS".to_string()),
         last_synced_at_utc: None,
     };
@@ -260,10 +258,7 @@ pub async fn patch_recovery_case_status(
 
     let case_club = db.recovery_cases[idx].club_id.clone();
     let target_site_id = club_to_site_id(&case_club);
-    let clubs = authorized_clubs_for_actor(&db, &actor_id);
-    let can_edit = is_admin_employee(&db, &actor_id)
-        || (clubs.contains(&case_club)
-            && can_access_module_action(&db, &actor_id, Some(target_site_id), "recovery", "edit"));
+    let can_edit = crate::recovery_evidence::allowed(&db, &actor_id, &db.recovery_cases[idx], true);
     if !can_edit {
         return Err(err_resp(
             StatusCode::FORBIDDEN,
@@ -271,6 +266,15 @@ pub async fn patch_recovery_case_status(
         ));
     }
 
+    if matches!(next_status.as_str(), "pret_contentieux" | "transmis_contentieux") && !crate::recovery_evidence::documented(&db, &db.recovery_cases[idx]) {
+        return Err(err_resp(StatusCode::CONFLICT,"Complétez les références documentaires vérifiées avant cette étape. Une case cochée ne remplace pas une preuve."));
+    }
+    if matches!(next_status.as_str(),"mise_en_demeure"|"pret_contentieux"|"transmis_contentieux") && crate::recovery_evidence::paused(&db,&db.recovery_cases[idx]) {
+        return Err(err_resp(StatusCode::CONFLICT,"Suivi suspendu : vérifiez le paiement signalé ou la contestation avant de poursuivre."));
+    }
+    if matches!(next_status.as_str(), "mise_en_demeure" | "pret_contentieux" | "transmis_contentieux") && payload.note.as_deref().is_none_or(|n| n.trim().is_empty()) {
+        return Err(err_resp(StatusCode::BAD_REQUEST,"Renseignez la référence et la date de la démarche réellement effectuée."));
+    }
     let snapshot = db.clone();
     let prev_status = db.recovery_cases[idx].status.clone();
     db.recovery_cases[idx].status = next_status.clone();
@@ -331,10 +335,7 @@ pub async fn post_recovery_case_relance(
 
     let case_club = db.recovery_cases[idx].club_id.clone();
     let target_site_id = club_to_site_id(&case_club);
-    let clubs = authorized_clubs_for_actor(&db, &actor_id);
-    let can_edit = is_admin_employee(&db, &actor_id)
-        || (clubs.contains(&case_club)
-            && can_access_module_action(&db, &actor_id, Some(target_site_id), "recovery", "edit"));
+    let can_edit = crate::recovery_evidence::allowed(&db, &actor_id, &db.recovery_cases[idx], true);
     if !can_edit {
         return Err(err_resp(
             StatusCode::FORBIDDEN,
@@ -342,6 +343,9 @@ pub async fn post_recovery_case_relance(
         ));
     }
 
+    if crate::recovery_evidence::paused(&db,&db.recovery_cases[idx]) {
+        return Err(err_resp(StatusCode::CONFLICT,"Relance suspendue : un contrôle du paiement, de la contestation ou du solde est nécessaire."));
+    }
     let snapshot = db.clone();
     let prev_count = db.recovery_cases[idx].relance_count;
     db.recovery_cases[idx].relance_count = prev_count + 1;

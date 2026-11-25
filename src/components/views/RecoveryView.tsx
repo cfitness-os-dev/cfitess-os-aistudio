@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   Bot,
@@ -17,6 +17,9 @@ import {
   Users,
 } from 'lucide-react';
 import { useCfos } from '../../context/CfosContext';
+import { RecoveryEvidencePanel } from './RecoveryEvidencePanel';
+import { confirmLeadDraftNavigation } from '../../domain/leadDraftGuard';
+import { fetchRecoveryEvidence, recoveryFollowupCsv, type RecoveryEvidenceSnapshot } from '../../domain/recoveryEvidence';
 import type { ClubId, RecoveryCase, RecoveryCaseStatus } from '../../types/cfos';
 
 async function recoveryFetchJson<T>(
@@ -72,12 +75,6 @@ async function recoveryFetchJson<T>(
   }
   return (await response.json()) as T;
 }
-
-const DEFAULT_CGV_SUMMARY = `CONDITIONS GÉNÉRALES DE VENTE — C.FITNESS (Carré de Soie & Beynost)
-1. Prélèvement SEPA mensuel : échéance mensuelle automatique. Tout rejet bancaire entraîne la suspension immédiate du droit d'accès aux portillons jusqu'à régularisation complète.
-2. Frais de rejet : les frais bancaires de rejet restent à la charge de l'adhérent conformément au mandat SEPA signé.
-3. Résiliation / Préavis : toute résiliation doit respecter un préavis contractuel de 2 mois par lettre recommandée ou demande écrite validée, après la période d'engagement initial de 12 mois. Toute révocation unilatérale de mandat SEPA sans respect du préavis rend les mensualités restantes exigibles.
-4. Mise en demeure & Contentieux : à défaut de régularisation sous 8 jours après mise en demeure, le dossier complet (contrat, CGV acceptées, historique des mensualités impayées et relances) est transmis à la société de recouvrement / service contentieux.`;
 
 const STATUS_META: Record<
   RecoveryCaseStatus,
@@ -151,8 +148,10 @@ export function RecoveryView() {
   const [statusFilter, setStatusFilter] = useState<'ALL' | RecoveryCaseStatus>('ALL');
   const [selectedCaseId, setSelectedCaseId] = useState<string>(recoveryCases[0]?.id || '');
   const [showRightsPanel, setShowRightsPanel] = useState(false);
-  const [cgvText, setCgvText] = useState(DEFAULT_CGV_SUMMARY);
-  const [showCgvEditor, setShowCgvEditor] = useState(false);
+  const [evidenceContext, setEvidenceContext] = useState<RecoveryEvidenceSnapshot | null>(null);
+  const [evidenceDraftDirty, setEvidenceDraftDirty] = useState(false);
+  const [caseActionReference, setCaseActionReference] = useState('');
+  const chatEpoch = useRef(0);
 
   // Ollama local status & chat
   const [ollamaOnline, setOllamaOnline] = useState<boolean | null>(null);
@@ -257,6 +256,8 @@ export function RecoveryView() {
     filteredCases.find((c) => c.id === selectedCaseId) ||
     filteredCases[0] ||
     null;
+
+  useEffect(() => { chatEpoch.current += 1; setChatMessages([]); setSendingChat(false); setEvidenceContext(null); setCaseActionReference(''); }, [selectedCase?.id, currentUser.id, activeSiteId]);
 
   const activeCases = clubCases.filter((c) => c.status !== 'regularise');
   const totalDueEur = activeCases.reduce((sum, c) => sum + c.amountDueEur, 0);
@@ -397,51 +398,15 @@ export function RecoveryView() {
 
   const handleExportWeeklyCsv = () => {
     const exportRows = filteredCases.filter((c) => c.status !== 'regularise');
-    const header = [
-      'ID',
-      'Adherent',
-      'Club',
-      'Telephone',
-      'Email',
-      'Montant_Du_EUR',
-      'Jours_Retard',
-      'Motif_Impaye',
-      'Mois_Factures',
-      'Contrat_Signe',
-      'Piece_ID_RIB',
-      'CGV_Acceptees',
-      'Pieces_Manquantes',
-      'Statut',
-      'Nb_Relances',
-    ].join(';');
+    const csv = recoveryFollowupCsv(exportRows);
 
-    const lines = exportRows.map((c) =>
-      [
-        c.id,
-        c.memberName,
-        c.clubId === 'carre-de-soie' ? 'Carré de Soie' : 'Beynost',
-        c.phone,
-        c.email,
-        c.amountDueEur.toFixed(2),
-        String(c.daysOverdue),
-        c.unpaidReason.replace(/;/g, ','),
-        c.billedMonths.join(' | '),
-        c.hasSignedContract ? 'OUI' : 'NON',
-        c.hasIdAndRib ? 'OUI' : 'NON',
-        c.hasCgvAccepted ? 'OUI' : 'NON',
-        c.missingDocs.length > 0 ? c.missingDocs.join(' | ') : 'Aucune',
-        STATUS_META[c.status].label,
-        String(c.relanceCount),
-      ].join(';')
-    );
-
-    const blob = new Blob(['\uFEFF' + [header, ...lines].join('\n')], {
+    const blob = new Blob([csv], {
       type: 'text/csv;charset=utf-8;',
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `cfitness_contentieux_hebdo_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `cfitness_suivi_impayes_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -454,27 +419,11 @@ export function RecoveryView() {
     setChatInput('');
     setSendingChat(true);
 
-    const systemPrompt = `Tu es l'assistant juridique et recouvrement interne de C.Fitness (clubs Carré de Soie et Beynost).
-Tu réponds toujours en français, de manière claire, professionnelle, ferme mais courtoise, en t'appuyant sur nos CGV.
-
-${cgvText}
-
-DOSSIER ADHÉRENT ACTUEL :
-- Nom : ${selectedCase.memberName}
-- Club : ${selectedCase.clubId === 'carre-de-soie' ? 'Carré de Soie' : 'Beynost'}
-- Formule : ${selectedCase.contractLabel}
-- Montant dû : ${selectedCase.amountDueEur.toFixed(2)} €
-- Retard : ${selectedCase.daysOverdue} jours
-- Motif précis : ${selectedCase.unpaidReason}
-- Mois facturés impayés : ${selectedCase.billedMonths.join(', ')}
-- Contrat signé présent : ${selectedCase.hasSignedContract ? 'Oui' : 'Non'}
-- Pièce d'identité & RIB : ${selectedCase.hasIdAndRib ? 'Oui' : 'Non'}
-- CGV acceptées : ${selectedCase.hasCgvAccepted ? 'Oui' : 'Non'}
-- Pièces manquantes : ${selectedCase.missingDocs.length > 0 ? selectedCase.missingDocs.join(', ') : 'Aucune'}
-- Relances déjà effectuées : ${selectedCase.relanceCount}
-- Dernière note : ${selectedCase.lastActionNote}`;
+    const epoch = chatEpoch.current;
 
     try {
+      const context = await fetchRecoveryEvidence(currentUser.id, selectedCase.id, selectedCase.clubId);
+      if (chatEpoch.current !== epoch) return;
       const data = await recoveryFetchJson<{
         ok?: boolean;
         reply?: string;
@@ -483,10 +432,12 @@ DOSSIER ADHÉRENT ACTUEL :
         method: 'POST',
         body: JSON.stringify({
           model: selectedModel,
-          systemPrompt,
+          recoveryCaseId: selectedCase.id,
+          expectedCaseRevision: context.revision,
           messages: nextHistory,
         }),
       });
+      if (chatEpoch.current !== epoch) return;
       if (data.ok && data.reply) {
         setChatMessages((prev) => [...prev, { role: 'assistant', content: data.reply! }]);
       } else {
@@ -498,20 +449,17 @@ DOSSIER ADHÉRENT ACTUEL :
           },
         ]);
       }
-    } catch (err) {
-      const detail =
-        err instanceof Error && err.message && !err.message.toLowerCase().includes('failed to fetch')
-          ? `Erreur IA locale : ${err.message}`
-          : 'Impossible de contacter le serveur Ollama local.';
+    } catch (error) {
+      if (chatEpoch.current !== epoch) return;
       setChatMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: detail,
+          content: error instanceof Error ? error.message : 'L’assistant n’a pas pu relire les données du dossier.',
         },
       ]);
     } finally {
-      setSendingChat(false);
+      if (chatEpoch.current === epoch) setSendingChat(false);
     }
   };
 
@@ -528,10 +476,10 @@ DOSSIER ADHÉRENT ACTUEL :
               Recouvrement &amp; Contentieux · Suivi Impayés Bi-Club
             </div>
             <h1 className="text-lg sm:text-xl font-extrabold mt-0.5">
-              Dossiers Impayés, Vérification CGV &amp; Export Contentieux
+              Suivi des impayés et préparation des dossiers
             </h1>
             <p className="text-xs cf-muted mt-0.5">
-              Contrôle des motifs de rejet, pièces du dossier, relances appuyées par nos CGV et export hebdomadaire pour la société de recouvrement.
+              Contrôle des motifs de rejet, pièces du dossier, suivi des échanges, références documentaires et export de travail pour la société de recouvrement.
             </p>
           </div>
         </div>
@@ -569,7 +517,7 @@ DOSSIER ADHÉRENT ACTUEL :
             className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 hover:brightness-110 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Export Hebdo Contentieux (CSV)</span>
+            <span>Exporter le suivi des impayés</span>
           </button>
         </div>
       </div>
@@ -841,7 +789,7 @@ DOSSIER ADHÉRENT ACTUEL :
                 return (
                   <div
                     key={rc.id}
-                    onClick={() => setSelectedCaseId(rc.id)}
+                    onClick={() => { const action = () => setSelectedCaseId(rc.id); if (confirmLeadDraftNavigation(action)) action(); }}
                     className={`p-3.5 rounded-xl border cursor-pointer transition-colors space-y-2 ${
                       active
                         ? isDark
@@ -899,7 +847,7 @@ DOSSIER ADHÉRENT ACTUEL :
                     <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
                       <span
                         className={`px-2 py-0.5 rounded flex items-center gap-1 ${
-                          rc.complianceVerified === false
+                          rc.complianceVerified !== true
                             ? 'bg-slate-500/15 text-slate-300'
                             : rc.hasSignedContract
                             ? 'bg-emerald-500/15 text-emerald-300'
@@ -908,7 +856,7 @@ DOSSIER ADHÉRENT ACTUEL :
                       >
                         <FileCheck2 className="w-3 h-3" />
                         Contrat{' '}
-                        {rc.complianceVerified === false
+                        {rc.complianceVerified !== true
                           ? 'À vérifier'
                           : rc.hasSignedContract
                           ? 'OK'
@@ -916,7 +864,7 @@ DOSSIER ADHÉRENT ACTUEL :
                       </span>
                       <span
                         className={`px-2 py-0.5 rounded flex items-center gap-1 ${
-                          rc.complianceVerified === false
+                          rc.complianceVerified !== true
                             ? 'bg-slate-500/15 text-slate-300'
                             : rc.hasIdAndRib
                             ? 'bg-emerald-500/15 text-emerald-300'
@@ -929,7 +877,7 @@ DOSSIER ADHÉRENT ACTUEL :
                           <FileWarning className="w-3 h-3" />
                         )}
                         ID &amp; RIB{' '}
-                        {rc.complianceVerified === false
+                        {rc.complianceVerified !== true
                           ? 'À vérifier'
                           : rc.hasIdAndRib
                           ? 'OK'
@@ -937,7 +885,7 @@ DOSSIER ADHÉRENT ACTUEL :
                       </span>
                       <span
                         className={`px-2 py-0.5 rounded flex items-center gap-1 ${
-                          rc.complianceVerified === false
+                          rc.complianceVerified !== true
                             ? 'bg-slate-500/15 text-slate-300'
                             : rc.hasCgvAccepted
                             ? 'bg-emerald-500/15 text-emerald-300'
@@ -945,10 +893,10 @@ DOSSIER ADHÉRENT ACTUEL :
                         }`}
                       >
                         CGV{' '}
-                        {rc.complianceVerified === false
+                        {rc.complianceVerified !== true
                           ? 'À vérifier'
                           : rc.hasCgvAccepted
-                          ? 'Signées'
+                          ? 'Déclarées · preuve à contrôler'
                           : 'Manquantes'}
                       </span>
                     </div>
@@ -959,6 +907,7 @@ DOSSIER ADHÉRENT ACTUEL :
           </div>
 
           {/* Détail dossier sélectionné & changement de statut */}
+          {selectedCase && <RecoveryEvidencePanel key={`${currentUser.id}:${selectedCase.id}:${selectedCase.status}:${selectedCase.relanceCount}:${selectedCase.lastActionNote}`} actorId={currentUser.id} caseId={selectedCase.id} club={selectedCase.clubId} onContext={setEvidenceContext} onDirtyChanged={setEvidenceDraftDirty} />}
           {selectedCase && (
             <div className="cf-card p-4 space-y-3 text-xs">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -976,43 +925,44 @@ DOSSIER ADHÉRENT ACTUEL :
               <div className="text-xs cf-muted">
                 Dernière note : <span className="font-medium">{selectedCase.lastActionNote}</span>
               </div>
+              <label className="block">Référence et date de la démarche réellement effectuée<input className="cf-input w-full p-2 min-h-[44px]" value={caseActionReference} onChange={e => setCaseActionReference(e.target.value)} /></label>
               <div className="flex flex-wrap gap-2 pt-1">
                 <button
                   type="button"
-                  disabled={savingCase}
+                  disabled={savingCase || evidenceDraftDirty || !evidenceContext?.canEdit || evidenceContext.followupPaused || !caseActionReference.trim()}
                   onClick={() =>
                     void handleRecordRelance(
                       selectedCase.id,
-                      `Relance email/SMS enregistrée le ${new Date().toLocaleDateString('fr-FR')}.`
+                      caseActionReference.trim()
                     )
                   }
                   className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <Mail className="w-3.5 h-3.5" />
-                  <span>Enregistrer 1 relance</span>
+                  <span>Consigner une relance déjà effectuée</span>
                 </button>
                 <button
                   type="button"
-                  disabled={savingCase}
+                  disabled={savingCase || evidenceDraftDirty || !evidenceContext?.canEdit || evidenceContext.followupPaused || !caseActionReference.trim()}
                   onClick={() =>
                     void handleChangeCaseStatus(
                       selectedCase.id,
                       'mise_en_demeure',
-                      'Mise en demeure (délai 8 jours CGV) envoyée.'
+                      caseActionReference.trim()
                     )
                   }
                   className="px-3 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-semibold cursor-pointer disabled:opacity-50"
                 >
-                  Passer en Mise en demeure
+                  Consigner une mise en demeure effectuée
                 </button>
                 <button
                   type="button"
-                  disabled={savingCase}
+                  disabled={savingCase || evidenceDraftDirty || !evidenceContext?.canEdit || !evidenceContext.documented || !caseActionReference.trim()}
                   onClick={() =>
                     void handleChangeCaseStatus(
                       selectedCase.id,
                       'pret_contentieux',
-                      'Dossier vérifié et prêt pour l’export contentieux hebdomadaire.'
+                      caseActionReference.trim()
                     )
                   }
                   className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold cursor-pointer disabled:opacity-50"
@@ -1021,26 +971,26 @@ DOSSIER ADHÉRENT ACTUEL :
                 </button>
                 <button
                   type="button"
-                  disabled={savingCase}
+                  disabled={savingCase || evidenceDraftDirty || !evidenceContext?.canEdit || !evidenceContext.documented || !caseActionReference.trim()}
                   onClick={() =>
                     void handleChangeCaseStatus(
                       selectedCase.id,
                       'transmis_contentieux',
-                      'Dossier transmis à la société de recouvrement.'
+                      caseActionReference.trim()
                     )
                   }
                   className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-semibold cursor-pointer disabled:opacity-50"
                 >
-                  Marquer Transmis
+                  Consigner une transmission effectuée
                 </button>
                 <button
                   type="button"
-                  disabled={savingCase}
+                  disabled={savingCase || evidenceDraftDirty || !evidenceContext?.canEdit || !caseActionReference.trim()}
                   onClick={() =>
                     void handleChangeCaseStatus(
                       selectedCase.id,
                       'regularise',
-                      'Impayé régularisé par l’adhérent.'
+                      caseActionReference.trim()
                     )
                   }
                   className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold cursor-pointer disabled:opacity-50"
@@ -1082,29 +1032,9 @@ DOSSIER ADHÉRENT ACTUEL :
                     <option value="qwen2.5:3b">qwen2.5:3b</option>
                   )}
                 </select>
-                <button
-                  type="button"
-                  onClick={() => setShowCgvEditor((v) => !v)}
-                  className="px-2 py-1 rounded-lg border border-slate-700 text-[11px] hover:bg-slate-800 cursor-pointer"
-                >
-                  CGV
-                </button>
               </div>
             </div>
-
-            {showCgvEditor && (
-              <div className="space-y-1.5 text-xs">
-                <div className="font-semibold text-violet-300">
-                  Base CGV injectée à l&apos;agent local :
-                </div>
-                <textarea
-                  rows={6}
-                  value={cgvText}
-                  onChange={(e) => setCgvText(e.target.value)}
-                  className="cf-input w-full p-2.5 text-[11px]"
-                />
-              </div>
-            )}
+            <p className="text-xs cf-muted">L’assistant relit les données et vérifications du serveur. Aucun texte de CGV ni délai n’est supposé applicable sans document vérifié.</p>
 
             {/* Raccourcis métier 1-clic */}
             <div className="flex flex-wrap gap-1.5 text-[11px]">
@@ -1113,7 +1043,7 @@ DOSSIER ADHÉRENT ACTUEL :
                 disabled={sendingChat || !selectedCase}
                 onClick={() =>
                   void askOllamaAgent(
-                    `Rédige un mail de relance amiable court et professionnel pour ${selectedCase?.memberName} concernant son impayé de ${selectedCase?.amountDueEur.toFixed(2)} € (${selectedCase?.unpaidReason}), avec lien de régularisation.`
+                    `Rédige un mail de relance amiable court et professionnel pour ${selectedCase?.memberName} concernant son impayé de ${selectedCase?.amountDueEur.toFixed(2)} € (${selectedCase?.unpaidReason}), sans inventer de lien de paiement, de clause ou de frais.`
                   )
                 }
                 className="px-2.5 py-1.5 rounded-lg bg-violet-600/20 border border-violet-500/40 text-violet-300 hover:bg-violet-600/30 font-semibold flex items-center gap-1 cursor-pointer disabled:opacity-50"
@@ -1138,7 +1068,7 @@ DOSSIER ADHÉRENT ACTUEL :
                 disabled={sendingChat || !selectedCase}
                 onClick={() =>
                   void askOllamaAgent(
-                    `Fais une fiche de synthèse claire pour notre société de recouvrement / contentieux sur le dossier de ${selectedCase?.memberName} : montant, motif, pièces présentes/manquantes et arguments CGV.`
+                    `Fais une fiche de synthèse claire pour notre société de recouvrement / contentieux sur le dossier de ${selectedCase?.memberName} : montant, motif, pièces présentes/manquantes et références documentaires vérifiées, sans inventer de clause.`
                   )
                 }
                 className="px-2.5 py-1.5 rounded-lg bg-rose-600/20 border border-rose-500/40 text-rose-300 hover:bg-rose-600/30 font-semibold cursor-pointer disabled:opacity-50"
