@@ -474,6 +474,7 @@ pub fn api_router(state: SharedState) -> Router {
                 .delete(crate::social_web::delete_social_post),
         )
         .with_state(state)
+        .layer(axum::middleware::from_fn(clear_stale_session_cookie_middleware))
 }
 
 #[derive(Deserialize, Default)]
@@ -597,14 +598,7 @@ pub(crate) fn verify_employee_secret(
 
 const SESSION_COOKIE_NAME: &str = "cfos_session";
 
-pub(crate) fn extract_session_token_from_headers(headers: &HeaderMap) -> Option<String> {
-    if let Some(auth_val) = headers.get(header::AUTHORIZATION).and_then(|v| v.to_str().ok()) {
-        if let Some(token) = auth_val.strip_prefix("Bearer ").map(str::trim) {
-            if !token.is_empty() {
-                return Some(token.to_string());
-            }
-        }
-    }
+fn extract_cookie_session_token(headers: &HeaderMap) -> Option<String> {
     for cookie_hdr in headers.get_all(header::COOKIE) {
         if let Ok(cookie_str) = cookie_hdr.to_str() {
             for part in cookie_str.split(';') {
@@ -621,6 +615,21 @@ pub(crate) fn extract_session_token_from_headers(headers: &HeaderMap) -> Option<
         }
     }
     None
+}
+
+fn has_session_cookie(headers: &HeaderMap) -> bool {
+    extract_cookie_session_token(headers).is_some()
+}
+
+pub(crate) fn extract_session_token_from_headers(headers: &HeaderMap) -> Option<String> {
+    if let Some(auth_val) = headers.get(header::AUTHORIZATION).and_then(|v| v.to_str().ok()) {
+        if let Some(token) = auth_val.strip_prefix("Bearer ").map(str::trim) {
+            if !token.is_empty() {
+                return Some(token.to_string());
+            }
+        }
+    }
+    extract_cookie_session_token(headers)
 }
 
 fn should_use_secure_cookie(headers: &HeaderMap) -> bool {
@@ -646,6 +655,30 @@ fn build_session_set_cookie(token: &str, max_age_secs: i64, secure: bool) -> Str
             SESSION_COOKIE_NAME, token, max_age_secs, secure_attr
         )
     }
+}
+
+/// Purge automatiquement un cookie HttpOnly `cfos_session` périmé lorsqu'une route `/api/*`
+/// répond `401 Unauthorized` (ex. après redémarrage serveur) afin d'éviter toute boucle infinie.
+async fn clear_stale_session_cookie_middleware(
+    req: axum::http::Request<axum::body::Body>,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    let path = req.uri().path().to_string();
+    let had_session_cookie = has_session_cookie(req.headers());
+    let secure_cookie = should_use_secure_cookie(req.headers());
+    let mut res = next.run(req).await;
+    if had_session_cookie
+        && path.starts_with("/api/")
+        && path != "/api/auth/login"
+        && res.status() == StatusCode::UNAUTHORIZED
+        && !res.headers().contains_key(header::SET_COOKIE)
+    {
+        let clear_cookie = build_session_set_cookie("", 0, secure_cookie);
+        if let Ok(cookie_hdr) = HeaderValue::from_str(&clear_cookie) {
+            res.headers_mut().insert(header::SET_COOKIE, cookie_hdr);
+        }
+    }
+    res
 }
 
 fn extract_client_ip_rate_key(headers: &HeaderMap) -> Option<String> {
@@ -7007,5 +7040,68 @@ mod tests {
         std::env::remove_var("CFITNESS_TRUST_PROXY");
         std::env::remove_var("CFITNESS_BACKUP_SIGNING_KEY");
         std::env::remove_var("CFITNESS_STRICT_SESSION");
+    }
+
+    #[tokio::test]
+    async fn stale_session_cookie_returns_401_and_clears_cookie_via_set_cookie() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        async fn send_raw_get(addr: std::net::SocketAddr, extra_headers: &str) -> String {
+            let mut stream = tokio::net::TcpStream::connect(addr)
+                .await
+                .expect("connect test server");
+            let req = format!(
+                "GET /api/recovery/cases HTTP/1.1\r\nHost: {}\r\nConnection: close\r\nx-cfitness-site-id: club-carre-soie\r\n{}\r\n",
+                addr, extra_headers
+            );
+            stream.write_all(req.as_bytes()).await.expect("write req");
+            let mut buf = Vec::new();
+            stream.read_to_end(&mut buf).await.expect("read resp");
+            String::from_utf8_lossy(&buf).to_string()
+        }
+
+        let _backup_env_guard = BACKUP_SECURITY_TEST_ENV.lock().await;
+        let state = test_state();
+        let app = api_router(state);
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("bind loopback");
+        let addr = listener.local_addr().expect("local addr");
+        let server_handle = tokio::spawn(async move {
+            let _ = axum::serve(listener, app).await;
+        });
+
+        // 1. Cookie HttpOnly périmé -> 401 + purge Set-Cookie Max-Age=0
+        let resp_stale_cookie =
+            send_raw_get(addr, "Cookie: cfos_session=cfos_dead_after_restart\r\n").await;
+        let lower_cookie_resp = resp_stale_cookie.to_ascii_lowercase();
+        assert!(
+            lower_cookie_resp.starts_with("http/1.1 401"),
+            "401 attendu avec cookie périmé, reçu:\n{}",
+            resp_stale_cookie
+        );
+        assert!(
+            lower_cookie_resp.contains(
+                "set-cookie: cfos_session=; httponly; samesite=strict; path=/; max-age=0"
+            ),
+            "Set-Cookie de purge attendu, reçu:\n{}",
+            resp_stale_cookie
+        );
+
+        // 2. Bearer invalide seul sans cookie -> 401 sans Set-Cookie inutile
+        let resp_bad_bearer = send_raw_get(addr, "Authorization: Bearer cfos_bad\r\n").await;
+        let lower_bearer_resp = resp_bad_bearer.to_ascii_lowercase();
+        assert!(
+            lower_bearer_resp.starts_with("http/1.1 401"),
+            "401 attendu avec Bearer invalide, reçu:\n{}",
+            resp_bad_bearer
+        );
+        assert!(
+            !lower_bearer_resp.contains("\r\nset-cookie:"),
+            "Aucun Set-Cookie attendu sans cookie cfos_session, reçu:\n{}",
+            resp_bad_bearer
+        );
+
+        server_handle.abort();
     }
 }

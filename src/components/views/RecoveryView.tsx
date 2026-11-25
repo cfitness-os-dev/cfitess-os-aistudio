@@ -25,6 +25,8 @@ async function recoveryFetchJson<T>(
   siteId: string,
   init?: RequestInit
 ): Promise<T> {
+  const isDemoMode =
+    (import.meta as { env?: Record<string, string | undefined> }).env?.VITE_DEMO_MODE !== 'false';
   const headers = new Headers(init?.headers);
   headers.set('x-cfitness-actor-id', actorId);
   headers.set('x-cfitness-site-id', siteId);
@@ -42,7 +44,8 @@ async function recoveryFetchJson<T>(
   }
 
   let response = await fetch(path, { ...init, headers });
-  if (response.status === 401 && headers.has('Authorization')) {
+  if (response.status === 401) {
+    // Purge du jeton local (le serveur purge aussi le cookie HttpOnly cfos_session sur cette 401)
     try {
       window.sessionStorage.removeItem('cfos_bearer_token');
       window.sessionStorage.removeItem('cfos_bearer_actor_id');
@@ -50,7 +53,12 @@ async function recoveryFetchJson<T>(
       // ignore
     }
     headers.delete('Authorization');
-    response = await fetch(path, { ...init, headers });
+    if (isDemoMode) {
+      response = await fetch(path, { ...init, headers });
+    }
+    if (response.status === 401) {
+      window.dispatchEvent(new CustomEvent('cfos-session-expired'));
+    }
   }
   if (!response.ok) {
     let errMsg = `Erreur serveur HTTP ${response.status}`;
@@ -490,12 +498,16 @@ DOSSIER ADHÉRENT ACTUEL :
           },
         ]);
       }
-    } catch {
+    } catch (err) {
+      const detail =
+        err instanceof Error && err.message && !err.message.toLowerCase().includes('failed to fetch')
+          ? `Erreur IA locale : ${err.message}`
+          : 'Impossible de contacter le serveur Ollama local.';
       setChatMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: 'Impossible de contacter le serveur Ollama local.',
+          content: detail,
         },
       ]);
     } finally {

@@ -700,6 +700,15 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
       baseHeaders['Content-Type'] = 'application/json';
     }
 
+    const clearLocalBearer = () => {
+      try {
+        window.sessionStorage.removeItem('cfos_bearer_token');
+        window.sessionStorage.removeItem('cfos_bearer_actor_id');
+      } catch {
+        // ignore
+      }
+    };
+
     const validBearerForActor =
       Boolean(bearer) && (!bearerActor || bearerActor === currentUserId);
 
@@ -716,13 +725,9 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
         return res;
       }
       // Jeton Bearer périmé (ex. après redémarrage serveur) : purge locale et rattrapage démo si autorisé
-      try {
-        window.sessionStorage.removeItem('cfos_bearer_token');
-        window.sessionStorage.removeItem('cfos_bearer_actor_id');
-      } catch {
-        // ignore
-      }
+      clearLocalBearer();
       if (!IS_DEMO_CLIENT_MODE) {
+        window.dispatchEvent(new CustomEvent('cfos-session-expired'));
         return res;
       }
     }
@@ -731,7 +736,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
       return null;
     }
 
-    return fetch('/api/me/preferences', {
+    let fallbackRes = await fetch('/api/me/preferences', {
       method,
       headers: {
         ...baseHeaders,
@@ -739,6 +744,22 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
       },
       body: body ? JSON.stringify(body) : undefined,
     });
+    if (fallbackRes.status === 401) {
+      clearLocalBearer();
+      // Le 401 initial a pu purger un cookie HttpOnly cfos_session périmé : une nouvelle tentative démo suit
+      fallbackRes = await fetch('/api/me/preferences', {
+        method,
+        headers: {
+          ...baseHeaders,
+          'x-cfitness-actor-id': currentUserId,
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      if (fallbackRes.status === 401) {
+        window.dispatchEvent(new CustomEvent('cfos-session-expired'));
+      }
+    }
+    return fallbackRes;
   };
 
   useEffect(() => {
@@ -893,7 +914,28 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // ignore
     }
-    fetch('/api/heitz/members', { headers })
+    const fetchWithStaleSessionRecovery = async (url: string): Promise<Response> => {
+      const attemptHeaders: Record<string, string> = { ...headers };
+      let response = await fetch(url, { headers: attemptHeaders });
+      if (response.status === 401) {
+        try {
+          window.sessionStorage.removeItem('cfos_bearer_token');
+          window.sessionStorage.removeItem('cfos_bearer_actor_id');
+        } catch {
+          // ignore
+        }
+        delete attemptHeaders.Authorization;
+        if (IS_DEMO_CLIENT_MODE) {
+          response = await fetch(url, { headers: attemptHeaders });
+        }
+        if (response.status === 401) {
+          window.dispatchEvent(new CustomEvent('cfos-session-expired'));
+        }
+      }
+      return response;
+    };
+
+    fetchWithStaleSessionRecovery('/api/heitz/members')
       .then(async response => {
         if (!response.ok) throw new Error('Chargement des dossiers refusé.');
         const rows = (await response.json()) as HeitzMember[];
@@ -901,7 +943,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
       })
       .catch(() => { if (!cancelled) setState(previous => ({ ...previous, heitzMembers: [] })); });
 
-    fetch('/api/heitz/live-overview', { headers })
+    fetchWithStaleSessionRecovery('/api/heitz/live-overview')
       .then(async response => {
         if (!response.ok) return;
         const live = (await response.json()) as {
@@ -969,7 +1011,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
         // ignore live overview error
       });
 
-    fetch('/api/recovery/cases', { headers })
+    fetchWithStaleSessionRecovery('/api/recovery/cases')
       .then(async response => {
         if (!response.ok) return;
         const cases = (await response.json()) as RecoveryCase[];
@@ -1083,6 +1125,35 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
   const notify = (tone: 'success' | 'warning' | 'error', text: string) => {
     setBannerNotice({ tone, text });
   };
+
+  const isAuthenticatedRef = useRef(isAuthenticated);
+  isAuthenticatedRef.current = isAuthenticated;
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleSessionExpired = () => {
+      if (!isAuthenticatedRef.current) return;
+      isAuthenticatedRef.current = false;
+      try {
+        window.sessionStorage.removeItem('cfos_local_auth_active');
+        window.sessionStorage.removeItem('cfos_local_auth_user_id');
+        window.sessionStorage.removeItem('cfos_bearer_token');
+        window.sessionStorage.removeItem('cfos_bearer_actor_id');
+      } catch {
+        // ignore
+      }
+      void fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+      setIsAuthenticated(false);
+      setBannerNotice({
+        tone: 'warning',
+        text: 'Session serveur expirée (ex. après mise à jour). Veuillez vous reconnecter.',
+      });
+    };
+    window.addEventListener('cfos-session-expired', handleSessionExpired);
+    return () => {
+      window.removeEventListener('cfos-session-expired', handleSessionExpired);
+    };
+  }, []);
 
   const requestServerBearerSession = async (
     employeeId: string,
@@ -1270,12 +1341,10 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     setCurrentUserId('');
     try {
       const existingToken = window.sessionStorage.getItem('cfos_bearer_token');
-      if (existingToken) {
-        void fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${existingToken}` },
-        }).catch(() => {});
-      }
+      void fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: existingToken ? { Authorization: `Bearer ${existingToken}` } : undefined,
+      }).catch(() => {});
       window.sessionStorage.removeItem('cfos_local_auth_active');
       window.sessionStorage.removeItem('cfos_local_auth_user_id');
       window.sessionStorage.removeItem('cfos_bearer_token');
