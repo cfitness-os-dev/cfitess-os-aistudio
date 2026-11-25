@@ -4,6 +4,8 @@ Avant de reprendre une intégration Heitz, un audit de couverture ou une demande
 
 ## Décisions de Daniel à conserver
 
+**Priorité actualisée le 25 novembre :** Daniel veut examiner d’abord la cohérence visible, l’arborescence et les parcours de Lead/RH/Mon planning. Il autorise une publication de démonstration, uniquement sur données fictives et sans aucun accès Heitz réel depuis cette version. Ne pas interpréter l’autorisation de publier comme une autorisation de connecter Heitz. Le lot groupé de démonstration inclut #82 et son complément d’isolation ; ne pas déployer #82 seule pour cette revue. Voir docs/demo-coherence-2026-11-25.md.
+
 - Heitz reste la référence pour les adhérents, abonnements, contrats, finances et accès. Une écriture OS doit utiliser une opération fournisseur documentée, attendre son résultat puis relire Heitz. Sinon, proposer un accès à l’interface web appropriée ; aucune réussite locale présentée comme une opération Heitz.
 - Objectif : couvrir toutes les possibilités de l’API réellement accessible, avec une matrice par fonction. Une fonction non commencée reste dans le registre ; elle ne devient pas « non exposée » parce que le code actuel ne la traite pas.
 - Priorité recouvrement : suivi quotidien, rapprochement des règlements/rejets/échéances/avoirs, contrats et CGV effectivement applicables, dossier pour le contentieux et fiche compréhensible au téléphone ou au club.
