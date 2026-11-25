@@ -1,7 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { HeitzMember } from '../types/cfos';
-import { filterHeitzMembers, selectedHeitzMember, parseHeitzSnapshot, safeHeitzWebUrl, type HeitzIntegration } from './heitzCrm';
+import {
+  describeHeitzAccessStatus,
+  filterHeitzMembers,
+  filterHeitzMembersByStatus,
+  maskRgpdEmail,
+  maskRgpdPhone,
+  parseHeitzSnapshot,
+  pseudonymizeMemberName,
+  safeHeitzWebUrl,
+  selectedHeitzMember,
+  type HeitzIntegration,
+} from './heitzCrm';
 import { HeitzCrmEditor } from './heitzCrmEditor';
 
 const member = (id: string, club: 'carre-de-soie' | 'beynost'): HeitzMember => ({
@@ -68,4 +79,28 @@ test('Heitz cancelled actor or club cannot receive a late reply; failed load has
   const next = new HeitzCrmEditor({ members: async () => { throw new Error('403'); }, integration: async () => integration,
     import: async () => ({ added: 0, updated: 0, totalProcessed: 0 }) });
   await next.load(); assert.equal(next.getSnapshot().status, 'error'); assert.deepEqual(next.getSnapshot().rows, []);
+});
+
+test('RGPD helpers mask contact details, pseudonymize passages and restrict debt amounts by role', () => {
+  assert.equal(maskRgpdPhone('06 11 22 33 44'), '06 •• •• •• 44');
+  assert.equal(maskRgpdPhone(''), 'Non renseigné');
+  assert.equal(maskRgpdEmail('camille.martin@c.fitness'), 'c•••@c.fitness');
+  assert.equal(pseudonymizeMemberName('Camille', 'Martin'), 'Camille M.');
+
+  const debtor = member('DEBT', 'carre-de-soie');
+  const forReception = describeHeitzAccessStatus(debtor, false);
+  assert.equal(forReception.tone, 'unpaid');
+  assert.equal(forReception.badgeLabel, 'À régulariser');
+  assert.doesNotMatch(forReception.detailLabel, /-40/);
+
+  const forFinance = describeHeitzAccessStatus(debtor, true);
+  assert.equal(forFinance.tone, 'unpaid');
+  assert.match(forFinance.badgeLabel, /-40\.00 €/);
+
+  const activeOk: HeitzMember = { ...debtor, id: 'OK', finBalanceEur: 0, finBalanceState: 1 };
+  const suspended: HeitzMember = { ...activeOk, id: 'SUSP', activeSubscription: false };
+  const all = [debtor, activeOk, suspended];
+  assert.equal(filterHeitzMembersByStatus(all, 'OK').length, 1);
+  assert.equal(filterHeitzMembersByStatus(all, 'UNPAID').length, 1);
+  assert.equal(filterHeitzMembersByStatus(all, 'INACTIVE').length, 1);
 });

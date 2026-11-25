@@ -1,5 +1,8 @@
 use crate::models::{HeitzMemberRecord, RecoveryCaseRecord, SiteKpis};
-use crate::rbac::{can_access_site_scope, is_admin_employee, is_manager_employee};
+use crate::rbac::{
+    can_access_finances, can_access_recovery, can_access_site_scope, is_admin_employee,
+    is_manager_employee,
+};
 use crate::routes::{append_audit, err_resp, resolve_session_actor, SharedState};
 use crate::seed::persist_state;
 use axum::extract::State;
@@ -652,7 +655,7 @@ pub async fn get_heitz_live_overview(
     headers: HeaderMap,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
-    let (allow_cds, allow_bey, synced_count) = {
+    let (allow_cds, allow_bey, can_see_financial_data, synced_count, member_pseudonyms) = {
         let db = state.db.read().await;
         let cds = can_access_site_scope(&db, &actor_id, "club-carre-soie");
         let bey = can_access_site_scope(&db, &actor_id, "club-beynost");
@@ -662,7 +665,28 @@ pub async fn get_heitz_live_overview(
                 "Aucun club autorisé pour consulter les indicateurs Heitz.",
             ));
         }
-        (cds, bey, db.heitz_members.len())
+        let fin_ok = is_admin_employee(&db, &actor_id)
+            || is_manager_employee(&db, &actor_id, None)
+            || can_access_finances(&db, &actor_id, None)
+            || can_access_recovery(&db, &actor_id, None);
+        let mut pseudonyms: HashMap<String, String> = HashMap::new();
+        for m in &db.heitz_members {
+            let initial = m
+                .last_name
+                .trim()
+                .chars()
+                .next()
+                .map(|c| format!("{}.", c.to_uppercase()))
+                .unwrap_or_default();
+            let display = format!("{} {}", m.first_name.trim(), initial).trim().to_string();
+            if !display.is_empty() {
+                pseudonyms.insert(m.id.clone(), display.clone());
+                if !m.badge_code.trim().is_empty() {
+                    pseudonyms.insert(m.badge_code.clone(), display);
+                }
+            }
+        }
+        (cds, bey, fin_ok, db.heitz_members.len(), pseudonyms)
     };
 
     let cds_center = heitz_center_id_cds();
@@ -769,63 +793,73 @@ pub async fn get_heitz_live_overview(
             let id_access = p.get("idAccess").and_then(|v| v.as_i64()).unwrap_or(0);
             let err_code = p.get("errorCode").and_then(|v| v.as_i64()).unwrap_or(0);
             let ts = p.get("in").and_then(|v| v.as_str()).unwrap_or("");
+            let member_id = format!("hz-{}", id_client);
+            let badge_code = format!("HZ-{}", if id_access > 0 { id_access } else { id_client });
+            let display_name = member_pseudonyms
+                .get(&member_id)
+                .or_else(|| member_pseudonyms.get(&badge_code))
+                .cloned()
+                .unwrap_or_else(|| badge_code.clone());
             recent_passages.push(json!({
                 "id": format!("hz-pass-{}", p.get("id").and_then(|v| v.as_i64()).unwrap_or(0)),
                 "clubId": club_id,
                 "idCenter": ctr,
-                "memberId": format!("hz-{}", id_client),
-                "badgeCode": format!("HZ-{}", if id_access > 0 { id_access } else { id_client }),
+                "memberId": member_id,
+                "memberDisplayName": display_name,
+                "badgeCode": badge_code,
                 "timestamp": ts,
                 "granted": err_code == 0,
                 "errorCode": err_code,
                 "reason": if err_code == 0 {
-                    format!("Passage portillon validé Heitz Cloud (centre #{})", ctr)
+                    format!("Entrée validée (centre #{})", ctr)
                 } else {
-                    format!("Refus portillon Heitz (code {})", err_code)
+                    "Passage refusé — Vérification dossier à l'accueil".to_string()
                 },
             }));
         }
     }
 
-    let tickets_raw = heitz_http_request(
-        "GET",
-        "/api/ticket?_limit=25&_offset=0&_sortBy=date&_sortOrder=DESC&detailed=true",
-        Some(&token),
-        None,
-        10,
-    )
-    .await
-    .unwrap_or_else(|_| json!([]));
-
     let mut recent_tickets: Vec<Value> = Vec::new();
-    if let Some(arr) = tickets_raw.as_array() {
-        for t in arr {
-            let siret = t.get("siret").and_then(|v| v.as_str()).unwrap_or("");
-            let ctr = t.get("creationIdCenter").and_then(|v| v.as_i64()).unwrap_or(0);
-            let club_id = if ctr == bey_center || siret.starts_with("852722529") {
-                "beynost"
-            } else {
-                "carre-de-soie"
-            };
-            if (club_id == "carre-de-soie" && !allow_cds) || (club_id == "beynost" && !allow_bey) {
-                continue;
+    if can_see_financial_data {
+        let tickets_raw = heitz_http_request(
+            "GET",
+            "/api/ticket?_limit=25&_offset=0&_sortBy=date&_sortOrder=DESC&detailed=true",
+            Some(&token),
+            None,
+            10,
+        )
+        .await
+        .unwrap_or_else(|_| json!([]));
+
+        if let Some(arr) = tickets_raw.as_array() {
+            for t in arr {
+                let siret = t.get("siret").and_then(|v| v.as_str()).unwrap_or("");
+                let ctr = t.get("creationIdCenter").and_then(|v| v.as_i64()).unwrap_or(0);
+                let club_id = if ctr == bey_center || siret.starts_with("852722529") {
+                    "beynost"
+                } else {
+                    "carre-de-soie"
+                };
+                if (club_id == "carre-de-soie" && !allow_cds) || (club_id == "beynost" && !allow_bey) {
+                    continue;
+                }
+                let amount = t
+                    .get("printTotal")
+                    .and_then(|v| v.as_f64())
+                    .or_else(|| t.get("_ticketTotal").and_then(|v| v.as_f64()))
+                    .unwrap_or(0.0);
+                recent_tickets.push(json!({
+                    "idTicket": t.get("id").and_then(|v| v.as_i64()).unwrap_or(0),
+                    "ticketNumber": t.get("number").and_then(|v| v.as_str()).unwrap_or(""),
+                    "clubId": club_id,
+                    "date": t.get("date").and_then(|v| v.as_str()).unwrap_or(""),
+                    "sellerName": t.get("sellerName").and_then(|v| v.as_str()).unwrap_or("Accueil C.Fitness"),
+                    "idEmpSeller": t.get("sellerIdEmp").and_then(|v| v.as_i64()).unwrap_or(0),
+                    "operation": t.get("operation").and_then(|v| v.as_str()).unwrap_or("Vente"),
+                    "amountTtcEur": amount,
+                    "status": t.get("status").and_then(|v| v.as_str()).unwrap_or("NORMAL"),
+                }));
             }
-            let amount = t
-                .get("printTotal")
-                .and_then(|v| v.as_f64())
-                .or_else(|| t.get("_ticketTotal").and_then(|v| v.as_f64()))
-                .unwrap_or(0.0);
-            recent_tickets.push(json!({
-                "idTicket": t.get("id").and_then(|v| v.as_i64()).unwrap_or(0),
-                "ticketNumber": t.get("number").and_then(|v| v.as_str()).unwrap_or(""),
-                "clubId": club_id,
-                "date": t.get("date").and_then(|v| v.as_str()).unwrap_or(""),
-                "sellerName": t.get("sellerName").and_then(|v| v.as_str()).unwrap_or("Accueil C.Fitness"),
-                "idEmpSeller": t.get("sellerIdEmp").and_then(|v| v.as_i64()).unwrap_or(0),
-                "operation": t.get("operation").and_then(|v| v.as_str()).unwrap_or("Vente"),
-                "amountTtcEur": amount,
-                "status": t.get("status").and_then(|v| v.as_str()).unwrap_or("NORMAL"),
-            }));
         }
     }
 
@@ -877,6 +911,7 @@ pub async fn get_heitz_live_overview(
         },
         "recentPassages": recent_passages,
         "recentTickets": recent_tickets,
+        "financesRedactedRgpd": !can_see_financial_data,
         "rooms": rooms,
         "checkedAtUtc": Utc::now().to_rfc3339(),
     })))

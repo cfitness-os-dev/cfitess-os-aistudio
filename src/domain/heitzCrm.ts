@@ -31,6 +31,95 @@ export function selectedHeitzMember(rows: HeitzMember[], id: string) {
   return rows.find(member => member.id === id) ?? rows[0] ?? null;
 }
 
+export type HeitzStatusFilter = 'ALL' | 'OK' | 'UNPAID' | 'INACTIVE';
+
+export function isHeitzMemberUnpaid(member: Pick<HeitzMember, 'finBalanceEur' | 'finBalanceState'>): boolean {
+  return member.finBalanceState === 0 || member.finBalanceEur < 0;
+}
+
+export function filterHeitzMembersByStatus(rows: HeitzMember[], status: HeitzStatusFilter): HeitzMember[] {
+  if (status === 'OK') {
+    return rows.filter(m => m.activeSubscription && !isHeitzMemberUnpaid(m));
+  }
+  if (status === 'UNPAID') {
+    return rows.filter(m => isHeitzMemberUnpaid(m));
+  }
+  if (status === 'INACTIVE') {
+    return rows.filter(m => !m.activeSubscription);
+  }
+  return rows;
+}
+
+/** RGPD Art. 32 (Confidentialité comptoir d'accueil) : masque le téléphone par défaut contre les regards indiscrets. */
+export function maskRgpdPhone(phone?: string): string {
+  const clean = (phone ?? '').trim();
+  if (!clean) return 'Non renseigné';
+  const digits = clean.replace(/\D/g, '');
+  if (digits.length < 4) return '•• •• ••';
+  return `${digits.slice(0, 2)} •• •• •• ${digits.slice(-2)}`;
+}
+
+/** RGPD Art. 32 (Confidentialité comptoir d'accueil) : masque l'adresse email par défaut. */
+export function maskRgpdEmail(email?: string): string {
+  const clean = (email ?? '').trim();
+  if (!clean) return 'Non renseigné';
+  const atIdx = clean.indexOf('@');
+  if (atIdx <= 0) return '•••';
+  return `${clean[0]}•••${clean.slice(atIdx)}`;
+}
+
+/** RGPD Art. 5.1.c (Minimisation sur bandeau de passage) : Prénom + initiale du nom. */
+export function pseudonymizeMemberName(firstName: string, lastName: string): string {
+  const fn = firstName.trim();
+  const ln = lastName.trim();
+  const initial = ln ? `${ln[0].toUpperCase()}.` : '';
+  return `${fn} ${initial}`.trim();
+}
+
+/**
+ * RGPD Art. 5.1.c & Art. 32 (Besoin d'en connaître) :
+ * - Tout collaborateur habilité Accueil/CRM voit si l'accès est autorisé, suspendu ou nécessite une vérification.
+ * - Seuls la Direction, les Responsables et les profils habilités Finances/Recouvrement voient le montant exact de la dette en euros.
+ */
+export function describeHeitzAccessStatus(
+  member: Pick<HeitzMember, 'activeSubscription' | 'finBalanceEur' | 'finBalanceState'>,
+  canSeeFinancialAmount: boolean
+): {
+  tone: 'ok' | 'unpaid' | 'inactive';
+  badgeLabel: string;
+  detailLabel: string;
+} {
+  if (!member.activeSubscription) {
+    return {
+      tone: 'inactive',
+      badgeLabel: 'Suspendu / Inactif',
+      detailLabel: 'Abonnement suspendu ou résilié dans HeitzSystem',
+    };
+  }
+  if (isHeitzMemberUnpaid(member)) {
+    if (canSeeFinancialAmount && member.finBalanceEur < 0) {
+      const formatted = `${member.finBalanceEur.toFixed(2)} €`;
+      return {
+        tone: 'unpaid',
+        badgeLabel: `Impayé (${formatted})`,
+        detailLabel: `Solde débiteur à régulariser : ${formatted}`,
+      };
+    }
+    return {
+      tone: 'unpaid',
+      badgeLabel: 'À régulariser',
+      detailLabel: 'Vérification dossier requise à l’accueil (montant réservé Direction / Recouvrement — RGPD)',
+    };
+  }
+  return {
+    tone: 'ok',
+    badgeLabel: 'À jour',
+    detailLabel: canSeeFinancialAmount
+      ? `Accès autorisé · Solde à jour (${member.finBalanceEur.toFixed(2)} €)`
+      : 'Accès autorisé · Cotisation à jour',
+  };
+}
+
 /** An export is a consultation snapshot, never a command to create a Heitz account. */
 export function parseHeitzSnapshot(csv: string, activeClub: ClubId): HeitzSnapshotRow[] {
   const delimiter = csv.split(/\r?\n/, 1)[0].includes(';') ? ';' : ',';

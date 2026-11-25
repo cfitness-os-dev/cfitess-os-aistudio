@@ -314,8 +314,15 @@ export function DevicesHeitzView() {
   });
 
   const filteredMembers = scopedClubMembers.filter((m) => {
-    if (heitzStatusFilter === 'OK' && (!m.activeSubscription || m.finBalanceEur < 0)) return false;
-    if (heitzStatusFilter === 'IMPAYE' && m.finBalanceEur >= 0) return false;
+    if (
+      heitzStatusFilter === 'OK' &&
+      (!m.activeSubscription || m.finBalanceEur < 0 || m.finBalanceState === 0)
+    ) {
+      return false;
+    }
+    if (heitzStatusFilter === 'IMPAYE' && m.finBalanceEur >= 0 && m.finBalanceState !== 0) {
+      return false;
+    }
     if (heitzStatusFilter === 'SUSPENDU' && m.activeSubscription) return false;
     if (!memberSearch.trim()) return true;
     const q = memberSearch.toLowerCase();
@@ -333,9 +340,16 @@ export function DevicesHeitzView() {
     null;
 
   const realActiveCount = scopedClubMembers.filter(
-    (m) => m.activeSubscription && m.finBalanceEur >= 0
+    (m) => m.activeSubscription && m.finBalanceEur >= 0 && m.finBalanceState !== 0
   ).length;
-  const realUnpaidCount = scopedClubMembers.filter((m) => m.finBalanceEur < 0).length;
+  const realUnpaidMembers = scopedClubMembers.filter(
+    (m) => m.finBalanceEur < 0 || m.finBalanceState === 0
+  );
+  const realUnpaidCount = realUnpaidMembers.length;
+  const realUnpaidTotalEur = realUnpaidMembers.reduce(
+    (sum, m) => sum + Math.abs(m.finBalanceEur),
+    0
+  );
   const realSuspendedCount = scopedClubMembers.filter((m) => !m.activeSubscription).length;
 
   const activeGateClub =
@@ -843,8 +857,10 @@ export function DevicesHeitzView() {
               onClick={() => setHeitzStatusFilter('IMPAYE')}
               className="p-3 rounded-xl bg-rose-50 border border-rose-200 cursor-pointer hover:bg-rose-100/70 transition-colors"
             >
-              <div className="text-rose-700 font-bold">5 impayés SEPA à relancer</div>
-              <div className="text-lg font-black text-rose-600 mt-0.5">1 250 €</div>
+              <div className="text-rose-700 font-bold">{realUnpaidCount} impayé(s) SEPA à relancer</div>
+              <div className="text-lg font-black text-rose-600 mt-0.5">
+                {realUnpaidTotalEur.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+              </div>
               <div className="text-[11px] text-rose-700 underline font-semibold">
                 Filtrer &amp; régulariser en 1 clic →
               </div>
@@ -1156,7 +1172,7 @@ export function DevicesHeitzView() {
                   const isSelected = selectedMember?.id === m.id;
                   const statusDot = !m.activeSubscription
                     ? 'bg-amber-500'
-                    : m.finBalanceEur < 0
+                    : m.finBalanceEur < 0 || m.finBalanceState === 0
                     ? 'bg-rose-600'
                     : 'bg-emerald-500';
                   return (
@@ -1184,12 +1200,16 @@ export function DevicesHeitzView() {
                           {m.badgeCode} · {m.homeClubId === 'carre-de-soie' ? 'CDS' : 'BEY'} ·{' '}
                           <span
                             className={
-                              m.finBalanceEur < 0
+                              m.finBalanceEur < 0 || m.finBalanceState === 0
                                 ? 'text-rose-600 font-bold'
                                 : 'text-emerald-700 font-semibold'
                             }
                           >
-                            {m.finBalanceEur.toFixed(2)} €
+                            {canRegularizeFinancialBalance
+                              ? `${m.finBalanceEur.toFixed(2)} €`
+                              : m.finBalanceEur < 0 || m.finBalanceState === 0
+                              ? 'À régulariser'
+                              : 'À jour'}
                           </span>
                         </div>
                       </button>
@@ -1235,7 +1255,7 @@ export function DevicesHeitzView() {
                     className={`px-4 py-3 text-white font-black text-sm flex items-center justify-between ${
                       !selectedMember.activeSubscription
                         ? 'bg-amber-600'
-                        : selectedMember.finBalanceEur < 0
+                        : selectedMember.finBalanceEur < 0 || selectedMember.finBalanceState === 0
                         ? 'bg-rose-600'
                         : 'bg-emerald-600'
                     }`}
@@ -1246,10 +1266,12 @@ export function DevicesHeitzView() {
                           <PauseCircle className="w-5 h-5" />
                           PROJECTION LOCALE : ABONNEMENT SUSPENDU / GEL MÉDICAL
                         </>
-                      ) : selectedMember.finBalanceEur < 0 ? (
+                      ) : selectedMember.finBalanceEur < 0 || selectedMember.finBalanceState === 0 ? (
                         <>
                           <ShieldAlert className="w-5 h-5" />
-                          PROJECTION LOCALE : SOLDE DÉBITEUR ({selectedMember.finBalanceEur.toFixed(2)} € — Vérifier dans HeitzSystem)
+                          {canRegularizeFinancialBalance
+                            ? `PROJECTION LOCALE : SOLDE DÉBITEUR (${selectedMember.finBalanceEur.toFixed(2)} € — Vérifier dans HeitzSystem)`
+                            : 'PROJECTION LOCALE : DOSSIER À VÉRIFIER À L’ACCUEIL (Montant masqué RGPD)'}
                         </>
                       ) : (
                         <>
@@ -1305,10 +1327,16 @@ export function DevicesHeitzView() {
                         <div className="text-slate-500 font-semibold">Solde Financier SEPA :</div>
                         <div
                           className={`text-sm font-mono font-black mt-0.5 tabular-nums ${
-                            selectedMember.finBalanceEur < 0 ? 'text-rose-600' : 'text-emerald-700'
+                            selectedMember.finBalanceEur < 0 || selectedMember.finBalanceState === 0
+                              ? 'text-rose-600'
+                              : 'text-emerald-700'
                           }`}
                         >
-                          {selectedMember.finBalanceEur.toFixed(2)} €
+                          {canRegularizeFinancialBalance
+                            ? `${selectedMember.finBalanceEur.toFixed(2)} €`
+                            : selectedMember.finBalanceEur < 0 || selectedMember.finBalanceState === 0
+                            ? 'À régulariser (masqué RGPD)'
+                            : 'À jour'}
                         </div>
                       </div>
 
