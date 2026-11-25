@@ -283,6 +283,7 @@ pub fn api_router(state: SharedState) -> Router {
         .route("/api/hr/leave-accrual/:club_id/apply", post(crate::hr_leave_accrual::apply))
         .route("/api/hr/carryovers/:club_id", get(crate::hr_leave_carry::get).post(crate::hr_leave_carry::post))
         .route("/api/me/carryovers/:club_id", get(crate::hr_leave_carry::get_mine))
+        .route("/api/recovery/cases/:case_id/evidence", get(crate::recovery_evidence::get).post(crate::recovery_evidence::post))
         .route("/api/hr/leave-rules/:club_id/requests/:request_id/settle", post(crate::hr_leave_policy::settle))
         .route("/api/admin/profiles", get(get_admin_profiles))
         .route("/api/admin/profiles/:profile_id", put(put_admin_profile))
@@ -3813,6 +3814,8 @@ pub struct OllamaChatMessage {
 pub struct OllamaChatPayload {
     pub model: Option<String>,
     pub system_prompt: Option<String>,
+    pub recovery_case_id: Option<String>,
+    pub expected_case_revision: Option<String>,
     pub messages: Vec<OllamaChatMessage>,
 }
 
@@ -4010,18 +4013,27 @@ async fn post_ollama_chat(
         ));
     }
 
+    let case_chat = payload.recovery_case_id.is_some();
+    let system_prompt = match (&payload.recovery_case_id, &payload.expected_case_revision) {
+        (Some(id), Some(revision)) => {
+            let db = state.db.read().await;
+            Some(crate::recovery_evidence::assistant_prompt(&db, &actor_id, id, revision)?)
+        }
+        (None, None) => payload.system_prompt.clone(),
+        _ => return Err(err_resp(StatusCode::BAD_REQUEST,"Actualisez le dossier avant de consulter son assistant.")),
+    };
     let model = payload
         .model
         .filter(|m| !m.trim().is_empty())
         .unwrap_or_else(ollama_default_model);
 
     let mut msgs: Vec<Value> = Vec::new();
-    if let Some(sys) = payload.system_prompt.filter(|s| !s.trim().is_empty()) {
+    if let Some(sys) = system_prompt.filter(|s| !s.trim().is_empty()) {
         msgs.push(json!({ "role": "system", "content": sys }));
     }
     for m in payload.messages {
         let role = m.role.trim();
-        if !matches!(role, "user" | "assistant" | "system") {
+        if !matches!(role, "user" | "assistant" | "system") || (case_chat && role == "system") {
             return Err(err_resp(
                 StatusCode::BAD_REQUEST,
                 "Rôle de message IA invalide (user, assistant ou system attendu).",
@@ -4049,6 +4061,11 @@ async fn post_ollama_chat(
 
     match ollama_http_request("POST", "/api/chat", Some(&req_body.to_string()), 90).await {
         Ok(val) => {
+            // A payment/dispute or permission change during generation invalidates the answer.
+            if let (Some(id), Some(revision)) = (&payload.recovery_case_id, &payload.expected_case_revision) {
+                let db = state.db.read().await;
+                crate::recovery_evidence::assistant_prompt(&db, &actor_id, id, revision)?;
+            }
             let reply = val
                 .get("message")
                 .and_then(|m| m.get("content"))
@@ -6870,6 +6887,8 @@ mod tests {
             Json(OllamaChatPayload {
                 model: None,
                 system_prompt: None,
+                recovery_case_id: None,
+                expected_case_revision: None,
                 messages: vec![OllamaChatMessage { role: "tool".into(), content: "test".into() }],
             }),
         ).await;

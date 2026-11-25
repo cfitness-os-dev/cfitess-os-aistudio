@@ -875,6 +875,8 @@ pub struct AppDatabaseState {
     #[serde(default)]
     pub recovery_cases: Vec<RecoveryCaseRecord>,
     #[serde(default)]
+    pub recovery_evidence: crate::recovery_evidence::Store,
+    #[serde(default)]
     pub stock_items: Vec<StockItemRecord>,
     #[serde(default)]
     pub maintenance_tickets: Vec<MaintenanceTicketRecord>,
