@@ -4061,6 +4061,11 @@ async fn post_ollama_chat(
 
     match ollama_http_request("POST", "/api/chat", Some(&req_body.to_string()), 90).await {
         Ok(val) => {
+            // A payment/dispute or permission change during generation invalidates the answer.
+            if let (Some(id), Some(revision)) = (&payload.recovery_case_id, &payload.expected_case_revision) {
+                let db = state.db.read().await;
+                crate::recovery_evidence::assistant_prompt(&db, &actor_id, id, revision)?;
+            }
             let reply = val
                 .get("message")
                 .and_then(|m| m.get("content"))

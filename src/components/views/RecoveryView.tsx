@@ -139,9 +139,9 @@ export function RecoveryView() {
   const [newClubId, setNewClubId] = useState<ClubId>(
     clubFilter === 'beynost' ? 'beynost' : 'carre-de-soie'
   );
-  const [newAmount, setNewAmount] = useState('39.90');
-  const [newDaysOverdue, setNewDaysOverdue] = useState('15');
-  const [newReason, setNewReason] = useState('Rejet prélèvement SEPA');
+  const [newAmount, setNewAmount] = useState('');
+  const [newDaysOverdue, setNewDaysOverdue] = useState('');
+  const [newReason, setNewReason] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [newEmail, setNewEmail] = useState('');
 
@@ -356,8 +356,8 @@ export function RecoveryView() {
             memberName: newMemberName.trim(),
             clubId: newClubId,
             amountDueEur: amount,
-            daysOverdue: Number.isFinite(days) && days >= 0 ? days : 1,
-            unpaidReason: newReason.trim() || 'Rejet prélèvement SEPA',
+            ...(Number.isFinite(days) && days >= 0 ? {daysOverdue:days} : {}),
+            unpaidReason: newReason.trim() || undefined,
             phone: newPhone.trim(),
             email: newEmail.trim(),
           }),
@@ -434,7 +434,7 @@ export function RecoveryView() {
           model: selectedModel,
           recoveryCaseId: selectedCase.id,
           expectedCaseRevision: context.revision,
-          messages: nextHistory,
+          messages: nextHistory.slice(-20),
         }),
       });
       if (chatEpoch.current !== epoch) return;
@@ -709,17 +709,17 @@ export function RecoveryView() {
           <div className="text-xl font-black text-amber-400 mt-1">
             {readyForLitigationCount}
           </div>
-          <div className="text-[11px] cf-muted mt-0.5">Dossiers complets (contrat + CGV)</div>
+          <div className="text-[11px] cf-muted mt-0.5">Dossiers classés prêts — pièces à relire</div>
         </div>
         <div className="cf-card p-4 flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="cf-muted font-medium">Agent IA local (Ollama)</span>
+            <span className="cf-muted font-medium">Assistant de préparation</span>
             <button
               type="button"
               onClick={() => void checkOllamaStatus()}
               disabled={checkingOllama}
               className="p-1 rounded hover:bg-slate-800 cursor-pointer"
-              title="Vérifier la connexion Ollama"
+              title="Vérifier la connexion de l’assistant"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${checkingOllama ? 'animate-spin' : ''}`} />
             </button>
@@ -741,7 +741,7 @@ export function RecoveryView() {
           <div className="text-[11px] cf-muted mt-0.5 truncate">
             {ollamaOnline
               ? `${ollamaModels.length} modèle(s) prêt(s) sur le serveur`
-              : ollamaError || 'Service Ollama non détecté'}
+              : ollamaError || 'Assistant indisponible'}
           </div>
         </div>
       </div>
@@ -805,8 +805,8 @@ export function RecoveryView() {
                         <span className="font-bold text-sm">{rc.memberName}</span>
                         <span className="text-xs cf-muted ml-2">
                           {rc.clubId === 'carre-de-soie' ? 'Carré de Soie' : 'Beynost'} ·{' '}
-                          {rc.overdueDaysKnown === false
-                            ? 'Retard non daté (Heitz)'
+                          {rc.overdueDaysKnown !== true
+                            ? 'Retard à vérifier'
                             : `${rc.daysOverdue}j de retard`}
                         </span>
                       </div>
@@ -832,7 +832,7 @@ export function RecoveryView() {
                         Mois facturés :{' '}
                         {rc.billedMonths.length > 0
                           ? rc.billedMonths.join(', ')
-                          : 'Non détaillés par Heitz'}
+                          : 'À retrouver auprès de la source'}
                       </span>
                       <span>·</span>
                       <span>Relances : {rc.relanceCount}</span>
@@ -859,7 +859,7 @@ export function RecoveryView() {
                         {rc.complianceVerified !== true
                           ? 'À vérifier'
                           : rc.hasSignedContract
-                          ? 'OK'
+                          ? 'Déclaré présent'
                           : 'Manquant'}
                       </span>
                       <span
@@ -871,7 +871,7 @@ export function RecoveryView() {
                             : 'bg-amber-500/15 text-amber-300'
                         }`}
                       >
-                        {rc.hasIdAndRib && rc.complianceVerified !== false ? (
+                        {rc.hasIdAndRib && rc.complianceVerified === true ? (
                           <CheckCircle2 className="w-3 h-3" />
                         ) : (
                           <FileWarning className="w-3 h-3" />
@@ -880,7 +880,7 @@ export function RecoveryView() {
                         {rc.complianceVerified !== true
                           ? 'À vérifier'
                           : rc.hasIdAndRib
-                          ? 'OK'
+                          ? 'Déclaré présent'
                           : 'Manquant'}
                       </span>
                       <span
@@ -1009,9 +1009,9 @@ export function RecoveryView() {
               <div className="flex items-center gap-2">
                 <Bot className="w-5 h-5 text-violet-400" />
                 <div>
-                  <h2 className="text-sm font-bold">Assistant IA Recouvrement (Ollama)</h2>
+                  <h2 className="text-sm font-bold">Assistant recouvrement</h2>
                   <p className="text-[11px] cf-muted">
-                    Connecté à nos CGV &amp; au dossier de {selectedCase?.memberName ?? '—'}
+                    Faits et références du dossier de {selectedCase?.memberName ?? '—'}
                   </p>
                 </div>
               </div>
@@ -1040,7 +1040,7 @@ export function RecoveryView() {
             <div className="flex flex-wrap gap-1.5 text-[11px]">
               <button
                 type="button"
-                disabled={sendingChat || !selectedCase}
+                disabled={sendingChat || !selectedCase || !evidenceContext || evidenceContext.followupPaused}
                 onClick={() =>
                   void askOllamaAgent(
                     `Rédige un mail de relance amiable court et professionnel pour ${selectedCase?.memberName} concernant son impayé de ${selectedCase?.amountDueEur.toFixed(2)} € (${selectedCase?.unpaidReason}), sans inventer de lien de paiement, de clause ou de frais.`
@@ -1053,15 +1053,15 @@ export function RecoveryView() {
               </button>
               <button
                 type="button"
-                disabled={sendingChat || !selectedCase}
+                disabled={sendingChat || !selectedCase || !evidenceContext || evidenceContext.followupPaused}
                 onClick={() =>
                   void askOllamaAgent(
-                    `Rédige une mise en demeure formelle sous 8 jours basée sur nos CGV pour ${selectedCase?.memberName} (${selectedCase?.amountDueEur.toFixed(2)} € sur ${selectedCase?.billedMonths.join(', ')}), motif : ${selectedCase?.unpaidReason}.`
+                    `Prépare les points à vérifier avant une démarche formelle pour ${selectedCase?.memberName} (${selectedCase?.amountDueEur.toFixed(2)} € sur ${selectedCase?.billedMonths.join(', ')}), motif : ${selectedCase?.unpaidReason}.`
                   )
                 }
                 className="px-2.5 py-1.5 rounded-lg bg-orange-600/20 border border-orange-500/40 text-orange-300 hover:bg-orange-600/30 font-semibold cursor-pointer disabled:opacity-50"
               >
-                Mise en demeure (CGV)
+                Vérifier avant démarche formelle
               </button>
               <button
                 type="button"
@@ -1098,26 +1098,7 @@ export function RecoveryView() {
                       {msg.role === 'user' ? 'Vous' : `Agent Recouvrement (${selectedModel})`}
                     </div>
                     <div>{msg.content}</div>
-                    {msg.role === 'assistant' &&
-                      selectedCase &&
-                      !msg.content.startsWith('Erreur IA locale') &&
-                      !msg.content.startsWith('Impossible de contacter') && (
-                        <div className="mt-2 pt-2 border-t border-white/10 flex justify-end">
-                          <button
-                            type="button"
-                            disabled={savingCase}
-                            onClick={() =>
-                              void handleRecordRelance(
-                                selectedCase.id,
-                                `[IA Ollama] ${msg.content.slice(0, 140).replace(/\s+/g, ' ')}...`
-                              )
-                            }
-                            className="px-2.5 py-1 rounded bg-emerald-600/25 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-600/35 text-[11px] font-semibold cursor-pointer disabled:opacity-50"
-                          >
-                            Tracer cette réponse en relance
-                          </button>
-                        </div>
-                      )}
+                    {msg.role === 'assistant' && <p className="mt-2 cf-muted">Brouillon à relire. Cette réponse ne consigne aucun envoi ni relance effectuée.</p>}
                   </div>
                 ))
               )}
