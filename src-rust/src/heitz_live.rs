@@ -214,25 +214,27 @@ where
             return Err(format!("Réponse paginée Heitz non-tableau sur {}", path));
         };
 
-        let mut added_new_or_unkeyed = 0usize;
-        for item in arr {
-            if let Some(id_num) = item.get("id").and_then(|v| v.as_i64()) {
-                if seen_ids.insert(id_num) {
-                    all_items.push(item.clone());
-                    added_new_or_unkeyed += 1;
-                }
-            } else {
-                all_items.push(item.clone());
-                added_new_or_unkeyed += 1;
-            }
+        if arr.len() > page_size {
+            return Err(
+                "Pagination Heitz incohérente : page supérieure à la taille demandée.".into(),
+            );
         }
-
-        if arr.len() < page_size || added_new_or_unkeyed == 0 {
-            break;
+        for item in arr {
+            let id_num = item.get("id").and_then(Value::as_i64).filter(|id| *id > 0)
+                .ok_or("Identifiant de pagination Heitz absent ou invalide : résultat incomplet refusé.")?;
+            if !seen_ids.insert(id_num) {
+                return Err(
+                    "Pagination Heitz répétée ou instable : résultat incomplet refusé.".into(),
+                );
+            }
+            all_items.push(item.clone());
+        }
+        if arr.len() < page_size {
+            return Ok(all_items);
         }
     }
 
-    Ok(all_items)
+    Err("Limite de pagination Heitz atteinte : résultat incomplet refusé.".into())
 }
 
 pub async fn authenticate_heitz_token() -> Result<String, String> {
@@ -244,7 +246,8 @@ pub async fn authenticate_heitz_token() -> Result<String, String> {
         "key": dev_key,
     })
     .to_string();
-    let resp = heitz_http_request("POST", "/api/developer/getToken?v=2", None, Some(&body), 12).await?;
+    let resp =
+        heitz_http_request("POST", "/api/developer/getToken?v=2", None, Some(&body), 12).await?;
     let token = resp
         .get("token")
         .and_then(|t| t.as_str())
@@ -254,7 +257,7 @@ pub async fn authenticate_heitz_token() -> Result<String, String> {
     Ok(token.to_string())
 }
 
-fn infer_club_id_from_heitz_id(id_val: i64, center_hint: Option<i64>) -> &'static str {
+fn infer_club_id_from_heitz_id(_id_val: i64, center_hint: Option<i64>) -> &'static str {
     let bey = heitz_center_id_bey();
     let cds = heitz_center_id_cds();
     if let Some(c) = center_hint {
@@ -265,16 +268,7 @@ fn infer_club_id_from_heitz_id(id_val: i64, center_hint: Option<i64>) -> &'stati
             return "carre-de-soie";
         }
     }
-    let s = id_val.to_string();
-    let cds_prefix = cds.to_string();
-    let bey_prefix = bey.to_string();
-    if s.starts_with(&cds_prefix) {
-        "carre-de-soie"
-    } else if s.starts_with(&bey_prefix) {
-        "beynost"
-    } else {
-        "unassigned"
-    }
+    "unassigned"
 }
 
 fn is_technical_or_system_account(first_name: &str, last_name: &str, user_type: i64) -> bool {
@@ -296,9 +290,9 @@ fn is_technical_or_system_account(first_name: &str, last_name: &str, user_type: 
         || combined.contains("LEAD API")
 }
 
-fn is_demo_recovery_id(id: &str) -> bool {
-    matches!(id, "rec-1" | "rec-2" | "rec-3" | "rec-4")
-}
+static HEITZ_SYNC_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+#[cfg(test)]
+static HEITZ_LIVE_TEST_ENV: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 fn extract_fmi_presence(fmi_val: &Value, current_hour: u32) -> (i64, i64, i64, i64) {
     let entries_today = fmi_val
@@ -376,6 +370,7 @@ pub async fn run_heitz_live_sync_scoped(
     allow_cds: bool,
     allow_bey: bool,
 ) -> Result<HeitzSyncSummary, String> {
+    let _sync_guard = HEITZ_SYNC_LOCK.lock().await;
     if !allow_cds && !allow_bey {
         return Err("Aucun club autorisé pour la synchronisation Heitz.".to_string());
     }
@@ -393,7 +388,10 @@ pub async fn run_heitz_live_sync_scoped(
     let mut client_center_by_passage: HashMap<i64, i64> = HashMap::new();
     let mut client_access_by_passage: HashMap<i64, i64> = HashMap::new();
     match heitz_fetch_paginated(&token, 100, 15, |skip, limit| {
-        format!("/api/userPassages/browse?_limit={}&_skip={}&start={}", limit, skip, today)
+        format!(
+            "/api/userPassages/browse?_limit={}&_skip={}&start={}",
+            limit, skip, today
+        )
     })
     .await
     {
@@ -417,7 +415,10 @@ pub async fn run_heitz_live_sync_scoped(
         }
         Err(err) => {
             partial_sync = true;
-            warnings.push(format!("Passages portillons partiels/indisponibles : {}", err));
+            warnings.push(format!(
+                "Passages portillons partiels/indisponibles : {}",
+                err
+            ));
         }
     }
 
@@ -505,7 +506,10 @@ pub async fn run_heitz_live_sync_scoped(
                     .or_else(|| t.get("_ticketTotal").and_then(|v| v.as_f64()))
                     .unwrap_or(0.0);
                 let siret = t.get("siret").and_then(|v| v.as_str()).unwrap_or("");
-                let ctr = t.get("creationIdCenter").and_then(|v| v.as_i64()).unwrap_or(0);
+                let ctr = t
+                    .get("creationIdCenter")
+                    .and_then(|v| v.as_i64())
+                    .unwrap_or(0);
                 if ctr == bey_center || siret.starts_with("852722529") {
                     rev_bey += amount.max(0.0);
                 } else if ctr == cds_center || siret.starts_with("818651317") {
@@ -538,7 +542,7 @@ pub async fn run_heitz_live_sync_scoped(
         let Some(uid) = u.get("id").and_then(|v| v.as_i64()) else {
             continue;
         };
-        if uid <= 10000 || !seen_ids.insert(uid) {
+        if uid <= 0 || !seen_ids.insert(uid) {
             continue;
         }
         let first_name = u
@@ -577,7 +581,7 @@ pub async fn run_heitz_live_sync_scoped(
             .get("_finBalance")
             .and_then(|v| v.as_f64())
             .or_else(|| u.get("finBalance").and_then(|v| v.as_f64()))
-            .unwrap_or(0.0);
+            .ok_or("Solde Heitz absent ou invalide : impossible de confirmer un solde nul.")?;
 
         let subs = u.get("_subscriptions").and_then(|v| v.as_array());
         let mut sub_label = String::from("Adhérent Heitz");
@@ -635,6 +639,11 @@ pub async fn run_heitz_live_sync_scoped(
 
         let id = format!("hz-{}", uid);
         let prev = prev_members_by_id.get(&id);
+        if prev.is_some_and(|p| p.home_club_id != club_id) {
+            partial_sync = true;
+            warnings.push("Rattachement d’un adhérent modifié ou non confirmé : fiche conservée, rapprochement manuel requis.".into());
+            continue;
+        }
         let seen_today = client_center_by_passage.contains_key(&uid);
 
         incoming_members.push(HeitzMemberRecord {
@@ -692,19 +701,21 @@ pub async fn run_heitz_live_sync_scoped(
                 || (club_id == "unassigned" && allow_cds && allow_bey)
         };
 
-        // Conserve les adhérents hors périmètre ou saisis hors-Heitz sans données démo fictives si synchro globale
-        let mut next_members: Vec<HeitzMemberRecord> = db
-            .heitz_members
-            .iter()
-            .filter(|m| {
-                if m.id.starts_with("hm-") && allow_cds && allow_bey {
-                    return false;
-                }
-                !in_scope_club(&m.home_club_id)
-            })
-            .cloned()
-            .collect();
-        next_members.extend(incoming_members.iter().cloned());
+        // A missing row is never a deletion event, including for imports/manual rows.
+        let mut next_members = db.heitz_members.clone();
+        for incoming in &incoming_members {
+            if let Some(old) = next_members.iter_mut().find(|m| m.id == incoming.id) {
+                let mut refreshed = incoming.clone();
+                refreshed.mywellness_member_id = old.mywellness_member_id.clone();
+                refreshed.technogym_moves30d = old.technogym_moves30d;
+                refreshed.loyalty_points = old.loyalty_points;
+                refreshed.referrals_count = old.referrals_count;
+                refreshed.last_reward_label = old.last_reward_label.clone();
+                *old = refreshed;
+            } else {
+                next_members.push(incoming.clone());
+            }
+        }
         db.heitz_members = next_members;
 
         let incoming_by_id: HashMap<&str, &HeitzMemberRecord> = incoming_members
@@ -721,9 +732,6 @@ pub async fn run_heitz_live_sync_scoped(
         let mut preserved_count = 0usize;
 
         for rc in &db.recovery_cases {
-            if is_demo_recovery_id(&rc.id) && allow_cds && allow_bey {
-                continue;
-            }
             if !rc.id.starts_with("rec-hz-") || !in_scope_club(&rc.club_id) {
                 next_recovery.push(rc.clone());
                 continue;
@@ -743,7 +751,7 @@ pub async fn run_heitz_live_sync_scoped(
                     updated.last_synced_at_utc = Some(synced_at_utc.clone());
                     preserved_count += 1;
                     next_recovery.push(updated);
-                } else if rc.relance_count > 0 || rc.status != "a_relancer" {
+                } else {
                     // Conserve l'historique d'un dossier suivi localement dont la dette est soldée
                     let mut settled = rc.clone();
                     settled.amount_due_eur = 0.0;
@@ -806,14 +814,7 @@ pub async fn run_heitz_live_sync_scoped(
 
         db.recovery_cases = next_recovery;
 
-        // Mise à jour des SIRET officiels uniquement pour les sites autorisés
-        for site in &mut db.sites {
-            if site.id == "club-carre-soie" && allow_cds {
-                site.siret = "818 651 317 00013".to_string();
-            } else if site.id == "club-beynost" && allow_bey {
-                site.siret = "852 722 529 00017".to_string();
-            }
-        }
+        // Club legal settings belong to organisation settings, not a reader sync.
 
         // KPI mis à jour uniquement si la lecture paginée des tickets a réussi intégralement
         if tickets_complete {
@@ -897,7 +898,10 @@ pub async fn run_heitz_live_sync_scoped(
 
         if let Err(err_msg) = persist_state(&state.data_dir, &db) {
             *db = snapshot;
-            return Err(format!("Échec persistance synchronisation Heitz : {}", err_msg));
+            return Err(format!(
+                "Échec persistance synchronisation Heitz : {}",
+                err_msg
+            ));
         }
 
         (active_rec, preserved_count)
@@ -991,7 +995,9 @@ pub async fn get_heitz_live_overview(
                 .next()
                 .map(|c| format!("{}.", c.to_uppercase()))
                 .unwrap_or_default();
-            let display = format!("{} {}", m.first_name.trim(), initial).trim().to_string();
+            let display = format!("{} {}", m.first_name.trim(), initial)
+                .trim()
+                .to_string();
             if !display.is_empty() {
                 pseudonyms.insert(m.id.clone(), display.clone());
                 if !m.badge_code.trim().is_empty() {
@@ -1014,7 +1020,15 @@ pub async fn get_heitz_live_overview(
         } else {
             0
         };
-        (cds, bey, fin_cds, fin_bey, scoped_count, unassigned, pseudonyms)
+        (
+            cds,
+            bey,
+            fin_cds,
+            fin_bey,
+            scoped_count,
+            unassigned,
+            pseudonyms,
+        )
     };
 
     let can_see_any_financial = can_fin_cds || can_fin_bey;
@@ -1128,10 +1142,8 @@ pub async fn get_heitz_live_overview(
                     let err_code = p.get("errorCode").and_then(|v| v.as_i64()).unwrap_or(0);
                     let ts = p.get("in").and_then(|v| v.as_str()).unwrap_or("");
                     let member_id = format!("hz-{}", id_client);
-                    let badge_code = format!(
-                        "HZ-{}",
-                        if id_access > 0 { id_access } else { id_client }
-                    );
+                    let badge_code =
+                        format!("HZ-{}", if id_access > 0 { id_access } else { id_client });
                     let display_name = member_pseudonyms
                         .get(&member_id)
                         .or_else(|| member_pseudonyms.get(&badge_code))
@@ -1174,7 +1186,10 @@ pub async fn get_heitz_live_overview(
                 if let Some(arr) = tickets_raw.as_array() {
                     for t in arr {
                         let siret = t.get("siret").and_then(|v| v.as_str()).unwrap_or("");
-                        let ctr = t.get("creationIdCenter").and_then(|v| v.as_i64()).unwrap_or(0);
+                        let ctr = t
+                            .get("creationIdCenter")
+                            .and_then(|v| v.as_i64())
+                            .unwrap_or(0);
                         let club_id = if ctr == bey_center || siret.starts_with("852722529") {
                             "beynost"
                         } else if ctr == cds_center || siret.starts_with("818651317") {
@@ -1308,6 +1323,10 @@ pub fn spawn_heitz_live_sync_worker(state: SharedState) {
 }
 
 #[cfg(test)]
+#[path = "heitz_sync_tests.rs"]
+mod sync_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::models::{Employee, EmployeeSiteAccess, SensitiveBankInfo, ContractSummary, EmployeeCounter};
@@ -1319,7 +1338,6 @@ mod tests {
     use tokio::net::TcpListener;
     use tokio::sync::RwLock;
 
-    static HEITZ_LIVE_TEST_ENV: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
     fn test_headers(state_sessions: &mut HashMap<String, (String, i64)>, actor_id: &str) -> HeaderMap {
         let token = format!(
