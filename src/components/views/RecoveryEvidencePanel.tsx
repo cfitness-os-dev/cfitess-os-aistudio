@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { HeitzRecoveryReadingsPanel } from './HeitzRecoveryReadingsPanel';
 import type { ClubId } from '../../types/cfos';
 import { fetchRecoveryEvidence, recoveryConversationSheet, type RecoveryEvidenceSnapshot, type EvidenceKind, type EvidenceCommand, type RecoveryEventKind } from '../../domain/recoveryEvidence';
 import { useLeadDraftGuard } from '../useLeadDraftGuard';
@@ -50,6 +51,7 @@ export function RecoveryEvidencePanel({ actorId, caseId, club, onContext, onDirt
     <p className="cf-muted text-sm">Les références consignent les pièces réellement consultées. Une déclaration dans l’ancien dossier ne constitue pas, à elle seule, une preuve de signature.</p>
     {error && <p role="alert">{error}</p>}{message && <p role="status">{message}</p>}{busy && !data && <p role="status">Chargement du dossier…</p>}
     {data && <>
+      <HeitzRecoveryReadingsPanel actorId={actorId} caseId={caseId} club={club} revision={data.revision} disabled={dirty||busy}/>
       <p className="text-sm">Solde indiqué : {data.amountDueEur.toFixed(2)} € · Source : {data.source || 'À vérifier'} · Dernière remontée : {data.sourceUpdatedAt ? new Date(data.sourceUpdatedAt).toLocaleString('fr-FR') : 'Non renseignée'}.</p>
       <dl className="grid sm:grid-cols-2 gap-3 text-sm"><div><dt className="cf-muted">Contrat indiqué</dt><dd>{data.assistantFacts.contractLabel || 'À vérifier'}</dd></div><div><dt className="cf-muted">Échéances indiquées</dt><dd>{data.assistantFacts.billedMonths.length ? data.assistantFacts.billedMonths.join(', ') : 'À retrouver'}</dd></div><div><dt className="cf-muted">Retard indiqué</dt><dd>{data.assistantFacts.overdueDays === null ? 'Inconnu' : data.assistantFacts.overdueDays + ' jours'}</dd></div><div><dt className="cf-muted">Motif à confirmer</dt><dd>{data.assistantFacts.reportedReason || 'Non renseigné'}</dd></div></dl>
       <button type="button" disabled={busy || dirty} className={button} onClick={() => { const url = URL.createObjectURL(new Blob([recoveryConversationSheet(data)], { type: 'text/plain;charset=utf-8' })); const link = document.createElement('a'); link.href = url; link.download = 'cfitness-fiche-echange.txt'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }}>Télécharger la fiche d’échange</button>

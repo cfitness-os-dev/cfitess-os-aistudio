@@ -89,7 +89,7 @@ fn parse_http_host_port_plain(base_url: &str) -> (String, String) {
     }
 }
 
-async fn heitz_http_request(
+pub(crate) async fn heitz_http_request(
     method: &str,
     path: &str,
     auth_token: Option<&str>,
