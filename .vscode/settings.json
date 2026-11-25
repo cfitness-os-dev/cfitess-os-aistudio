@@ -302,7 +302,8 @@
     "ratelimit",
     "hdrs",
     "bodypump",
-    "idemp"
+    "idemp",
+    "impayes"
   ],
   "cSpell.ignoreRegExpList": [
     "\\bACCES\\b",
