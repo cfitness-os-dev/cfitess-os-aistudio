@@ -1,0 +1,16 @@
+{
+  "observedOn": "2026-11-25",
+  "source": "Resource inventory of the authorized Heitz web session, document and financial screens",
+  "webVersionObserved": "WS:2.1.4-BETA.187 M:1.4.187",
+  "containsPersonalDataOrSecrets": false,
+  "responseBodiesCaptured": false,
+  "cloudCompatibilityVerified": false,
+  "scope": "Observed URL candidates; not a public API specification or a completed reader",
+  "requests": [
+    { "path": "/api/userDocument", "methodConfirmedByPublicDocs": "GET", "observedQuery": {"idClient": "<member>", "details": "true"}, "status": "targeting_observed_in_web_response_schema_to_qualify" },
+    { "path": "/api/userFinancial/financialRecords/browse", "methodConfirmedByPublicDocs": null, "observedQuery": {"idClient": "<member>", "hideCancelled": "true", "_offset": "0", "_limit": "10", "_paginate": "true"}, "status": "observed_url_only", "limit": "UI also used page sizes 8 and 9; envelope, totals, status and cancelled-record semantics unconfirmed" },
+    { "path": "/api/financialOperations/invoicesClientDisplay/issued", "methodConfirmedByPublicDocs": null, "observedQuery": {"idClient": "<member>"}, "status": "observed_url_only" },
+    { "path": "/api/userSubscriptions/detailedV3", "methodConfirmedByPublicDocs": null, "observedQuery": {"clients": "<member>", "details": "1", "viewAs": "EMPLOYEE", "purpose": "1", "_paginate": "true", "_limit": "100", "_offset": "0"}, "status": "observed_url_only", "limit": "Another UI call used details=1,5,7 and state=0,1,2,4,5,6,7; meanings not inferred" },
+    { "path": "/api/users/balance/detailed", "methodConfirmedByPublicDocs": null, "observedQuery": {"idClient": "<member>", "reload": "false"}, "status": "observed_url_only", "limit": "reload=true was also observed; side effects not qualified, do not replay as a read automatically" }
+  ]
+}

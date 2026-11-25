@@ -181,6 +181,13 @@ pub async fn get(
         crate::heitz_live::heitz_http_request("GET", &paths[2], Some(&token), None, 12)
     );
     // Permissions and dossier identity can change while the provider is responding.
+    let (current_actor, _) = crate::routes::resolve_session_actor(&s, &h).await?;
+    if current_actor != actor {
+        return Err(err_resp(
+            StatusCode::UNAUTHORIZED,
+            "La session a changé pendant la lecture Heitz.",
+        ));
+    }
     {
         let db = s.db.read().await;
         let c = db

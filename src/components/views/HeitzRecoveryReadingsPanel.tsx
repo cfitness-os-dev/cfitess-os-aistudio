@@ -12,7 +12,8 @@ export function HeitzRecoveryReadingsPanel({ actorId, caseId, club, revision, di
     revision: string;
     disabled: boolean;
 }) {
-    const [data, setData] = useState<HeitzRecoveryReadings | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState('');
+    const [stored, setData] = useState<HeitzRecoveryReadings | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState('');
+    const data = stored && stored.actorId === actorId && stored.caseId === caseId && stored.clubId === club && stored.revision === revision ? stored : null;
     const request = useRef<AbortController | null>(null);
     useEffect(() => { request.current?.abort(); setData(null); setError(''); setBusy(false); return () => request.current?.abort(); }, [actorId, caseId, club, revision]);
     async function load() { if (busy || disabled)

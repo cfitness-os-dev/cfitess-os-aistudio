@@ -131,10 +131,16 @@ def main():
                 pending=pool.submit(reading,admin,revision);assert started.wait(timeout=5)
                 assert call('PATCH',route+'/status',admin,{'status':'regularise','note':'Recette fictive concurrente'})[0]==200
                 release.set();assert pending.result(timeout=10)[0]==409
+            # Revoking the session while the vendor is slow must discard the answer too.
+            started.clear();release.clear();phase[0]=4;revision=evidence()['revision']
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                pending=pool.submit(reading,admin,revision);assert started.wait(timeout=5)
+                assert call('POST','/api/auth/logout',admin)[0]==200
+                release.set();assert pending.result(timeout=10)[0]==401
             assert all(ids==['501'] for ids in read_ids)
             assert not any(path=='/api/userDocument' for _,path in requests)
             assert all(method=='GET' or (method=='POST' and path=='/api/developer/getToken') for method,path in requests)
-            print('PASS: reader and access-link auth/club/revision/identity, mismatched centre returns no links, links without provider requests or disk changes, manual identity rejected, 3 documented GET queries, forecast not receipt, failure not empty, projection privacy, changed dossier discarded, no document scan or provider write')
+            print('PASS: reader and access-link auth/club/revision/identity, mismatched centre returns no links, links without provider requests or disk changes, manual identity rejected, 3 documented GET queries, forecast not receipt, failure not empty, projection privacy, changed dossier and revoked session discarded, no document scan or provider write')
         finally:
             if proc is not None:stop(proc)
             stub.shutdown();stub.server_close()
