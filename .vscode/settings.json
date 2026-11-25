@@ -303,7 +303,8 @@
     "hdrs",
     "bodypump",
     "idemp",
-    "impayes"
+    "impayes",
+    "samesite"
   ],
   "cSpell.ignoreRegExpList": [
     "\\bACCES\\b",
