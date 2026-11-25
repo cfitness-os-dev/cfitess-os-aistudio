@@ -2,7 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   Bot,
+  Check,
   CheckCircle2,
+  Copy,
   Download,
   FileCheck2,
   FileWarning,
@@ -15,11 +17,13 @@ import {
   ShieldCheck,
   Sparkles,
   Users,
+  XCircle,
 } from 'lucide-react';
 import { useCfos } from '../../context/CfosContext';
 import { RecoveryEvidencePanel } from './RecoveryEvidencePanel';
 import { confirmLeadDraftNavigation } from '../../domain/leadDraftGuard';
 import { fetchRecoveryEvidence, recoveryFollowupCsv, type RecoveryEvidenceSnapshot } from '../../domain/recoveryEvidence';
+import { buildClubRecoveryMailto, getClubRecoveryMailbox } from '../../domain/recoveryMailto';
 import type { ClubId, RecoveryCase, RecoveryCaseStatus } from '../../types/cfos';
 
 async function recoveryFetchJson<T>(
@@ -152,6 +156,9 @@ export function RecoveryView() {
   const [evidenceDraftDirty, setEvidenceDraftDirty] = useState(false);
   const [caseActionReference, setCaseActionReference] = useState('');
   const chatEpoch = useRef(0);
+  const chatAbortRef = useRef<AbortController | null>(null);
+  const copyTimerRef = useRef<number | null>(null);
+  const [copiedMsgIdx, setCopiedMsgIdx] = useState<number | null>(null);
 
   // Ollama local status & chat
   const [ollamaOnline, setOllamaOnline] = useState<boolean | null>(null);
@@ -257,7 +264,24 @@ export function RecoveryView() {
     filteredCases[0] ||
     null;
 
-  useEffect(() => { chatEpoch.current += 1; setChatMessages([]); setSendingChat(false); setEvidenceContext(null); setCaseActionReference(''); }, [selectedCase?.id, currentUser.id, activeSiteId]);
+  useEffect(() => {
+    chatEpoch.current += 1;
+    chatAbortRef.current?.abort();
+    chatAbortRef.current = null;
+    setChatMessages([]);
+    setSendingChat(false);
+    setCopiedMsgIdx(null);
+    setEvidenceContext(null);
+    setCaseActionReference('');
+    return () => {
+      chatAbortRef.current?.abort();
+      chatAbortRef.current = null;
+      if (copyTimerRef.current !== null) {
+        window.clearTimeout(copyTimerRef.current);
+        copyTimerRef.current = null;
+      }
+    };
+  }, [selectedCase?.id, currentUser.id, activeSiteId]);
 
   const activeCases = clubCases.filter((c) => c.status !== 'regularise');
   const totalDueEur = activeCases.reduce((sum, c) => sum + c.amountDueEur, 0);
@@ -411,6 +435,28 @@ export function RecoveryView() {
     URL.revokeObjectURL(url);
   };
 
+  const cancelOllamaAgent = () => {
+    if (!chatAbortRef.current) return;
+    chatAbortRef.current.abort();
+    chatAbortRef.current = null;
+  };
+
+  const copyAssistantReply = async (idx: number, content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedMsgIdx(idx);
+      if (copyTimerRef.current !== null) {
+        window.clearTimeout(copyTimerRef.current);
+      }
+      copyTimerRef.current = window.setTimeout(() => {
+        setCopiedMsgIdx((prev) => (prev === idx ? null : prev));
+        copyTimerRef.current = null;
+      }, 2000);
+    } catch {
+      // Clipboard indisponible hors contexte sécurisé : ignore silencieusement
+    }
+  };
+
   const askOllamaAgent = async (promptText: string) => {
     if (!selectedCase || !promptText.trim() || sendingChat) return;
     const nextUserMsg: ChatMsg = { role: 'user', content: promptText.trim() };
@@ -420,16 +466,27 @@ export function RecoveryView() {
     setSendingChat(true);
 
     const epoch = chatEpoch.current;
+    chatAbortRef.current?.abort();
+    const controller = new AbortController();
+    chatAbortRef.current = controller;
 
     try {
       const context = await fetchRecoveryEvidence(currentUser.id, selectedCase.id, selectedCase.clubId);
       if (chatEpoch.current !== epoch) return;
+      if (controller.signal.aborted) {
+        setChatMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: 'Génération annulée en cours de route.' },
+        ]);
+        return;
+      }
       const data = await recoveryFetchJson<{
         ok?: boolean;
         reply?: string;
         error?: string;
       }>('/api/ollama/chat', currentUser.id, activeSiteId, {
         method: 'POST',
+        signal: controller.signal,
         body: JSON.stringify({
           model: selectedModel,
           recoveryCaseId: selectedCase.id,
@@ -451,14 +508,25 @@ export function RecoveryView() {
       }
     } catch (error) {
       if (chatEpoch.current !== epoch) return;
+      const isAbort =
+        controller.signal.aborted ||
+        (error instanceof DOMException && error.name === 'AbortError') ||
+        (error instanceof Error && error.name === 'AbortError');
       setChatMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: error instanceof Error ? error.message : 'L’assistant n’a pas pu relire les données du dossier.',
+          content: isAbort
+            ? 'Génération annulée en cours de route.'
+            : error instanceof Error
+              ? error.message
+              : 'L’assistant n’a pas pu relire les données du dossier.',
         },
       ]);
     } finally {
+      if (chatAbortRef.current === controller) {
+        chatAbortRef.current = null;
+      }
       if (chatEpoch.current === epoch) setSendingChat(false);
     }
   };
@@ -1011,7 +1079,10 @@ export function RecoveryView() {
                 <div>
                   <h2 className="text-sm font-bold">Assistant recouvrement</h2>
                   <p className="text-[11px] cf-muted">
-                    Faits et références du dossier de {selectedCase?.memberName ?? '—'}
+                    Dossier de {selectedCase?.memberName ?? '—'}
+                    {selectedCase
+                      ? ` · Boîte mail club : ${getClubRecoveryMailbox(selectedCase.clubId).clubEmail}`
+                      : ''}
                   </p>
                 </div>
               </div>
@@ -1034,7 +1105,9 @@ export function RecoveryView() {
                 </select>
               </div>
             </div>
-            <p className="text-xs cf-muted">L’assistant relit les données et vérifications du serveur. Aucun texte de CGV ni délai n’est supposé applicable sans document vérifié.</p>
+            <p className="text-xs cf-muted">
+              Périmètre strict C.Fitness OS &amp; droit général du recouvrement. L’assistant relit les données du serveur sans inventer de clause CGV.
+            </p>
 
             {/* Raccourcis métier 1-clic */}
             <div className="flex flex-wrap gap-1.5 text-[11px]">
@@ -1077,34 +1150,105 @@ export function RecoveryView() {
               </button>
             </div>
 
-            {/* Historique conversation Ollama */}
-            <div className="flex-1 min-h-[260px] max-h-[380px] overflow-y-auto space-y-2.5 p-3 rounded-xl bg-black/20 border border-[var(--cf-border)] text-xs">
+            {/* Historique conversation Ollama (hauteur doublée vers le bas) */}
+            <div className="flex-1 min-h-[520px] max-h-[760px] overflow-y-auto space-y-2.5 p-3 rounded-xl bg-black/20 border border-[var(--cf-border)] text-xs">
               {chatMessages.length === 0 ? (
-                <div className="cf-muted text-center py-10 space-y-1">
+                <div className="cf-muted text-center py-16 space-y-1">
                   <div>Sélectionne un dossier à gauche puis clique sur un bouton ci-dessus</div>
-                  <div>ou pose ta question à l&apos;agent Ollama local.</div>
+                  <div>ou pose ta question sur ce dossier, C.Fitness OS ou les règles générales du recouvrement.</div>
                 </div>
               ) : (
-                chatMessages.map((msg, idx) => (
-                  <div
-                    key={idx}
-                    className={`p-2.5 rounded-xl whitespace-pre-wrap ${
-                      msg.role === 'user'
-                        ? 'bg-violet-600/25 border border-violet-500/40 ml-6'
-                        : 'bg-slate-800/70 border border-slate-700 mr-4'
-                    }`}
-                  >
-                    <div className="text-[10px] font-bold uppercase opacity-70 mb-1">
-                      {msg.role === 'user' ? 'Vous' : `Agent Recouvrement (${selectedModel})`}
+                chatMessages.map((msg, idx) => {
+                  const isErrorOrCancel =
+                    msg.content.startsWith('Erreur IA locale') ||
+                    msg.content.startsWith('Impossible de contacter') ||
+                    msg.content === 'Génération annulée en cours de route.';
+                  const mailto =
+                    msg.role === 'assistant' && !isErrorOrCancel && selectedCase
+                      ? buildClubRecoveryMailto({
+                          clubId: selectedCase.clubId,
+                          recipientEmail: selectedCase.email,
+                          memberName: selectedCase.memberName,
+                          body: msg.content,
+                          followupPaused: Boolean(evidenceContext?.followupPaused),
+                        })
+                      : null;
+                  const disabledMailReason = evidenceContext?.followupPaused
+                    ? 'Envoi bloqué (dossier suspendu)'
+                    : 'E-mail adhérent indisponible';
+                  return (
+                    <div
+                      key={idx}
+                      className={`p-2.5 rounded-xl whitespace-pre-wrap ${
+                        msg.role === 'user'
+                          ? 'bg-violet-600/25 border border-violet-500/40 ml-6'
+                          : 'bg-slate-800/70 border border-slate-700 mr-4'
+                      }`}
+                    >
+                      <div className="text-[10px] font-bold uppercase opacity-70 mb-1">
+                        {msg.role === 'user' ? 'Vous' : `Agent Recouvrement (${selectedModel})`}
+                      </div>
+                      <div>{msg.content}</div>
+                      {msg.role === 'assistant' && !isErrorOrCancel && (
+                        <div className="mt-2 pt-2 border-t border-white/10 space-y-2">
+                          <div className="flex flex-wrap items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => void copyAssistantReply(idx, msg.content)}
+                              className="px-2.5 py-1 rounded bg-slate-700/70 hover:bg-slate-700 border border-slate-600 text-slate-100 text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              {copiedMsgIdx === idx ? (
+                                <>
+                                  <Check className="w-3 h-3 text-emerald-400" />
+                                  <span>Copié !</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3 h-3" />
+                                  <span>Copier</span>
+                                </>
+                              )}
+                            </button>
+                            {mailto ? (
+                              <a
+                                href={mailto.href}
+                                title={`Ouvrir dans votre messagerie (${mailto.clubEmail}) vers ${mailto.recipientEmail}`}
+                                className="px-2.5 py-1 rounded bg-blue-600/25 hover:bg-blue-600/35 border border-blue-500/40 text-blue-200 text-[11px] font-semibold inline-flex items-center gap-1"
+                              >
+                                <Mail className="w-3 h-3" />
+                                <span>Envoyer par mail ({mailto.clubEmail})</span>
+                              </a>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled
+                                className="px-2.5 py-1 rounded bg-slate-800/70 border border-slate-700 text-slate-400 text-[11px] inline-flex items-center gap-1 opacity-60 cursor-not-allowed"
+                              >
+                                <Mail className="w-3 h-3" />
+                                <span>{disabledMailReason}</span>
+                              </button>
+                            )}
+                          </div>
+                          <p className="cf-muted text-[11px]">
+                            Brouillon à relire. L’ouverture dans la messagerie du club ne consigne aucun envoi ni relance effectuée.
+                          </p>
+                        </div>
+                      )}
                     </div>
-                    <div>{msg.content}</div>
-                    {msg.role === 'assistant' && <p className="mt-2 cf-muted">Brouillon à relire. Cette réponse ne consigne aucun envoi ni relance effectuée.</p>}
-                  </div>
-                ))
+                  );
+                })
               )}
               {sendingChat && (
-                <div className="text-[11px] cf-muted italic">
-                  L&apos;agent local ({selectedModel}) rédige la réponse...
+                <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-800/60 border border-slate-700 text-[11px] cf-muted italic">
+                  <span>L&apos;agent local ({selectedModel}) rédige la réponse...</span>
+                  <button
+                    type="button"
+                    onClick={cancelOllamaAgent}
+                    className="not-italic px-2 py-1 rounded bg-rose-600/25 hover:bg-rose-600/40 border border-rose-500/40 text-rose-200 font-semibold inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <XCircle className="w-3 h-3" />
+                    <span>Annuler</span>
+                  </button>
                 </div>
               )}
             </div>
@@ -1121,17 +1265,28 @@ export function RecoveryView() {
                 type="text"
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Demander à l'agent (ex: quels arguments CGV si opposition SEPA ?)"
+                placeholder="Poser une question sur le dossier, C.Fitness OS ou le recouvrement..."
                 className="cf-input flex-1 px-3 py-2 text-xs"
               />
-              <button
-                type="submit"
-                disabled={sendingChat || !chatInput.trim()}
-                className="px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50"
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>Envoyer</span>
-              </button>
+              {sendingChat ? (
+                <button
+                  type="button"
+                  onClick={cancelOllamaAgent}
+                  className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  <span>Annuler</span>
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={!chatInput.trim() || !selectedCase}
+                  className="px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Envoyer</span>
+                </button>
+              )}
             </form>
           </div>
         </div>
