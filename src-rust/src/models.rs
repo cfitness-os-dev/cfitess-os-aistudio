@@ -625,6 +625,14 @@ pub struct RecoveryCaseRecord {
     pub status: String,
     pub relance_count: u32,
     pub last_action_note: String,
+    #[serde(default)]
+    pub overdue_days_known: Option<bool>,
+    #[serde(default)]
+    pub compliance_verified: Option<bool>,
+    #[serde(default)]
+    pub source_provenance: Option<String>,
+    #[serde(default)]
+    pub last_synced_at_utc: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -735,6 +743,14 @@ pub struct HeitzMemberRecord {
     pub referrals_count: u32,
     #[serde(default)]
     pub last_reward_label: Option<String>,
+    #[serde(default)]
+    pub data_source: Option<String>,
+    #[serde(default)]
+    pub last_synced_at_utc: Option<String>,
+    #[serde(default)]
+    pub last_workout_known: Option<bool>,
+    #[serde(default)]
+    pub loyalty_points_known: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

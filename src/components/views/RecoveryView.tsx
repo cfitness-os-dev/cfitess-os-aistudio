@@ -845,7 +845,9 @@ DOSSIER ADHÉRENT ACTUEL :
                         <span className="font-bold text-sm">{rc.memberName}</span>
                         <span className="text-xs cf-muted ml-2">
                           {rc.clubId === 'carre-de-soie' ? 'Carré de Soie' : 'Beynost'} ·{' '}
-                          {rc.daysOverdue}j de retard
+                          {rc.overdueDaysKnown === false
+                            ? 'Retard non daté (Heitz)'
+                            : `${rc.daysOverdue}j de retard`}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -866,44 +868,76 @@ DOSSIER ADHÉRENT ACTUEL :
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 text-[11px] cf-muted">
-                      <span>Mois facturés : {rc.billedMonths.join(', ')}</span>
+                      <span>
+                        Mois facturés :{' '}
+                        {rc.billedMonths.length > 0
+                          ? rc.billedMonths.join(', ')
+                          : 'Non détaillés par Heitz'}
+                      </span>
                       <span>·</span>
                       <span>Relances : {rc.relanceCount}</span>
+                      {rc.sourceProvenance && (
+                        <>
+                          <span>·</span>
+                          <span>Source : {rc.sourceProvenance}</span>
+                        </>
+                      )}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
                       <span
                         className={`px-2 py-0.5 rounded flex items-center gap-1 ${
-                          rc.hasSignedContract
+                          rc.complianceVerified === false
+                            ? 'bg-slate-500/15 text-slate-300'
+                            : rc.hasSignedContract
                             ? 'bg-emerald-500/15 text-emerald-300'
                             : 'bg-rose-500/15 text-rose-300'
                         }`}
                       >
                         <FileCheck2 className="w-3 h-3" />
-                        Contrat {rc.hasSignedContract ? 'OK' : 'Manquant'}
+                        Contrat{' '}
+                        {rc.complianceVerified === false
+                          ? 'À vérifier'
+                          : rc.hasSignedContract
+                          ? 'OK'
+                          : 'Manquant'}
                       </span>
                       <span
                         className={`px-2 py-0.5 rounded flex items-center gap-1 ${
-                          rc.hasIdAndRib
+                          rc.complianceVerified === false
+                            ? 'bg-slate-500/15 text-slate-300'
+                            : rc.hasIdAndRib
                             ? 'bg-emerald-500/15 text-emerald-300'
                             : 'bg-amber-500/15 text-amber-300'
                         }`}
                       >
-                        {rc.hasIdAndRib ? (
+                        {rc.hasIdAndRib && rc.complianceVerified !== false ? (
                           <CheckCircle2 className="w-3 h-3" />
                         ) : (
                           <FileWarning className="w-3 h-3" />
                         )}
-                        ID &amp; RIB {rc.hasIdAndRib ? 'OK' : 'Manquant'}
+                        ID &amp; RIB{' '}
+                        {rc.complianceVerified === false
+                          ? 'À vérifier'
+                          : rc.hasIdAndRib
+                          ? 'OK'
+                          : 'Manquant'}
                       </span>
                       <span
                         className={`px-2 py-0.5 rounded flex items-center gap-1 ${
-                          rc.hasCgvAccepted
+                          rc.complianceVerified === false
+                            ? 'bg-slate-500/15 text-slate-300'
+                            : rc.hasCgvAccepted
                             ? 'bg-emerald-500/15 text-emerald-300'
                             : 'bg-rose-500/15 text-rose-300'
                         }`}
                       >
-                        CGV {rc.hasCgvAccepted ? 'Signées' : 'Manquantes'}
+                        CGV{' '}
+                        {rc.complianceVerified === false
+                          ? 'À vérifier'
+                          : rc.hasCgvAccepted
+                          ? 'Signées'
+                          : 'Manquantes'}
                       </span>
                     </div>
                   </div>
