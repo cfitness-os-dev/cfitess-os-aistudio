@@ -50,12 +50,15 @@ pub async fn get_heitz_integration(
             urls.insert(club.into(), serde_json::json!(configured_web_url(std::env::var(var).ok())));
         }
     }
+    let live_configured = crate::heitz_live::is_heitz_live_configured();
     Ok(Json(serde_json::json!({
         "webUrls": urls,
         "apiWritesAvailable": false,
-        "mode": "web_only",
+        "liveReadEnabled": live_configured,
+        "snapshotImportEnabled": true,
+        "mode": if live_configured { "live_read_and_snapshot" } else { "web_only" },
         "canImportSnapshot": is_admin_employee(&db, &actor_id),
-        "liveConfigured": crate::heitz_live::is_heitz_live_configured(),
+        "liveConfigured": live_configured,
         "centerIds": {
             "carre-de-soie": crate::heitz_live::heitz_center_id_cds(),
             "beynost": crate::heitz_live::heitz_center_id_bey(),
@@ -202,6 +205,8 @@ pub async fn post_heitz_members_import(
                 active_subscription: raw.active_subscription.unwrap_or(false), fin_balance_eur: balance,
                 fin_balance_state: if balance < 0.0 { 0 } else { 1 }, technogym_moves30d: 0,
                 days_since_last_workout: 0, loyalty_points: 0, referrals_count: 0, last_reward_label: None,
+                data_source: Some("CSV Import".into()), last_synced_at_utc: None,
+                last_workout_known: Some(false), loyalty_points_known: Some(false),
             }); added += 1;
         }
     }

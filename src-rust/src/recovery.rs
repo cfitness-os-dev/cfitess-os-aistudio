@@ -200,6 +200,10 @@ pub async fn post_recovery_case(
             .filter(|s| !s.is_empty())
             .unwrap_or("Dossier ouvert dans C.Fitness OS.")
             .to_string(),
+        overdue_days_known: Some(payload.days_overdue.is_some()),
+        compliance_verified: Some(payload.has_signed_contract.is_some() || payload.has_id_and_rib.is_some() || payload.has_cgv_accepted.is_some()),
+        source_provenance: Some("Saisie manuelle C.Fitness OS".to_string()),
+        last_synced_at_utc: None,
     };
 
     let snapshot = db.clone();

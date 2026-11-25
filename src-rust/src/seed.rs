@@ -355,6 +355,10 @@ fn default_demo_recovery_cases() -> Vec<RecoveryCaseRecord> {
             status: "a_relancer".into(),
             relance_count: 1,
             last_action_note: "Portillon bloqué automatiquement · SMS de régularisation envoyé.".into(),
+            overdue_days_known: None,
+            compliance_verified: None,
+            source_provenance: None,
+            last_synced_at_utc: None,
         },
         RecoveryCaseRecord {
             id: "rec-2".into(),
@@ -375,6 +379,10 @@ fn default_demo_recovery_cases() -> Vec<RecoveryCaseRecord> {
             status: "pret_contentieux".into(),
             relance_count: 3,
             last_action_note: "2 relances SMS + mise en demeure restée sans réponse · Dossier complet pour contentieux.".into(),
+            overdue_days_known: None,
+            compliance_verified: None,
+            source_provenance: None,
+            last_synced_at_utc: None,
         },
         RecoveryCaseRecord {
             id: "rec-3".into(),
@@ -395,6 +403,10 @@ fn default_demo_recovery_cases() -> Vec<RecoveryCaseRecord> {
             status: "mise_en_demeure".into(),
             relance_count: 2,
             last_action_note: "Mise en demeure envoyée · En attente de nouveau RIB ou règlement CB.".into(),
+            overdue_days_known: None,
+            compliance_verified: None,
+            source_provenance: None,
+            last_synced_at_utc: None,
         },
         RecoveryCaseRecord {
             id: "rec-4".into(),
@@ -415,6 +427,10 @@ fn default_demo_recovery_cases() -> Vec<RecoveryCaseRecord> {
             status: "pret_contentieux".into(),
             relance_count: 3,
             last_action_note: "Préavis non respecté · Dossier prêt pour transfert recouvrement.".into(),
+            overdue_days_known: None,
+            compliance_verified: None,
+            source_provenance: None,
+            last_synced_at_utc: None,
         },
     ]
 }

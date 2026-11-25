@@ -342,6 +342,10 @@ export interface HeitzMember {
   loyaltyPoints?: number;
   referralsCount?: number;
   lastRewardLabel?: string;
+  dataSource?: string;
+  lastSyncedAtUtc?: string;
+  lastWorkoutKnown?: boolean;
+  loyaltyPointsKnown?: boolean;
 }
 
 export interface AccessEvent {
@@ -604,6 +608,10 @@ export interface RecoveryCase {
   status: RecoveryCaseStatus;
   relanceCount: number;
   lastActionNote: string;
+  overdueDaysKnown?: boolean;
+  complianceVerified?: boolean;
+  sourceProvenance?: string;
+  lastSyncedAtUtc?: string;
 }
 
 
