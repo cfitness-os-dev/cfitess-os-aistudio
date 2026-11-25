@@ -1,3 +1,4 @@
+import { LeadWorkspaceNavigation, type LeadWorkspacePage } from '../LeadWorkspaceNavigation';
 import { LeadCommunicationsHistoryView } from "./LeadCommunicationsHistoryView";
 import { LeadCampaignsView } from "./LeadCampaignsView";
 import { confirmLeadDraftNavigation } from "../../domain/leadDraftGuard";
@@ -268,7 +269,7 @@ export function LeadCommercialHubView({
       ? currentUser.siteAssignments.map((sa) => sa.clubId)
       : [currentUser.clubId];
   const isClubAuthorized = (cid: 'carre-de-soie' | 'beynost') => allowedClubIds.includes(cid);
-  const authorizedProspects = prospects.filter((p) => isClubAuthorized(p.clubId));
+  const authorizedProspects = prospects.filter((p) => isClubAuthorized(p.clubId) && (clubFilter === 'all' || p.clubId === clubFilter));
   const commercialLabelById: Record<string, string> = Object.fromEntries(
     employees.map((e) => [e.id, `${e.firstName} ${e.lastName}`])
   );
@@ -876,18 +877,26 @@ export function LeadCommercialHubView({
     }
   };
 
-  const ALL_TABS: Array<{ id: LeadHubTab; label: string; badge?: string; icon: React.ComponentType<{ className?: string }>; technicalOnly?: boolean }> = [
-    { id: 'prospects', label: 'Prospects & Pipeline', badge: isTechnicalMode ? '10 statuts' : undefined, icon: Users },
-    { id: 'clients', label: 'Clients & Vacances', badge: 'Heitz', icon: UserCheck, technicalOnly: true },
-    { id: 'activities', label: 'Activités', badge: isTechnicalMode ? '9 filtres' : undefined, icon: ActivityIcon },
-    { id: 'planning', label: isTechnicalMode ? 'Planning RDV & Stripe' : 'RDV Découverte', badge: isTechnicalMode ? 'RDV-01' : undefined, icon: Calendar },
-    { id: 'messaging', label: 'WhatsApp 24h', badge: isTechnicalMode ? 'WA-01/02' : undefined, icon: MessageCircle },
-    { id: 'communication', label: 'Communication', badge: isTechnicalMode ? 'Admin/Mgr' : undefined, icon: Send },
-    { id: 'analytics_forms', label: 'Stats · Ventes · Formulaires', badge: isTechnicalMode ? 'ACL-01' : undefined, icon: BarChart3 },
-    { id: 'settings', label: 'Paramètres CRM', badge: isTechnicalMode ? '9 APIs' : undefined, icon: Sliders },
-    { id: 'traceability', label: 'Traçabilité Lead', badge: '1682', icon: Compass, technicalOnly: true },
-  ];
-  const TABS = ALL_TABS.filter((t) => !t.technicalOnly || isTechnicalMode);
+  const activePage: LeadWorkspacePage = activeTab === 'communication' ? commSubTab
+    : activeTab === 'analytics_forms' ? analyticsSubTab : activeTab;
+  const destination = (page: LeadWorkspacePage): LeadHubTab =>
+    ['models', 'campaigns', 'utm', 'scenarios', 'logs'].includes(page) ? 'communication'
+      : ['stats', 'sales', 'forms'].includes(page) ? 'analytics_forms' : page as LeadHubTab;
+  const selectPage = (page: LeadWorkspacePage) => {
+    if (page === activePage) return;
+    const apply = () => {
+      const tab = destination(page);
+      setActiveTabState(tab);
+      if (tab === 'communication') setCommSubTab(page as typeof commSubTab);
+      if (tab === 'analytics_forms') setAnalyticsSubTab(page as typeof analyticsSubTab);
+    };
+    if (confirmLeadDraftNavigation(apply)) apply();
+  };
+  const canAccessPage = (page: LeadWorkspacePage) => {
+    const target = page === 'stats' ? 'statistics' : page === 'sales' ? 'sales'
+      : page === 'forms' ? 'forms_read' : tabToTarget(destination(page));
+    return evaluateLeadModuleAccess(simulatedRole, target, statsAllowedForCommercial).allowed;
+  };
 
   return cleanUiTree(
     <div className="space-y-4">
@@ -909,13 +918,13 @@ export function LeadCommercialHubView({
               </div>
             ) : (
               <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
-                CRM Commercial · Carré de Soie &amp; Beynost
+                Votre espace commercial
               </div>
             )}
             <h1 className="text-base sm:text-lg font-extrabold mt-1">
               {isTechnicalMode
                 ? `Prospection – Vente Bi-Club, Communication Multicanal & Traçabilité Lead (${LEAD_AUDIT_META.totalFiles} fichiers)`
-                : 'Prospection – Vente · Prospects, Suivi Commercial & Ventes'}
+                : 'Prospection'}
             </h1>
           </div>
 
@@ -956,59 +965,20 @@ export function LeadCommercialHubView({
           </div>
         )}
 
-        {/* Navigation interne des 9 onglets Lead — 100% responsive sans débordement */}
-        <div className="flex flex-wrap gap-1.5 pt-2 border-t border-slate-800/80">
-          {TABS.map((t) => {
-            const Icon = t.icon;
-            const accessCheck = evaluateLeadModuleAccess(
-              simulatedRole,
-              tabToTarget(t.id),
-              statsAllowedForCommercial
-            );
-            const active = activeTab === t.id;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setActiveTab(t.id)}
-                className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer border transition-all ${
-                  active
-                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-400 shadow-xs'
-                    : accessCheck.allowed
-                    ? 'bg-slate-900/50 text-slate-200 border-slate-700/80 hover:border-emerald-500/50'
-                    : 'bg-rose-950/30 text-rose-300 border-rose-500/30 opacity-85'
-                }`}
-              >
-                {accessCheck.allowed ? (
-                  <Icon className="w-3.5 h-3.5 shrink-0" />
-                ) : (
-                  <Lock className="w-3.5 h-3.5 shrink-0 text-rose-400" />
-                )}
-                <span>{t.label}</span>
-                {t.badge && (
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/25">
-                    {t.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
       </div>
 
+      <div className="grid grid-cols-1 xl:grid-cols-[220px_minmax(0,1fr)] gap-4 items-start">
+        <LeadWorkspaceNavigation activePage={activePage} onSelect={selectPage} canAccess={canAccessPage} technicalMode={isTechnicalMode} />
+        <div className="min-w-0 space-y-4">
       {/* Contrôle serveur RBAC si la vue active est bloquée */}
       {!currentAccess.allowed ? (
         <div className="cf-card p-6 border border-rose-500/40 bg-rose-950/20 space-y-3">
           <div className="flex items-center gap-2 text-rose-400 font-extrabold text-sm">
             <ShieldAlert className="w-5 h-5" />
-            <span>HTTP {currentAccess.httpStatus} — Accès bloqué côté serveur</span>
+            <span>Accès réservé</span>
           </div>
           <p className="text-xs text-slate-200">{currentAccess.reason}</p>
-          <p className="text-[11px] cf-muted">
-            Conformément aux droits d’accès de votre profil, le rôle{' '}
-            <strong>{simulatedRole.toUpperCase()}</strong> ne peut accéder ni à l&apos;interface ni aux routes API
-            associées.
-          </p>
+          <p className="text-sm cf-muted">Contactez votre responsable si cette rubrique est nécessaire à votre travail.</p>
         </div>
       ) : (
         <>
@@ -1019,6 +989,9 @@ export function LeadCommercialHubView({
             <div className="space-y-4">
               {pipelineChildren}
 
+              <details className="group cf-card p-4">
+                <summary className="cursor-pointer font-semibold text-sm">Importer des prospects et gérer les segments</summary>
+                <p className="text-xs cf-muted mt-2 mb-4">Ajoutez une liste de contacts ou mettez à jour les segments de plusieurs prospects.</p>
               {/* Extension Lead Lot 2A : 10 statuts, Sélection multiple Segments, Import Excel 11 col., Archivage & DOC-02 */}
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 {/* Import Excel Officiel 11 Colonnes */}
@@ -1027,10 +1000,10 @@ export function LeadCommercialHubView({
                     <div>
                       <h3 className="text-sm font-extrabold flex items-center gap-2">
                         <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-                        Import Prospects Excel Officiel (11 colonnes ordonnées)
+                        Importer des prospects
                       </h3>
                       <p className="text-[11px] cf-muted">
-                        1re ligne ignorée · Email requis · Consentement RGPD décoché (<code>false</code>) par défaut
+                        Utilisez le modèle proposé. L’email est requis et le consentement doit être renseigné pour chaque contact.
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
@@ -1198,7 +1171,7 @@ export function LeadCommercialHubView({
                 <div className="cf-card p-4 space-y-3 border border-slate-700/80">
                   <h3 className="text-sm font-extrabold flex items-center gap-2">
                     <Layers className="w-4 h-4 text-violet-400" />
-                    10 Statuts Lead, Sélection Multiple Segments &amp; Règle d’Archivage
+                    Segments et suivi des contacts
                   </h3>
 
                   <div className="flex flex-wrap gap-1.5">
@@ -1460,6 +1433,7 @@ export function LeadCommercialHubView({
                   </div>
                 </div>
               </div>
+              </details>
             </div>
           )}
 
@@ -2474,36 +2448,13 @@ export function LeadCommercialHubView({
           {/* ================================================================= */}
           {activeTab === 'communication' && (
             <div className="space-y-4">
-              <div className="cf-card p-3 flex flex-wrap gap-1.5">
-                {[
-                  { id: 'models', label: 'Modèles de messages' },
-                  { id: 'campaigns', label: 'Campagnes' },
-                  { id: 'utm', label: 'Suivi des campagnes' },
-                  { id: 'scenarios', label: 'Scénarios' },
-                  { id: 'logs', label: 'Historique des échanges' },
-                ].map((sub) => (
-                  <button
-                    key={sub.id}
-                    type="button"
-                    onClick={() => { if(sub.id===commSubTab || confirmLeadDraftNavigation(()=>setCommSubTab(sub.id as typeof commSubTab))) setCommSubTab(sub.id as typeof commSubTab); }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer border ${
-                      commSubTab === sub.id
-                        ? 'bg-emerald-600 text-white border-emerald-400'
-                        : 'bg-slate-900 border-slate-700 text-slate-300'
-                    }`}
-                  >
-                    {sub.label}
-                  </button>
-                ))}
-              </div>
-
               {commSubTab === 'models' && <LeadMessageTemplatesView key={`${currentUser.id}:${clubFilter}`} actorId={currentUser.id} clubId={clubFilter === 'all' ? null : clubFilter} />}
 
               {commSubTab === 'campaigns' && <LeadCampaignsView key={`${currentUser.id}:${clubFilter}`} actorId={currentUser.id} clubId={clubFilter === 'all' ? null : clubFilter} />}
 
               {commSubTab === 'utm' && (
                 <div className="cf-card p-4 space-y-3 text-xs">
-                  <h3 className="text-sm font-extrabold">Campagnes UTM (`/utm_campaign`)</h3>
+                  <h3 className="text-sm font-extrabold">Suivi des campagnes</h3>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
@@ -2549,44 +2500,6 @@ export function LeadCommercialHubView({
           {/* ================================================================= */}
           {activeTab === 'analytics_forms' && (
             <div className="space-y-4">
-              <div className="cf-card p-3 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setAnalyticsSubTab('stats')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${
-                      analyticsSubTab === 'stats' ? 'bg-violet-600 text-white' : 'bg-slate-900 text-slate-300'
-                    }`}
-                  >
-                    Statistiques (8 vues)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAnalyticsSubTab('sales')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${
-                      analyticsSubTab === 'sales' ? 'bg-violet-600 text-white' : 'bg-slate-900 text-slate-300'
-                    }`}
-                  >
-                    Ventes (Fin abonnement)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAnalyticsSubTab('forms')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${
-                      analyticsSubTab === 'forms' ? 'bg-violet-600 text-white' : 'bg-slate-900 text-slate-300'
-                    }`}
-                  >
-                    Formulaires de capture
-                  </button>
-                </div>
-
-                {simulatedRole === 'commercial' && analyticsSubTab === 'stats' && (
-                  <span className="text-[11px] text-amber-300 font-semibold">
-                    Accès Statistiques COMMERCIAL géré côté serveur (app-settings)
-                  </span>
-                )}
-              </div>
-
               {analyticsSubTab === 'stats' && (
                 <div className="cf-card p-4 space-y-4 text-xs">
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -2846,7 +2759,7 @@ export function LeadCommercialHubView({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <h3 className="text-sm font-extrabold">
-                        Formulaires (`/forms`) — Création, Sections, Publication &amp; Réponses
+                        Formulaires
                       </h3>
                       <p className="cf-muted">
                         Configuration des formulaires par club · Accès en écriture réservé aux managers.
@@ -2934,7 +2847,7 @@ export function LeadCommercialHubView({
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="border-b border-slate-800 text-slate-400">
-                          <th className="py-2 pr-3">Nom du formulaire (UI-01)</th>
+                          <th className="py-2 pr-3">Nom du formulaire</th>
                           <th className="py-2 pr-3">Club</th>
                           <th className="py-2 pr-3">Sections / Réponses</th>
                           <th className="py-2 pr-3">Statut</th>
@@ -2943,7 +2856,7 @@ export function LeadCommercialHubView({
                       </thead>
                       <tbody>
                         {formsList
-                          .filter((f) => isClubAuthorized(f.clubId))
+                          .filter((f) => isClubAuthorized(f.clubId) && (clubFilter === 'all' || f.clubId === clubFilter))
                           .map((f) => {
                           const canWrite =
                             isClubAuthorized(f.clubId) &&
@@ -2962,7 +2875,7 @@ export function LeadCommercialHubView({
                                   {f.name}
                                 </button>
                               </td>
-                              <td className="py-2 pr-3 font-mono">{f.clubId}</td>
+                              <td className="py-2 pr-3">{f.clubId === 'beynost' ? 'Beynost' : 'Carré de Soie'}</td>
                               <td className="py-2 pr-3">
                                 {f.sections} section(s) · {f.responsesCount} réponse(s)
                               </td>
@@ -3022,7 +2935,7 @@ export function LeadCommercialHubView({
 
                   {(() => {
                     const activeForm = formsList.find(
-                      (f) => f.id === selectedFormId && isClubAuthorized(f.clubId)
+                      (f) => f.id === selectedFormId && isClubAuthorized(f.clubId) && (clubFilter === 'all' || f.clubId === clubFilter)
                     );
                     if (!activeForm) return null;
                     const canWrite =
@@ -4178,6 +4091,8 @@ export function LeadCommercialHubView({
           )}
         </>
       )}
+        </div>
+      </div>
     </div>,
     isTechnicalMode
   );
