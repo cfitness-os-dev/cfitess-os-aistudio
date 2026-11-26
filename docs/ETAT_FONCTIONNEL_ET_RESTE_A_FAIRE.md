@@ -1,6 +1,6 @@
 # État fonctionnel et suite du développement
 
-État du 26 novembre 2026, lot local après PR #90, communication RH programmée. Ce document remplace une estimation globale en pourcentage par des critères vérifiables. Il ne déclare pas l’exhaustivité des logiciels de référence.
+État du 26 novembre 2026, recontrôle du main c416a6f après intégration des PR #83–#91 ; éligibilité des affectations Lead. Ce document remplace une estimation globale en pourcentage par des critères vérifiables. Il ne déclare pas l’exhaustivité des logiciels de référence.
 
 ## Règles à conserver
 
@@ -24,11 +24,12 @@
 | Notifications RH | Cloche, boîte personnelle, lectures persistantes et notifications d’absences/annotations de pointage/planning publié testées ; trois formats vérifiés | Notifications de dépôt/prise de connaissance documentaire raccordées ; signatures et autres modules à raccorder, push/envois externes non livrés |
 | Calendrier personnel | Flux .ics privé réellement servi : horaires propres publiés et absences validées, droits revérifiés, lien aléatoire haché, renouvellement/révocation/désactivation testés | Création/téléchargement/révocation/désactivation testés dans le navigateur ; abonnement Apple/Google/Outlook et adresse HTTPS stable restent à recetter |
 | Lead, scénarios, modèles, campagnes | Moteurs et simulations existants ; voir contrats et recettes spécialisés | Variables de contexte non raccordées, réentrée/délégations avancées et autres écarts déjà listés dans les contrats ; recette par fonction avant annonce de parité |
+| Affectation Lead / RH | Contrôle compte actif et rattachement au club, absences historiques, jour local et file d’attente ; 10 variantes HTTP sur deux clubs | Vivier commercial encore prédéfini ; raccorder tous les parcours d’approbation, équilibrage multiple, activités et déclenchement au début des absences futures |
 | Emails, SMS, WhatsApp | Préparation/simulation ; pas d’envoi réel validé | Paramétrage dédié, états fournisseurs, oppositions, accusés, échecs et anti-doublons à recetter sans perturber Heitz |
 | Suivi des campagnes et certaines intégrations | Des tableaux et configurations de démonstration restent présents | Remplacer les exemples par une lecture persistante traçable ou indiquer clairement leur état ; ne pas annoncer un connecteur actif |
 | Heitz et recouvrement | Collectes et garde de démonstration développées ; pas de connexion réelle autorisée pour la démo | Comparer chaque capacité à la documentation et aux droits fournisseur, puis recette séparée autorisée sur jeux adaptés |
 | Paie, signatures, recrutement | Interfaces et exemples présents, connexion réelle non certifiée dans ce lot | Tester les formats, prestataires et parcours autorisés ; une signature simulée n’est pas un document signé réel |
-| Mise en ligne | PR #83/#84 et lot RH proposés en branches séparées ; pas déployés par Codex | Relecture, intégration protégée, démonstration isolée identifiée par commit, puis recontrôle de la version servie |
+| Mise en ligne | PR #83–#91 fusionnées par le développeur sur main c416a6f, constat GitHub ; pas déployées par Codex | Vérifier séparément le commit réellement servi et ses parcours avant le pilote |
 
 ## Références de travail à ne pas perdre
 
@@ -46,6 +47,7 @@
 - `docs/rh-communication-programmee-recette-2026-11-26.md` : programmation interne, annulation, recontrôle des droits à échéance, refus, atomicité et redémarrage.
 - `docs/rh-planning-notifications-recette-2026-11-26.md` : publication/modification/retrait/réaffectation des horaires et transaction persistante avec alertes.
 - `docs/rh-documents-recette-2026-11-26.md` : fichiers privés persistants, droits, accusés sans signature, sauvegarde à compléter et écarts documentaires explicites.
+- `docs/lead-assignment-integration-recette-2026-11-26.md` : recontrôle du main intégré, défauts d’affectation reproduits et restes répartis avec Antigravity.
 - `docs/v1-utilisable-conditions.md` : conditions de réception d’un pilote ; ne pas les remplacer par le nombre de tests.
 
 ## Critère de fin

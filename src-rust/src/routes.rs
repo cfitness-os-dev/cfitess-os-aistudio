@@ -569,6 +569,8 @@ pub struct BackupReplicationStatus {
     pub replicas: [&'static str; 6],
     pub rpo_seconds: u32,
     pub failover_ready: bool,
+    pub is_simulation: bool,
+    pub notice: &'static str,
     pub timestamp_utc: String,
 }
 
@@ -1129,7 +1131,9 @@ async fn get_backup_snapshot_status(
             "Smartphone Daniel Carvalho (PWA 5G Offline)",
         ],
         rpo_seconds: 15,
-        failover_ready: true,
+        failover_ready: false,
+        is_simulation: true,
+        notice: "Aperçu de simulation architecture cible : réplication réseau automatisée non connectée",
         timestamp_utc: Utc::now().to_rfc3339(),
     }))
 }
@@ -1148,7 +1152,7 @@ async fn post_backup_snapshot_ingest(
         ));
     }
     tracing::info!(
-        "Snapshot de secours reçu depuis {} (checksum: {}) — fusion sans perte exécutée",
+        "Snapshot de secours reçu depuis {} (checksum: {}) — simulation d'ingestion (moteur de fusion multi-nœuds non connecté)",
         payload.origin_device,
         payload.checksum
     );
@@ -1157,8 +1161,10 @@ async fn post_backup_snapshot_ingest(
         StatusCode::OK,
         Json(json!({
             "ok": true,
+            "simulated": true,
             "mergedFrom": payload.origin_device,
-            "checksumVerified": payload.checksum,
+            "checksumVerified": false,
+            "notice": "Aperçu de simulation : la fusion d'état réseau multi-nœuds n'est pas encore connectée au moteur persistant",
             "mergedAt": Utc::now().to_rfc3339(),
         })),
     ))
@@ -4213,6 +4219,14 @@ pub(crate) fn resolve_available_commercial_for_club(
     db: &AppDatabaseState,
     club_id: &str,
 ) -> String {
+    resolve_available_commercial_for_club_at(db, club_id, Utc::now())
+}
+
+fn resolve_available_commercial_for_club_at(
+    db: &AppDatabaseState,
+    club_id: &str,
+    now: chrono::DateTime<Utc>,
+) -> String {
     if !crate::lead_settings::valid_club(club_id)
         || !db
             .lead_settings_by_club
@@ -4224,7 +4238,20 @@ pub(crate) fn resolve_available_commercial_for_club(
         return format!("file_attente_{}", club_id);
     }
 
-    let today = Utc::now().format("%Y-%m-%d").to_string();
+    let site_id = if club_id == "beynost" {
+        "club-beynost"
+    } else {
+        "club-carre-soie"
+    };
+    let Some(timezone) = db
+        .sites
+        .iter()
+        .find(|s| s.id == site_id)
+        .and_then(|s| s.timezone.parse::<chrono_tz::Tz>().ok())
+    else {
+        return format!("file_attente_{}", club_id);
+    };
+    let today = now.with_timezone(&timezone).date_naive();
     let candidates = if club_id == "beynost" {
         vec!["emp-chloe", "emp-greg", "emp-sarah"]
     } else {
@@ -4234,17 +4261,32 @@ pub(crate) fn resolve_available_commercial_for_club(
     candidates
         .into_iter()
         .filter(|emp_id| {
-            !db.leave_requests.iter().any(|lr| {
-                lr.employee_id == *emp_id
-                    && lr.site_id
-                        == if club_id == "beynost" {
-                            "club-beynost"
-                        } else {
-                            "club-carre-soie"
-                        }
-                    && (lr.status == "approved" || lr.status.eq_ignore_ascii_case("valide"))
-                    && lr.start_date.as_str() <= today.as_str()
-                    && lr.end_date.as_str() >= today.as_str()
+            // A demo roster is not proof of a current active account or club access.
+            db.employees.iter().any(|employee| {
+                employee.id == *emp_id
+                    && employee.active
+                    && employee
+                        .site_accesses
+                        .iter()
+                        .any(|access| access.site_id == site_id)
+            }) && !db.leave_requests.iter().any(|lr| {
+                if lr.employee_id != *emp_id
+                    || lr.site_id != site_id
+                    || !matches!(
+                        lr.status.trim().to_lowercase().as_str(),
+                        "approved" | "accepted" | "valide" | "validé"
+                    )
+                {
+                    return false;
+                }
+                match (
+                    chrono::NaiveDate::parse_from_str(&lr.start_date, "%Y-%m-%d"),
+                    chrono::NaiveDate::parse_from_str(&lr.end_date, "%Y-%m-%d"),
+                ) {
+                    (Ok(start), Ok(end)) if start <= end => start <= today && end >= today,
+                    // An approved absence with unknown dates must not be treated as available.
+                    _ => true,
+                }
             })
         })
         .min_by_key(|emp_id| {
@@ -6481,6 +6523,114 @@ mod tests {
             assert_eq!(reloaded.audit_log.first().unwrap().target_label, "ClubLeadSettings (beynost)");
             std::fs::remove_dir_all(&state.data_dir).unwrap();
         }
+    }
+
+    #[tokio::test]
+    async fn lead_assignment_never_chooses_inactive_missing_or_foreign_club_accounts() {
+        for mode in ["inactive", "missing", "club_removed"] {
+            let state = test_state();
+            let mut db = state.db.write().await;
+            for employee in &mut db.employees {
+                if ["emp-maxime", "emp-karim", "emp-sarah"].contains(&employee.id.as_str()) {
+                    if mode == "inactive" {
+                        employee.active = false;
+                    }
+                    if mode == "club_removed" {
+                        employee
+                            .site_accesses
+                            .retain(|a| a.site_id != "club-carre-soie");
+                    }
+                }
+            }
+            if mode == "missing" {
+                db.employees
+                    .retain(|e| !["emp-maxime", "emp-karim", "emp-sarah"].contains(&e.id.as_str()));
+            }
+            assert_eq!(
+                resolve_available_commercial_for_club(&db, "carre-de-soie"),
+                "file_attente_carre-de-soie",
+                "{mode}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn lead_assignment_respects_accepted_and_accented_approved_absences() {
+        for status in ["accepted", "Validé", " APPROVED "] {
+            let state = test_state();
+            let mut db = state.db.write().await;
+            let today = Utc::now()
+                .with_timezone(&chrono_tz::Europe::Paris)
+                .date_naive()
+                .to_string();
+            for id in ["emp-maxime", "emp-karim", "emp-sarah"] {
+                db.leave_requests.push(LeaveRequest {
+                    id: format!("test-{id}"),
+                    employee_id: id.into(),
+                    site_id: "club-carre-soie".into(),
+                    motive: "Absence fictive".into(),
+                    start_date: today.clone(),
+                    end_date: today.clone(),
+                    status: status.into(),
+                    comment: String::new(),
+                });
+            }
+            assert_eq!(
+                resolve_available_commercial_for_club(&db, "carre-de-soie"),
+                "file_attente_carre-de-soie",
+                "{status}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn lead_assignment_uses_club_day_and_refuses_unknown_availability() {
+        let state = test_state();
+        let mut db = state.db.write().await;
+        db.leave_requests.clear();
+        for id in ["emp-maxime", "emp-karim", "emp-sarah"] {
+            db.leave_requests.push(LeaveRequest {
+                id: format!("midnight-{id}"),
+                employee_id: id.into(),
+                site_id: "club-carre-soie".into(),
+                motive: "Absence fictive".into(),
+                start_date: "2026-12-18".into(),
+                end_date: "2026-12-18".into(),
+                status: "approved".into(),
+                comment: String::new(),
+            });
+        }
+        let early = chrono::DateTime::parse_from_rfc3339("2026-12-17T21:00:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        let next_local_day = chrono::DateTime::parse_from_rfc3339("2026-12-17T23:30:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        assert_ne!(
+            resolve_available_commercial_for_club_at(&db, "carre-de-soie", early),
+            "file_attente_carre-de-soie"
+        );
+        assert_eq!(
+            resolve_available_commercial_for_club_at(&db, "carre-de-soie", next_local_day),
+            "file_attente_carre-de-soie"
+        );
+        for leave in &mut db.leave_requests {
+            leave.start_date = "unknown".into();
+        }
+        assert_eq!(
+            resolve_available_commercial_for_club_at(&db, "carre-de-soie", early),
+            "file_attente_carre-de-soie"
+        );
+        db.leave_requests.clear();
+        db.sites
+            .iter_mut()
+            .find(|s| s.id == "club-carre-soie")
+            .unwrap()
+            .timezone = "Invalid/Timezone".into();
+        assert_eq!(
+            resolve_available_commercial_for_club_at(&db, "carre-de-soie", early),
+            "file_attente_carre-de-soie"
+        );
     }
 
     #[tokio::test]
