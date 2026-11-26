@@ -628,10 +628,7 @@ pub async fn post_workspace_action(
                     .completed
                     .ok_or_else(|| bad("État de la tâche requis."))?);
             } else {
-                row["read"] = json!(true);
-                if row["rhMessageId"].is_string() && row["readAt"].is_null() {
-                    row["readAt"] = json!(now);
-                }
+                crate::rh_notifications::mark_read(row,&now);
             }
         }
         "set_checklist" => {
@@ -773,6 +770,7 @@ pub async fn post_workspace_action(
         None,
         None,
     );
+    crate::rh_notifications::leave_changes(&db,&mut next)?;
     persist_state(&state.data_dir, &next).map_err(|_| {
         err_resp(
             StatusCode::INTERNAL_SERVER_ERROR,

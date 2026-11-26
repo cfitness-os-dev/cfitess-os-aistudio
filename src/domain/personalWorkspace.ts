@@ -1,3 +1,4 @@
+import { notificationsChanged } from './rhNotifications';
 import type { LeavePolicy } from './hrLeaveRules';
 import type {
   ClubId,
@@ -165,5 +166,7 @@ export async function requestPersonalWorkspace(
         ? payload.error
         : "Impossible de charger ou enregistrer votre espace.",
     );
-  return validatePersonalResponse(payload, employeeId, clubId);
+  const result = validatePersonalResponse(payload, employeeId, clubId);
+  if(action) notificationsChanged(employeeId,clubId);
+  return result;
 }

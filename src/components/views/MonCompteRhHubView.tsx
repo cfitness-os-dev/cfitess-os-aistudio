@@ -77,11 +77,14 @@ function parseInitialTarget(subTarget?: string | null): {
   tab: MonCompteHubTab;
   section: McSectionId;
   isPersonalSpace: boolean;
+  personalPage?: string;
 } {
   if (!subTarget) {
     return { tab: 'mon-compte', section: 'MC01', isPersonalSpace: false };
   }
   const normalized = subTarget.trim();
+  const personalPages: Record<string,string> = {'personal-notifications':'notifications','personal-leave':'leave','personal-time':'time'};
+  if (personalPages[normalized.toLowerCase()]) return {tab:'github-my-day',section:'MC01',isPersonalSpace:true,personalPage:personalPages[normalized.toLowerCase()]};
   if (normalized.toLowerCase() === 'personal') {
     return { tab: 'github-my-day', section: 'MC01', isPersonalSpace: true };
   }
@@ -345,7 +348,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
           {fatalError && <button type="button" className="cf-brand-gradient text-white px-3 py-2 rounded-xl" onClick={() => void refreshAll()}>Réessayer</button>}
         </div>;
     const legacyPersonalPages: Partial<Record<McSectionId, string>> = { MC02: 'dossier', MC03: 'planning', MC04: 'leave', MC05: 'time', MC06: 'documents', MC13: 'preferences' };
-    return <PersonalWorkspaceView preferencesPanel={preferencesPanel} initialPage={isPersonalSpace ? undefined : legacyPersonalPages[initialTarget.section]} />;
+    return <PersonalWorkspaceView preferencesPanel={preferencesPanel} initialPage={initialTarget.personalPage ?? (isPersonalSpace ? undefined : legacyPersonalPages[initialTarget.section])} />;
   }
 
   if (!isShellAdmin && !effectiveDashboard && !isTechnicalMode && !planningOnly) {
@@ -661,7 +664,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
       )}
 
       {/* Contenu selon onglet */}
-      {hubTab === 'github-my-day' && (isPersonalSpace ? <PersonalWorkspaceView /> : <MyDayCollaboratorView />)}
+      {hubTab === 'github-my-day' && (isPersonalSpace || isTechnicalMode) && (isPersonalSpace ? <PersonalWorkspaceView /> : <MyDayCollaboratorView />)}
       {hubTab === 'github-planning' && (
         <PlanningHrView
           personalScopeOnly={!isShellAdmin}

@@ -353,6 +353,7 @@ pub fn api_router(state: SharedState) -> Router {
             get(get_preferences).put(put_preferences),
         )
         .route("/api/me/calendar-token/revoke", post(post_revoke_calendar_token))
+        .route("/api/me/notifications/:club_id", get(crate::rh_notifications::get).post(crate::rh_notifications::read))
         .route("/api/me/calendar-link", get(crate::hr_collaboration::calendar_status).post(crate::hr_collaboration::issue_calendar))
         .route("/api/calendar/:token", get(crate::hr_collaboration::calendar_feed))
         .route("/api/hr/communications/:club_id", get(crate::hr_collaboration::get_messages).post(crate::hr_collaboration::publish_message))

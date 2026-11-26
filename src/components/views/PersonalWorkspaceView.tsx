@@ -1,3 +1,4 @@
+import { PersonalNotifications } from '../PersonalNotifications';
 import type { ReactNode } from 'react';
 import { HrWorkspaceNavigation } from '../HrWorkspaceNavigation';
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
@@ -34,6 +35,7 @@ const HrEmployeeDossierView = lazy(() =>
 
 const tabs = [
   ["home", "Ma journée", Home],
+  ["notifications", "Mes notifications", Bell],
   ["dossier", "Mon dossier", UserCheck],
   ["planning", "Mon planning", Calendar],
   ["leave", "Mes absences", Calendar],
@@ -53,13 +55,13 @@ const punchLabels: Record<string, string> = {
 };
 
 export function PersonalWorkspaceView({ preferencesPanel, initialPage }: { preferencesPanel?: ReactNode; initialPage?: string } = {}) {
-  const { currentUser, clubFilter, authorizedClubIds } = useCfos();
+  const { currentUser, clubFilter, authorizedClubIds, personalNavigationRevision } = useCfos();
   const club = (
     clubFilter === "all" ? authorizedClubIds[0] : clubFilter
   ) as ClubId;
   return (
     <PersonalWorkspaceContent
-      key={`${currentUser.id}:${club}`}
+      key={`${currentUser.id}:${club}:${initialPage ?? ""}:${personalNavigationRevision}`}
       employeeId={currentUser.id}
       club={club}
       preferencesPanel={preferencesPanel}
@@ -84,7 +86,7 @@ function PersonalWorkspaceContent({
     const requested = new URLSearchParams(window.location.search).get(
       "personalTab",
     );
-    return tabs.find(([key]) => key === (requested ?? initialPage))?.[0] ?? "home";
+    return tabs.find(([key]) => key === (initialPage ?? requested))?.[0] ?? "home";
   });
   const [data, setData] = useState<PersonalWorkspace | null>(null);
   const [error, setError] = useState("");
@@ -187,6 +189,7 @@ function PersonalWorkspaceContent({
       setError("");
       setSuccess("");
       const url = new URL(window.location.href);
+      url.pathname = "/mon-compte/personal";
       url.searchParams.set("personalTab", nextTab);
       window.history.replaceState(null, "", url.pathname + url.search + url.hash);
     };
@@ -263,7 +266,7 @@ function PersonalWorkspaceContent({
           onSelect={id => navigate(id as Tab)}
           items={tabs.map(([id, label, icon]) => ({
             id, label, icon,
-            group: ['home', 'planning', 'time'].includes(id) ? 'Mon quotidien'
+            group: ['home', 'notifications', 'planning', 'time'].includes(id) ? 'Mon quotidien'
               : ['dossier', 'counters', 'leave', 'documents'].includes(id) ? 'Mon dossier RH'
                 : 'Mes outils',
           }))}
@@ -297,7 +300,8 @@ function PersonalWorkspaceContent({
             </Suspense>
           )}
           {tab === "preferences" && (preferencesPanel ?? <p role="status">Les préférences ne sont pas disponibles. Actualisez votre espace ou contactez votre responsable.</p>)}
-          {tab === "home" && (
+          {tab === "notifications" && <PersonalNotifications actor={employeeId} club={club} />}
+      {tab === "home" && (
             <div className="grid lg:grid-cols-2 gap-4">
               <section className="cf-card p-4 space-y-3">
                 <h2 className="font-bold">Mes tâches</h2>
@@ -397,41 +401,7 @@ function PersonalWorkspaceContent({
                     </label>
                   ))}
               </section>
-              <section className="cf-card p-4 space-y-3">
-                <h2 className="font-bold flex items-center gap-2">
-                  <Bell className="w-4 h-4" />
-                  Mes notifications
-                </h2>
-                {!data.notifications.length && (
-                  <p className="cf-muted">Aucune notification.</p>
-                )}
-                {data.notifications.map((row) => (
-                  <article
-                    key={row.id}
-                    className="cf-card-secondary rounded-xl p-3 space-y-2"
-                  >
-                    <strong>{row.title}</strong>
-                    {row.senderName && <p className="cf-muted">De {row.senderName}</p>}
-                    <p className="whitespace-pre-wrap break-words">{row.message}</p>
-                    {row.read ? (
-                      <p className="cf-muted">Lue</p>
-                    ) : (
-                      <button
-                        disabled={busy}
-                        className={button}
-                        onClick={() =>
-                          void save({ action: "read_notification", id: row.id })
-                        }
-                      >
-                        Marquer comme lue
-                      </button>
-                    )}
-                  </article>
-                ))}
-                <button className={button} onClick={() => navigate("documents")}>
-                  Voir mes documents à consulter
-                </button>
-              </section>
+              <PersonalNotifications actor={employeeId} club={club} variant="preview" />
             </div>
           )}
           {tab === "planning" && (

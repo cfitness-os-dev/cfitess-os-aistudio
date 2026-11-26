@@ -264,6 +264,7 @@ interface CfosContextValue extends PersistedState {
   shellMode: ShellMode;
   activeSection: AdminSection;
   navSubTarget: string | null;
+  personalNavigationRevision: number;
   clubFilter: ClubFilter;
   themeMode: 'light' | 'dark';
   setThemeMode: (mode: 'light' | 'dark') => void;
@@ -605,6 +606,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
   })();
   const [activeSection, setActiveSectionState] = useState<AdminSection>(initialNav.section);
   const [navSubTarget, setNavSubTarget] = useState<string | null>(initialNav.subTarget);
+  const [personalNavigationRevision, setPersonalNavigationRevision] = useState(0);
   const [isArchitectUnlocked, setIsArchitectUnlocked] = useState<boolean>(false);
   const [isTechnicalMode, setIsTechnicalMode] = useState<boolean>(false);
   const toggleTechnicalMode = () => setIsTechnicalMode((prev) => !prev);
@@ -1010,7 +1012,9 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
   }, [currentUserId, isAuthenticated, primaryAuthorizedClub]);
 
   const setActiveSection = (sec: AdminSection, subTarget?: string) => {
-    if((sec !== activeSection || (subTarget ?? null) !== navSubTarget) && !confirmLeadDraftNavigation(()=>setActiveSection(sec,subTarget))) return;
+    const personalRequest = sec === 'my-day' && ['personal-notifications','personal-leave','personal-time'].includes(subTarget ?? '');
+    if((sec !== activeSection || (subTarget ?? null) !== navSubTarget || personalRequest) && !confirmLeadDraftNavigation(()=>setActiveSection(sec,subTarget))) return;
+    if (personalRequest) setPersonalNavigationRevision(n => n + 1);
     if (sec !== 'governance') {
       setIsArchitectUnlocked(false);
     }
@@ -3103,6 +3107,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     shellMode,
     activeSection,
     navSubTarget,
+    personalNavigationRevision,
     clubFilter,
     themeMode,
     setThemeMode,

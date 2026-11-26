@@ -1,3 +1,4 @@
+import { notificationsChanged } from './rhNotifications';
 import type { ApiAuthContext } from './clientApi';
 export interface RhRecipient { id: string; name: string; teams: {id: string; name: string}[]; fileStatus: string }
 export interface RhMessages {
@@ -42,7 +43,9 @@ async function request(auth: ApiAuthContext, path: string, body?: unknown, signa
   return value;
 }
 export async function requestRhMessages(auth: ApiAuthContext, club: string, command?: RhPublication, before?: string, signal?: AbortSignal) {
-  return validateMessages(await request(auth, '/api/hr/communications/' + encodeURIComponent(club) + (before ? '?before=' + encodeURIComponent(before) : ''), command, signal), auth.actorId, club);
+  const result = validateMessages(await request(auth, '/api/hr/communications/' + encodeURIComponent(club) + (before ? '?before=' + encodeURIComponent(before) : ''), command, signal), auth.actorId, club);
+  if(command?.recipientIds.includes(auth.actorId)) notificationsChanged(auth.actorId,club);
+  return result;
 }
 export async function requestCalendarStatus(auth: ApiAuthContext, signal?: AbortSignal) {
   return validateCalendar(await request(auth, '/api/me/calendar-link', undefined, signal), auth.actorId) as CalendarStatus;

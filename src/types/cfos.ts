@@ -556,7 +556,8 @@ export interface CollaboratorNotification {
   createdAt: string;
   title: string;
   message: string;
-  type: 'signature_requise' | 'rdv_heitz' | 'passage_club' | 'mywellness_checkup' | 'rh_planning' | 'rh_message';
+  type: 'signature_requise' | 'rdv_heitz' | 'passage_club' | 'mywellness_checkup' | 'rh_planning' | 'rh_message' | 'rh_leave' | 'rh_time_review';
+  targetPage?: string;
   rhMessageId?: string;
   senderName?: string;
   readAt?: string | null;

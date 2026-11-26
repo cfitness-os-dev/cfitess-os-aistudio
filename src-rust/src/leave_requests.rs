@@ -245,6 +245,7 @@ pub async fn patch_leave_request_decision(
         Some(updated.status.clone()),
     );
 
+    crate::rh_notifications::leave_changes(&db,&mut next)?;
     persist_state(&state.data_dir, &next).map_err(|err| {
         err_resp(
             StatusCode::INTERNAL_SERVER_ERROR,
