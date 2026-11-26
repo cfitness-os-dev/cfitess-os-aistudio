@@ -29,6 +29,10 @@ test('rebalanceStaleProspects sends correct payload and bearer token', async () 
           clubsProcessed: ['club-carre-soie'],
           reassignedCount: 2,
           reassignedIds: ['p1', 'p2'],
+          reassigned: [
+            { id: 'p1', clubId: 'club-carre-soie', assignedToId: 'emp-chloe' },
+            { id: 'p2', clubId: 'club-carre-soie', assignedToId: 'emp-mario' },
+          ],
           thresholdDaysApplied: 4,
         }),
         { status: 200 }
@@ -47,6 +51,8 @@ test('rebalanceStaleProspects sends correct payload and bearer token', async () 
     });
     assert.equal(res.ok, true);
     assert.equal(res.reassignedCount, 2);
+    assert.equal(res.reassigned?.length, 2);
+    assert.equal(res.reassigned?.[0]?.assignedToId, 'emp-chloe');
   } finally {
     globalThis.fetch = originalFetch;
     if (originalStorage) Object.defineProperty(globalThis, 'sessionStorage', originalStorage);

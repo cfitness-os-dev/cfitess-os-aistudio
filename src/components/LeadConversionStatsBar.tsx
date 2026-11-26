@@ -9,16 +9,18 @@ import {
   Sliders,
   CheckCircle2,
   AlertTriangle,
+  Users,
 } from 'lucide-react';
 import {
   fetchLeadConversionStats,
   rebalanceStaleProspects,
   type ConversionStatsData,
+  type RebalanceStaleResult,
 } from '../domain/leadPoolApi';
 
 interface LeadConversionStatsBarProps {
   clubId?: string;
-  onRebalanceComplete?: (count: number) => void;
+  onRebalanceComplete?: (result: RebalanceStaleResult) => void;
 }
 
 export function LeadConversionStatsBar({
@@ -29,6 +31,7 @@ export function LeadConversionStatsBar({
   const [loading, setLoading] = useState<boolean>(false);
   const [rebalancing, setRebalancing] = useState<boolean>(false);
   const [showConfig, setShowConfig] = useState<boolean>(false);
+  const [showBreakdown, setShowBreakdown] = useState<boolean>(false);
   const [thresholdDays, setThresholdDays] = useState<number>(3);
   const [feedback, setFeedback] = useState<{ type: 'ok' | 'warn'; text: string } | null>(null);
 
@@ -65,7 +68,7 @@ export function LeadConversionStatsBar({
         });
         await loadStats();
         if (onRebalanceComplete) {
-          onRebalanceComplete(res.reassignedCount);
+          onRebalanceComplete(res);
         }
       }
     } catch (err: unknown) {
@@ -129,8 +132,27 @@ export function LeadConversionStatsBar({
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
+            onClick={() => setShowBreakdown(!showBreakdown)}
+            className={`px-2.5 py-1.5 rounded-xl border transition-colors cursor-pointer font-bold flex items-center gap-1.5 ${
+              showBreakdown
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200'
+            }`}
+            title="Afficher la répartition par commercial"
+          >
+            <Users className="w-3.5 h-3.5 text-blue-400" />
+            <span className="hidden sm:inline">
+              Équipe ({stats?.commercialBreakdown?.length ?? 0})
+            </span>
+          </button>
+          <button
+            type="button"
             onClick={() => setShowConfig(!showConfig)}
-            className="px-2.5 py-1.5 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+            className={`px-2.5 py-1.5 rounded-xl border transition-colors cursor-pointer font-bold flex items-center gap-1.5 ${
+              showConfig
+                ? 'bg-violet-600 text-white border-violet-600'
+                : 'border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200'
+            }`}
             title="Paramètres de réattribution"
           >
             <Sliders className="w-3.5 h-3.5 text-slate-400" />
@@ -183,6 +205,71 @@ export function LeadConversionStatsBar({
           >
             Appliquer maintenant
           </button>
+        </div>
+      )}
+
+      {/* Commercial Breakdown Accordion */}
+      {showBreakdown && (
+        <div className="p-4 bg-slate-50 border-t border-slate-200 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="font-extrabold text-slate-800 flex items-center gap-1.5">
+              <Users className="w-4 h-4 text-violet-600" />
+              Répartition du vivier commercial
+            </span>
+            <span className="text-[11px] text-slate-500">
+              Charge active et taux de conversion par collaborateur
+            </span>
+          </div>
+
+          {!stats?.commercialBreakdown || stats.commercialBreakdown.length === 0 ? (
+            <p className="text-slate-500 text-xs italic py-2">
+              Aucun commercial affecté à des prospects actifs pour le périmètre sélectionné.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {stats.commercialBreakdown.map((c) => {
+                const total = c.activeLeads + c.convertedLeads;
+                const convRate = total > 0 ? (c.convertedLeads / total) * 100 : 0;
+                return (
+                  <div
+                    key={c.employeeId}
+                    className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-900 font-mono text-xs">
+                        {c.employeeId}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-mono font-bold text-[10px]">
+                        {convRate.toFixed(0)} % conv.
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-center text-[11px]">
+                      <div className="p-1.5 rounded-lg bg-slate-50">
+                        <div className="text-slate-400 text-[10px]">Actifs</div>
+                        <div className="font-bold text-blue-600 font-mono">{c.activeLeads}</div>
+                      </div>
+                      <div className="p-1.5 rounded-lg bg-slate-50">
+                        <div className="text-slate-400 text-[10px]">Convertis</div>
+                        <div className="font-bold text-emerald-600 font-mono">
+                          {c.convertedLeads}
+                        </div>
+                      </div>
+                      <div className="p-1.5 rounded-lg bg-slate-50">
+                        <div className="text-slate-400 text-[10px]">Stagnants</div>
+                        <div
+                          className={`font-bold font-mono ${
+                            c.staleLeads > 0 ? 'text-amber-600' : 'text-slate-600'
+                          }`}
+                        >
+                          {c.staleLeads}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

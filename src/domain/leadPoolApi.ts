@@ -1,10 +1,17 @@
 import type { ClubId } from '../types/cfos';
 
+export interface RebalancedProspectItem {
+  id: string;
+  clubId: string;
+  assignedToId: string;
+}
+
 export interface RebalanceStaleResult {
   ok: boolean;
   clubsProcessed: string[];
   reassignedCount: number;
   reassignedIds: string[];
+  reassigned?: RebalancedProspectItem[];
   thresholdDaysApplied: number;
 }
 

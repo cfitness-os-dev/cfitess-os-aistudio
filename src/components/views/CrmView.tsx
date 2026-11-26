@@ -237,10 +237,17 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
         <div className="space-y-4">
           <LeadConversionStatsBar
             clubId={clubFilter}
-            onRebalanceComplete={(count) => {
+            onRebalanceComplete={(result) => {
+              if (result.reassigned && result.reassigned.length > 0) {
+                for (const item of result.reassigned) {
+                  updateProspect(item.id, {
+                    assignedToId: item.assignedToId,
+                  });
+                }
+              }
               setFeedbackBanner({
                 type: 'ok',
-                text: `${count} prospect(s) réassigné(s) automatiquement selon le vivier commercial.`,
+                text: `${result.reassignedCount} prospect(s) réassigné(s) automatiquement selon le vivier commercial.`,
               });
             }}
           />
