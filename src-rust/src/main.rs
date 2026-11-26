@@ -14,6 +14,7 @@ mod heitz_transport;
 mod recovery_evidence;
 mod heitz_members;
 mod hr_manager;
+mod hr_collaboration;
 mod hr_organisation;
 mod hr_pilotage;
 mod hr_site_rules;
@@ -63,6 +64,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 async fn security_headers_middleware(req: Request<Body>, next: Next) -> Response {
     let is_api_route = req.uri().path().starts_with("/api/");
+    let is_private_calendar = req.uri().path().starts_with("/api/calendar/");
     let is_https_forwarded = req
         .headers()
         .get("x-forwarded-proto")
@@ -78,7 +80,7 @@ async fn security_headers_middleware(req: Request<Body>, next: Next) -> Response
     headers.insert("x-frame-options", HeaderValue::from_static("SAMEORIGIN"));
     headers.insert(
         "referrer-policy",
-        HeaderValue::from_static("strict-origin-when-cross-origin"),
+        HeaderValue::from_static(if is_private_calendar { "no-referrer" } else { "strict-origin-when-cross-origin" }),
     );
     headers.insert(
         "permissions-policy",
@@ -207,7 +209,10 @@ async fn main() {
         .fallback_service(spa_service)
         .layer(middleware::from_fn(security_headers_middleware))
         .layer(cors_layer)
-        .layer(TraceLayer::new_for_http());
+        .layer(TraceLayer::new_for_http().make_span_with(|request: &Request<Body>| {
+            let path = if request.uri().path().starts_with("/api/calendar/") { "/api/calendar/[private]" } else { request.uri().path() };
+            tracing::info_span!("http", method = %request.method(), path)
+        }));
 
     let addr: SocketAddr = bind_addr
         .parse()

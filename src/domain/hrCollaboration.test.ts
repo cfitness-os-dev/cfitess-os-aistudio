@@ -1,0 +1,27 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { validateMessages, validateCalendar } from './hrCollaboration';
+const messages = () => ({actorId:'emp-mario',clubId:'beynost',channel:'internal',recipients:[{id:'emp-chloe',name:'Chloé'}],messages:[{id:'m',subject:'Consigne',body:'Bonjour',createdAt:'2026-11-26T12:00:00Z',recipientCount:1,receipts:[{employeeId:'emp-chloe',employeeName:'Chloé',read:false,readAt:null}]}],nextCursor:null});
+test('messages: rejects another actor or club before replacing the current screen', () => {
+  assert.throws(() => validateMessages(messages(),'emp-chloe','beynost'));
+  assert.throws(() => validateMessages(messages(),'emp-mario','carre-de-soie'));
+  assert.equal(validateMessages(messages(),'emp-mario','beynost').messages[0].receipts[0].read,false);
+});
+test('messages: incomplete read receipts and invalid pagination fail visibly', () => {
+  const x=messages(); (x.messages[0].receipts[0] as {read:unknown}).read='yes';
+  assert.throws(() => validateMessages(x,'emp-mario','beynost'));
+  assert.throws(() => validateMessages({...messages(),nextCursor:42},'emp-mario','beynost'));
+  assert.throws(() => validateMessages({...messages(),messages:[{...messages().messages[0],createdAt:'not-a-date'}]},'emp-mario','beynost'));
+});
+const status={actorId:'emp-chloe',enabled:true,issued:false,clubIds:[],createdAt:null};
+test('calendar: only own status and known clubs are accepted', () => {
+  assert.equal(validateCalendar(status,'emp-chloe').actorId,'emp-chloe');
+  assert.throws(() => validateCalendar(status,'emp-mario'));
+  assert.throws(() => validateCalendar({...status,clubIds:['another-club']},'emp-chloe'));
+});
+test('calendar: refuses external URLs and predictable legacy tokens', () => {
+  const valid={actorId:'emp-chloe',clubIds:['beynost'],createdAt:'2026-11-26T12:00:00Z',relativeUrl:'/api/calendar/'+'a'.repeat(64)+'.ics'};
+  assert.equal(validateCalendar(valid,'emp-chloe',true).actorId,'emp-chloe');
+  for(const relativeUrl of ['https://example.com/steal','//example.com/a','/api/calendar/cal-emp-chloe.ics','/api/calendar/'+'a'.repeat(64)+'.ics?leak=1'])
+    assert.throws(() => validateCalendar({...valid,relativeUrl},'emp-chloe',true));
+});

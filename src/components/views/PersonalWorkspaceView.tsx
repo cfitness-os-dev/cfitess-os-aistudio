@@ -411,7 +411,8 @@ function PersonalWorkspaceContent({
                     className="cf-card-secondary rounded-xl p-3 space-y-2"
                   >
                     <strong>{row.title}</strong>
-                    <p>{row.message}</p>
+                    {row.senderName && <p className="cf-muted">De {row.senderName}</p>}
+                    <p className="whitespace-pre-wrap break-words">{row.message}</p>
                     {row.read ? (
                       <p className="cf-muted">Lue</p>
                     ) : (
