@@ -304,7 +304,13 @@
     "bodypump",
     "idemp",
     "impayes",
-    "samesite"
+    "samesite",
+    "RDONLY",
+    "WRONLY",
+    "CREAT",
+    "fstat",
+    "fsync",
+    "fileno"
   ],
   "cSpell.ignoreRegExpList": [
     "\\bACCES\\b",
