@@ -115,6 +115,9 @@ pub fn compute_days_since_commercial_activity(
 }
 
 fn is_alert_rule_enabled(db: &AppDatabaseState, club_id: &str, rule_id: &str) -> bool {
+    if matches!(rule_id, "LEAD-REBALANCE" | "LEAD-TRANSFER") {
+        return true;
+    }
     if let Some(settings) = db.lead_settings_by_club.get(club_id) {
         if let Some(arr) = settings.get("enabledAlertIds").and_then(|v| v.as_array()) {
             return arr.iter().any(|item| item.as_str() == Some(rule_id));
@@ -1501,6 +1504,534 @@ pub(crate) async fn post_heitz_sync_sale(
     Ok(Json(response_summary))
 }
 
+pub fn is_commercial_available_for_club(
+    db: &AppDatabaseState,
+    emp_id: &str,
+    club_id: &str,
+    now: DateTime<Utc>,
+) -> bool {
+    let site_id = club_id_to_audit_site_id(club_id);
+    let Some(timezone) = db
+        .sites
+        .iter()
+        .find(|s| s.id == site_id)
+        .and_then(|s| s.timezone.parse::<chrono_tz::Tz>().ok())
+    else {
+        return false;
+    };
+    let today = now.with_timezone(&timezone).date_naive();
+
+    let has_active_account = db.employees.iter().any(|e| {
+        e.id == emp_id
+            && e.active
+            && e.site_accesses.iter().any(|a| a.site_id == site_id)
+    });
+    if !has_active_account {
+        return false;
+    }
+
+    let is_on_leave = db.leave_requests.iter().any(|lr| {
+        if lr.employee_id != emp_id
+            || lr.site_id != site_id
+            || !matches!(
+                lr.status.trim().to_lowercase().as_str(),
+                "approved" | "accepted" | "valide" | "validé"
+            )
+        {
+            return false;
+        }
+        match (
+            NaiveDate::parse_from_str(&lr.start_date, "%Y-%m-%d"),
+            NaiveDate::parse_from_str(&lr.end_date, "%Y-%m-%d"),
+        ) {
+            (Ok(start), Ok(end)) if start <= end => start <= today && end >= today,
+            _ => true,
+        }
+    });
+
+    !is_on_leave
+}
+
+pub fn resolve_best_commercial_for_club(
+    db: &AppDatabaseState,
+    club_id: &str,
+    now: DateTime<Utc>,
+    exclude_emp: Option<&str>,
+) -> String {
+    let site_id = club_id_to_audit_site_id(club_id);
+    let Some(timezone) = db
+        .sites
+        .iter()
+        .find(|s| s.id == site_id)
+        .and_then(|s| s.timezone.parse::<chrono_tz::Tz>().ok())
+    else {
+        return format!("file_attente_{}", club_id);
+    };
+    let today = now.with_timezone(&timezone).date_naive();
+    let candidates = if club_id == "beynost" {
+        vec!["emp-chloe", "emp-greg", "emp-sarah"]
+    } else {
+        vec!["emp-maxime", "emp-karim", "emp-sarah"]
+    };
+
+    candidates
+        .into_iter()
+        .filter(|emp_id| {
+            if let Some(exc) = exclude_emp {
+                if *emp_id == exc {
+                    return false;
+                }
+            }
+            db.employees.iter().any(|employee| {
+                employee.id == *emp_id
+                    && employee.active
+                    && employee
+                        .site_accesses
+                        .iter()
+                        .any(|access| access.site_id == site_id)
+            }) && !db.leave_requests.iter().any(|lr| {
+                if lr.employee_id != *emp_id
+                    || lr.site_id != site_id
+                    || !matches!(
+                        lr.status.trim().to_lowercase().as_str(),
+                        "approved" | "accepted" | "valide" | "validé"
+                    )
+                {
+                    return false;
+                }
+                match (
+                    NaiveDate::parse_from_str(&lr.start_date, "%Y-%m-%d"),
+                    NaiveDate::parse_from_str(&lr.end_date, "%Y-%m-%d"),
+                ) {
+                    (Ok(start), Ok(end)) if start <= end => start <= today && end >= today,
+                    _ => true,
+                }
+            })
+        })
+        .min_by_key(|emp_id| {
+            let active_count = db
+                .lead_prospects
+                .iter()
+                .filter(|prospect| {
+                    prospect.club_id == club_id
+                        && prospect.assigned_to_id.as_deref() == Some(*emp_id)
+                        && !prospect.is_archived
+                        && !matches!(
+                            prospect.stage.as_str(),
+                            "Client"
+                                | "Client enseigne"
+                                | "Perdu"
+                                | "Perdu / Sans suite"
+                                | "Archivé"
+                                | "Froid"
+                        )
+                })
+                .count();
+
+            let latest_touch = db
+                .lead_prospects
+                .iter()
+                .filter(|p| {
+                    p.club_id == club_id
+                        && p.assigned_to_id.as_deref() == Some(*emp_id)
+                        && !p.is_archived
+                })
+                .filter_map(|p| p.last_commercial_touch_at.as_deref().or(Some(&p.created_at)))
+                .max()
+                .unwrap_or("");
+
+            (active_count, latest_touch)
+        })
+        .map(str::to_string)
+        .unwrap_or_else(|| format!("file_attente_{}", club_id))
+}
+
+#[derive(Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub struct RebalanceStalePayload {
+    pub club_id: Option<String>,
+    pub threshold_days: Option<u32>,
+}
+
+pub(crate) async fn post_rebalance_stale_prospects(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Json(payload): Json<RebalanceStalePayload>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let authorized_clubs = {
+        let db = state.db.read().await;
+        lead_archiving_authorized_clubs(&db, &actor_id)
+    };
+
+    let target_clubs = match payload.club_id.as_deref().map(|s| s.trim()).filter(|s| !s.is_empty()) {
+        None | Some("all") => {
+            if authorized_clubs.is_empty() {
+                return Err(err_resp(
+                    StatusCode::FORBIDDEN,
+                    "Réattribution automatique refusée (403) : aucun club habilité.",
+                ));
+            }
+            authorized_clubs
+        }
+        Some(club_id) => {
+            if !is_valid_club_id(club_id) {
+                return Err(err_resp(StatusCode::BAD_REQUEST, "Identifiant de club invalide."));
+            }
+            if !authorized_clubs.iter().any(|c| c == club_id) {
+                return Err(err_resp(
+                    StatusCode::FORBIDDEN,
+                    format!("Réattribution automatique refusée (403) sur le club {}.", club_id),
+                ));
+            }
+            vec![club_id.to_string()]
+        }
+    };
+
+    let threshold_days = payload.threshold_days.unwrap_or(3).max(1);
+    let now = Utc::now();
+    let mut reassigned_ids: Vec<String> = Vec::new();
+    let mut alert_events: Vec<(String, String, String, String, String)> = Vec::new();
+
+    {
+        let mut db = state.db.write().await;
+        let snapshot = db.clone();
+
+        for club_id in &target_clubs {
+            for idx in 0..db.lead_prospects.len() {
+                let prospect = &db.lead_prospects[idx];
+                if prospect.club_id != *club_id || prospect.is_archived {
+                    continue;
+                }
+                if matches!(
+                    prospect.stage.as_str(),
+                    "Client" | "Client enseigne" | "Perdu" | "Perdu / Sans suite" | "Archivé" | "Froid"
+                ) {
+                    continue;
+                }
+
+                let current_assignee = prospect.assigned_to_id.as_deref().unwrap_or("");
+                let is_unassigned = current_assignee.is_empty() || current_assignee.starts_with("file_attente_");
+                let is_assignee_unavailable = !is_unassigned
+                    && !is_commercial_available_for_club(&db, current_assignee, club_id, now);
+                let days_inactive = compute_days_since_commercial_activity(prospect, now).unwrap_or(0);
+                let is_stale = days_inactive >= threshold_days as i64;
+
+                if is_unassigned || is_assignee_unavailable || is_stale {
+                    let exclude_current = if is_stale && !is_assignee_unavailable {
+                        Some(current_assignee)
+                    } else {
+                        None
+                    };
+                    let best_commercial = resolve_best_commercial_for_club(&db, club_id, now, exclude_current);
+                    if !best_commercial.starts_with("file_attente_") && best_commercial != current_assignee {
+                        let old_assigned = if current_assignee.is_empty() {
+                            "non assigné".to_string()
+                        } else {
+                            current_assignee.to_string()
+                        };
+                        let new_assigned = best_commercial.clone();
+                        let p = &mut db.lead_prospects[idx];
+                        p.assigned_to_id = Some(new_assigned.clone());
+                        let full_name = format!("{} {}", p.first_name, p.last_name).trim().to_string();
+                        let pid = p.id.clone();
+                        reassigned_ids.push(pid.clone());
+                        alert_events.push((
+                            club_id.clone(),
+                            pid,
+                            full_name,
+                            old_assigned,
+                            new_assigned,
+                        ));
+                    }
+                }
+            }
+        }
+
+        for (cid, pid, pname, old_ass, new_ass) in &alert_events {
+            append_audit(
+                &mut db,
+                &actor_id,
+                "lead.pool.reassign",
+                format!("Réaffectation automatique prospect {} ({}) de {} vers {}", pid, pname, old_ass, new_ass),
+                club_id_to_audit_site_id(cid),
+                pid,
+                Some(old_ass.clone()),
+                Some(new_ass.clone()),
+            );
+            emit_lead_alert_if_enabled(
+                &mut db,
+                cid,
+                "LEAD-REBALANCE",
+                "commercial_reassigned",
+                "app",
+                format!("Prospect réaffecté : {}", pname),
+                format!("Le prospect {} vous a été réaffecté (anciennement : {}) pour relance.", pname, old_ass),
+                Some(pid.clone()),
+                vec![new_ass.clone()],
+                vec![],
+            );
+        }
+
+        if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+            *db = snapshot;
+            return Err(err_resp(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Erreur lors de la sauvegarde de la réattribution : {}", err_msg),
+            ));
+        }
+    }
+
+    Ok(Json(json!({
+        "ok": true,
+        "clubsProcessed": target_clubs,
+        "reassignedCount": reassigned_ids.len(),
+        "reassignedIds": reassigned_ids,
+        "thresholdDaysApplied": threshold_days
+    })))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TransferProspectPayload {
+    pub target_club_id: String,
+    #[serde(default)]
+    pub reason: Option<String>,
+}
+
+pub(crate) async fn post_transfer_prospect(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Path(prospect_id): Path<String>,
+    Json(payload): Json<TransferProspectPayload>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let target_club = payload.target_club_id.trim();
+    if !is_valid_club_id(target_club) {
+        return Err(err_resp(StatusCode::BAD_REQUEST, "Club de destination invalide."));
+    }
+
+    let mut db = state.db.write().await;
+    let snapshot = db.clone();
+
+    let (source_club, prospect_name) = {
+        let prospect = db
+            .lead_prospects
+            .iter()
+            .find(|p| p.id == prospect_id)
+            .ok_or_else(|| err_resp(StatusCode::NOT_FOUND, "Prospect introuvable."))?;
+        (
+            prospect.club_id.clone(),
+            format!("{} {}", prospect.first_name, prospect.last_name).trim().to_string(),
+        )
+    };
+
+    if source_club == target_club {
+        return Err(err_resp(
+            StatusCode::BAD_REQUEST,
+            "Le club de destination doit être différent du club actuel.",
+        ));
+    }
+
+    let source_ok = actor_has_lead_admin_write_on_club(&db, &actor_id, &source_club);
+    let target_ok = actor_has_lead_admin_write_on_club(&db, &actor_id, target_club);
+    if !source_ok || !target_ok {
+        return Err(err_resp(
+            StatusCode::FORBIDDEN,
+            "Transfert refusé (403) : habilitation requise sur les deux clubs.",
+        ));
+    }
+
+    let target_commercial = crate::routes::resolve_available_commercial_for_club(&db, target_club);
+    let reason_str = payload.reason.as_deref().unwrap_or("Transfert inter-clubs").trim();
+
+    if let Some(p) = db.lead_prospects.iter_mut().find(|p| p.id == prospect_id) {
+        p.club_id = target_club.to_string();
+        p.assigned_to_id = Some(target_commercial.clone());
+        p.last_commercial_touch_at = None;
+    }
+
+    append_audit(
+        &mut db,
+        &actor_id,
+        "lead.prospect.transfer",
+        format!(
+            "Transfert prospect {} ({}) de {} vers {} : {}",
+            prospect_id, prospect_name, source_club, target_club, reason_str
+        ),
+        club_id_to_audit_site_id(&source_club),
+        &prospect_id,
+        Some(source_club.clone()),
+        Some(target_club.to_string()),
+    );
+
+    emit_lead_alert_if_enabled(
+        &mut db,
+        target_club,
+        "LEAD-TRANSFER",
+        "prospect_transferred",
+        "app",
+        format!("Nouveau prospect transféré : {}", prospect_name),
+        format!(
+            "Le prospect {} a été transféré depuis {} (motif : {}).",
+            prospect_name, source_club, reason_str
+        ),
+        Some(prospect_id.clone()),
+        vec![target_commercial.clone()],
+        vec![],
+    );
+
+    if let Err(err_msg) = persist_state(&state.data_dir, &db) {
+        *db = snapshot;
+        return Err(err_resp(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Erreur lors de la sauvegarde du transfert : {}", err_msg),
+        ));
+    }
+
+    Ok(Json(json!({
+        "ok": true,
+        "prospectId": prospect_id,
+        "sourceClubId": source_club,
+        "targetClubId": target_club,
+        "assignedTo": target_commercial,
+        "reason": reason_str
+    })))
+}
+
+#[derive(Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub struct ConversionStatsQuery {
+    pub club_id: Option<String>,
+}
+
+pub(crate) async fn get_lead_conversion_stats(
+    State(state): State<SharedState>,
+    headers: HeaderMap,
+    Query(query): Query<ConversionStatsQuery>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
+    let db = state.db.read().await;
+    let allowed_clubs = authorized_clubs_for_actor(&db, &actor_id);
+
+    if let Some(ref requested_club) = query.club_id {
+        if requested_club != "all" {
+            if !is_valid_club_id(requested_club) {
+                return Err(err_resp(StatusCode::BAD_REQUEST, "Identifiant de club invalide."));
+            }
+            if !allowed_clubs.contains(requested_club) {
+                return Err(err_resp(
+                    StatusCode::FORBIDDEN,
+                    format!("Accès refusé (403) aux statistiques du club {}.", requested_club),
+                ));
+            }
+        }
+    }
+
+    let clubs_in_scope: Vec<&str> = match query.club_id.as_deref() {
+        Some("all") | None => KNOWN_CLUBS
+            .iter()
+            .filter(|c| allowed_clubs.contains(&c.to_string()))
+            .copied()
+            .collect(),
+        Some(c) => vec![c],
+    };
+
+    let now = Utc::now();
+    let mut total_prospects = 0;
+    let mut active_count = 0;
+    let mut converted_count = 0;
+    let mut lost_count = 0;
+    let mut archived_count = 0;
+    let mut stale_count = 0;
+    let mut unassigned_count = 0;
+
+    use std::collections::HashMap;
+    #[derive(Default, serde::Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct CommercialStats {
+        employee_id: String,
+        active_leads: usize,
+        converted_leads: usize,
+        stale_leads: usize,
+    }
+
+    let mut commercial_map: HashMap<String, CommercialStats> = HashMap::new();
+
+    for prospect in &db.lead_prospects {
+        if !clubs_in_scope.contains(&prospect.club_id.as_str()) {
+            continue;
+        }
+        total_prospects += 1;
+
+        let is_converted = matches!(prospect.stage.as_str(), "Client" | "Client enseigne")
+            || prospect.converted_offer.is_some();
+        let is_lost = matches!(prospect.stage.as_str(), "Perdu" | "Perdu / Sans suite");
+
+        if is_converted {
+            converted_count += 1;
+        } else if is_lost {
+            lost_count += 1;
+        } else if prospect.is_archived || prospect.stage == "Archivé" {
+            archived_count += 1;
+        } else {
+            active_count += 1;
+            let days_inact = compute_days_since_commercial_activity(prospect, now).unwrap_or(0);
+            if days_inact >= 3 {
+                stale_count += 1;
+            }
+        }
+
+        let assigned = prospect.assigned_to_id.as_deref().unwrap_or("");
+        if assigned.is_empty() || assigned.starts_with("file_attente_") {
+            if !is_converted && !is_lost && !prospect.is_archived {
+                unassigned_count += 1;
+            }
+        } else {
+            let entry = commercial_map.entry(assigned.to_string()).or_insert_with(|| CommercialStats {
+                employee_id: assigned.to_string(),
+                active_leads: 0,
+                converted_leads: 0,
+                stale_leads: 0,
+            });
+            if is_converted {
+                entry.converted_leads += 1;
+            } else if !is_lost && !prospect.is_archived {
+                entry.active_leads += 1;
+                let days_inact = compute_days_since_commercial_activity(prospect, now).unwrap_or(0);
+                if days_inact >= 3 {
+                    entry.stale_leads += 1;
+                }
+            }
+        }
+    }
+
+    let conversion_rate = if total_prospects > 0 {
+        ((converted_count as f64 / total_prospects as f64) * 1000.0).round() / 10.0
+    } else {
+        0.0
+    };
+
+    let mut commercial_breakdown: Vec<CommercialStats> = commercial_map.into_values().collect();
+    commercial_breakdown.sort_by(|a, b| b.active_leads.cmp(&a.active_leads));
+
+    Ok(Json(json!({
+        "ok": true,
+        "clubsInScope": clubs_in_scope,
+        "stats": {
+            "totalProspects": total_prospects,
+            "activeLeads": active_count,
+            "convertedLeads": converted_count,
+            "lostLeads": lost_count,
+            "archivedLeads": archived_count,
+            "staleLeads": stale_count,
+            "unassignedLeads": unassigned_count,
+            "conversionRatePercent": conversion_rate,
+            "commercialBreakdown": commercial_breakdown
+        }
+    })))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2576,6 +3107,260 @@ mod tests {
             assert_eq!(db.lead_alerts.len(), initial_alerts_len);
             assert_eq!(db.processed_lead_events.len(), initial_events_len);
         }
+
+        srv.abort();
+        let _ = std::fs::remove_dir_all(&base_dir);
+    }
+
+    #[tokio::test]
+    async fn lead_rebalancing_reassigns_unavailable_and_stale_prospects() {
+        let base_dir = make_isolated_dir("rebalance");
+        let state = state_for_dir(base_dir.clone());
+        let (addr, srv) = spawn_http_server(state.clone()).await;
+
+        let tok_mario = http_login(&addr, "emp-mario", "1010").await;
+        let today = Utc::now()
+            .with_timezone(&chrono_tz::Europe::Paris)
+            .date_naive()
+            .to_string();
+
+        {
+            let mut db = state.db.write().await;
+            db.lead_prospects.clear();
+            db.lead_alerts.clear();
+
+            // Prospect 1 : assigné à Maxime, mais Maxime est en congé validé aujourd'hui
+            let mut p1 = make_prospect(
+                "pr-stale-1",
+                "carre-de-soie",
+                "p1@test.local",
+                "0600000001",
+                Some("emp-maxime"),
+                &Utc::now().to_rfc3339(),
+            );
+            p1.first_name = "Alice".into();
+            p1.last_name = "Durand".into();
+            db.lead_prospects.push(p1);
+
+            // Congé validé pour Maxime
+            db.leave_requests.push(crate::models::LeaveRequest {
+                id: "leave-maxime-today".into(),
+                employee_id: "emp-maxime".into(),
+                site_id: "club-carre-soie".into(),
+                motive: "Congés payés".into(),
+                start_date: today.clone(),
+                end_date: today.clone(),
+                status: "approved".into(),
+                comment: "Vacances".into(),
+            });
+
+            // Prospect 2 : assigné à Karim mais sans activité commerciale depuis 5 jours
+            let old_date = (Utc::now() - Duration::days(5)).to_rfc3339();
+            let mut p2 = make_prospect(
+                "pr-stale-2",
+                "carre-de-soie",
+                "p2@test.local",
+                "0600000002",
+                Some("emp-karim"),
+                &old_date,
+            );
+            p2.first_name = "Bob".into();
+            p2.last_name = "Martin".into();
+            p2.last_commercial_touch_at = Some(old_date);
+            db.lead_prospects.push(p2);
+        }
+
+        // Déclenchement de la réattribution automatique
+        let rebalance_payload = serde_json::to_vec(&json!({
+            "clubId": "carre-de-soie",
+            "thresholdDays": 3
+        }))
+        .unwrap();
+
+        let (st, res) = http_req(
+            &addr,
+            "POST",
+            "/api/lead/automations/rebalance-stale",
+            &[("authorization", &format!("Bearer {}", tok_mario))],
+            Some(&rebalance_payload),
+        )
+        .await;
+
+        assert_eq!(st, 200, "rebalance response: {:?}", res);
+        assert_eq!(res["ok"], true);
+        assert_eq!(res["reassignedCount"], 2);
+
+        {
+            let db = state.db.read().await;
+            let pr1 = db.lead_prospects.iter().find(|p| p.id == "pr-stale-1").unwrap();
+            // Maxime étant en congé, pr1 a été réaffecté à un autre commercial disponible (Karim ou Sarah)
+            assert_ne!(pr1.assigned_to_id.as_deref(), Some("emp-maxime"));
+
+            // Une alerte a été émise
+            assert!(db.lead_alerts.iter().any(|a| a.event_type == "commercial_reassigned"));
+            // Un log d'audit a été enregistré
+            assert!(db.audit_log.iter().any(|ev| ev.action_type == "lead.pool.reassign"));
+        }
+
+        srv.abort();
+        let _ = std::fs::remove_dir_all(&base_dir);
+    }
+
+    #[tokio::test]
+    async fn lead_transfer_inter_clubs_enforces_strict_rbac() {
+        let base_dir = make_isolated_dir("transfer");
+        let state = state_for_dir(base_dir.clone());
+        let (addr, srv) = spawn_http_server(state.clone()).await;
+
+        let tok_mario = http_login(&addr, "emp-mario", "1010").await; // Superadmin bi-club
+        let tok_chloe = http_login(&addr, "emp-chloe", "5320").await; // Commerciale Beynost seule
+
+        {
+            let mut db = state.db.write().await;
+            db.lead_prospects.clear();
+            let mut p = make_prospect(
+                "pr-transfer-1",
+                "carre-de-soie",
+                "transfer@test.local",
+                "0612345678",
+                Some("emp-maxime"),
+                &Utc::now().to_rfc3339(),
+            );
+            p.first_name = "Camille".into();
+            p.last_name = "Roux".into();
+            db.lead_prospects.push(p);
+        }
+
+        let body_same = serde_json::to_vec(&json!({
+            "targetClubId": "carre-de-soie"
+        }))
+        .unwrap();
+
+        // 1. Refus si même club (400)
+        let (st_same, _) = http_req(
+            &addr,
+            "POST",
+            "/api/lead/prospects/pr-transfer-1/transfer",
+            &[("authorization", &format!("Bearer {}", tok_mario))],
+            Some(&body_same),
+        )
+        .await;
+        assert_eq!(st_same, 400);
+
+        let body_valid = serde_json::to_vec(&json!({
+            "targetClubId": "beynost",
+            "reason": "Déménagement adhérent"
+        }))
+        .unwrap();
+
+        // 2. Chloé (Beynost uniquement) ne peut pas transférer un lead de Carré de Soie (403)
+        let (st_chloe, _) = http_req(
+            &addr,
+            "POST",
+            "/api/lead/prospects/pr-transfer-1/transfer",
+            &[("authorization", &format!("Bearer {}", tok_chloe))],
+            Some(&body_valid),
+        )
+        .await;
+        assert_eq!(st_chloe, 403);
+
+        // 3. Mario (bi-club) réussit le transfert (200)
+        let (st_mario, res_mario) = http_req(
+            &addr,
+            "POST",
+            "/api/lead/prospects/pr-transfer-1/transfer",
+            &[("authorization", &format!("Bearer {}", tok_mario))],
+            Some(&body_valid),
+        )
+        .await;
+        assert_eq!(st_mario, 200, "transfer: {:?}", res_mario);
+        assert_eq!(res_mario["ok"], true);
+        assert_eq!(res_mario["targetClubId"], "beynost");
+
+        {
+            let db = state.db.read().await;
+            let pr = db.lead_prospects.iter().find(|p| p.id == "pr-transfer-1").unwrap();
+            assert_eq!(pr.club_id, "beynost");
+            // Le commercial de Beynost a été assigné automatiquement
+            assert!(["emp-chloe", "emp-greg", "emp-sarah"]
+                .contains(&pr.assigned_to_id.as_deref().unwrap_or("")));
+            // Alerte générée sur Beynost
+            assert!(db
+                .lead_alerts
+                .iter()
+                .any(|a| a.club_id == "beynost" && a.event_type == "prospect_transferred"));
+        }
+
+        srv.abort();
+        let _ = std::fs::remove_dir_all(&base_dir);
+    }
+
+    #[tokio::test]
+    async fn lead_conversion_stats_aggregates_kpis() {
+        let base_dir = make_isolated_dir("stats");
+        let state = state_for_dir(base_dir.clone());
+        let (addr, srv) = spawn_http_server(state.clone()).await;
+
+        let tok_mario = http_login(&addr, "emp-mario", "1010").await;
+
+        {
+            let mut db = state.db.write().await;
+            db.lead_prospects.clear();
+
+            // 1 actif
+            let p1 = make_prospect(
+                "pr-act-1",
+                "carre-de-soie",
+                "act@test.local",
+                "0600000010",
+                Some("emp-maxime"),
+                &Utc::now().to_rfc3339(),
+            );
+            // 1 converti
+            let mut p2 = make_prospect(
+                "pr-conv-1",
+                "carre-de-soie",
+                "conv@test.local",
+                "0600000011",
+                Some("emp-maxime"),
+                &Utc::now().to_rfc3339(),
+            );
+            p2.stage = "Client".into();
+            p2.converted_offer = Some("HZ-PASS".into());
+
+            // 1 perdu
+            let mut p3 = make_prospect(
+                "pr-lost-1",
+                "carre-de-soie",
+                "lost@test.local",
+                "0600000012",
+                Some("emp-karim"),
+                &Utc::now().to_rfc3339(),
+            );
+            p3.stage = "Perdu".into();
+
+            db.lead_prospects.push(p1);
+            db.lead_prospects.push(p2);
+            db.lead_prospects.push(p3);
+        }
+
+        let (st, res) = http_req(
+            &addr,
+            "GET",
+            "/api/lead/stats/conversion?clubId=carre-de-soie",
+            &[("authorization", &format!("Bearer {}", tok_mario))],
+            None,
+        )
+        .await;
+
+        assert_eq!(st, 200, "stats: {:?}", res);
+        assert_eq!(res["ok"], true);
+        let s = &res["stats"];
+        assert_eq!(s["totalProspects"], 3);
+        assert_eq!(s["activeLeads"], 1);
+        assert_eq!(s["convertedLeads"], 1);
+        assert_eq!(s["lostLeads"], 1);
+        assert_eq!(s["conversionRatePercent"], 33.3);
 
         srv.abort();
         let _ = std::fs::remove_dir_all(&base_dir);
