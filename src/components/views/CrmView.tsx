@@ -21,10 +21,14 @@ import {
   FileText,
   Dumbbell,
   ExternalLink,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { ClubId, Prospect, ProspectStage } from '../../types/cfos';
 import { formatClubName } from '../../domain/rules';
 import { LeadCommercialHubView } from './LeadCommercialHubView';
+import { LeadTransferModal } from '../LeadTransferModal';
+import { LeadConversionStatsBar } from '../LeadConversionStatsBar';
+import type { TransferProspectResult } from '../../domain/leadPoolApi';
 
 const STAGES: ProspectStage[] = [
   'Nouveau',
@@ -50,6 +54,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
     clubFilter,
     prospects,
     employees,
+    updateProspect,
     updateProspectStage,
     scheduleProspectTrial,
     convertProspectToMember,
@@ -72,10 +77,22 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
   const [convertingProspect, setConvertingProspect] = useState<Prospect | null>(null);
   const [selectedFormula, setSelectedFormula] = useState<string>(CFITNESS_SUBSCRIPTION_FORMULAS[0]);
   const [sponsorMemberId, setSponsorMemberId] = useState<string>('');
+  const [transferringProspect, setTransferringProspect] = useState<Prospect | null>(null);
   const [feedbackBanner, setFeedbackBanner] = useState<{
     type: 'ok' | 'warn';
     text: string;
   } | null>(null);
+
+  const handleTransferSuccess = (result: TransferProspectResult) => {
+    updateProspect(result.prospectId, {
+      clubId: result.targetClubId as ClubId,
+      assignedToId: result.assignedTo,
+    });
+    setFeedbackBanner({
+      type: 'ok',
+      text: `Prospect transféré vers ${formatClubName(result.targetClubId as ClubId, true)} avec succès (commercial : ${result.assignedTo}).`,
+    });
+  };
 
   // New Prospect Form
   const [firstName, setFirstName] = useState('');
@@ -218,6 +235,15 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
       subTarget={subTarget}
       pipelineChildren={
         <div className="space-y-4">
+          <LeadConversionStatsBar
+            clubId={clubFilter}
+            onRebalanceComplete={(count) => {
+              setFeedbackBanner({
+                type: 'ok',
+                text: `${count} prospect(s) réassigné(s) automatiquement selon le vivier commercial.`,
+              });
+            }}
+          />
       {/* ===================================================================== */}
       {/* EN-TÊTE UNIFIÉ C.FITNESS OS — CRM PROSPECTS & ADHÉSIONS               */}
       {/* ===================================================================== */}
@@ -498,6 +524,15 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                               </button>
                             </div>
 
+                            <button
+                              type="button"
+                              onClick={() => setTransferringProspect(prospect)}
+                              className="w-full py-1 px-2 rounded bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer"
+                            >
+                              <ArrowRightLeft className="w-3 h-3 text-indigo-600" />
+                              Transférer de club
+                            </button>
+
                             {prospect.stage !== 'Adhérent' && (
                               <button
                                 onClick={() => setConvertingProspect(prospect)}
@@ -583,7 +618,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                 </div>
 
                 {/* HubSpot Quick Action Circles */}
-                <div className="grid grid-cols-3 gap-2 text-center border-b border-slate-200 pb-3">
+                <div className="grid grid-cols-4 gap-1.5 text-center border-b border-slate-200 pb-3">
                   <button
                     onClick={() => handleQuickCall(selectedHubspotProspect)}
                     className="p-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 flex flex-col items-center gap-1 cursor-pointer"
@@ -604,6 +639,14 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                   >
                     <BadgeCheck className="w-4 h-4 text-emerald-600" />
                     <span className="font-semibold text-[10px] text-emerald-800">Heitz</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTransferringProspect(selectedHubspotProspect)}
+                    className="p-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 flex flex-col items-center gap-1 cursor-pointer"
+                  >
+                    <ArrowRightLeft className="w-4 h-4 text-indigo-600" />
+                    <span className="font-semibold text-[10px] text-indigo-800">Transférer</span>
                   </button>
                 </div>
 
@@ -801,7 +844,10 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
               </div>
               <p className="text-xs cf-muted">{formatClubName(prospect.clubId, true)} · {prospect.source}</p>
               <p className="text-sm break-words">{prospect.phone || prospect.email || 'Coordonnées à compléter'}</p>
-              <button type="button" onClick={() => { openContact(prospect.id); }} className="w-full min-h-11 rounded-xl border border-violet-500/30 text-sm font-semibold text-violet-400">Ouvrir la fiche contact</button>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => { openContact(prospect.id); }} className="flex-1 min-h-11 rounded-xl border border-violet-500/30 text-sm font-semibold text-violet-400">Ouvrir la fiche contact</button>
+                <button type="button" onClick={() => setTransferringProspect(prospect)} className="px-3 min-h-11 rounded-xl border border-indigo-500/30 text-sm font-semibold text-indigo-400">Transférer</button>
+              </div>
             </article>)}
           </div>
           <div className="hidden md:block p-4 overflow-x-auto">
@@ -876,6 +922,14 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                           className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold cursor-pointer"
                         >
                           Planifier Essai
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTransferringProspect(prospect)}
+                          className="px-2.5 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold cursor-pointer"
+                          title="Transférer vers un autre club"
+                        >
+                          Transférer
                         </button>
                         {prospect.stage !== 'Adhérent' && (
                           <button
@@ -1132,6 +1186,13 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
           </form>
         </div>
       )}
+
+          <LeadTransferModal
+            prospect={transferringProspect}
+            isOpen={Boolean(transferringProspect)}
+            onClose={() => setTransferringProspect(null)}
+            onSuccess={handleTransferSuccess}
+          />
         </div>
       }
     />
