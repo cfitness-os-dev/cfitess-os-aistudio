@@ -62,7 +62,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
     rewardMemberLoyaltyOrReferral,
   } = useCfos();
 
-  const [viewMode, setViewMode] = useState<'KANBAN' | 'HUBSPOT_360' | 'TABLE'>('KANBAN');
+  const [viewMode, setViewMode] = useState<'KANBAN' | 'HUBSPOT_360' | 'TABLE'>('TABLE');
   const [selectedHubspotProspectId, setSelectedHubspotProspectId] = useState<string>(
     prospects[0]?.id || ''
   );
@@ -127,7 +127,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
     filteredProspects[0] ||
     null;
 
-  const commercials = employees.filter((e) => e.role === 'commercial');
+  const commercials = employees.filter((e) => e.role === 'commercial' && allowedClubIds.includes(e.clubId) && (clubFilter === 'all' || e.clubId === clubFilter));
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,6 +207,10 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
 
   const changeView=(mode:typeof viewMode)=>{if(mode===viewMode)return;if(confirmLeadDraftNavigation(()=>setViewMode(mode)))setViewMode(mode);};
   const changeContact=(id:string)=>{if(id===selectedHubspotProspect?.id)return;if(confirmLeadDraftNavigation(()=>setSelectedHubspotProspectId(id)))setSelectedHubspotProspectId(id);};
+  const openContact = (id: string) => {
+    const apply = () => { setSelectedHubspotProspectId(id); setViewMode('HUBSPOT_360'); };
+    if (confirmLeadDraftNavigation(apply)) apply();
+  };
   const totalPipelineValueEur = Math.round(filteredProspects.length * DEAL_ANNUAL_VALUE_EUR);
 
   return (
@@ -231,7 +235,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                 }`}
               >
                 <Columns3 className="w-3.5 h-3.5" />
-                Vue Kanban
+                Tableau de suivi
               </button>
               <button
                 onClick={() => changeView('HUBSPOT_360')}
@@ -242,7 +246,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                 }`}
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
-                Fiche Prospect Détaillée
+                Fiche contact
               </button>
               <button
                 onClick={() => changeView('TABLE')}
@@ -259,20 +263,12 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <div className="text-right font-mono text-xs hidden sm:block">
-              <span className="text-slate-500">Potentiel annuel : </span>
-              <span className="font-bold text-emerald-600 tabular-nums">
-                {totalPipelineValueEur.toLocaleString('fr-FR')} €
-              </span>
-              <span className="text-slate-500"> · {filteredProspects.length} dossiers</span>
-            </div>
-
             <button
               onClick={() => setShowNewModal(true)}
               className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-xs font-extrabold flex items-center gap-1.5 cursor-pointer shadow-xs"
             >
               <UserPlus className="w-4 h-4" />
-              + Nouveau Prospect
+              Nouveau prospect
             </button>
           </div>
         </div>
@@ -281,7 +277,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
         <div className="bg-slate-50 border-b border-slate-200 px-4 py-2.5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 text-xs">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-bold text-slate-700">
-              Objectif Art. 4 CDI (20 abos/mois) :
+              Objectifs commerciaux :
             </span>
             {commercials.map((com) => {
               const actual = com.monthlySubscriptionsActual ?? 0;
@@ -326,7 +322,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
-              Tout le Pipeline ({prospects.filter((p) => allowedClubIds.includes(p.clubId) && (clubFilter === 'all' || p.clubId === clubFilter)).length})
+              Tous les prospects ({prospects.filter((p) => allowedClubIds.includes(p.clubId) && (clubFilter === 'all' || p.clubId === clubFilter)).length})
             </button>
             {STAGES.map((st, idx) => {
               const count = prospects.filter(
@@ -355,7 +351,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                         isSelected ? 'text-emerald-100' : 'text-slate-500'
                       }`}
                     >
-                      {stageEur.toLocaleString('fr-FR')} € · {count} offre(s)
+                      {count} contact{count > 1 ? 's' : ''}
                     </div>
                   </div>
                   <ChevronRight
@@ -398,14 +394,14 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
         {/* VIEW 1: AUTHENTIC PIPEDRIVE DEALS KANBAN BOARD                        */}
         {/* ===================================================================== */}
         {viewMode === 'KANBAN' && (
-          <div className="p-4 bg-[#F3F4F6] grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
+          <div className="p-4 bg-[#F3F4F6] flex gap-3 overflow-x-auto">
             {STAGES.map((stage) => {
               const stageProspects = filteredProspects.filter((p) => p.stage === stage);
               const stageVal = Math.round(stageProspects.length * DEAL_ANNUAL_VALUE_EUR);
               return (
                 <div
                   key={stage}
-                  className="bg-[#E5E7EB]/80 border border-slate-300/80 rounded-lg p-2.5 flex flex-col space-y-2"
+                  className="bg-[#E5E7EB]/80 border border-slate-300/80 rounded-lg p-2.5 flex flex-col space-y-2 min-w-[240px] flex-1"
                 >
                   {/* Pipedrive Column Header */}
                   <div className="pb-2 border-b border-slate-300">
@@ -414,9 +410,6 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                       <span className="px-1.5 py-0.2 rounded bg-white border border-slate-300 font-mono text-[10px] font-bold text-slate-700 tabular-nums">
                         {stageProspects.length}
                       </span>
-                    </div>
-                    <div className="text-[10px] font-mono text-slate-600 mt-0.5 tabular-nums">
-                      {stageVal.toLocaleString('fr-FR')} € / an
                     </div>
                   </div>
 
@@ -461,7 +454,6 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
 
                           {/* Pipedrive Deal Value + Phone */}
                           <div className="flex items-center justify-between text-[11px] font-mono tabular-nums">
-                            <span className="font-bold text-slate-700">39,90 €/m</span>
                             <span className="text-slate-500">{prospect.phone}</span>
                           </div>
 
@@ -512,7 +504,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                                 className="w-full py-1.5 px-2 rounded bg-[#017737] hover:bg-[#01632d] text-white text-[10px] font-extrabold flex items-center justify-center gap-1 cursor-pointer"
                               >
                                 <BadgeCheck className="w-3.5 h-3.5" />
-                                GAGNÉ → Créer Adhérent Heitz
+                                Préparer l’adhésion
                               </button>
                             )}
 
@@ -570,7 +562,6 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
               ))}
             </div>
 
-            <LeadProspectScenariosPanel key={currentUser.id+":"+selectedHubspotProspect.clubId+":"+selectedHubspotProspect.id} actorId={currentUser.id} clubId={selectedHubspotProspect.clubId} prospectId={selectedHubspotProspect.id}/>
 
             {/* HubSpot 3-Column CRM Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 text-xs">
@@ -663,14 +654,14 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                       {selectedHubspotProspect.smsStopOptOut
                         ? 'STOP SMS Actif'
                         : selectedHubspotProspect.rgpdConsent
-                        ? 'Opt-in RGPD Actif'
+                        ? 'Consentement enregistré'
                         : 'Consentement RGPD non recueilli'}
                     </span>
                     <button
                       onClick={() => toggleProspectStopSms(selectedHubspotProspect.id)}
                       className="text-[11px] text-[#00A4BD] underline cursor-pointer"
                     >
-                      {selectedHubspotProspect.smsStopOptOut ? 'Réactiver' : 'Tester STOP'}
+                      {selectedHubspotProspect.smsStopOptOut ? 'Réactiver les SMS' : 'Suspendre les SMS'}
                     </button>
                   </div>
                 </div>
@@ -690,11 +681,12 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                 {selectedHubspotProspect.pendingSmsDraft && (
                   <div className="p-3 rounded-lg bg-violet-50 border border-violet-200 space-y-2">
                     <div className="font-bold text-slate-900">
-                      SMS transactionnel en attente de validation :
+                      Brouillon SMS à vérifier :
                     </div>
                     <p className="font-mono text-[11px] text-slate-700">
                       {selectedHubspotProspect.pendingSmsDraft}
                     </p>
+                    <p className="text-xs cf-muted">Destinataire : {selectedHubspotProspect.firstName} {selectedHubspotProspect.lastName}. Vérifiez le prénom et le rendez-vous dans le texte avant de valider.</p>
                     <button
                       onClick={() =>
                         sendValidatedProspectSms(
@@ -705,7 +697,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                       className="w-full py-2 px-3 rounded bg-violet-600 hover:bg-violet-700 text-white font-bold flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       <Send className="w-3.5 h-3.5" />
-                      Valider et envoyer le SMS
+                      Valider le brouillon SMS
                     </button>
                   </div>
                 )}
@@ -729,14 +721,14 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                     <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 space-y-1">
                       <div className="font-bold text-emerald-900 flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5 text-emerald-600" />
-                        Séance d&apos;Essai Planifiée (POST /api/planning/book)
+                        Séance d’essai planifiée
                       </div>
                       <div className="text-emerald-800 font-semibold">
                         {selectedHubspotProspect.trialDate}
                       </div>
                       {selectedHubspotProspect.heitzPassageQrCode && (
                         <div className="pt-1 border-t border-emerald-200/80 font-mono text-[11px] text-emerald-900">
-                          Ticket QR Portillon Heitz (/api/passageCode/generate) :{' '}
+                          Code d’accès associé :{' '}
                           <strong>{selectedHubspotProspect.heitzPassageQrCode}</strong>
                         </div>
                       )}
@@ -748,23 +740,10 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
               {/* RIGHT PANE (4 cols): HubSpot Deals & Direct Heitz Membership Conversion */}
               <div className="lg:col-span-4 bg-white border border-slate-300 rounded-lg p-4 space-y-4">
                 <div className="border-b border-slate-200 pb-2.5 font-extrabold text-slate-900">
-                  Transaction Associée &amp; Passerelle Heitz System
+                  Offres et adhésion
                 </div>
 
-                <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900">
-                      Abonnement C.Fitness Bi-Club
-                    </span>
-                    <span className="font-mono font-bold text-[#017737]">39,90 €/mois</span>
-                  </div>
-                  <div className="text-[11px] text-slate-600">
-                    Accès 6h-23h 7j/7 Carré de Soie + Beynost · Bilan Technogym Checkup + Biocircuit inclus.
-                  </div>
-                  <div className="text-[10px] font-mono text-slate-500">
-                    Valeur annuelle : {DEAL_ANNUAL_VALUE_EUR.toFixed(2)} € TTC
-                  </div>
-                </div>
+                <p className="text-sm cf-muted">Choisissez une offre pour préparer l’adhésion de ce contact. Les tarifs et les documents doivent être vérifiés avant validation.</p>
 
                 {selectedHubspotProspect.stage !== 'Adhérent' ? (
                   <button
@@ -772,12 +751,12 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                     className="w-full py-3 px-4 rounded-lg bg-[#017737] hover:bg-[#01632d] text-white font-extrabold flex items-center justify-center gap-2 cursor-pointer shadow-xs"
                   >
                     <BadgeCheck className="w-4 h-4" />
-                    Convertir en Adhérent Heitz + Mandat SEPA
+                    Préparer l’adhésion
                   </button>
                 ) : (
                   <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 font-bold flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    Prospect déjà converti en Adhérent Heitz actif !
+                    Ce contact est enregistré comme adhérent.
                   </div>
                 )}
 
@@ -802,6 +781,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                 </button>
               </div>
             </div>
+            <LeadProspectScenariosPanel key={currentUser.id+":"+selectedHubspotProspect.clubId+":"+selectedHubspotProspect.id} actorId={currentUser.id} clubId={selectedHubspotProspect.clubId} prospectId={selectedHubspotProspect.id}/>
           </div>
         )}
 
@@ -809,7 +789,22 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
         {/* VIEW 3: HUBSPOT SPREADSHEET CONTACTS TABLE                            */}
         {/* ===================================================================== */}
         {viewMode === 'TABLE' && (
-          <div className="p-4 overflow-x-auto bg-white">
+          <>
+          <div className="md:hidden divide-y divide-slate-700/30">
+            {filteredProspects.length === 0 && <p className="p-5 cf-muted text-sm">Aucun prospect ne correspond à votre recherche.</p>}
+            {filteredProspects.map(prospect => <article key={prospect.id} className="p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <button type="button" className="text-left font-bold text-violet-400" onClick={() => { openContact(prospect.id); }}>
+                  {prospect.firstName} {prospect.lastName}
+                </button>
+                <span className="text-xs rounded-full bg-violet-500/10 text-violet-400 px-2 py-1 shrink-0">{prospect.stage}</span>
+              </div>
+              <p className="text-xs cf-muted">{formatClubName(prospect.clubId, true)} · {prospect.source}</p>
+              <p className="text-sm break-words">{prospect.phone || prospect.email || 'Coordonnées à compléter'}</p>
+              <button type="button" onClick={() => { openContact(prospect.id); }} className="w-full min-h-11 rounded-xl border border-violet-500/30 text-sm font-semibold text-violet-400">Ouvrir la fiche contact</button>
+            </article>)}
+          </div>
+          <div className="hidden md:block p-4 overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-slate-200 text-[11px] font-semibold uppercase text-slate-500">
@@ -818,15 +813,17 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                   <th className="py-2.5 px-3">Téléphone &amp; Email</th>
                   <th className="py-2.5 px-3">Objectif &amp; Séance d&apos;Essai</th>
                   <th className="py-2.5 px-3">Conformité RGPD / Bloctel</th>
-                  <th className="py-2.5 px-3">Étape Pipeline</th>
-                  <th className="py-2.5 pl-3 text-right">Actions Rapides</th>
+                  <th className="py-2.5 px-3">Étape du suivi</th>
+                  <th className="py-2.5 pl-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredProspects.map((prospect) => (
                   <tr key={prospect.id} className="hover:bg-slate-50/80">
                     <td className="py-3 pr-3 font-bold text-slate-900">
-                      {prospect.firstName} {prospect.lastName}
+                      <button type="button" className="text-left text-violet-400 hover:underline" onClick={() => { openContact(prospect.id); }}>
+                        {prospect.firstName} {prospect.lastName}
+                      </button>
                     </td>
                     <td className="py-3 px-3">
                       <span className="font-semibold text-slate-800">
@@ -852,9 +849,9 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                       ) : prospect.bloctelListed ? (
                         <span className="text-amber-700 font-semibold">Liste Bloctel</span>
                       ) : prospect.rgpdConsent ? (
-                        <span className="text-emerald-700 font-medium">Opt-in RGPD Actif</span>
+                        <span className="text-emerald-700 font-medium">Consentement enregistré</span>
                       ) : (
-                        <span className="text-amber-700 font-medium">RGPD non consenti</span>
+                        <span className="text-amber-700 font-medium">Consentement non renseigné</span>
                       )}
                     </td>
                     <td className="py-3 px-3">
@@ -885,7 +882,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                             onClick={() => setConvertingProspect(prospect)}
                             className="px-2.5 py-1.5 rounded-lg bg-[#017737] hover:bg-[#01632d] text-white font-semibold cursor-pointer"
                           >
-                            Souscrire Heitz
+                            Préparer l’adhésion
                           </button>
                         )}
                       </div>
@@ -895,6 +892,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 
