@@ -37,6 +37,23 @@ export function isHeitzMemberUnpaid(member: Pick<HeitzMember, 'finBalanceEur' | 
   return member.finBalanceState === 0 || member.finBalanceEur < 0;
 }
 
+export function isHeitzDropout(
+  member: Pick<HeitzMember, 'daysSinceLastWorkout' | 'lastWorkoutKnown'>,
+  thresholdDays: number
+): boolean {
+  return member.lastWorkoutKnown !== false
+    && Number.isFinite(member.daysSinceLastWorkout)
+    && member.daysSinceLastWorkout >= thresholdDays;
+}
+
+export function describeHeitzLastVisit(
+  member: Pick<HeitzMember, 'daysSinceLastWorkout' | 'lastWorkoutKnown'>
+): string {
+  return member.lastWorkoutKnown === false
+    ? 'Dernier passage à vérifier dans Heitz'
+    : `Dernier passage : il y a ${member.daysSinceLastWorkout}j`;
+}
+
 export function filterHeitzMembersByStatus(rows: HeitzMember[], status: HeitzStatusFilter): HeitzMember[] {
   if (status === 'OK') {
     return rows.filter(m => m.activeSubscription && !isHeitzMemberUnpaid(m));
