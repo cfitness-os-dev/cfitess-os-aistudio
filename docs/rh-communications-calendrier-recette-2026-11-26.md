@@ -58,7 +58,7 @@ Stockage rétrocompatible dans `personalWorkspace.collaboration` avec valeurs pa
 | Niveau | Résultat |
 | --- | --- |
 | TypeScript, interface et contrats existants + 4 nouveaux tests | 165 tests réussis |
-| Suite Rust complète avant les 2 derniers tests supplémentaires | 183 tests réussis |
+| Suite Rust complète finale | 185 tests réussis |
 | Module RH final, incluant les équipes encadrées et la pagination | 10 tests réussis, 175 autres filtrés |
 | Construction TypeScript/Vite et binaire Rust | Réussie |
 | Recette HTTP contre binaire Rust final | 10 contrôles réussis, dont redémarrage serveur, non-doublon, refus de droits, confidentialité, renouvellement/révocation/désactivation et erreur disque |
