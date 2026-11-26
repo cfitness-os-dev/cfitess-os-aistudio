@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCfos } from '../../context/CfosContext';
 import { describeHeitzCollection } from '../../domain/heitzCollection';
+import { describeHeitzLastVisit } from '../../domain/heitzCrm';
 import { HeitzMembersPanel } from './HeitzMembersPanel';
 import {
   QrCode,
@@ -1349,8 +1350,8 @@ export function DevicesHeitzView() {
                       <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
                         <div className="text-slate-500 font-semibold">Assiduité &amp; Rétention :</div>
                         <div className="font-bold text-slate-900 mt-0.5">
-                          Dernier passage : il y a {selectedMember.daysSinceLastWorkout}j
-                          {selectedMember.daysSinceLastWorkout >= 15 && (
+                          {describeHeitzLastVisit(selectedMember)}
+                          {selectedMember.lastWorkoutKnown !== false && selectedMember.daysSinceLastWorkout >= 15 && (
                             <span className="text-rose-600 ml-1">(Alerte &gt;15j)</span>
                           )}
                         </div>
@@ -1361,13 +1362,17 @@ export function DevicesHeitzView() {
                           Bilan Technogym Checkup &amp; Mywellness :
                         </div>
                         <div className="font-mono font-bold text-slate-900 mt-0.5 tabular-nums">
-                          {selectedMember.technogymMoves30d} MOVEs ·{' '}
-                          {selectedMember.technogymCheckupWellnessAge
-                            ? `Wellness Age™ ${selectedMember.technogymCheckupWellnessAge} ans`
-                            : 'Checkup synchro'}
-                          {selectedMember.technogymCheckupScore
-                            ? ` · Score Checkup : ${selectedMember.technogymCheckupScore}/100`
-                            : ''}
+                          {selectedMember.dataSource === 'HeitzSystem Cloud'
+                            ? 'Données MOVEs et Checkup non synchronisées'
+                            : `${selectedMember.technogymMoves30d} MOVEs · ${
+                                selectedMember.technogymCheckupWellnessAge
+                                  ? `Wellness Age™ ${selectedMember.technogymCheckupWellnessAge} ans`
+                                  : 'Checkup non renseigné'
+                              }${
+                                selectedMember.technogymCheckupScore
+                                  ? ` · Score Checkup : ${selectedMember.technogymCheckupScore}/100`
+                                  : ''
+                              }`}
                         </div>
                       </div>
                     </div>
