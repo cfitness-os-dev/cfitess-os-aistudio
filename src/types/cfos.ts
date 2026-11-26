@@ -556,7 +556,10 @@ export interface CollaboratorNotification {
   createdAt: string;
   title: string;
   message: string;
-  type: 'signature_requise' | 'rdv_heitz' | 'passage_club' | 'mywellness_checkup' | 'rh_planning';
+  type: 'signature_requise' | 'rdv_heitz' | 'passage_club' | 'mywellness_checkup' | 'rh_planning' | 'rh_message';
+  rhMessageId?: string;
+  senderName?: string;
+  readAt?: string | null;
   read: boolean;
   actionLabel?: string;
   targetSection?: AdminSection;

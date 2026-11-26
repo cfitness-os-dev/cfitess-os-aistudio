@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   Globe,
   KeyRound,
-  RefreshCw,
   ShieldAlert,
   ShieldCheck,
 } from 'lucide-react';
@@ -13,6 +12,7 @@ import { useCfos } from '../context/CfosContext';
 import { cleanUiTree } from '../domain/cleanModeSanitizer';
 import { ApiClientError, clientApi, type ApiAuthContext } from '../domain/clientApi';
 import type { UserPreferences } from '../domain/types';
+import { PersonalCalendarPanel } from './PersonalCalendarPanel';
 import { useLeadDraftGuard } from '../components/useLeadDraftGuard';
 
 interface PreferencesViewProps {
@@ -72,24 +72,6 @@ export function PreferencesView({
     }
   }
 
-  async function handleRevokeCalendar() {
-    setFeedback(null);
-    try {
-      const updated = await clientApi.revokeCalendarToken(auth);
-      setDraft(updated);
-      await onRefreshDashboard();
-      setFeedback({
-        kind: 'ok',
-        text: 'L’identifiant du calendrier a été renouvelé. La connexion au calendrier reste à finaliser.',
-      });
-    } catch (e) {
-      setFeedback({
-        kind: 'err',
-        text: e instanceof ApiClientError ? e.message : String(e),
-      });
-    }
-  }
-
   async function handleChangePassword() {
     setFeedback(null);
     try {
@@ -109,7 +91,7 @@ export function PreferencesView({
     }
   }
 
-  const calendarUrl = `https://c.fitness/ics/${draft.calendarFeedToken}.ics`;
+
 
   return cleanUiTree(
     <div className="space-y-5">
@@ -300,21 +282,11 @@ export function PreferencesView({
                   }
                   className="accent-violet-500"
                 />
-                Souhaitée
+                Activer mon calendrier privé
               </label>
             </div>
 
-            <p className="text-sm cf-muted">La synchronisation du calendrier est à finaliser. Aucun lien d’abonnement opérationnel n’est fourni pour le moment.</p>
-            {isTechnicalMode && <div className="cf-card-secondary p-3 cf-mono text-[11px] break-all text-cyan-300">Exemple non raccordé : {calendarUrl}</div>}
-
-            <button
-              type="button"
-              onClick={handleRevokeCalendar}
-              className="cf-card-secondary px-3.5 py-2 text-xs font-semibold text-amber-300 hover:border-amber-500/60 flex items-center gap-1.5"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Renouveler l’identifiant du calendrier
-            </button>
+            <PersonalCalendarPanel key={auth.actorId} auth={auth} enabled={preferences.calendarFeedEnabled} unsaved={JSON.stringify(draft) !== JSON.stringify(preferences)} />
           </div>
 
           <div className="cf-card p-5 space-y-3">

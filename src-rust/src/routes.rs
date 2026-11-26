@@ -353,6 +353,9 @@ pub fn api_router(state: SharedState) -> Router {
             get(get_preferences).put(put_preferences),
         )
         .route("/api/me/calendar-token/revoke", post(post_revoke_calendar_token))
+        .route("/api/me/calendar-link", get(crate::hr_collaboration::calendar_status).post(crate::hr_collaboration::issue_calendar))
+        .route("/api/calendar/:token", get(crate::hr_collaboration::calendar_feed))
+        .route("/api/hr/communications/:club_id", get(crate::hr_collaboration::get_messages).post(crate::hr_collaboration::publish_message))
         .route("/api/me/password", post(post_change_password))
         .route("/api/ollama/status", get(get_ollama_status))
         .route("/api/ollama/chat", post(post_ollama_chat))
@@ -3590,6 +3593,9 @@ async fn put_preferences(
     let snapshot = db.clone();
     db.preferences_by_employee
         .insert(actor_id.clone(), prefs.clone());
+    if !prefs.calendar_feed_enabled {
+        db.personal_workspace.collaboration.calendars.remove(&actor_id);
+    }
     let summary = format!(
         "Mise à jour thème={}, accent={}, langue={}, canal e-mail={}, fréquence={}",
         prefs.theme_mode,
@@ -3637,9 +3643,10 @@ async fn post_revoke_calendar_token(
         .unwrap_or_else(|| default_employee_preferences(&actor_id));
 
     let snapshot = db.clone();
-    let prev = prefs.calendar_feed_token.clone();
-    let suffix = Utc::now().timestamp_millis() & 0xFFFF_FFFF;
-    prefs.calendar_feed_token = format!("cal-revoked-new-{:x}", suffix);
+    let mut bytes = [0u8; 32];
+    rand::RngCore::fill_bytes(&mut rand::rngs::OsRng, &mut bytes);
+    prefs.calendar_feed_token = format!("cal-revoked-new-{}", hex::encode(bytes));
+    db.personal_workspace.collaboration.calendars.remove(&actor_id);
     db.preferences_by_employee
         .insert(actor_id.clone(), prefs.clone());
 
@@ -3650,8 +3657,8 @@ async fn post_revoke_calendar_token(
         "Renouvellement et révocation de l’URL personnelle .ics (EX32)".into(),
         "org",
         "UTI04",
-        Some(prev),
-        Some(prefs.calendar_feed_token.clone()),
+        None,
+        None,
     );
     if let Err(err_msg) = persist_state(&state.data_dir, &db) {
         *db = snapshot;

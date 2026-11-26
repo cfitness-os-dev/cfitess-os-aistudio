@@ -29,6 +29,8 @@ import { PreferencesView } from '../../views/PreferencesView';
 import { MyDayCollaboratorView } from './MyDayCollaboratorView';
 import { PersonalWorkspaceView } from './PersonalWorkspaceView';
 
+const HrCommunicationsView = lazy(() => import('./HrCommunicationsView').then(m => ({default: m.HrCommunicationsView})));
+
 const HrEmployeeDossierView = lazy(() =>
   import('./HrEmployeeDossierView').then((m) => ({ default: m.HrEmployeeDossierView }))
 );
@@ -796,6 +798,10 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                 </Suspense>
               )}
 
+              {hubTab === 'mon-compte' && activeSection === 'MC09' && effectiveDashboard && (
+                <HrCommunicationsView key={auth.actorId + ':' + effectiveClubId} auth={auth} clubId={effectiveClubId} />
+              )}
+
               {hubTab === 'mon-compte' && activeSection === 'MC10' && effectiveDashboard && (
                 <Suspense fallback={<p role="status">Chargement des paramètres RH…</p>}>
                   <HrSiteRulesView
@@ -831,6 +837,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                 activeSection !== 'MC06' &&
                 activeSection !== 'MC07' &&
                 activeSection !== 'MC08' &&
+                activeSection !== 'MC09' &&
                 activeSection !== 'MC10' &&
                 activeSection !== 'MC11' &&
                 activeSection !== 'MC12' &&
