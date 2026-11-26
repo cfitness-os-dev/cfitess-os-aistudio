@@ -17,7 +17,7 @@ def main():
                 data=None if body is None else json.dumps(body).encode())
             with urllib.request.urlopen(req,timeout=5) as r:return r.status,json.loads(r.read())
         def start(folder):
-            env={'PATH':os.environ.get('PATH','/usr/bin:/bin'),'TMPDIR':os.environ['TMPDIR'],
+            env={**os.environ,'TMPDIR':os.environ['TMPDIR'],
                 'CFITNESS_ENV':'demo','CFITNESS_DEMO_MODE':'1','CFITNESS_STRICT_SESSION':'1',
                 'CFITNESS_BIND_ADDR':f'127.0.0.1:{port}','CFITNESS_DATA_DIR':str(folder),
                 'CFITNESS_HEITZ_LIVE_READS_ENABLED':'0','CFITNESS_HEITZ_WORKER':'0',
