@@ -22,7 +22,7 @@ Les anciennes modifications de fiche/étape/segments restent locales : leurs not
 
 ## Preuves exécutées
 
-- `npm test` : **195 réussis, 0 échec**, dont 7 nouveaux tests : attribution réelle/null, réponse incomplète/hors club/doublons, liste vide, conservation des lignes et notes locales, absence de fusion par email, transfert par identifiant stable, relectures répétées.
+- `npm test` : **196 réussis, 0 échec**, dont 8 nouveaux tests : attribution réelle/null, réponse incomplète/hors club/doublons, liste vide, conservation des lignes et notes locales, absence de fusion par email, transfert par identifiant stable, relectures répétées.
 - Compilation TypeScript et build Vite réussis ; `cargo test --locked --quiet` : **222 réussis, 0 échec**. Backend identique à celui de #105.
 - Vrai backend isolé `http://127.0.0.1:64752/crm`, répertoire neuf cloné d'une précédente fixture synthétique possédée par cette recette. Uniquement dans ce clone, liste CDS mise à zéro et un contact serveur laissé à Beynost avant lancement ; aucun original modifié.
 - Navigateur : CDS affiche **0 actif / Liste(0)** et conserve les anciennes fiches séparément ; Beynost affiche **1 actif / Liste(1)**. Avant correctif, les exemples locaux restaient dans les listes.

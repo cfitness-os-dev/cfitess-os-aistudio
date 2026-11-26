@@ -31,7 +31,7 @@ export function reconcileLeadSnapshot(previous:Prospect[],history:Prospect[],sna
   const ids=new Set(incomingById.keys()), historical=[...history], historyKeys=new Set(history.map(r=>JSON.stringify(r)));
   for(const row of previous) {
     const incoming=incomingById.get(row.id), key=JSON.stringify(row);
-    if(scope.has(row.clubId) && (!incoming || JSON.stringify(incoming)!==key) && !historyKeys.has(key)){historical.push(row);historyKeys.add(key);}
+    if((scope.has(row.clubId)||ids.has(row.id)) && (!incoming || JSON.stringify(incoming)!==key) && !historyKeys.has(key)){historical.push(row);historyKeys.add(key);}
   }
   return {prospects:[...previous.filter(r=>!scope.has(r.clubId)&&!ids.has(r.id)),...snapshot.prospects],history:historical};
 }

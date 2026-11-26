@@ -49,3 +49,12 @@ test('local notes and enriched fields overwritten by server remain recoverable a
  assert.equal(result.history[0].notes,original.notes);
  assert.equal(result.history[0].heitzPassageQrCode,'synthetic-local-qr');
 });
+
+test('target-only scope preserves prior transferred version without keeping it in the visible list',()=>{
+ const previous=snapshot([{...row('moved'),comment:'older local comment'}]).prospects;
+ const target=snapshot([row('moved','carre-de-soie')],['carre-de-soie']);
+ const result=reconcileLeadSnapshot(previous,[],target);
+ assert.equal(result.prospects.length,1);assert.equal(result.prospects[0].clubId,'carre-de-soie');
+ assert.equal(result.history.length,1);assert.equal(result.history[0].clubId,'beynost');
+ assert.equal(result.history[0].comment,'older local comment');
+});
