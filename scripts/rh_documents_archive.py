@@ -109,7 +109,7 @@ def create(source,destination,key=None):
                 check_document(content,row)
                 archive.writestr('rh-documents/'+row['id'],content)
             archive.writestr('manifest.json',json.dumps(manifest,ensure_ascii=False,sort_keys=True,allow_nan=False).encode())
-        with open(temporary,'rb') as stream:os.fsync(stream.fileno())
+        with open(temporary,'r+b') as stream:os.fsync(stream.fileno())
         # Atomic creation, refusing even a destination created concurrently.
         os.link(temporary,destination)
         return {'documents':len(rows),'signed':key is not None,'created':True}

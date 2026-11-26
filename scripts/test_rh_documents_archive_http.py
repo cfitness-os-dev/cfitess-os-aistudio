@@ -7,7 +7,7 @@ def main():
     base=f'http://127.0.0.1:{port}';pdf=b'%PDF-1.4\nArchive fictive\n%%EOF\n'
     with tempfile.TemporaryDirectory(prefix='rh-archive-http-',dir=os.environ['TMPDIR']) as folder:
         root=Path(folder);source=root/'source';source.mkdir()
-        env={'PATH':os.environ.get('PATH','/usr/bin:/bin'),'TMPDIR':os.environ['TMPDIR'],
+        env={**os.environ,'TMPDIR':os.environ['TMPDIR'],
             'CFITNESS_ENV':'demo','CFITNESS_DEMO_MODE':'1','CFITNESS_STRICT_SESSION':'1',
             'CFITNESS_BIND_ADDR':f'127.0.0.1:{port}','CFITNESS_HEITZ_LIVE_READS_ENABLED':'0','CFITNESS_HEITZ_WORKER':'0',
             'CFITNESS_AUTOMATION_SCHEDULER':'0','CFITNESS_SCENARIOS_WORKER':'0','CFITNESS_CAMPAIGNS_WORKER':'0','CFITNESS_RH_SCHEDULER':'0',
@@ -31,7 +31,7 @@ def main():
         def login(who,key):
             code,v=call('POST','/api/auth/login',body={'emailOrId':who,'pinOrPassword':os.environ[key]});assert code==200;return v['sessionToken']
         key=secrets.token_hex(32)
-        cli_env={'PATH':env['PATH'],'TMPDIR':env['TMPDIR'],'RH_ARCHIVE_TEST_KEY':key}
+        cli_env={**os.environ,'TMPDIR':env['TMPDIR'],'RH_ARCHIVE_TEST_KEY':key}
         def cli(*args,expected=0):
             p=subprocess.run([sys.executable,str(Path(__file__).with_name('rh_documents_archive.py')),*args],env=cli_env,text=True,capture_output=True,timeout=15)
             assert p.returncode==expected,('archive command',p.returncode,p.stderr)

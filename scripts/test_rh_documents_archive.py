@@ -91,10 +91,14 @@ class ArchiveTests(unittest.TestCase):
     def test_private_source_symlinks_are_refused(self):
         if not hasattr(os,'symlink'):self.skipTest('Symlinks unavailable')
         path=self.source/'rh-documents'/self.id
-        path.unlink();outside=self.root/'outside-fictif';outside.write_bytes(self.raw);path.symlink_to(outside)
+        path.unlink();outside=self.root/'outside-fictif';outside.write_bytes(self.raw)
+        try:path.symlink_to(outside)
+        except OSError:self.skipTest('Symlink creation not privileged')
         with self.assertRaises(ValueError):a.create(self.source,self.archive)
         self.assertEqual(outside.read_bytes(),self.raw)
         path.unlink();path.write_bytes(self.raw)
-        folder=self.source/'rh-documents';moved=self.root/'other-folder';folder.rename(moved);folder.symlink_to(moved,target_is_directory=True)
+        folder=self.source/'rh-documents';moved=self.root/'other-folder';folder.rename(moved)
+        try:folder.symlink_to(moved,target_is_directory=True)
+        except OSError:self.skipTest('Symlink creation not privileged')
         with self.assertRaises(ValueError):a.create(self.source,self.archive)
 if __name__=='__main__':unittest.main()
