@@ -1741,7 +1741,8 @@ async fn post_shift(
     Json(payload): Json<CreateShiftPayload>,
 ) -> Result<(StatusCode, Json<Shift>), (StatusCode, Json<Value>)> {
     let (actor_id, _) = resolve_session_actor(&state, &headers).await?;
-    let mut db = state.db.write().await;
+    let mut stored = state.db.write().await;
+    let mut db = stored.clone();
     let site_id = payload.site_id.trim();
     if !db.sites.iter().any(|site| site.id == site_id) {
         return Err(err_resp(
@@ -1901,6 +1902,7 @@ async fn post_shift(
         None,
         Some(format!("{}-{}", shift.start_time, shift.end_time)),
     );
+    crate::planning_notifications::changes(&mut db,&before_shifts)?;
     if let Err(error) = persist_state(&state.data_dir, &db) {
         db.shifts = before_shifts;
         db.audit_log = before_audit;
@@ -1909,6 +1911,7 @@ async fn post_shift(
             format!("Impossible de persister le shift : {error}"),
         ));
     }
+    *stored = db;
     Ok((StatusCode::CREATED, Json(shift)))
 }
 
@@ -1919,7 +1922,8 @@ async fn patch_shift(
     Json(patch): Json<UpdateShiftPayload>,
 ) -> Result<Json<Shift>, (StatusCode, Json<Value>)> {
     let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
-    let mut db = state.db.write().await;
+    let mut stored = state.db.write().await;
+    let mut db = stored.clone();
 
     let shift_idx = db
         .shifts
@@ -2173,6 +2177,7 @@ async fn patch_shift(
         Some(before),
         Some(after),
     );
+    crate::planning_notifications::changes(&mut db,&before_shifts)?;
     if let Err(error) = persist_state(&state.data_dir, &db) {
         db.shifts = before_shifts;
         db.audit_log = before_audit;
@@ -2182,6 +2187,7 @@ async fn patch_shift(
         ));
     }
 
+    *stored = db;
     Ok(Json(updated))
 }
 
@@ -2191,7 +2197,8 @@ async fn delete_shift(
     Path(shift_id): Path<String>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     let (actor_id, site_id) = resolve_session_actor(&state, &headers).await?;
-    let mut db = state.db.write().await;
+    let mut stored = state.db.write().await;
+    let mut db = stored.clone();
     let shift_idx = db
         .shifts
         .iter()
@@ -2247,6 +2254,7 @@ async fn delete_shift(
         Some(format!("{}-{}", shift.start_time, shift.end_time)),
         None,
     );
+    crate::planning_notifications::changes(&mut db,&before_shifts)?;
     if let Err(error) = persist_state(&state.data_dir, &db) {
         db.shifts = before_shifts;
         db.audit_log = before_audit;
@@ -2255,6 +2263,7 @@ async fn delete_shift(
             format!("Impossible de persister la suppression du shift : {error}"),
         ));
     }
+    *stored = db;
     Ok(Json(json!({ "ok": true, "shiftId": shift.id })))
 }
 

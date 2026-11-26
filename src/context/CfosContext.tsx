@@ -1012,7 +1012,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
   }, [currentUserId, isAuthenticated, primaryAuthorizedClub]);
 
   const setActiveSection = (sec: AdminSection, subTarget?: string) => {
-    const personalRequest = sec === 'my-day' && ['personal-notifications','personal-leave','personal-time'].includes(subTarget ?? '');
+    const personalRequest = sec === 'my-day' && ['personal-notifications','personal-leave','personal-time','personal-planning'].includes(subTarget ?? '');
     if((sec !== activeSection || (subTarget ?? null) !== navSubTarget || personalRequest) && !confirmLeadDraftNavigation(()=>setActiveSection(sec,subTarget))) return;
     if (personalRequest) setPersonalNavigationRevision(n => n + 1);
     if (sec !== 'governance') {

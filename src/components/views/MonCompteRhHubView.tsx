@@ -83,7 +83,7 @@ function parseInitialTarget(subTarget?: string | null): {
     return { tab: 'mon-compte', section: 'MC01', isPersonalSpace: false };
   }
   const normalized = subTarget.trim();
-  const personalPages: Record<string,string> = {'personal-notifications':'notifications','personal-leave':'leave','personal-time':'time'};
+  const personalPages: Record<string,string> = {'personal-notifications':'notifications','personal-leave':'leave','personal-time':'time','personal-planning':'planning'};
   if (personalPages[normalized.toLowerCase()]) return {tab:'github-my-day',section:'MC01',isPersonalSpace:true,personalPage:personalPages[normalized.toLowerCase()]};
   if (normalized.toLowerCase() === 'personal') {
     return { tab: 'github-my-day', section: 'MC01', isPersonalSpace: true };
