@@ -425,6 +425,7 @@ export const clientApi = {
     }>;
     prospects: Array<{
       id: string;
+      assignedToId: string | null;
       gender: string;
       firstName: string;
       lastName: string;

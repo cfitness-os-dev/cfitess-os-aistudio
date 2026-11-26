@@ -56,6 +56,8 @@
 
 - `docs/lead-pool-parcours-recette-2026-11-26.md` : contrôles réels des trois formats, corrections du bandeau/transfert et blocages d’éligibilité/collection restant à corriger avant exploitation.
 
+- `docs/lead-liste-partagee-recette-2026-11-26.md` : lecture partagée réconciliée, copies locales conservées et attribution reçue respectée ; création/édition serveur toujours prioritaires avant pilote.
+
 ## Critère de fin
 
 Pour chaque option retenue : référence source, écran cible, droit/club, lecture/écriture réelle ou simulation, règle de gestion, scénario de réussite, scénario de refus/échec, preuve et version testée. Une option non observée reste à vérifier ; une connexion désactivée volontairement n’est pas annoncée comme opérationnelle. Les comptes, appareils et accords du fournisseur nécessaires aux essais réels restent à obtenir avant le pilote.
