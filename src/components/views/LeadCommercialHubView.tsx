@@ -1,3 +1,4 @@
+import { validateLeadSnapshot } from '../../domain/leadProspectSnapshot';
 import { LeadWorkspaceNavigation, type LeadWorkspacePage } from '../LeadWorkspaceNavigation';
 import { LeadCommunicationsHistoryView } from "./LeadCommunicationsHistoryView";
 import { LeadCampaignsView } from "./LeadCampaignsView";
@@ -255,6 +256,8 @@ export function LeadCommercialHubView({
     employees,
     heitzMembers,
     prospects,
+    leadLocalContacts,
+    leadServerClubs,
     clubFilter,
     isTechnicalMode,
     createProspect,
@@ -270,11 +273,15 @@ export function LeadCommercialHubView({
       ? currentUser.siteAssignments.map((sa) => sa.clubId)
       : [currentUser.clubId];
   const isClubAuthorized = (cid: 'carre-de-soie' | 'beynost') => allowedClubIds.includes(cid);
-  const authorizedProspects = prospects.filter((p) => isClubAuthorized(p.clubId) && (clubFilter === 'all' || p.clubId === clubFilter));
+  const authorizedProspects = prospects.filter((p) => leadServerClubs?.includes(p.clubId) && (clubFilter === 'all' || p.clubId === clubFilter));
   const commercialLabelById: Record<string, string> = Object.fromEntries(
     employees.map((e) => [e.id, `${e.firstName} ${e.lastName}`])
   );
 
+  const [historyLimit,setHistoryLimit]=useState(50);
+  const localHistory=(leadLocalContacts??[]).filter(p=>leadServerClubs?.includes(p.clubId)&&(clubFilter==='all'||p.clubId===clubFilter));
+  const [workspaceReady,setWorkspaceReady]=useState(false);
+  const [workspaceActor,setWorkspaceActor]=useState('');
   const [workspaceSyncError, setWorkspaceSyncError] = useState<string | null>(null);
 
   const syncSequence = useRef(0);
@@ -282,9 +289,10 @@ export function LeadCommercialHubView({
   useEffect(()=>{ const update=(event:Event)=>{if((event as CustomEvent).detail?.employeeId===currentUser.id)setSessionRevision(v=>v+1);}; window.addEventListener('cfos-bearer-updated',update);return()=>window.removeEventListener('cfos-bearer-updated',update);},[currentUser.id]);
   const syncLeadWorkspaceFromServer = async () => {
     const ticket=++syncSequence.current;
-    setWorkspaceSyncError(null);
+    setWorkspaceSyncError(null);setWorkspaceReady(false);setWorkspaceActor(currentUser.id);
     const ws = await clientApi.getLeadWorkspace({ actorId: currentUser.id, siteId: 'all' });
     if(ticket!==syncSequence.current)return;
+    const snapshot=validateLeadSnapshot(ws);
     setFormsList(
       (ws.forms ?? []).map((f) => ({
         id: f.id,
@@ -330,37 +338,9 @@ export function LeadCommercialHubView({
         statusLabel: a.statusLabel,
       }))
     );
-    if (ws.prospects?.length) {
-      upsertServerProspects(
-        ws.prospects.map((sp) => ({
-          id: sp.id,
-          firstName: sp.firstName,
-          lastName: sp.lastName,
-          phone: sp.phone,
-          email: sp.email,
-          clubId: sp.clubId,
-          source: (sp.source as Prospect['source']) || 'Site c.fitness',
-          stage: (sp.stage as Prospect['stage']) || 'Nouveau',
-          assignedToId: sp.clubId === 'beynost' ? 'emp-chloe' : 'emp-maxime',
-          rgpdConsent: sp.rgpdConsent,
-          bloctelListed: false,
-          smsStopOptOut: false,
-          retryCount: 0,
-          trialDate: sp.trialDate,
-          goal: sp.comment || 'Soumission publique serveur',
-          notes: sp.comment || '',
-          createdAt: sp.createdAt,
-          segments: sp.segments,
-          leadStatus: sp.leadStatus,
-          gender: sp.gender,
-          street: sp.street,
-          postalCode: sp.postalCode,
-          city: sp.city,
-          birthDate: sp.birthDate,
-          comment: sp.comment,
-        }))
-      );
-    }
+    upsertServerProspects(currentUser.id,snapshot);
+    setWorkspaceReady(true);
+
   };
 
   // Synchronisation serveur partagée (snapshot serveur prioritaire)
@@ -988,8 +968,14 @@ export function LeadCommercialHubView({
           {/* ================================================================= */}
           {activeTab === 'prospects' && (
             <div className="space-y-4">
-              {pipelineChildren}
+              {workspaceReady && workspaceActor===currentUser.id && (clubFilter==='all' || leadServerClubs?.includes(clubFilter)) ? pipelineChildren : <div className="cf-card p-4" role="status">{workspaceSyncError ? 'La liste partagée n’est pas disponible. Les contacts de cet appareil sont conservés ; réessayez le chargement.' : 'Chargement des prospects partagés…'}</div>}
 
+              {workspaceReady && workspaceActor===currentUser.id && localHistory.length>0 && <details className="cf-card p-4">
+                <summary className="cursor-pointer font-semibold text-sm">Contacts et anciennes versions conservés sur cet appareil</summary>
+                <p className="cf-muted text-sm mt-2">Ces copies ne remplacent pas les données partagées et ne sont pas comptées dans les indicateurs. Elles restent consultables pour reprendre une ancienne saisie, sans import ni suppression automatique.</p>
+                <ul className="space-y-3 mt-3">{localHistory.slice(0,historyLimit).map((p,i)=><li key={p.id+':'+i} className="cf-card-secondary rounded-lg p-3 text-sm break-words"><strong>{p.firstName} {p.lastName}</strong><p>{p.phone} · {p.email}</p><p className="cf-muted">{p.source} · {p.stage}</p>{p.notes&&<p className="whitespace-pre-wrap">{p.notes}</p>}</li>)}</ul>
+                {localHistory.length>historyLimit && <button type="button" className="cf-card-secondary rounded-lg p-3 text-sm mt-3" onClick={()=>setHistoryLimit(n=>n+50)}>Afficher les contacts conservés suivants</button>}
+              </details>}
               <details className="group cf-card p-4">
                 <summary className="cursor-pointer font-semibold text-sm">Importer des prospects et gérer les segments</summary>
                 <p className="text-xs cf-muted mt-2 mb-4">Ajoutez une liste de contacts ou mettez à jour les segments de plusieurs prospects.</p>

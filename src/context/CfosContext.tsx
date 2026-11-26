@@ -1,3 +1,4 @@
+import { reconcileLeadSnapshot, type LeadProspectSnapshot } from '../domain/leadProspectSnapshot';
 import { clubStorage, authorizedClub, readClubSelection, rememberClubSelection } from '../domain/clubSelection';
 import { clientApi } from '../domain/clientApi';
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -162,6 +163,7 @@ interface PersistedState {
   leaveRequests: LeaveRequest[];
   hrDocuments: HRDocument[];
   prospects: Prospect[];
+  leadLocalContacts: Prospect[];
   phoneLines: PhoneLine[];
   callLogs: CallLog[];
   trainingModules: TrainingModule[];
@@ -200,6 +202,7 @@ function getDefaultState(): PersistedState {
     leaveRequests: INITIAL_LEAVE_REQUESTS,
     hrDocuments: INITIAL_HR_DOCUMENTS,
     prospects: INITIAL_PROSPECTS,
+    leadLocalContacts: [],
     phoneLines: INITIAL_PHONE_LINES,
     callLogs: INITIAL_CALL_LOGS,
     trainingModules: INITIAL_TRAINING_MODULES,
@@ -223,6 +226,7 @@ function getDefaultState(): PersistedState {
 }
 
 interface CfosContextValue extends PersistedState {
+  leadServerClubs: ClubId[] | null;
   currentUser: Employee;
   authorizedClubIds: ClubId[];
   isDemoMode: boolean;
@@ -352,10 +356,11 @@ interface CfosContextValue extends PersistedState {
         | 'leadStatus'
         | 'segments'
       >
-    >
+    >,
+    confirmation?: 'server-confirmed'
   ) => { ok: boolean; message: string };
   assignSegmentToProspects: (prospectIds: string[], segmentName: string) => number;
-  upsertServerProspects: (serverProspects: Prospect[]) => void;
+  upsertServerProspects: (actorId:string,snapshot:LeadProspectSnapshot) => void;
   updateProspectStage: (prospectId: string, stage: ProspectStage) => void;
   scheduleProspectTrial: (prospectId: string, trialDateLabel: string) => void;
   convertProspectToMember: (
@@ -514,6 +519,8 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
       return 'emp-mario';
     }
   });
+  const [leadScope,setLeadScope]=useState<{actorId:string;clubs:ClubId[]}|null>(null);
+  const leadActor=useRef(currentUserId);leadActor.current=currentUserId;
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -1643,7 +1650,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
         return { ok: false, message: errMsg };
       }
     }
-    const dup = findDuplicateProspect(state.prospects, input.phone, input.email);
+    const dup = findDuplicateProspect([...state.prospects,...(state.leadLocalContacts??[])], input.phone, input.email);
     if (dup) {
       const msg = `Doublon détecté : ${dup.firstName} ${dup.lastName} existe déjà dans le pipeline (${dup.stage}).`;
       notify('warning', msg);
@@ -1682,7 +1689,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
 
     setState((prev) => ({
       ...prev,
-      prospects: [newProspect, ...prev.prospects],
+      leadLocalContacts: [newProspect, ...(prev.leadLocalContacts??[])],
       auditLogs: appendAudit(prev.auditLogs, {
         clubId: input.clubId,
         action: 'CREATION_PROSPECT_CRM',
@@ -1691,11 +1698,11 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
       }),
     }));
 
-    notify('success', `Prospect ${newProspect.firstName} ${newProspect.lastName} ajouté au pipeline.`);
-    return { ok: true, message: 'Prospect enregistré avec succès.' };
+    notify('warning', 'Contact conservé sur cet appareil. Il reste à importer dans la liste partagée.');
+    return { ok: true, message: 'Contact conservé sur cet appareil uniquement. Un responsable doit l’importer pour le partager.' };
   };
 
-  const updateProspect: CfosContextValue['updateProspect'] = (prospectId, patch) => {
+  const updateProspect: CfosContextValue['updateProspect'] = (prospectId, patch, confirmation) => {
     if (patch.phone !== undefined) {
       const rawPhone = patch.phone.trim();
       const digitsOnly = rawPhone.replace(/[\s.\-()]/g, '').replace(/^\+33/, '0');
@@ -1721,26 +1728,18 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
         }),
       };
     });
-    notify('success', 'Fiche prospect mise à jour et persistée.');
-    return { ok: true, message: 'Fiche prospect enregistrée.' };
+    if(confirmation==='server-confirmed')return {ok:true,message:'Modification partagée confirmée.'};
+    notify('warning', 'Modifications conservées sur cet appareil uniquement. Elles ne sont pas encore partagées avec le club.');
+    return { ok: true, message: 'Modifications conservées sur cet appareil uniquement ; elles ne sont pas transmises au club.' };
   };
 
-  const upsertServerProspects = (serverProspects: Prospect[]) => {
-    setState((prev) => {
-      const next = [...prev.prospects];
-      for (const sp of serverProspects) {
-        const idx = next.findIndex(
-          (lp) =>
-            lp.id === sp.id ||
-            (lp.email.trim().toLowerCase() === sp.email.trim().toLowerCase() && lp.clubId === sp.clubId)
-        );
-        if (idx >= 0) {
-          next[idx] = { ...next[idx], ...sp, id: sp.id };
-        } else {
-          next.unshift(sp);
-        }
-      }
-      return { ...prev, prospects: next };
+  const upsertServerProspects = (actorId:string,snapshot:LeadProspectSnapshot) => {
+    if(leadActor.current!==actorId)return;
+    setLeadScope({actorId,clubs:snapshot.allowedClubs});
+    setState(prev=>{
+      if(leadActor.current!==actorId)return prev;
+      const next=reconcileLeadSnapshot(prev.prospects,prev.leadLocalContacts??[],snapshot);
+      return {...prev,prospects:next.prospects,leadLocalContacts:next.history};
     });
   };
 
@@ -1763,7 +1762,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
         afterState: `Segment ajouté : ${segmentName.trim()}`,
       }),
     }));
-    notify('success', `Segment « ${segmentName.trim()} » enregistré sur ${prospectIds.length} prospect(s).`);
+    notify('warning', `Segment « ${segmentName.trim()} » conservé sur cet appareil uniquement pour ${prospectIds.length} contact(s).`);
     return updatedCount || prospectIds.length;
   };
 
@@ -1772,7 +1771,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
       ...prev,
       prospects: prev.prospects.map((p) => (p.id === prospectId ? { ...p, stage } : p)),
     }));
-    notify('success', `Statut prospect mis à jour : ${stage}.`);
+    notify('warning', `Étape « ${stage} » conservée sur cet appareil uniquement, sans enregistrement partagé.`);
   };
 
   const scheduleProspectTrial = (prospectId: string, trialDateLabel: string) => {
@@ -3084,6 +3083,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
 
   const value: CfosContextValue = {
     ...state,
+    leadServerClubs:leadScope?.actorId===currentUserId ? leadScope.clubs : null,
     employees: syncedEmployees,
     recoveryCases: recoveryCasesSafe,
     recoveryAuthorizedEmployeeIds: recoveryAuthorizedIds,

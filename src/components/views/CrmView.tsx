@@ -52,7 +52,8 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
   const {
     currentUser,
     clubFilter,
-    prospects,
+    prospects: cachedProspects,
+    leadServerClubs,
     employees,
     updateProspect,
     updateProspectStage,
@@ -67,6 +68,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
     rewardMemberLoyaltyOrReferral,
   } = useCfos();
 
+  const prospects=cachedProspects.filter(p=>leadServerClubs?.includes(p.clubId));
   const managementClubs = leadManagementClubs(currentUser);
   const canManageSelectedClub=clubFilter !== 'all' && managementClubs.includes(clubFilter);
   const [viewMode, setViewMode] = useState<'KANBAN' | 'HUBSPOT_360' | 'TABLE'>('TABLE');
@@ -91,7 +93,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
     updateProspect(result.prospectId, {
       clubId: result.targetClubId as ClubId,
       assignedToId: result.assignedTo,
-    });
+    }, 'server-confirmed');
     setFeedbackBanner({
       type: 'ok',
       text: `Prospect transféré vers ${formatClubName(result.targetClubId as ClubId, true)} avec succès (commercial : ${employees.find(e=>e.id===result.assignedTo)?.firstName ?? 'du club'}).`,
@@ -249,7 +251,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                 for (const item of result.reassigned) {
                   updateProspect(item.id, {
                     assignedToId: item.assignedToId,
-                  });
+                  }, 'server-confirmed');
                 }
               }
               setFeedbackBanner({
@@ -258,6 +260,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
               });
             }}
           />
+          {filteredProspects.length===0 && <p className="cf-card p-4 text-sm cf-muted" role="status">Aucun prospect partagé pour ce club ou ces filtres.</p>}
       {/* ===================================================================== */}
       {/* EN-TÊTE UNIFIÉ C.FITNESS OS — CRM PROSPECTS & ADHÉSIONS               */}
       {/* ===================================================================== */}
@@ -1078,8 +1081,8 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
           >
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-slate-900">
-                Ajouter un nouveau prospect (anti-doublon)
-              </h3>
+                Nouveau contact à reprendre
+              </h3><p className="cf-muted text-sm mt-2">Cette saisie reste sur cet appareil. Elle ne rejoint pas encore les prospects partagés et doit être reprise par un responsable.</p>
               <button
                 type="button"
                 onClick={() => setShowNewModal(false)}
@@ -1194,7 +1197,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                 type="submit"
                 className="px-4 py-2 rounded-lg bg-[#017737] hover:bg-[#01632d] text-white text-xs font-semibold cursor-pointer"
               >
-                Enregistrer l&apos;offre
+                Conserver sur cet appareil
               </button>
             </div>
           </form>
