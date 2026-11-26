@@ -85,27 +85,33 @@ export function BackupFailoverPanel() {
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-violet-600">
-              Continuité d&apos;Activité Hors-Serveur (PRA / PCA Multi-Appareils)
+              Continuité d&apos;Activité Hors-Serveur (PRA / PCA Multi-Appareils) — Simulation
             </span>
             <span
               className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold ${
                 isOutage
                   ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                  : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                  : 'bg-amber-50 text-amber-900 border border-amber-200'
               }`}
             >
               {isOutage
-                ? `MODE SECOURS ACTIF SUR : ${activeReplica.deviceName}`
-                : '6 APPAREILS SYNCHRONISÉS EN TEMPS RÉEL (PC · TABLETTES · TÉLÉPHONES)'}
+                ? `SIMULATION SECOURS ACTIVE SUR : ${activeReplica.deviceName}`
+                : 'SIMULATION ARCHITECTURE PRA (6 NŒUDS CIBLES HORS-SERVEUR)'}
             </span>
           </div>
           <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
             <Database className="w-5 h-5 text-violet-600 shrink-0" />
-            Sauvegarde Automatique Multi-Appareils (PC, Tablette, Téléphone) &amp; Relais Coupure de Courant
+            Architecture Cible Multi-Appareils (PC, Tablette, Téléphone) &amp; Relais de Continuité
           </h2>
           <p className="text-xs text-slate-600">
-            En cas de coupure électrique ou de panne du serveur principal de Carré de Soie (<span className="font-mono">10.10.0.10</span>), les données des 2 clubs sont automatiquement répliquées en local (IndexedDB + cache PWA + fichier <span className="font-mono">.cfos-backup.json</span>) sur les autres PC, Tablettes Kiosques et Smartphones de la direction pour continuer à faire tourner Carré de Soie et Beynost sans interruption.
+            En cas de coupure électrique ou de panne du serveur principal de Carré de Soie (<span className="font-mono">10.10.0.10</span>), ce panneau prévisualise la bascule sur réplicas locaux (IndexedDB + cache PWA + fichier <span className="font-mono">.cfos-backup.json</span>).
           </p>
+          <div className="p-2.5 bg-amber-50/90 border border-amber-200 rounded-xl text-[11px] text-amber-900 flex items-start gap-2">
+            <ShieldAlert className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold">Aperçu d&apos;architecture cible (non connecté en production) :</span> La synchronisation réseau automatisée en temps réel entre appareils physiques et la fusion multi-nœuds sans perte ne sont pas opérationnelles dans cette version. Les 6 appareils ci-dessous illustrent le dimensionnement cible.
+            </div>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
@@ -114,7 +120,7 @@ export function BackupFailoverPanel() {
             className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5 text-blue-600" />
-            Forcer Réplication (6 appareils)
+            Simuler réplication locale
           </button>
 
           <button

@@ -569,6 +569,8 @@ pub struct BackupReplicationStatus {
     pub replicas: [&'static str; 6],
     pub rpo_seconds: u32,
     pub failover_ready: bool,
+    pub is_simulation: bool,
+    pub notice: &'static str,
     pub timestamp_utc: String,
 }
 
@@ -1129,7 +1131,9 @@ async fn get_backup_snapshot_status(
             "Smartphone Daniel Carvalho (PWA 5G Offline)",
         ],
         rpo_seconds: 15,
-        failover_ready: true,
+        failover_ready: false,
+        is_simulation: true,
+        notice: "Aperçu de simulation architecture cible : réplication réseau automatisée non connectée",
         timestamp_utc: Utc::now().to_rfc3339(),
     }))
 }
@@ -1148,7 +1152,7 @@ async fn post_backup_snapshot_ingest(
         ));
     }
     tracing::info!(
-        "Snapshot de secours reçu depuis {} (checksum: {}) — fusion sans perte exécutée",
+        "Snapshot de secours reçu depuis {} (checksum: {}) — simulation d'ingestion (moteur de fusion multi-nœuds non connecté)",
         payload.origin_device,
         payload.checksum
     );
@@ -1157,8 +1161,10 @@ async fn post_backup_snapshot_ingest(
         StatusCode::OK,
         Json(json!({
             "ok": true,
+            "simulated": true,
             "mergedFrom": payload.origin_device,
-            "checksumVerified": payload.checksum,
+            "checksumVerified": false,
+            "notice": "Aperçu de simulation : la fusion d'état réseau multi-nœuds n'est pas encore connectée au moteur persistant",
             "mergedAt": Utc::now().to_rfc3339(),
         })),
     ))
