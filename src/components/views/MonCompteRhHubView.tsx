@@ -29,6 +29,7 @@ import { PreferencesView } from '../../views/PreferencesView';
 import { MyDayCollaboratorView } from './MyDayCollaboratorView';
 import { PersonalWorkspaceView } from './PersonalWorkspaceView';
 
+const HrDocumentsView = lazy(() => import('./HrDocumentsView').then(m => ({default:m.HrDocumentsView})));
 const HrCommunicationsView = lazy(() => import('./HrCommunicationsView').then(m => ({default: m.HrCommunicationsView})));
 
 const HrEmployeeDossierView = lazy(() =>
@@ -83,7 +84,7 @@ function parseInitialTarget(subTarget?: string | null): {
     return { tab: 'mon-compte', section: 'MC01', isPersonalSpace: false };
   }
   const normalized = subTarget.trim();
-  const personalPages: Record<string,string> = {'personal-notifications':'notifications','personal-leave':'leave','personal-time':'time','personal-planning':'planning'};
+  const personalPages: Record<string,string> = {'personal-notifications':'notifications','personal-leave':'leave','personal-time':'time','personal-planning':'planning','personal-documents':'documents'};
   if (personalPages[normalized.toLowerCase()]) return {tab:'github-my-day',section:'MC01',isPersonalSpace:true,personalPage:personalPages[normalized.toLowerCase()]};
   if (normalized.toLowerCase() === 'personal') {
     return { tab: 'github-my-day', section: 'MC01', isPersonalSpace: true };
@@ -763,12 +764,15 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
 
               {hubTab === 'mon-compte' && activeSection === 'MC06' && (
                 <div className="space-y-4">
+                  <HrDocumentsView actorId={auth.actorId} clubId={effectiveClubId} personal={isPersonalSpace || !isShellAdmin} />
+                  <details className="cf-card p-4"><summary className="cursor-pointer text-sm">Modèles et signatures — aperçu existant</summary>
                   <AtsView
                     initialTab="YOUSIGN_PARAPHEUR"
                     personalScopeOnly={isPersonalSpace || !isShellAdmin}
                     scopedEmployeeId={isPersonalSpace || !isShellAdmin ? currentUser.id : undefined}
                     canManageRecruitment={!isPersonalSpace && isShellAdmin}
                   />
+                  </details>
                 </div>
               )}
 

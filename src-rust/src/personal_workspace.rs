@@ -20,6 +20,8 @@ mod leave_withdrawal;
 #[serde(rename_all = "camelCase")]
 pub struct WorkspaceStore {
     #[serde(default)]
+    pub documents: crate::hr_documents::Store,
+    #[serde(default)]
     pub collaboration: crate::hr_collaboration::CollaborationStore,
     #[serde(default)]
     pub clock_policies: HashMap<String, HashMap<String, crate::clock_policy::ClockPolicy>>,
