@@ -287,11 +287,11 @@ export function RecoveryView() {
         setSelectedModel(data.defaultModel);
       }
       if (!data.online && data.error) {
-        setOllamaError(data.error);
+        setOllamaError("L’assistant est indisponible. Réessayez dans un instant.");
       }
     } catch {
       setOllamaOnline(false);
-      setOllamaError('Impossible de joindre le service local IA.');
+      setOllamaError('L’assistant est indisponible. Réessayez dans un instant.');
     } finally {
       setCheckingOllama(false);
     }
@@ -741,7 +741,7 @@ export function RecoveryView() {
             ...(prev?.messages ?? nextHistory),
             {
               role: 'assistant',
-              content: `Erreur IA locale : ${data.error || 'Aucune réponse reçue d’Ollama.'}`,
+              content: 'Erreur IA locale : l’assistant est indisponible. Actualisez le dossier puis réessayez.',
             },
           ],
           updatedAt: prev?.updatedAt ?? null,
@@ -1005,6 +1005,7 @@ export function RecoveryView() {
       )}
 
       {/* KPIs + État IA Locale Ollama */}
+      {(import.meta as { env?: Record<string, string | undefined> }).env?.VITE_DEMO_MODE !== 'false' && <p role="status" className="cf-card-secondary p-3 rounded-xl text-sm">Démonstration sur données fictives. Utilisez cette version pour vérifier le rangement et les parcours ; elle ne remplace pas vos logiciels en service.</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
         <div className="cf-card p-4">
           <div className="cf-muted font-medium">Dossiers impayés actifs</div>
@@ -1048,13 +1049,13 @@ export function RecoveryView() {
               {ollamaOnline === null
                 ? 'Vérification...'
                 : ollamaOnline
-                ? `En ligne (${selectedModel})`
-                : 'Hors ligne'}
+                ? "Disponible"
+                : 'Indisponible'}
             </span>
           </div>
           <div className="text-[11px] cf-muted mt-0.5 truncate">
             {ollamaOnline
-              ? `${ollamaModels.length} modèle(s) prêt(s) sur le serveur`
+              ? "Prépare des brouillons à relire avant utilisation"
               : ollamaError || 'Assistant indisponible'}
           </div>
         </div>
@@ -1399,7 +1400,7 @@ export function RecoveryView() {
               </div>
             </div>
             <p className="text-xs cf-muted">
-              Périmètre strict C.Fitness OS &amp; droit général du recouvrement. L’assistant relit les données du serveur sans inventer de clause CGV.
+              Les brouillons s’appuient sur le dossier et doivent être relus avant utilisation. Les clauses des CGV restent à vérifier dans le document d’origine.
             </p>
 
             {selectedCase && selectedChannels && (
@@ -1423,7 +1424,7 @@ export function RecoveryView() {
                     <Mail className="w-3 h-3 shrink-0" />
                     <span>
                       {selectedChannels.emailDeliverable
-                        ? `Mail : ${selectedChannels.emailLabel} (envoi club prêt)`
+                        ? `Mail : ${selectedChannels.emailLabel} (adresse disponible)`
                         : selectedChannels.emailMasked
                         ? `Mail masqué (${selectedChannels.emailLabel})`
                         : 'Mail : indisponible'}
@@ -1464,7 +1465,7 @@ export function RecoveryView() {
                 className="px-2.5 py-1.5 rounded-lg bg-violet-600/20 border border-violet-500/40 text-violet-300 hover:bg-violet-600/30 font-semibold flex items-center gap-1 cursor-pointer disabled:opacity-50"
               >
                 <Sparkles className="w-3 h-3" />
-                <span>Mail relance amiable</span>
+                <span>Préparer un e-mail</span>
               </button>
               <button
                 type="button"
@@ -1477,7 +1478,7 @@ export function RecoveryView() {
                 className="px-2.5 py-1.5 rounded-lg bg-sky-600/20 border border-sky-500/40 text-sky-300 hover:bg-sky-600/30 font-semibold flex items-center gap-1 cursor-pointer disabled:opacity-50"
               >
                 <Phone className="w-3 h-3" />
-                <span>SMS / Message court</span>
+                <span>Préparer un SMS</span>
               </button>
               <button
                 type="button"

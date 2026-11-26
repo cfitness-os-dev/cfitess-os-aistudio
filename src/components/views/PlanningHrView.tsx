@@ -1602,8 +1602,8 @@ export function PlanningHrView({
             </div>
             <span className="text-[10px] text-slate-500 font-mono">
               {isCoursCollectifsView
-                ? 'Synchronisation bidirectionnelle API Heitz & Technogym Mywellness'
-                : 'Remplacement Skello · Synchronisation bidirectionnelle API Heitz & Technogym Mywellness'}
+                ? 'Horaires, cours et rendez-vous'
+                : 'Horaires, cours et rendez-vous'}
             </span>
           </div>
         )}
@@ -2401,7 +2401,7 @@ export function PlanningHrView({
 
                     <div>
                       <label className="block font-semibold text-slate-700 mb-1">
-                        Poste Skello (Étiquette Couleur)
+                        Poste de travail
                       </label>
                       <select
                         value={roleLabel}
@@ -2476,7 +2476,7 @@ export function PlanningHrView({
                       className="w-full py-2.5 rounded-lg bg-[#4318FF] hover:bg-[#3611d4] text-white font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
                     >
                       <Plus className="w-4 h-4" />
-                      Ajouter au planning Skello
+                      Ajouter au planning
                     </button>
                   </form>
                 </div>
@@ -2514,7 +2514,7 @@ export function PlanningHrView({
                 <>
                   <div className="flex items-center gap-2">
                     <span className="px-2 py-0.5 rounded bg-white/10 font-mono text-[10px] uppercase tracking-wider text-sky-300">
-                      Indicateurs Skello Semaine {currentWeekNumber}
+                      Synthèse de la semaine {currentWeekNumber}
                     </span>
                     <span className="text-slate-300 hidden sm:inline">
                       Synthèse temps réel des heures planifiées et masse salariale chargée
@@ -2551,7 +2551,7 @@ export function PlanningHrView({
                       </>
                     )}
                     <div>
-                      <span className="text-slate-400 text-[11px]">Conformité IDCC 2511 : </span>
+                      <span className="text-slate-400 text-[11px]">Contrôles du planning : </span>
                       <span
                         className={`font-bold ${
                           existingScheduleViolations.length === 0
@@ -2560,7 +2560,7 @@ export function PlanningHrView({
                         }`}
                       >
                         {existingScheduleViolations.length === 0
-                          ? '100% Conforme'
+                          ? 'Aucune alerte détectée'
                           : `${existingScheduleViolations.length} alerte(s)`}
                       </span>
                     </div>
@@ -2597,7 +2597,7 @@ export function PlanningHrView({
                     Dossier #081865 — SAS C.FITNESS · SIRET {CFITNESS_LEGAL_IDENTITY.siret} · IDCC 2511 (Sport)
                   </div>
                   <div className="text-[11px] text-teal-100">
-                    Transmission des Éléments Variables (EV) depuis le module RH C.Fitness OS (remplaçant Skello) : Export CSV compatible actif + Connecteur API REST prêt pour l&apos;expert-comptable.
+                    Préparez et exportez les éléments variables de paie pour votre gestionnaire de paie.
                   </div>
                 </div>
               </div>
@@ -2724,7 +2724,7 @@ export function PlanningHrView({
               {/* Left 7 cols: Silae Accounting Matrix (Grille EV) */}
               <div className="lg:col-span-7 bg-white border border-slate-300 rounded-lg overflow-hidden">
                 <div className="bg-slate-800 text-white px-3.5 py-2 text-xs font-bold flex items-center justify-between">
-                  <span>Matrice des Variables de Paie Silae (Remplacement direct de l&apos;export Skello)</span>
+                  <span>Éléments variables de paie</span>
                   <span className="font-mono text-[11px] text-teal-300">Base 151,67h / mois</span>
                 </div>
                 <div className="overflow-x-auto">

@@ -83,7 +83,7 @@ test('isDeliverableMemberPhone and describeMemberRecoveryChannels detect contact
   assert.equal(both.phoneDeliverable, true);
   assert.equal(both.emailMasked, false);
   assert.equal(both.phoneMasked, false);
-  assert.equal(both.recommendedChannelLabel, 'Envoi possible : E-mail & Téléphone / SMS');
+  assert.equal(both.recommendedChannelLabel, 'Coordonnées disponibles : e-mail et téléphone');
 
   const maskedAndPhone = describeMemberRecoveryChannels({
     email: 'c***@example.fr',
@@ -94,7 +94,7 @@ test('isDeliverableMemberPhone and describeMemberRecoveryChannels detect contact
   assert.equal(maskedAndPhone.phoneDeliverable, true);
   assert.equal(
     maskedAndPhone.recommendedChannelLabel,
-    'Envoi possible : Téléphone / SMS uniquement'
+    'Coordonnée disponible : téléphone'
   );
 
   const missingBoth = describeMemberRecoveryChannels({

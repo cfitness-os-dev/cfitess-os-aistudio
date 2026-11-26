@@ -3,12 +3,15 @@ import type { ClubId } from '../types/cfos';
 export interface HeitzRecoveryLinks {
   actorId: string; caseId: string; clubId: ClubId; revision: string;
   configured: boolean;
+  demoOffline?: boolean;
   urls: null | { financial: string; documents: string; subscriptions: string };
   notice: string;
 }
 export function validateHeitzRecoveryLinks(value: unknown, actor: string, id: string, club: ClubId, revision: string): HeitzRecoveryLinks {
   const v = value as HeitzRecoveryLinks;
   if (!v || v.actorId !== actor || v.caseId !== id || v.clubId !== club || v.revision !== revision || typeof v.configured !== 'boolean' || typeof v.notice !== 'string' || (!v.configured && v.urls !== null) || (v.configured && !v.urls)) throw new Error('Les accès reçus ne correspondent pas au dossier. Actualisez-le.');
+  if (v.demoOffline !== undefined && typeof v.demoOffline !== 'boolean') throw new Error('État de démonstration non confirmé.');
+  if (v.demoOffline && (v.configured || v.urls)) throw new Error('Les accès Heitz doivent être désactivés en démonstration.');
   if (v.urls) {
     const client = /^rec-hz-hz-([1-9][0-9]*)$/.exec(id)?.[1];
     if (!client || !Number.isSafeInteger(Number(client))) throw new Error('Identité Heitz non confirmée.');

@@ -47,7 +47,7 @@ pub async fn get_heitz_integration(
     let mut urls = serde_json::Map::new();
     for (club, var) in [("carre-de-soie", "CFITNESS_HEITZ_WEB_URL_CDS"), ("beynost", "CFITNESS_HEITZ_WEB_URL_BEY")] {
         if can_access_site_scope(&db, &actor_id, club_to_site_id(club)) {
-            urls.insert(club.into(), serde_json::json!(configured_web_url(std::env::var(var).ok())));
+            urls.insert(club.into(), serde_json::json!(if crate::heitz_live::heitz_demo_offline() { None } else { configured_web_url(std::env::var(var).ok()) }));
         }
     }
     let live_configured = crate::heitz_live::is_heitz_live_configured();

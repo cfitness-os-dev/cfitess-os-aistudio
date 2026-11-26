@@ -160,8 +160,21 @@ pub async fn get(
                 "Le dossier a changé. Actualisez-le avant la lecture Heitz.",
             ));
         }
+        if crate::heitz_live::heitz_demo_offline() && !crate::heitz_live::is_heitz_network_allowed() {
+            let loaded = |items: Value| json!({"status":"loaded","items":items,"completeHistoryVerified":false});
+            return Ok(Json(json!({"actorId":actor,"caseId":id,"clubId":c.club_id,"revision":q.revision,"collectedAtUtc":Utc::now().to_rfc3339(),"partial":false,"simulated":true,
+                "provisional":loaded(json!([{"date":"2026-12-01T00:00:00Z","valuePayment":c.amount_due_eur,"valueSale":c.amount_due_eur,"valuePoints":0.0}])),
+                "display":loaded(json!([{"id":1,"next":"2026-12-01T00:00:00Z","last":null,"label":"Échéancier fictif de démonstration","totalSale":format!("{:.2} EUR — exemple",c.amount_due_eur),"totalPayment":format!("{:.2} EUR prévus — exemple",c.amount_due_eur),"totalPoints":null,"access":"Abonnement fictif","period":"Mensuel — exemple","processManually":false}])),
+                "subscriptions":loaded(json!([{"id":1,"accessLabel":"Abonnement fictif de démonstration"}])),
+                "paymentsCollected":false,"contractOriginalsCollected":false,"termsOriginalsCollected":false,"signatureStatus":"not_checked",
+                "documents":{"status":"targeting_to_qualify","message":"Exemples fictifs uniquement ; aucun contrat ou CGV récupéré dans Heitz."},
+                "notice":"Simulation de présentation : aucun appel à Heitz et aucune preuve réelle collectée ou validée."})));
+        }
         (source_id(&db, c)?, c.club_id.clone())
     };
+    if !crate::heitz_live::is_heitz_network_allowed() {
+        return Err(err_resp(StatusCode::FORBIDDEN, "Les connexions à Heitz sont désactivées pour cet environnement."));
+    }
     let token = crate::heitz_live::authenticate_heitz_token()
         .await
         .map_err(|_| {
@@ -181,6 +194,13 @@ pub async fn get(
         crate::heitz_live::heitz_http_request("GET", &paths[2], Some(&token), None, 12)
     );
     // Permissions and dossier identity can change while the provider is responding.
+    let (current_actor, _) = crate::routes::resolve_session_actor(&s, &h).await?;
+    if current_actor != actor {
+        return Err(err_resp(
+            StatusCode::UNAUTHORIZED,
+            "La session a changé pendant la lecture Heitz.",
+        ));
+    }
     {
         let db = s.db.read().await;
         let c = db

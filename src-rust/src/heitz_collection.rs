@@ -1,6 +1,12 @@
 //! Validate already-supported read responses. Tickets are not payment evidence or revenue.
 use serde_json::{json, Value};
 
+/// A generic membership fallback is not the name of a contract.
+pub fn recovery_contract_label(subscription: &str) -> String {
+    let label = subscription.trim();
+    if label == "Adhérent Heitz" { String::new() } else { label.to_string() }
+}
+
 /// Only the exact legacy reader label identifies the old unqualified ticket aggregate.
 pub fn invalidate_legacy_revenue(
     kpis: &mut [crate::models::SiteKpis],
@@ -91,6 +97,13 @@ pub fn tickets(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn membership_fallback_does_not_become_a_contract() {
+        assert_eq!(recovery_contract_label(" Adhérent Heitz "), "");
+        assert_eq!(recovery_contract_label("  "), "");
+        assert_eq!(recovery_contract_label(" LIBERTE BI-CLUB "), "LIBERTE BI-CLUB");
+        assert_eq!(recovery_contract_label("Adhérent Heitz Premium"), "Adhérent Heitz Premium");
+    }
     #[test]
     fn legacy_ticket_aggregate_is_invalidated_only_for_an_authorized_club() {
         let mut rows = crate::seed::create_initial_seed_state().kpis;

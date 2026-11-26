@@ -12,7 +12,8 @@ export function HeitzRecoveryReadingsPanel({ actorId, caseId, club, revision, di
     revision: string;
     disabled: boolean;
 }) {
-    const [data, setData] = useState<HeitzRecoveryReadings | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState('');
+    const [stored, setData] = useState<HeitzRecoveryReadings | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState('');
+    const data = stored && stored.actorId === actorId && stored.caseId === caseId && stored.clubId === club && stored.revision === revision ? stored : null;
     const request = useRef<AbortController | null>(null);
     useEffect(() => { request.current?.abort(); setData(null); setError(''); setBusy(false); return () => request.current?.abort(); }, [actorId, caseId, club, revision]);
     async function load() { if (busy || disabled)
@@ -35,6 +36,7 @@ export function HeitzRecoveryReadingsPanel({ actorId, caseId, club, revision, di
    <button type="button" disabled={disabled || busy} className="cf-brand-gradient text-white px-3 py-2 min-h-[44px] rounded-xl disabled:opacity-50" onClick={() => void load()}>{busy ? 'Lecture des sources…' : 'Lire les échéanciers et abonnements Heitz'}</button>
    {disabled && <p className="text-sm">Terminez ou abandonnez la saisie avant de consulter les sources.</p>}{error && <p role="alert">{error}</p>}
    {data && <>
+     {data.simulated && <p role="status" className="font-semibold text-amber-300">Démonstration : données fictives, aucun accès à Heitz.</p>}
      <p role="status">Lecture du {new Date(data.collectedAtUtc).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}{data.partial ? ' · Certaines sources restent non confirmées.' : '.'} Cette lecture ne garantit pas que tout l’historique est présent.</p>
      <details><summary className="cursor-pointer font-semibold min-h-[44px]">Échéances prévisionnelles</summary><Status source={data.provisional}/>{data.provisional.status === 'loaded' && data.provisional.items.map((r, i) => <article key={i} className="cf-card p-3 mt-2 rounded-xl"><p>{date(r.date)}</p><p>Règlement prévu : {r.valuePayment.toFixed(2)} · Vente prévue : {r.valueSale.toFixed(2)}</p><p className="cf-muted text-xs">Montants source ; devise à confirmer. Aucun encaissement déduit.</p></article>)}</details>
      <details><summary className="cursor-pointer font-semibold min-h-[44px]">Échéancier affiché par Heitz</summary><Status source={data.display}/>{data.display.status === 'loaded' && data.display.items.map(r => <article key={r.id} className="cf-card p-3 mt-2 rounded-xl"><strong>{r.label || 'Libellé non fourni'} · Référence {r.id}</strong><p>{r.access || 'Accès non renseigné'}</p><p>Vente : {r.totalSale ?? 'Non renseignée'} · Règlement prévu : {r.totalPayment ?? 'Non renseigné'}</p><p>{r.period ?? 'Périodicité non fournie'} · Prochaine échéance : {r.next ? date(r.next) : 'Non fournie'}</p></article>)}</details>

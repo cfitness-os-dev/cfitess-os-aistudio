@@ -97,6 +97,9 @@ pub async fn get(
             "Le dossier a changé. Actualisez-le avant de consulter Heitz.",
         ));
     }
+    if crate::heitz_live::heitz_demo_offline() {
+        return Ok(Json(json!({"actorId":actor,"caseId":id,"clubId":c.club_id,"revision":q.revision,"configured":false,"urls":null,"demoOffline":true,"notice":"Démonstration sur données fictives : les accès à Heitz sont désactivés."})));
+    }
     let client = crate::heitz_recovery_readers::source_id(&db, c)?;
     let (var, center) = match c.club_id.as_str() {
         "carre-de-soie" => (
@@ -111,7 +114,7 @@ pub async fn get(
     };
     let urls = links(std::env::var(var).ok(), center, client);
     Ok(Json(
-        json!({"actorId":actor,"caseId":id,"clubId":c.club_id,"revision":q.revision,"configured":urls.is_some(),"urls":urls,"notice":"Ouverture dans Heitz, avec sa propre connexion. Aucun règlement ni document importé et aucune preuve validée automatiquement."}),
+        json!({"actorId":actor,"caseId":id,"clubId":c.club_id,"revision":q.revision,"configured":urls.is_some(),"urls":urls,"demoOffline":false,"notice":"Ouverture dans Heitz, avec sa propre connexion. Aucun règlement ni document importé et aucune preuve validée automatiquement."}),
     ))
 }
 

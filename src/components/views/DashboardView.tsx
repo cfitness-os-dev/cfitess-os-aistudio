@@ -529,7 +529,7 @@ export function DashboardView() {
             }`}
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Vue d&apos;ensemble (C.Fitness OS)</span>
+            <span>Vue d’ensemble</span>
           </button>
 
           {canSeeCameras && (
@@ -545,7 +545,7 @@ export function DashboardView() {
               }`}
             >
               <Video className="w-3.5 h-3.5 text-rose-500" />
-              <span>Caméras des Clubs (8 Live)</span>
+              <span>Caméras des clubs</span>
             </button>
           )}
 
@@ -562,7 +562,7 @@ export function DashboardView() {
               }`}
             >
               <TrendingUp className="w-3.5 h-3.5" />
-              <span>1. Pilotage Heitz &amp; FMI</span>
+              <span>Suivi de l’activité</span>
             </button>
           )}
 
@@ -638,6 +638,7 @@ export function DashboardView() {
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
           {/* LEFT MAIN COLUMN (9 cols on xl) */}
           <div className="xl:col-span-9 space-y-5">
+            {(import.meta as { env?: Record<string, string | undefined> }).env?.VITE_DEMO_MODE !== 'false' && <p role="status" className="cf-card p-3 rounded-xl text-sm">Démonstration sur données fictives : explorez les rubriques et les parcours sans connexion à vos logiciels réels.</p>}
             {/* Greeting Row + Period Dropdown */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
@@ -1641,7 +1642,7 @@ export function DashboardView() {
             </div>
 
             {/* ROW 4: VUE EN DIRECT DES CAMÉRAS DES CLUBS (DIRECTION & ACCUEIL UNIQUEMENT) */}
-            {canSeeCameras && <ClubCamerasWallPanel />}
+            {/* Les caméras sont regroupées dans leur onglet dédié. */}
           </div>
 
           {/* RIGHT SIDEBAR COLUMN (3 cols on xl): Actions importantes & Activités du jour */}
@@ -1917,7 +1918,10 @@ export function DashboardView() {
       {/* =====================================================================
           VOLET CAMÉRAS : MUR DE VIDÉOSURVEILLANCE EN DIRECT (8 CAMÉRAS)
          ===================================================================== */}
-      {activeTab === 'cameras' && <ClubCamerasWallPanel />}
+      {activeTab === 'cameras' && <section className="space-y-3">
+        {(import.meta as { env?: Record<string, string | undefined> }).env?.VITE_DEMO_MODE !== 'false' && <p role="status" className="cf-card p-3 rounded-xl text-sm">Aperçu fictif de vidéosurveillance : aucune caméra ni connexion Heitz réelle n’est activée dans cette démonstration.</p>}
+        <ClubCamerasWallPanel />
+      </section>}
 
       {/* =====================================================================
           VOLET 1 : PILOTAGE OPÉRATIONNEL & KPIS BI-CLUB

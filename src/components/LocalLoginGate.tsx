@@ -209,7 +209,7 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
               isDark ? 'bg-[#131826] border-slate-800' : 'bg-white border-slate-200'
             }`}
           >
-            VPN WireGuard &lt; 3 ms
+            Démonstration
           </span>
         </div>
       </header>
@@ -226,13 +226,13 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
         >
           <div>
             <div className="text-xs font-semibold uppercase tracking-wider text-violet-400">
-              Module M1 · Contrôle d&apos;Accès Local par Rôle (RBAC)
+              Votre espace C.Fitness
             </div>
             <h1 className="text-lg sm:text-xl font-bold mt-1">
-              1. Choisissez votre profil métier (Directeur, Employé, Coach)
+              Choisissez votre profil
             </h1>
             <p className="text-xs text-slate-400 mt-1">
-              Authentification hébergée directement sur le serveur local de Carré de Soie (PostgreSQL 16 + hachage Argon2id), sans dépendance Firebase ni cloud tiers.
+              Retrouvez les rubriques de votre club selon les droits attribués à votre profil.
             </p>
           </div>
 
@@ -314,7 +314,7 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
                     }`}
                   >
                     <span className="text-[11px] text-emerald-500 font-medium">
-                      {emp.totpEnabled ? '2FA TOTP Actif' : 'PIN / Mot de passe local'}
+                      {emp.totpEnabled ? 'Accès direction' : 'PIN / Mot de passe local'}
                     </span>
                     <button
                       type="button"
@@ -425,7 +425,7 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
           >
             <div className="font-semibold flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-              Périmètre d&apos;habilitation RBAC :
+              Vos accès :
             </div>
             <p className="text-slate-400 leading-relaxed">{roleMeta.permissions}</p>
           </div>
@@ -433,7 +433,7 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
           <form onSubmit={handleSubmitLogin} className="space-y-4 text-xs">
             <div>
               <label className="block font-semibold text-slate-400 mb-1">
-                Identifiant Local (Base PostgreSQL Carré de Soie)
+                Identifiant
               </label>
               <input
                 type="text"
@@ -513,7 +513,7 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
             {selectedEmployee.totpEnabled && (
               <div>
                 <label className="block font-semibold text-slate-400 mb-1">
-                  Double Authentification Direction (TOTP Local RFC 6238)
+                  Code de vérification
                 </label>
                 <input
                   type="text"
@@ -608,7 +608,7 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
         </div>
         <div className="flex items-center gap-1.5 text-emerald-500 font-medium">
           <CheckCircle2 className="w-3.5 h-3.5" />
-          <span>Authentification 100% locale (aucun appel Firebase / Google Cloud externe)</span>
+          <span>C.Fitness OS — Espace collaborateurs</span>
         </div>
       </footer>
     </div>
