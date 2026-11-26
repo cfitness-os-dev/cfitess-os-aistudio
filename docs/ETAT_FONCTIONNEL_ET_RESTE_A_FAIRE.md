@@ -1,6 +1,6 @@
 # État fonctionnel et suite du développement
 
-État du 26 novembre 2026, lot local après PR #89, notifications des plannings publiés. Ce document remplace une estimation globale en pourcentage par des critères vérifiables. Il ne déclare pas l’exhaustivité des logiciels de référence.
+État du 26 novembre 2026, lot local après PR #90, communication RH programmée. Ce document remplace une estimation globale en pourcentage par des critères vérifiables. Il ne déclare pas l’exhaustivité des logiciels de référence.
 
 ## Règles à conserver
 
@@ -19,7 +19,7 @@
 | Absences | Parcours navigateur création → validation → retour salarié réussi sur une absence fictive ; statuts historiques reconnus | Cas complexes avec débit/reprise de compteur, migration des statuts historiques et cas après clôture |
 | Compteurs, acquisition, report | Services et contrats déjà développés ; accès propre au salarié vérifié dans ce lot | Confirmer les formules encore non observées dans Skello et réconcilier les soldes historiques ; voir les documents d’acquisition/report existants |
 | Badgeuses, tablettes, photos | Réglages regroupés sous Réglages RH, restrictions serveur recontrôlées | Appairage et recette physique des tablettes, caméra, salle et présence avant cours ; aucun matériel validé par la simple navigation |
-| Communication RH | Publications internes et lectures persistantes, filtres équipes/dossiers, historique et audit ; parcours responsable/collaborateur exécuté sur ordinateur/mobile/tablette | Cloche raccordée à la boîte personnelle ; email, pièces jointes, programmation et autres variantes COM01 restent à développer |
+| Communication RH | Publications internes immédiates ou programmées, annulation, lectures persistantes, filtres équipes/dossiers, historique et audit ; contrôles ordinateur/mobile/tablette | Email, pièces jointes et autres variantes COM01 restent à développer ; la programmation est une amélioration OS et non une option Skello observée |
 | Notifications RH | Cloche, boîte personnelle, lectures persistantes et notifications d’absences/annotations de pointage/planning publié testées ; trois formats vérifiés | Déclencheurs documents/signatures et autres modules à raccorder ; push et envois externes non livrés |
 | Calendrier personnel | Flux .ics privé réellement servi : horaires propres publiés et absences validées, droits revérifiés, lien aléatoire haché, renouvellement/révocation/désactivation testés | Création/téléchargement/révocation/désactivation testés dans le navigateur ; abonnement Apple/Google/Outlook et adresse HTTPS stable restent à recetter |
 | Lead, scénarios, modèles, campagnes | Moteurs et simulations existants ; voir contrats et recettes spécialisés | Variables de contexte non raccordées, réentrée/délégations avancées et autres écarts déjà listés dans les contrats ; recette par fonction avant annonce de parité |
@@ -42,6 +42,7 @@
 - `docs/rh-communications-calendrier-recette-2026-11-26.md` : contrat, parcours, résultats serveur et blocage visuel du nouveau lot.
 - `docs/rh-audiences-contexte-recette-2026-11-26.md` : recontrôles visuels exécutés après rétablissement du navigateur, ciblage des destinataires, mémorisation du club et écart de la cloche globale.
 - `docs/rh-notifications-recette-2026-11-26.md` : vraie cloche, boîte personnelle, événements d’absence/pointage, navigation, refus et redémarrage.
+- `docs/rh-communication-programmee-recette-2026-11-26.md` : programmation interne, annulation, recontrôle des droits à échéance, refus, atomicité et redémarrage.
 - `docs/rh-planning-notifications-recette-2026-11-26.md` : publication/modification/retrait/réaffectation des horaires et transaction persistante avec alertes.
 - `docs/v1-utilisable-conditions.md` : conditions de réception d’un pilote ; ne pas les remplacer par le nombre de tests.
 
