@@ -31,6 +31,7 @@ import {
 import { useCfos } from '../../context/CfosContext';
 import { clientApi } from '../../domain/clientApi';
 import { SERVICE_ALERT_IDS, setLeadAlertEnabled } from '../../domain/leadNotificationSettings';
+import { isHeitzDropout } from '../../domain/heitzCrm';
 import { LEAD_SETTINGS_PRESENTATION } from '../../domain/leadSettingsPresentation';
 import type { Prospect } from '../../types/cfos';
 import { cleanUiTree } from '../../domain/cleanModeSanitizer';
@@ -1496,7 +1497,7 @@ export function LeadCommercialHubView({
                     </thead>
                     <tbody>
                       {heitzMembers.map((m) => {
-                        const isDrop = m.daysSinceLastWorkout >= 14;
+                        const isDrop = isHeitzDropout(m, 14);
                         return (
                           <tr key={m.id} className="border-b border-slate-800/60">
                             <td className="py-2 pr-3 font-bold">
@@ -1516,11 +1517,15 @@ export function LeadCommercialHubView({
                                     : 'bg-slate-800 text-slate-200'
                                 }`}
                               >
-                                {m.daysSinceLastWorkout} j sans passage {isDrop ? '⚠ Décrocheur' : ''}
+                                {m.lastWorkoutKnown === false
+                                  ? 'Passage à vérifier dans Heitz'
+                                  : `${m.daysSinceLastWorkout} j sans passage ${isDrop ? '⚠ Décrocheur' : ''}`}
                               </span>
                             </td>
                             <td className="py-2 pr-3 font-mono text-[11px]">
-                              Score Checkup {m.technogymCheckupScore ?? 78}/100 · Âge {m.technogymCheckupWellnessAge ?? 29} ans · {m.technogymMoves30d} MOVEs/30j
+                              {m.dataSource === 'HeitzSystem Cloud'
+                                ? 'Données MOVEs et Checkup non synchronisées'
+                                : `Score Checkup ${m.technogymCheckupScore ?? 'non renseigné'} · Âge ${m.technogymCheckupWellnessAge ?? 'non renseigné'} · ${m.technogymMoves30d} MOVEs/30j`}
                             </td>
                             <td className="py-2">
                               {m.subscriptionName} ({m.finBalanceEur < 0 ? `Impayé ${m.finBalanceEur} €` : 'À jour'})

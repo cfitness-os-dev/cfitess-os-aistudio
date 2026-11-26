@@ -5,3 +5,6 @@ target/
 *.log
 *.db
 *.sqlite
+
+# Fichiers temporaires d'agents (ne jamais versionner)
+.temp/

@@ -388,3 +388,89 @@ fn simulate(
     db.lead_scenarios.campaigns[idx].runs.push(json!({"revision":c.revision,"at":now.to_rfc3339(),"actorId":actor,"message":message,"audience":audience,"outcomes":outcomes,"estimatedSegments":estimated_segments,"simulationOnly":true}));
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn prospect(id: &str, club_id: &str, email: &str) -> LeadProspectRecord {
+        serde_json::from_value(json!({
+            "id": id,
+            "firstName": "Test",
+            "lastName": id,
+            "email": email,
+            "phone": "0612345678",
+            "clubId": club_id,
+            "source": "Site",
+            "stage": "Nouveau",
+            "leadStatus": "Nouveau",
+            "rgpdConsent": true,
+            "createdAt": "2026-11-25"
+        }))
+        .unwrap()
+    }
+
+    fn campaign(id: &str, club_id: &str) -> Campaign {
+        Campaign {
+            id: id.into(),
+            club_id: club_id.into(),
+            revision: 1,
+            name: id.into(),
+            channel: "email".into(),
+            segment_ids: vec![],
+            template_id: "template".into(),
+            status_ids: vec![],
+            source_ids: vec![],
+            archived: false,
+            updated_at: "2026-11-26T00:00:00Z".into(),
+            simulated_revisions: vec![],
+            runs: vec![],
+            schedules: vec![],
+        }
+    }
+
+    #[test]
+    fn campaign_snapshot_and_targets_are_club_scoped_and_honor_email_suppression() {
+        let mut db = crate::seed::create_initial_seed_state();
+        db.lead_prospects = vec![
+            prospect("cds-suppressed", "carre-de-soie", "shared@example.test"),
+            prospect("cds-eligible", "carre-de-soie", "cds@example.test"),
+            prospect("beynost-same-address", "beynost", "shared@example.test"),
+        ];
+        db.lead_scenarios
+            .email_suppressions
+            .push(brevo::Suppression {
+                club_id: "carre-de-soie".into(),
+                email: "shared@example.test".into(),
+                reason: "Désinscription de recette".into(),
+                actor_id: "emp-mario".into(),
+                created_at: "2026-11-26T00:00:00Z".into(),
+            });
+        db.lead_scenarios.campaigns = vec![
+            campaign("campaign-cds", "carre-de-soie"),
+            campaign("campaign-beynost", "beynost"),
+        ];
+
+        let cds = snapshot(&db, "carre-de-soie", "emp-mario");
+        let cds_campaigns = cds["campaigns"].as_array().unwrap();
+        assert_eq!(cds_campaigns.len(), 1);
+        assert_eq!(cds_campaigns[0]["campaign"]["id"], "campaign-cds");
+        assert_eq!(
+            cds_campaigns[0]["audience"]["eligibleIds"],
+            json!(["cds-eligible"])
+        );
+        assert_eq!(
+            cds_campaigns[0]["audience"]["excluded"][0]["reason"],
+            "Adresse exclue des emails"
+        );
+
+        let bey = snapshot(&db, "beynost", "emp-mario");
+        let bey_campaigns = bey["campaigns"].as_array().unwrap();
+        assert_eq!(bey_campaigns.len(), 1);
+        assert_eq!(bey_campaigns[0]["campaign"]["id"], "campaign-beynost");
+        assert_eq!(
+            bey_campaigns[0]["audience"]["eligibleIds"],
+            json!(["beynost-same-address"])
+        );
+    }
+}
