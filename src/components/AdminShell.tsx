@@ -1,3 +1,4 @@
+import { PersonalNotifications } from './PersonalNotifications';
 import React, { Suspense, lazy, useState } from 'react';
 import { useCfos } from '../context/CfosContext';
 import {
@@ -30,7 +31,6 @@ import {
   Sparkles,
   Settings,
   Search,
-  Bell,
   MessageSquare,
   Compass,
   Globe,
@@ -382,7 +382,6 @@ export function AdminShell() {
   const todayLabel = formatFrenchDate(0);
   const tomorrowLabel = formatFrenchDate(1);
   const [selectedDateLabel, setSelectedDateLabel] = useState(todayLabel);
-  const [notifPopoverOpen, setNotifPopoverOpen] = useState(false);
 
   React.useEffect(() => {
     if (activeSection === 'dashboard') {
@@ -952,101 +951,7 @@ export function AdminShell() {
                 </button>
               )}
 
-              {/* Notifications Bell with Badge 3 */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setNotifPopoverOpen((prev) => !prev)}
-                  aria-label="Notifications (3)"
-                  className={`relative w-9 h-9 rounded-xl border flex items-center justify-center cursor-pointer transition-colors ${
-                    isDark
-                      ? 'bg-[#1A2033] border-slate-700 text-slate-300 hover:bg-slate-800'
-                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  <Bell className="w-4 h-4" />
-                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
-                    3
-                  </span>
-                </button>
-
-                {notifPopoverOpen && (
-                  <div
-                    className={`absolute right-0 mt-2 w-80 rounded-2xl border shadow-xl p-3.5 z-50 space-y-2.5 text-xs ${
-                      isDark
-                        ? 'bg-[#161B2B] border-slate-700 text-slate-200'
-                        : 'bg-white border-slate-200 text-slate-800'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between font-bold">
-                      <span>Actions importantes (3)</span>
-                      <button
-                        type="button"
-                        onClick={() => setNotifPopoverOpen(false)}
-                        className="text-slate-400 hover:text-slate-600 cursor-pointer"
-                      >
-                        Fermer
-                      </button>
-                    </div>
-                    {currentUser.role === 'admin' && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveSection('devices', 'finances');
-                          setNotifPopoverOpen(false);
-                        }}
-                        className={`w-full p-2.5 rounded-xl text-left flex items-center justify-between cursor-pointer ${
-                          isDark ? 'bg-rose-950/40 hover:bg-rose-950/60' : 'bg-rose-50 hover:bg-rose-100'
-                        }`}
-                      >
-                        <div>
-                          <div className="font-bold text-rose-500">5 impayés à relancer</div>
-                          <div className="text-[11px] opacity-80">Représentent 1 250 €</div>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-rose-400" />
-                      </button>
-                    )}
-                    {currentUser.role === 'admin' && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveSection('my-day', 'MC06');
-                          setNotifPopoverOpen(false);
-                        }}
-                        className={`w-full p-2.5 rounded-xl text-left flex items-center justify-between cursor-pointer ${
-                          isDark
-                            ? 'bg-amber-950/40 hover:bg-amber-950/60'
-                            : 'bg-amber-50 hover:bg-amber-100'
-                        }`}
-                      >
-                        <div>
-                          <div className="font-bold text-amber-500">2 contrats en attente</div>
-                          <div className="text-[11px] opacity-80">À valider cette semaine</div>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-amber-400" />
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveSection('orchestrator', 'maintenance');
-                        setNotifPopoverOpen(false);
-                      }}
-                      className={`w-full p-2.5 rounded-xl text-left flex items-center justify-between cursor-pointer ${
-                        isDark
-                          ? 'bg-emerald-950/40 hover:bg-emerald-950/60'
-                          : 'bg-emerald-50 hover:bg-emerald-100'
-                      }`}
-                    >
-                      <div>
-                        <div className="font-bold text-emerald-500">Maintenance prévue</div>
-                        <div className="text-[11px] opacity-80">CTA Beynost – 15 avril</div>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-emerald-400" />
-                    </button>
-                  </div>
-                )}
-              </div>
+              <PersonalNotifications actor={currentUser.id} club={clubFilter === 'beynost' ? 'beynost' : 'carre-de-soie'} variant="bell" />
 
               {/* Chat / Softphone WebRTC Button */}
               <button

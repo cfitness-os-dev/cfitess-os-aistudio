@@ -740,6 +740,7 @@ pub async fn settle(
         Some(json!({"status":row.status,"counter":before}).to_string()),
         Some(json!({"status":next_status,"counter":after}).to_string()),
     );
+    crate::rh_notifications::leave_changes(&db,&mut next)?;
     persist_state(&state.data_dir, &next).map_err(|_| {
         err_resp(
             StatusCode::INTERNAL_SERVER_ERROR,

@@ -1,6 +1,6 @@
 # État fonctionnel et suite du développement
 
-État du 26 novembre 2026, lot local après PR #87, ciblage RH et recontrôles visuels. Ce document remplace une estimation globale en pourcentage par des critères vérifiables. Il ne déclare pas l’exhaustivité des logiciels de référence.
+État du 26 novembre 2026, lot local après PR #88, vraie cloche et événements RH. Ce document remplace une estimation globale en pourcentage par des critères vérifiables. Il ne déclare pas l’exhaustivité des logiciels de référence.
 
 ## Règles à conserver
 
@@ -14,12 +14,13 @@
 | Domaine | État vérifié ou limite | Suite concrète |
 | --- | --- | --- |
 | Navigation Prospection | PR #84 : rubriques séparées, accès scénarios, liste mobile, filtres de club ; recette ciblée | Vérifier chaque option contre l’inventaire Lead, pas seulement les menus |
-| Mon compte | Une navigation, dix rubriques ; compteur et préférences raccordés aux services existants | Recetter l’ensemble des documents, formations, contrôles et cas de droits sur les appareils retenus |
+| Mon compte | Une navigation, onze rubriques dont les notifications persistantes ; compteur et préférences raccordés aux services existants | Recetter l’ensemble des documents, formations, contrôles et cas de droits sur les appareils retenus |
 | Gestion RH | Sections selon réponse serveur, raccourcis vers dossiers/demandes/pointages | Recette complète des sections avancées et du planning d’équipe |
 | Absences | Parcours navigateur création → validation → retour salarié réussi sur une absence fictive ; statuts historiques reconnus | Cas complexes avec débit/reprise de compteur, migration des statuts historiques et cas après clôture |
 | Compteurs, acquisition, report | Services et contrats déjà développés ; accès propre au salarié vérifié dans ce lot | Confirmer les formules encore non observées dans Skello et réconcilier les soldes historiques ; voir les documents d’acquisition/report existants |
 | Badgeuses, tablettes, photos | Réglages regroupés sous Réglages RH, restrictions serveur recontrôlées | Appairage et recette physique des tablettes, caméra, salle et présence avant cours ; aucun matériel validé par la simple navigation |
-| Communication RH | Publications internes et lectures persistantes, filtres équipes/dossiers, historique et audit ; parcours responsable/collaborateur exécuté sur ordinateur/mobile/tablette | Cloche globale encore codée en dur ; email, pièces jointes, programmation et autres variantes COM01 restent à développer |
+| Communication RH | Publications internes et lectures persistantes, filtres équipes/dossiers, historique et audit ; parcours responsable/collaborateur exécuté sur ordinateur/mobile/tablette | Cloche raccordée à la boîte personnelle ; email, pièces jointes, programmation et autres variantes COM01 restent à développer |
+| Notifications RH | Cloche, boîte personnelle, lectures persistantes et notifications d’absences/annotations de pointage testées ; trois formats vérifiés | Déclencheurs planning/documents/signatures et autres modules à raccorder ; push et envois externes non livrés |
 | Calendrier personnel | Flux .ics privé réellement servi : horaires propres publiés et absences validées, droits revérifiés, lien aléatoire haché, renouvellement/révocation/désactivation testés | Création/téléchargement/révocation/désactivation testés dans le navigateur ; abonnement Apple/Google/Outlook et adresse HTTPS stable restent à recetter |
 | Lead, scénarios, modèles, campagnes | Moteurs et simulations existants ; voir contrats et recettes spécialisés | Variables de contexte non raccordées, réentrée/délégations avancées et autres écarts déjà listés dans les contrats ; recette par fonction avant annonce de parité |
 | Emails, SMS, WhatsApp | Préparation/simulation ; pas d’envoi réel validé | Paramétrage dédié, états fournisseurs, oppositions, accusés, échecs et anti-doublons à recetter sans perturber Heitz |
@@ -40,6 +41,7 @@
 - `docs/demo-coherence-2026-11-25.md`, `docs/lead-navigation-review-2026-11-26.md` et `docs/rh-workspace-recette-2026-11-26.md` : versions, parcours exécutés et limites des dernières reprises d’interface.
 - `docs/rh-communications-calendrier-recette-2026-11-26.md` : contrat, parcours, résultats serveur et blocage visuel du nouveau lot.
 - `docs/rh-audiences-contexte-recette-2026-11-26.md` : recontrôles visuels exécutés après rétablissement du navigateur, ciblage des destinataires, mémorisation du club et écart de la cloche globale.
+- `docs/rh-notifications-recette-2026-11-26.md` : vraie cloche, boîte personnelle, événements d’absence/pointage, navigation, refus et redémarrage.
 - `docs/v1-utilisable-conditions.md` : conditions de réception d’un pilote ; ne pas les remplacer par le nombre de tests.
 
 ## Critère de fin

@@ -212,6 +212,7 @@ pub async fn decide_request(
         Some(request.status),
         Some(format!("{} | {}", payload.status, note)),
     );
+    crate::rh_notifications::leave_changes(&db,&mut next)?;
     persist_state(&state.data_dir, &next).map_err(|_| {
         err_resp(
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -283,6 +284,7 @@ pub async fn review_entry(
     }
     let previous = row["review"].clone();
     row["review"] = json!({"note":note,"actorId":actor,"at":Utc::now().to_rfc3339(),"version":format!("review-{}",rand::random::<u128>())});
+    let event_version = row["review"]["version"].as_str().unwrap().to_string();
     append_audit(
         &mut next,
         &actor,
@@ -293,6 +295,7 @@ pub async fn review_entry(
         Some(previous.to_string()),
         Some(note.into()),
     );
+    crate::rh_notifications::add(&mut next,employee,&club_id,&format!("pointage:{id}:{event_version}"),"Votre pointage a reçu une annotation","Une note a été ajoutée par un responsable. Consultez Mes pointages pour le détail.","rh_time_review","time")?;
     persist_state(&state.data_dir, &next).map_err(|_| {
         err_resp(
             StatusCode::INTERNAL_SERVER_ERROR,
