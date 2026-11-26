@@ -8,3 +8,6 @@ target/
 
 # Fichiers temporaires d'agents (ne jamais versionner)
 .temp/
+__pycache__/
+*.pyc
+*.pyo
