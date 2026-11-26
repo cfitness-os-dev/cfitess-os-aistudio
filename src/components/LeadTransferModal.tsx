@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowRightLeft, X, AlertCircle, Building2, UserCheck, ShieldCheck } from 'lucide-react';
 import type { Prospect, ClubId } from '../types/cfos';
 import { formatClubName } from '../domain/rules';
 import { transferProspect, type TransferProspectResult } from '../domain/leadPoolApi';
 
 interface LeadTransferModalProps {
+  managementClubs?: string[];
+  employees?: {id:string;firstName:string;lastName:string}[];
   prospect: Prospect | null;
   isOpen: boolean;
   onClose: () => void;
@@ -13,10 +15,14 @@ interface LeadTransferModalProps {
 
 export function LeadTransferModal({
   prospect,
+  managementClubs=[],
+  employees=[],
   isOpen,
   onClose,
   onSuccess,
 }: LeadTransferModalProps) {
+  const alive=useRef(true); const submitting=useRef(false);
+  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
   const [targetClubId, setTargetClubId] = useState<ClubId>('beynost');
   const [reason, setReason] = useState<string>('Préférence géographique ou déménagement');
   const [loading, setLoading] = useState<boolean>(false);
@@ -34,26 +40,32 @@ export function LeadTransferModal({
 
   if (!isOpen || !prospect) return null;
 
+  const assignee=employees.find(e=>e.id===prospect.assignedToId);
+
   const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!prospect) return;
+    if (!prospect || submitting.current) return;
+    if(!managementClubs.includes(prospect.clubId) || !managementClubs.includes(targetClubId)){setError('Le transfert nécessite une autorisation de gestion dans les deux clubs.');return;}
     if (targetClubId === prospect.clubId) {
       setError('Le club de destination doit être différent du club actuel.');
       return;
     }
 
+    submitting.current=true;
     setLoading(true);
     setError(null);
 
     try {
       const result = await transferProspect(prospect.id, targetClubId, reason);
+      if(!alive.current)return;
       onSuccess(result);
       onClose();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Échec du transfert.';
-      setError(msg);
+      if(alive.current)setError(msg);
     } finally {
-      setLoading(false);
+      submitting.current=false;
+      if(alive.current)setLoading(false);
     }
   };
 
@@ -64,7 +76,7 @@ export function LeadTransferModal({
       aria-labelledby="transfer-modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
     >
-      <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden text-slate-800 animate-in fade-in zoom-in-95 duration-150">
+      <div className="relative w-full max-w-md max-h-[85dvh] overflow-y-auto rounded-2xl bg-white shadow-2xl border border-slate-200 text-slate-800 animate-in fade-in zoom-in-95 duration-150">
         <div className="bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-4 text-white flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-white/15">
@@ -91,10 +103,11 @@ export function LeadTransferModal({
         </div>
 
         <form onSubmit={handleTransfer} className="p-5 space-y-4 text-xs">
+          {(!managementClubs.includes(prospect.clubId) || managementClubs.length < 2) && <p role="status" className="text-sm">Le transfert nécessite une autorisation de gestion dans les deux clubs. Demandez à un responsable habilité.</p>}
           {error && (
             <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 flex items-start gap-2 text-xs">
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-              <span>{error}</span>
+              <span role="alert">{error}</span>
             </div>
           )}
 
@@ -112,7 +125,7 @@ export function LeadTransferModal({
                 <UserCheck className="w-3.5 h-3.5 text-slate-400" /> Commercial actuel :
               </span>
               <span className="font-mono text-slate-700">
-                {prospect.assignedToId || 'Non assigné'}
+                {assignee ? assignee.firstName+' '+assignee.lastName : 'En attente d’attribution'}
               </span>
             </div>
           </div>
@@ -128,10 +141,10 @@ export function LeadTransferModal({
               disabled={loading}
               className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500"
             >
-              <option value="carre-de-soie" disabled={prospect.clubId === 'carre-de-soie'}>
+              <option value="carre-de-soie" disabled={prospect.clubId === 'carre-de-soie' || !managementClubs.includes('carre-de-soie')}>
                 C.Fitness Carré de Soie {prospect.clubId === 'carre-de-soie' ? '(Actuel)' : ''}
               </option>
-              <option value="beynost" disabled={prospect.clubId === 'beynost'}>
+              <option value="beynost" disabled={prospect.clubId === 'beynost' || !managementClubs.includes('beynost')}>
                 C.Fitness Beynost {prospect.clubId === 'beynost' ? '(Actuel)' : ''}
               </option>
             </select>
@@ -173,7 +186,7 @@ export function LeadTransferModal({
             </button>
             <button
               type="submit"
-              disabled={loading || targetClubId === prospect.clubId}
+              disabled={loading || targetClubId === prospect.clubId || !managementClubs.includes(prospect.clubId) || !managementClubs.includes(targetClubId)}
               className="px-5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-extrabold flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50 transition-all"
             >
               {loading ? (
