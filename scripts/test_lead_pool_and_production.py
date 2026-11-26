@@ -31,14 +31,14 @@ def test_preflight_tool() -> None:
             "employees": [
                 {
                     "id": "emp-admin",
-                    "site_accesses": [{"site_id": "club-carre-soie", "profile_id": "admin"}],
+                    "siteAccesses": [{"siteId": "carre-de-soie", "profileId": "admin_systeme"}],
                 }
             ],
-            "sites": [{"id": "club-carre-soie"}],
-            "leave_requests": [],
-            "lead_prospects": [],
-            "lead_alerts": [],
-            "audit_log": [],
+            "sites": [{"id": "carre-de-soie"}],
+            "leaveRequests": [],
+            "leadProspects": [],
+            "leadAlerts": [],
+            "auditLog": [],
         }
         state_file.write_text(json.dumps(valid_state), encoding="utf-8")
 

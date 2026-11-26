@@ -1782,11 +1782,23 @@ pub(crate) async fn post_rebalance_stale_prospects(
         }
     }
 
+    let reassigned_items: Vec<Value> = alert_events
+        .iter()
+        .map(|(cid, pid, _, _, new_ass)| {
+            json!({
+                "id": pid,
+                "clubId": cid,
+                "assignedToId": new_ass
+            })
+        })
+        .collect();
+
     Ok(Json(json!({
         "ok": true,
         "clubsProcessed": target_clubs,
         "reassignedCount": reassigned_ids.len(),
         "reassignedIds": reassigned_ids,
+        "reassigned": reassigned_items,
         "thresholdDaysApplied": threshold_days
     })))
 }
