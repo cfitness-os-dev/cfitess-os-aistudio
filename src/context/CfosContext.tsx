@@ -1,3 +1,4 @@
+import { clubStorage, authorizedClub, readClubSelection, rememberClubSelection } from '../domain/clubSelection';
 import { clientApi } from '../domain/clientApi';
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { confirmLeadDraftNavigation } from '../domain/leadDraftGuard';
@@ -636,21 +637,20 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     ? currentUser.clubId
     : authorizedClubIds[0] ?? 'carre-de-soie';
 
-  const [clubFilter, setClubFilterState] = useState<ClubFilter>(primaryAuthorizedClub);
+  const [clubSelection, setClubSelection] = useState(() => ({
+    actorId: currentUser.id,
+    clubId: readClubSelection(clubStorage(), currentUser.id, authorizedClubIds, primaryAuthorizedClub),
+  }));
+  // Resolve against this account's current rights before any module receives the club.
+  const clubFilter: ClubFilter = clubSelection.actorId === currentUser.id
+    ? authorizedClub(clubSelection.clubId, authorizedClubIds, primaryAuthorizedClub)
+    : readClubSelection(clubStorage(), currentUser.id, authorizedClubIds, primaryAuthorizedClub);
   const setClubFilter = (filter: ClubFilter) => {
-    if(filter !== clubFilter && !confirmLeadDraftNavigation(()=>setClubFilter(filter))) return;
-    if (filter !== 'all' && authorizedClubIds.includes(filter)) {
-      setClubFilterState(filter);
-      return;
-    }
-    setClubFilterState(primaryAuthorizedClub);
+    if (filter !== clubFilter && !confirmLeadDraftNavigation(() => setClubFilter(filter))) return;
+    const next = authorizedClub(filter, authorizedClubIds, primaryAuthorizedClub);
+    rememberClubSelection(clubStorage(), currentUser.id, next);
+    setClubSelection({ actorId: currentUser.id, clubId: next });
   };
-
-  useEffect(() => {
-    if (clubFilter === 'all' || !authorizedClubIds.includes(clubFilter as ClubId)) {
-      setClubFilterState(primaryAuthorizedClub);
-    }
-  }, [clubFilter, authorizedClubIds, primaryAuthorizedClub]);
 
   const [activeMywellnessModal, setActiveMywellnessModal] = useState<{
     mywellnessMemberId?: string;
@@ -1352,7 +1352,8 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     setCurrentUserId('emp-mario');
     setShellMode('admin');
     setActiveSection('my-day', 'personal');
-    setClubFilterState('carre-de-soie');
+    setClubSelection({ actorId: 'emp-mario', clubId: 'carre-de-soie' });
+    rememberClubSelection(clubStorage(), 'emp-mario', 'carre-de-soie');
     try {
       window.sessionStorage.removeItem('cfos_architect_pin_unlocked');
       window.localStorage.removeItem('cfos_architect_pin_unlocked');
@@ -1752,7 +1753,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
         return { ...p, segments: nextSegs };
       }),
       auditLogs: appendAudit(prev.auditLogs, {
-        clubId: clubFilter === 'all' ? 'carre-de-soie' : clubFilter,
+        clubId: clubFilter,
         action: 'AFFECTATION_SEGMENT_PROSPECTS',
         target: `${prospectIds.length} prospect(s)`,
         afterState: `Segment ajouté : ${segmentName.trim()}`,

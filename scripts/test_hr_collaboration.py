@@ -17,7 +17,7 @@ def main():
     base = f'http://127.0.0.1:{port}'
     checks = []
     with tempfile.TemporaryDirectory(prefix='rh-collaboration-', dir=os.environ['TMPDIR']) as folder:
-        env = {'PATH':os.environ.get('PATH','/usr/bin:/bin'),'TMPDIR':os.environ['TMPDIR'],
+        env = {**os.environ, 'TMPDIR':os.environ['TMPDIR'],
                'CFITNESS_ENV':'demo','CFITNESS_DEMO_MODE':'1','CFITNESS_STRICT_SESSION':'1',
                'CFITNESS_BIND_ADDR':f'127.0.0.1:{port}','CFITNESS_DATA_DIR':folder,
                'CFITNESS_HEITZ_LIVE_READS_ENABLED':'0','CFITNESS_HEITZ_WORKER':'0',
@@ -51,6 +51,9 @@ def main():
             assert call('GET',path,employee)[0]==403
             assert call('GET','/api/hr/communications/unknown',admin)[0]==400
             checks.append('session and club-specific manager permissions')
+            audience=call('GET',path,admin)[1]['recipients']
+            assert audience and all(isinstance(r.get('fileStatus'),str) and isinstance(r.get('teams'),list) and all(set(t)=={'id','name'} for t in r['teams']) for r in audience)
+            checks.append('authorized recipient team and file-status metadata available for audience filters')
             command={'operationId':secrets.token_hex(16),'subject':'Recette HTTP fictive','body':'Message interne persistant','recipientIds':['emp-chloe']}
             code,published,_=call('POST',path,admin,command);assert code==200
             message_id=published['publishedMessageId']

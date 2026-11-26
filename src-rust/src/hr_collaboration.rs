@@ -205,8 +205,27 @@ fn workspace(
         }).collect();
         json!({"id":m.id,"subject":m.subject,"body":m.body,"createdAt":m.created_at,"recipientCount":m.recipient_ids.len(),"receipts":receipts})
     }).collect();
+    let site_id = site(club)?;
+    let recipients: Vec<Value> = recipient_ids
+        .iter()
+        .map(|id| {
+            let employee = db.employees.iter().find(|e| e.id == *id).unwrap();
+            let access = employee
+                .site_accesses
+                .iter()
+                .find(|a| a.site_id == site_id)
+                .unwrap();
+            let teams: Vec<Value> = db
+                .teams
+                .iter()
+                .filter(|t| t.site_id == site_id && access.team_ids.contains(&t.id))
+                .map(|t| json!({"id":t.id,"name":t.name}))
+                .collect();
+            json!({"id":id,"name":name(db,id),"teams":teams,"fileStatus":employee.hr_file_status})
+        })
+        .collect();
     Ok(
-        json!({"actorId":actor,"clubId":club,"channel":"internal","recipients":recipient_ids.iter().map(|id|json!({"id":id,"name":name(db,id)})).collect::<Vec<_>>(),"messages":messages,"nextCursor":next}),
+        json!({"actorId":actor,"clubId":club,"channel":"internal","recipients":recipients,"messages":messages,"nextCursor":next}),
     )
 }
 pub async fn get_messages(
