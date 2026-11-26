@@ -2,7 +2,10 @@
 use crate::hr_manager::request_revision;
 use crate::models::LeaveRequest;
 use crate::rbac::{evaluate_permission, PermissionTarget};
-use crate::routes::{append_audit, err_resp, resolve_session_actor, SharedState};
+use crate::routes::{
+    append_audit, err_resp, resolve_available_commercial_for_club, resolve_session_actor,
+    SharedState,
+};
 use crate::seed::persist_state;
 use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode};
@@ -169,14 +172,72 @@ pub async fn patch_leave_request_decision(
         };
     }
     let updated = next.leave_requests[idx].clone();
+    let mut reassigned_prospects = 0usize;
+    if updated.status == "approved" {
+        let club_id = match updated.site_id.as_str() {
+            "club-carre-soie" => Some("carre-de-soie"),
+            "club-beynost" => Some("beynost"),
+            _ => None,
+        };
+        let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
+        if let Some(club_id) = club_id.filter(|club_id| {
+            next.lead_settings_by_club
+                .get(*club_id)
+                .and_then(|settings| settings.get("autoUnassignOnLeave"))
+                .and_then(Value::as_bool)
+                .unwrap_or(true)
+                && updated.start_date <= today
+                && updated.end_date >= today
+        }) {
+            let replacement = resolve_available_commercial_for_club(&next, club_id);
+            for prospect in &mut next.lead_prospects {
+                if prospect.club_id == club_id
+                    && prospect.assigned_to_id.as_deref() == Some(updated.employee_id.as_str())
+                    && !prospect.is_archived
+                    && !matches!(
+                        prospect.stage.as_str(),
+                        "Client"
+                            | "Client enseigne"
+                            | "Perdu"
+                            | "Perdu / Sans suite"
+                            | "Archivé"
+                            | "Froid"
+                    )
+                    && !matches!(
+                        prospect.lead_status.as_str(),
+                        "Client"
+                            | "Client enseigne"
+                            | "Perdu"
+                            | "Perdu / Sans suite"
+                            | "Archivé"
+                            | "Froid"
+                    )
+                {
+                    prospect.assigned_to_id = Some(replacement.clone());
+                    reassigned_prospects += 1;
+                }
+            }
+        }
+    }
 
     append_audit(
         &mut next,
         &actor_id,
         "Demande d'absence (Décision)",
         format!(
-            "Demande {} ({}) passée de {} à {}",
-            updated.id, updated.motive, old_status, updated.status
+            "Demande {} ({}) passée de {} à {}{}",
+            updated.id,
+            updated.motive,
+            old_status,
+            updated.status,
+            if reassigned_prospects > 0 {
+                format!(
+                    " ; {} prospect(s) réaffecté(s) selon l’absence RH",
+                    reassigned_prospects
+                )
+            } else {
+                String::new()
+            }
         ),
         &updated.site_id,
         "leave_request",
@@ -231,9 +292,102 @@ mod tests {
             header::AUTHORIZATION,
             HeaderValue::from_str(&format!("Bearer {token}")).unwrap(),
         );
-        headers.insert("x-cfitness-actor-id", HeaderValue::from_str(actor_id).unwrap());
-        headers.insert("x-cfitness-site-id", HeaderValue::from_str(site_id).unwrap());
+        headers.insert(
+            "x-cfitness-actor-id",
+            HeaderValue::from_str(actor_id).unwrap(),
+        );
+        headers.insert(
+            "x-cfitness-site-id",
+            HeaderValue::from_str(site_id).unwrap(),
+        );
         headers
+    }
+
+    #[tokio::test]
+    async fn approved_current_leave_reassigns_active_prospects_by_least_load_when_enabled() {
+        for auto_unassign in [true, false] {
+            let state = test_state();
+            let request_id = format!("req-auto-reassign-{}", auto_unassign);
+            let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
+            {
+                let mut db = state.db.write().await;
+                db.lead_prospects.clear();
+                for (id, assignee, stage) in [
+                    ("leave-owner", "emp-maxime", "Nouveau"),
+                    ("karim-load", "emp-karim", "Nouveau"),
+                    ("closed-owner", "emp-maxime", "Client"),
+                ] {
+                    db.lead_prospects.push(
+                        serde_json::from_value(serde_json::json!({
+                            "id": id,
+                            "firstName": "Test",
+                            "lastName": id,
+                            "email": format!("{}@example.test", id),
+                            "clubId": "carre-de-soie",
+                            "source": "Site",
+                            "stage": stage,
+                            "leadStatus": stage,
+                            "rgpdConsent": true,
+                            "assignedToId": assignee,
+                            "createdAt": "2026-11-25"
+                        }))
+                        .unwrap(),
+                    );
+                }
+                db.lead_settings_by_club.get_mut("carre-de-soie").unwrap()["autoUnassignOnLeave"] =
+                    serde_json::json!(auto_unassign);
+                db.leave_requests.push(LeaveRequest {
+                    id: request_id.clone(),
+                    employee_id: "emp-maxime".into(),
+                    site_id: "club-carre-soie".into(),
+                    motive: "Arrêt maladie".into(),
+                    start_date: today.clone(),
+                    end_date: today,
+                    status: "pending".into(),
+                    comment: "Arrêt de travail".into(),
+                });
+            }
+
+            let admin_headers = session_headers(&state, "emp-mario", "club-carre-soie").await;
+            let Json(approved) = patch_leave_request_decision(
+                State(state.clone()),
+                Path(request_id),
+                admin_headers,
+                Json(LeaveDecisionPayload {
+                    status: "approved".into(),
+                    ..Default::default()
+                }),
+            )
+            .await
+            .expect("approved absence persists");
+            assert_eq!(approved.status, "approved");
+
+            let db = state.db.read().await;
+            let reassigned = db
+                .lead_prospects
+                .iter()
+                .find(|prospect| prospect.id == "leave-owner")
+                .unwrap();
+            assert_eq!(
+                reassigned.assigned_to_id.as_deref(),
+                Some(if auto_unassign {
+                    "emp-sarah"
+                } else {
+                    "emp-maxime"
+                })
+            );
+            assert_eq!(
+                db.lead_prospects
+                    .iter()
+                    .find(|prospect| prospect.id == "closed-owner")
+                    .unwrap()
+                    .assigned_to_id
+                    .as_deref(),
+                Some("emp-maxime")
+            );
+            drop(db);
+            let _ = std::fs::remove_dir_all(&state.data_dir);
+        }
     }
 
     #[tokio::test]
