@@ -4187,7 +4187,21 @@ fn parse_hhmm_minutes(hhmm: &str) -> Option<u32> {
     Some(h * 60 + m)
 }
 
-pub(crate) fn resolve_available_commercial_for_club(db: &AppDatabaseState, club_id: &str) -> String {
+pub(crate) fn resolve_available_commercial_for_club(
+    db: &AppDatabaseState,
+    club_id: &str,
+) -> String {
+    if !crate::lead_settings::valid_club(club_id)
+        || !db
+            .lead_settings_by_club
+            .get(club_id)
+            .and_then(|settings| settings.get("autoAssignEnabled"))
+            .and_then(Value::as_bool)
+            .unwrap_or(true)
+    {
+        return format!("file_attente_{}", club_id);
+    }
+
     let today = Utc::now().format("%Y-%m-%d").to_string();
     let candidates = if club_id == "beynost" {
         vec!["emp-chloe", "emp-greg", "emp-sarah"]
@@ -4195,19 +4209,52 @@ pub(crate) fn resolve_available_commercial_for_club(db: &AppDatabaseState, club_
         vec!["emp-maxime", "emp-karim", "emp-sarah"]
     };
 
-    for emp_id in candidates {
-        let is_on_leave = db.leave_requests.iter().any(|lr| {
-            lr.employee_id == emp_id
-                && lr.site_id == if club_id == "beynost" { "club-beynost" } else { "club-carre-soie" }
-                && (lr.status == "approved" || lr.status.eq_ignore_ascii_case("valide"))
-                && lr.start_date.as_str() <= today.as_str()
-                && lr.end_date.as_str() >= today.as_str()
-        });
-        if !is_on_leave {
-            return emp_id.to_string();
-        }
-    }
-    format!("file_attente_{}", club_id)
+    candidates
+        .into_iter()
+        .filter(|emp_id| {
+            !db.leave_requests.iter().any(|lr| {
+                lr.employee_id == *emp_id
+                    && lr.site_id
+                        == if club_id == "beynost" {
+                            "club-beynost"
+                        } else {
+                            "club-carre-soie"
+                        }
+                    && (lr.status == "approved" || lr.status.eq_ignore_ascii_case("valide"))
+                    && lr.start_date.as_str() <= today.as_str()
+                    && lr.end_date.as_str() >= today.as_str()
+            })
+        })
+        .min_by_key(|emp_id| {
+            db.lead_prospects
+                .iter()
+                .filter(|prospect| {
+                    prospect.club_id == club_id
+                        && prospect.assigned_to_id.as_deref() == Some(*emp_id)
+                        && !prospect.is_archived
+                        && !matches!(
+                            prospect.stage.as_str(),
+                            "Client"
+                                | "Client enseigne"
+                                | "Perdu"
+                                | "Perdu / Sans suite"
+                                | "Archivé"
+                                | "Froid"
+                        )
+                        && !matches!(
+                            prospect.lead_status.as_str(),
+                            "Client"
+                                | "Client enseigne"
+                                | "Perdu"
+                                | "Perdu / Sans suite"
+                                | "Archivé"
+                                | "Froid"
+                        )
+                })
+                .count()
+        })
+        .map(str::to_string)
+        .unwrap_or_else(|| format!("file_attente_{}", club_id))
 }
 
 async fn get_public_lead_form(
@@ -4330,6 +4377,13 @@ async fn post_public_lead_form_submit(
         new_pid
     };
 
+    let activity_assignee = db
+        .lead_prospects
+        .iter()
+        .find(|prospect| prospect.id == prospect_id)
+        .and_then(|prospect| prospect.assigned_to_id.clone())
+        .unwrap_or_else(|| format!("file_attente_{}", club_id));
+
     let response_id = format!("rep-pub-{}", Utc::now().timestamp_millis());
     let sample = crate::models::LeadFormSampleResponseRecord {
         id: response_id.clone(),
@@ -4358,11 +4412,7 @@ async fn post_public_lead_form_submit(
             club_id: club_id.clone(),
             due_at: Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
             status: "todo".into(),
-            assigned_to_id: if club_id == "beynost" {
-                "emp-chloe".into()
-            } else {
-                "emp-maxime".into()
-            },
+            assigned_to_id: activity_assignee,
             status_label: "Nouvelle soumission".into(),
         },
     );
@@ -6053,6 +6103,22 @@ mod tests {
         .unwrap();
         assert_eq!(st_sub, StatusCode::CREATED);
         let prospect_id = sub_json.0["prospectId"].as_str().unwrap().to_string();
+        {
+            let db = state.db.read().await;
+            let prospect_assignee = db
+                .lead_prospects
+                .iter()
+                .find(|prospect| prospect.id == prospect_id)
+                .and_then(|prospect| prospect.assigned_to_id.clone())
+                .unwrap();
+            let activity_assignee = db
+                .lead_activities
+                .iter()
+                .find(|activity| activity.prospect_id.as_deref() == Some(prospect_id.as_str()))
+                .map(|activity| activity.assigned_to_id.as_str())
+                .unwrap();
+            assert_eq!(activity_assignee, prospect_assignee.as_str());
+        }
 
         // 3. Visiteur anonyme réserve un créneau public /book/carre-de-soie/coaching-decouverte
         let (st_book, _) = post_public_book_slot(
@@ -6393,6 +6459,46 @@ mod tests {
             assert_eq!(reloaded.audit_log.first().unwrap().target_label, "ClubLeadSettings (beynost)");
             std::fs::remove_dir_all(&state.data_dir).unwrap();
         }
+    }
+
+    #[tokio::test]
+    async fn lead_auto_assignment_uses_least_load_and_respects_disabled_setting() {
+        let state = test_state();
+        let mut db = state.db.write().await;
+        db.lead_prospects.clear();
+        for (id, assigned_to_id) in [
+            ("maxime-1", "emp-maxime"),
+            ("maxime-2", "emp-maxime"),
+            ("karim-1", "emp-karim"),
+        ] {
+            db.lead_prospects.push(
+                serde_json::from_value(json!({
+                    "id": id,
+                    "firstName": "Test",
+                    "lastName": id,
+                    "email": format!("{}@example.test", id),
+                    "clubId": "carre-de-soie",
+                    "source": "Site",
+                    "stage": "Nouveau",
+                    "leadStatus": "Nouveau",
+                    "rgpdConsent": true,
+                    "assignedToId": assigned_to_id,
+                    "createdAt": "2026-11-25"
+                }))
+                .unwrap(),
+            );
+        }
+
+        assert_eq!(
+            resolve_available_commercial_for_club(&db, "carre-de-soie"),
+            "emp-sarah"
+        );
+        db.lead_settings_by_club.get_mut("carre-de-soie").unwrap()["autoAssignEnabled"] =
+            json!(false);
+        assert_eq!(
+            resolve_available_commercial_for_club(&db, "carre-de-soie"),
+            "file_attente_carre-de-soie"
+        );
     }
 
     #[tokio::test]
