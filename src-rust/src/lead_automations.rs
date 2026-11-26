@@ -1552,6 +1552,52 @@ pub fn is_commercial_available_for_club(
     !is_on_leave
 }
 
+pub fn resolve_club_commercial_candidates(db: &AppDatabaseState, club_id: &str) -> Vec<String> {
+    // 1. Vivier commercial explicitement configuré et persistant dans les réglages Lead du club
+    if let Some(pool) = db
+        .lead_settings_by_club
+        .get(club_id)
+        .and_then(|settings| {
+            settings
+                .get("commercialPoolIds")
+                .or_else(|| settings.get("assignedEmployeeIds"))
+        })
+        .and_then(Value::as_array)
+    {
+        let custom: Vec<String> = pool
+            .iter()
+            .filter_map(|v| v.as_str())
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+        if !custom.is_empty() {
+            return custom;
+        }
+    }
+
+    // 2. Vivier commercial qualifié par défaut pour les clubs répertoriés :
+    // - Carré de Soie : Maxime Giraud (commercial) et Sarah Bensaid (responsable commerciale)
+    //   Exclusion de Karim Haddad (coach sportif) et Greg Carvalho (recouvrement) sauf habilitation explicite
+    // - Beynost : Chloé Morel (commerciale)
+    //   Exclusion de Greg Carvalho (recouvrement)
+    if club_id == "beynost" {
+        vec!["emp-chloe".to_string()]
+    } else if club_id == "carre-de-soie" {
+        vec!["emp-maxime".to_string(), "emp-sarah".to_string()]
+    } else {
+        let site_id = club_id_to_audit_site_id(club_id);
+        db.employees
+            .iter()
+            .filter(|e| {
+                e.active
+                    && e.matricule.starts_with("CF-COM")
+                    && e.site_accesses.iter().any(|a| a.site_id == site_id)
+            })
+            .map(|e| e.id.clone())
+            .collect()
+    }
+}
+
 pub fn resolve_best_commercial_for_club(
     db: &AppDatabaseState,
     club_id: &str,
@@ -1568,17 +1614,13 @@ pub fn resolve_best_commercial_for_club(
         return format!("file_attente_{}", club_id);
     };
     let today = now.with_timezone(&timezone).date_naive();
-    let candidates = if club_id == "beynost" {
-        vec!["emp-chloe", "emp-greg", "emp-sarah"]
-    } else {
-        vec!["emp-maxime", "emp-karim", "emp-sarah"]
-    };
+    let candidates = resolve_club_commercial_candidates(db, club_id);
 
     candidates
         .into_iter()
         .filter(|emp_id| {
             if let Some(exc) = exclude_emp {
-                if *emp_id == exc {
+                if emp_id == exc {
                     return false;
                 }
             }
@@ -1614,7 +1656,7 @@ pub fn resolve_best_commercial_for_club(
                 .iter()
                 .filter(|prospect| {
                     prospect.club_id == club_id
-                        && prospect.assigned_to_id.as_deref() == Some(*emp_id)
+                        && prospect.assigned_to_id.as_deref() == Some(emp_id.as_str())
                         && !prospect.is_archived
                         && !matches!(
                             prospect.stage.as_str(),
@@ -1633,7 +1675,7 @@ pub fn resolve_best_commercial_for_club(
                 .iter()
                 .filter(|p| {
                     p.club_id == club_id
-                        && p.assigned_to_id.as_deref() == Some(*emp_id)
+                        && p.assigned_to_id.as_deref() == Some(emp_id.as_str())
                         && !p.is_archived
                 })
                 .filter_map(|p| p.last_commercial_touch_at.as_deref().or(Some(&p.created_at)))
@@ -1642,7 +1684,6 @@ pub fn resolve_best_commercial_for_club(
 
             (active_count, latest_touch)
         })
-        .map(str::to_string)
         .unwrap_or_else(|| format!("file_attente_{}", club_id))
 }
 
@@ -3293,9 +3334,8 @@ mod tests {
             let db = state.db.read().await;
             let pr = db.lead_prospects.iter().find(|p| p.id == "pr-transfer-1").unwrap();
             assert_eq!(pr.club_id, "beynost");
-            // Le commercial de Beynost a été assigné automatiquement
-            assert!(["emp-chloe", "emp-greg", "emp-sarah"]
-                .contains(&pr.assigned_to_id.as_deref().unwrap_or("")));
+            // Le commercial de Beynost a été assigné automatiquement (Chloé, Greg étant exclu du vivier commercial)
+            assert_eq!(pr.assigned_to_id.as_deref(), Some("emp-chloe"));
             // Alerte générée sur Beynost
             assert!(db
                 .lead_alerts
@@ -3304,6 +3344,48 @@ mod tests {
         }
 
         srv.abort();
+        let _ = std::fs::remove_dir_all(&base_dir);
+    }
+
+    #[tokio::test]
+    async fn commercial_pool_qualification_excludes_coach_and_recovery_and_respects_settings() {
+        let base_dir = make_isolated_dir("pool_qual");
+        let state = state_for_dir(base_dir.clone());
+        let mut db = state.db.write().await;
+
+        // 1. Pour Carré de Soie : Maxime et Sarah sont qualifiés, Karim (coach) est exclu
+        let cands_cds = resolve_club_commercial_candidates(&db, "carre-de-soie");
+        assert!(cands_cds.contains(&"emp-maxime".to_string()));
+        assert!(!cands_cds.contains(&"emp-karim".to_string()), "Coach sportif pur exclu");
+        assert!(!cands_cds.contains(&"emp-greg".to_string()), "Recouvrement exclu");
+
+        // 2. Pour Beynost : Chloé est qualifiée, Greg (recouvrement) est exclu
+        let cands_bey = resolve_club_commercial_candidates(&db, "beynost");
+        assert!(cands_bey.contains(&"emp-chloe".to_string()));
+        assert!(!cands_bey.contains(&"emp-greg".to_string()), "Recouvrement exclu de Beynost");
+
+        // 3. Si un vivier explicite est configuré dans lead_settings_by_club, il prime
+        db.lead_settings_by_club.get_mut("beynost").unwrap()["commercialPoolIds"] = serde_json::json!(["emp-sarah"]);
+        let custom_bey = resolve_club_commercial_candidates(&db, "beynost");
+        assert_eq!(custom_bey, vec!["emp-sarah".to_string()]);
+
+        // 4. Si tous les commerciaux habilités sont en congé approuvé -> file d'attente
+        let today = Utc::now().with_timezone(&chrono_tz::Europe::Paris).date_naive().to_string();
+        for eid in ["emp-maxime", "emp-sarah"] {
+            db.leave_requests.push(crate::models::LeaveRequest {
+                id: format!("leave-{eid}-test"),
+                employee_id: eid.into(),
+                site_id: "club-carre-soie".into(),
+                motive: "Vacances".into(),
+                start_date: today.clone(),
+                end_date: today.clone(),
+                status: "approved".into(),
+                comment: String::new(),
+            });
+        }
+        let best = resolve_best_commercial_for_club(&db, "carre-de-soie", Utc::now(), None);
+        assert_eq!(best, "file_attente_carre-de-soie");
+        drop(db);
         let _ = std::fs::remove_dir_all(&base_dir);
     }
 
