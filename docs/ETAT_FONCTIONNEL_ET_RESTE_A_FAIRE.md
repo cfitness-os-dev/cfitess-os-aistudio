@@ -25,7 +25,7 @@
 | Notifications RH | Cloche, boîte personnelle, lectures persistantes et notifications d’absences/annotations de pointage/planning publié testées ; trois formats vérifiés | Notifications de dépôt/prise de connaissance documentaire raccordées ; signatures et autres modules à raccorder, push/envois externes non livrés |
 | Calendrier personnel | Flux .ics privé réellement servi : horaires propres publiés et absences validées, droits revérifiés, lien aléatoire haché, renouvellement/révocation/désactivation testés | Création/téléchargement/révocation/désactivation testés dans le navigateur ; abonnement Apple/Google/Outlook et adresse HTTPS stable restent à recetter |
 | Lead, scénarios, modèles, campagnes | Moteurs et simulations existants ; voir contrats et recettes spécialisés | Variables de contexte non raccordées, réentrée/délégations avancées et autres écarts déjà listés dans les contrats ; recette par fonction avant annonce de parité |
-| Affectation Lead / RH | Contrôle compte actif et rattachement au club, absences historiques, jour local et file d’attente ; 10 variantes HTTP sur deux clubs | Vivier commercial encore prédéfini ; raccorder tous les parcours d’approbation, équilibrage multiple, activités et déclenchement au début des absences futures |
+| Affectation Lead / RH | Contrôle compte actif et rattachement au club, absences historiques, jour local et file d’attente ; 10 variantes HTTP sur deux clubs | Rééquilibrage/transfert livrés par #99/#101/#103 ; recette suivante reproduit attribution au coach/recouvrement et exemples locaux désynchronisés : éligibilité explicite, source unique et recontrôle RH nécessaires |
 | Emails, SMS, WhatsApp | Préparation/simulation ; pas d’envoi réel validé | Paramétrage dédié, états fournisseurs, oppositions, accusés, échecs et anti-doublons à recetter sans perturber Heitz |
 | Suivi des campagnes et certaines intégrations | Des tableaux et configurations de démonstration restent présents | Remplacer les exemples par une lecture persistante traçable ou indiquer clairement leur état ; ne pas annoncer un connecteur actif |
 | Heitz et recouvrement | Collectes et garde de démonstration développées ; pas de connexion réelle autorisée pour la démo | Comparer chaque capacité à la documentation et aux droits fournisseur, puis recette séparée autorisée sur jeux adaptés |
@@ -53,6 +53,8 @@
 - `docs/v1-utilisable-conditions.md` : conditions de réception d’un pilote ; ne pas les remplacer par le nombre de tests.
 
 - `docs/rh-photos-archives-recette-2026-11-26.md` : V2 documents + photos synthétiques, compatibilité V1, intégrité de consultation et 8 groupes HTTP ; aucun matériel réel testé.
+
+- `docs/lead-pool-parcours-recette-2026-11-26.md` : contrôles réels des trois formats, corrections du bandeau/transfert et blocages d’éligibilité/collection restant à corriger avant exploitation.
 
 ## Critère de fin
 

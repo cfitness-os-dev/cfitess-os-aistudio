@@ -28,7 +28,7 @@ import { formatClubName } from '../../domain/rules';
 import { LeadCommercialHubView } from './LeadCommercialHubView';
 import { LeadTransferModal } from '../LeadTransferModal';
 import { LeadConversionStatsBar } from '../LeadConversionStatsBar';
-import type { TransferProspectResult } from '../../domain/leadPoolApi';
+import { leadManagementClubs, type TransferProspectResult } from '../../domain/leadPoolApi';
 
 const STAGES: ProspectStage[] = [
   'Nouveau',
@@ -67,6 +67,8 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
     rewardMemberLoyaltyOrReferral,
   } = useCfos();
 
+  const managementClubs = leadManagementClubs(currentUser);
+  const canManageSelectedClub=clubFilter !== 'all' && managementClubs.includes(clubFilter);
   const [viewMode, setViewMode] = useState<'KANBAN' | 'HUBSPOT_360' | 'TABLE'>('TABLE');
   const [selectedHubspotProspectId, setSelectedHubspotProspectId] = useState<string>(
     prospects[0]?.id || ''
@@ -77,6 +79,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
   const [convertingProspect, setConvertingProspect] = useState<Prospect | null>(null);
   const [selectedFormula, setSelectedFormula] = useState<string>(CFITNESS_SUBSCRIPTION_FORMULAS[0]);
   const [sponsorMemberId, setSponsorMemberId] = useState<string>('');
+  const [poolRevision,setPoolRevision]=useState(0);
   const [transferringProspect, setTransferringProspect] = useState<Prospect | null>(null);
   const [feedbackBanner, setFeedbackBanner] = useState<{
     type: 'ok' | 'warn';
@@ -84,13 +87,14 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
   } | null>(null);
 
   const handleTransferSuccess = (result: TransferProspectResult) => {
+    setPoolRevision(v=>v+1);
     updateProspect(result.prospectId, {
       clubId: result.targetClubId as ClubId,
       assignedToId: result.assignedTo,
     });
     setFeedbackBanner({
       type: 'ok',
-      text: `Prospect transféré vers ${formatClubName(result.targetClubId as ClubId, true)} avec succès (commercial : ${result.assignedTo}).`,
+      text: `Prospect transféré vers ${formatClubName(result.targetClubId as ClubId, true)} avec succès (commercial : ${employees.find(e=>e.id===result.assignedTo)?.firstName ?? 'du club'}).`,
     });
   };
 
@@ -236,7 +240,10 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
       pipelineChildren={
         <div className="space-y-4">
           <LeadConversionStatsBar
+            key={currentUser.id + ':' + clubFilter + ':' + poolRevision}
             clubId={clubFilter}
+            employees={employees}
+            canRebalance={canManageSelectedClub}
             onRebalanceComplete={(result) => {
               if (result.reassigned && result.reassigned.length > 0) {
                 for (const item of result.reassigned) {
@@ -1195,6 +1202,9 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
       )}
 
           <LeadTransferModal
+            key={currentUser.id + ':' + (transferringProspect?.id ?? '')}
+            managementClubs={managementClubs}
+            employees={employees}
             prospect={transferringProspect}
             isOpen={Boolean(transferringProspect)}
             onClose={() => setTransferringProspect(null)}
