@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::fs;
-use std::io::Cursor;
+use std::io::{Cursor, Read};
 use std::path::{Path as FsPath, PathBuf};
 
 type Failure = (StatusCode, Json<Value>);
@@ -565,7 +565,7 @@ pub(crate) fn consume_punch_photo(
     Ok(slot.clone())
 }
 
-/// Consultation privée d'une photo de pointage réservée aux responsables RH (ORG04-37).
+/// Consultation privée d'une photo de pointage réservée au propriétaire ou super administrateur.
 pub async fn get_punch_photo(
     State(state): State<SharedState>,
     Path((raw_club, photo_id)): Path<(String, String)>,
@@ -591,17 +591,27 @@ pub async fn get_punch_photo(
     };
 
     let disk_path = photo_disk_path(&state.data_dir, &record.site_id, &record.file_name);
-    let bytes = fs::read(&disk_path).map_err(|_| {
-        err_resp(
-            StatusCode::NOT_FOUND,
-            "Fichier photo indisponible sur le disque.",
-        )
+    let file = fs::File::open(&disk_path).map_err(|_| {
+        err_resp(StatusCode::NOT_FOUND, "Fichier photo indisponible sur le disque.")
     })?;
+    let mut bytes = Vec::new();
+    file.take((MAX_PHOTO_BYTES + 1) as u64).read_to_end(&mut bytes).map_err(|_| {
+        err_resp(StatusCode::CONFLICT, "Lecture de la preuve photo impossible.")
+    })?;
+    if bytes.len() != record.byte_size
+        || !(MIN_PHOTO_BYTES..=MAX_PHOTO_BYTES).contains(&bytes.len())
+        || !matches!(record.content_type.as_str(), "image/png" | "image/jpeg")
+        || format!("{:x}", Sha256::digest(&bytes)) != record.sha256_hex
+    {
+        return Err(err_resp(StatusCode::CONFLICT, "Intégrité de la preuve photo non vérifiée."));
+    }
 
     Response::builder()
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, record.content_type.as_str())
         .header(header::CACHE_CONTROL, "private, no-store")
+        .header("x-content-type-options", "nosniff")
+        .header("referrer-policy", "no-referrer")
         .body(Body::from(bytes))
         .map_err(|_| {
             err_resp(
