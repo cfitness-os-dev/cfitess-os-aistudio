@@ -105,14 +105,14 @@ def main():
             assert len(call('GET', endpoint, admin)[1]['enrollments']) == 1
             checks.append('publication revisions and one enrollment per contact/scenario')
             # Find a contact with a real, active fixture commercial for the canonical task.
-            state = json.loads((folder / 'cfitness_state.json').read_text())
+            state = json.loads((folder / 'cfitness_state.json').read_text(encoding='utf-8'))
             enrolled = next(p for p in state['leadProspects'] if p['id'] == prospect['id'])
             # Fixtures can be unassigned; explicitly adjust only the disposable fixture between process runs.
             stop(proc)
             enrolled['assignedToId'] = 'emp-maxime'
             enrolled['rgpdConsent'] = True
             enrolled['email'] = 'scenario@example.test'
-            (folder / 'cfitness_state.json').write_text(json.dumps(state))
+            (folder / 'cfitness_state.json').write_text(json.dumps(state), encoding='utf-8')
             proc = start()
             admin = login('emp-mario', 'CFITNESS_TEST_ADMIN_SECRET')
             _, ws = call('POST', endpoint, admin, dict(action='run'))
@@ -311,7 +311,7 @@ def main():
             checks.append('email exclusion enforces role/club, rollback on disk failure, replay and restart before pending step')
             # Campaigns must use canonical club data, not the old browser prototype.
             stop(proc)
-            fixture=json.loads((folder/'cfitness_state.json').read_text())
+            fixture=json.loads((folder/'cfitness_state.json').read_text(encoding='utf-8'))
             canonical=next(p for p in fixture['leadProspects'] if p['id']==prospect['id'])
             def campaign_contact(id,email,club='carre-de-soie',**fields):
                 return {**canonical,'id':id,'email':email,'clubId':club,'rgpdConsent':True,'isArchived':False,'stage':'Nouveau','leadStatus':'Nouveau','segments':[],**fields}
@@ -322,7 +322,7 @@ def main():
                 campaign_contact('cmp-no-consent','refus@example.test',rgpdConsent=False),
                 campaign_contact('cmp-archived','archive@example.test',isArchived=True),
                 campaign_contact('cmp-invalid','invalid-address')]
-            (folder/'cfitness_state.json').write_text(json.dumps(fixture))
+            (folder/'cfitness_state.json').write_text(json.dumps(fixture), encoding='utf-8')
             proc=start();admin=login('emp-mario','CFITNESS_TEST_ADMIN_SECRET');employee=login('emp-chloe','CFITNESS_TEST_COMMERCIAL_SECRET')
             response=call('POST',endpoint,admin,dict(action='save_template',templateId=None,expectedRevision=None,message=dict(name='Campagne club',channel='email',subject='Bonjour %prenom%',body='Bienvenue au %club%')))[1]
             template_id=response['commandResult']['templateId']
@@ -366,11 +366,11 @@ def main():
             assert call('POST',endpoint,admin,{**simulation,'expectedRevision':3})[0]==409
             checks.append('updated campaign rechecks exclusions before simulation and archived campaigns cannot execute')
             stop(proc)
-            fixture=json.loads((folder/'cfitness_state.json').read_text())
+            fixture=json.loads((folder/'cfitness_state.json').read_text(encoding='utf-8'))
             for contact in fixture['leadProspects']:
                 contact['segments']=['SMS cible']
                 contact['phone']={'cmp-valid':'06 00 00 00 01','cmp-duplicate':'+33600000001','cmp-foreign':'0033600000001','cmp-invalid':'0600000004'}.get(contact['id'],'invalid')
-            (folder/'cfitness_state.json').write_text(json.dumps(fixture))
+            (folder/'cfitness_state.json').write_text(json.dumps(fixture), encoding='utf-8')
             proc=start();admin=login('emp-mario','CFITNESS_TEST_ADMIN_SECRET');employee=login('emp-chloe','CFITNESS_TEST_COMMERCIAL_SECRET')
             response=call('POST',endpoint,admin,dict(action='save_template',templateId=None,expectedRevision=None,message=dict(name='SMS de recette',channel='sms',subject='',body='Bonjour %prenom%, visite du club (€).')))[1]
             sms_template=response['commandResult']['templateId']
@@ -439,11 +439,11 @@ def main():
             assert call('POST',endpoint,admin,{**sms_campaign,'campaignId':sms_campaign_id,'expectedRevision':2})[0]==200
             assert call('POST',endpoint,admin,dict(action='save_template',templateId=sms_template,expectedRevision=1,message=dict(name='Canal modifié',channel='email',subject='Un email',body='Message email')))[0]==409
             stop(proc)
-            fixture=json.loads((folder/'cfitness_state.json').read_text())
+            fixture=json.loads((folder/'cfitness_state.json').read_text(encoding='utf-8'))
             template=next(t for t in fixture['leadScenarios']['templates'] if t['id']==sms_template)
             template['message']['channel']='email'
             template['message']['subject']='Objet'
-            (folder/'cfitness_state.json').write_text(json.dumps(fixture))
+            (folder/'cfitness_state.json').write_text(json.dumps(fixture), encoding='utf-8')
             proc=start();admin=login('emp-mario','CFITNESS_TEST_ADMIN_SECRET')
             before=call('GET',endpoint,admin)[1]
             assert call('POST',endpoint,admin,{**sms_sim,'expectedRevision':3})[0]==409
@@ -455,10 +455,10 @@ def main():
             import datetime as dt
             from zoneinfo import ZoneInfo
             stop(proc)
-            fixture=json.loads((folder/'cfitness_state.json').read_text())
+            fixture=json.loads((folder/'cfitness_state.json').read_text(encoding='utf-8'))
             contact={**fixture['leadProspects'][0],'id':'window-contact','email':'window@example.test','rgpdConsent':True,'isArchived':False,'stage':'Nouveau','leadStatus':'Nouveau','clubId':'carre-de-soie','assignedToId':'emp-maxime'}
             fixture['leadProspects'].append(contact)
-            (folder/'cfitness_state.json').write_text(json.dumps(fixture))
+            (folder/'cfitness_state.json').write_text(json.dumps(fixture), encoding='utf-8')
             proc=start();admin=login('emp-mario','CFITNESS_TEST_ADMIN_SECRET');employee=login('emp-chloe','CFITNESS_TEST_COMMERCIAL_SECRET')
             today=dt.datetime.now(dt.timezone.utc).astimezone(ZoneInfo('Europe/Paris')).isoweekday()
             window=dict(timezone='Europe/Paris',weekdays=[today%7+1],startTime='09:00',endTime='18:00')
