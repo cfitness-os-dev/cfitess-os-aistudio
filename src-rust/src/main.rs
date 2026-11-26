@@ -15,6 +15,7 @@ mod recovery_evidence;
 mod heitz_members;
 mod hr_manager;
 mod hr_collaboration;
+mod hr_documents;
 mod rh_notifications;
 mod planning_notifications;
 mod hr_organisation;

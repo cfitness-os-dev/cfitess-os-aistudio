@@ -20,7 +20,8 @@
 | Compteurs, acquisition, report | Services et contrats déjà développés ; accès propre au salarié vérifié dans ce lot | Confirmer les formules encore non observées dans Skello et réconcilier les soldes historiques ; voir les documents d’acquisition/report existants |
 | Badgeuses, tablettes, photos | Réglages regroupés sous Réglages RH, restrictions serveur recontrôlées | Appairage et recette physique des tablettes, caméra, salle et présence avant cours ; aucun matériel validé par la simple navigation |
 | Communication RH | Publications internes immédiates ou programmées, annulation, lectures persistantes, filtres équipes/dossiers, historique et audit ; contrôles ordinateur/mobile/tablette | Email, pièces jointes et autres variantes COM01 restent à développer ; la programmation est une amélioration OS et non une option Skello observée |
-| Notifications RH | Cloche, boîte personnelle, lectures persistantes et notifications d’absences/annotations de pointage/planning publié testées ; trois formats vérifiés | Déclencheurs documents/signatures et autres modules à raccorder ; push et envois externes non livrés |
+| Documents RH | Import PDF/PNG/JPEG, téléchargement privé, consultation déclarée, archivage/restauration, droits club/équipes et notifications testés | Sauvegarde conjointe métadonnées/fichiers, réconciliation après arrêt brutal, sécurité des fichiers réels et écarts DOC01/DOC02/DOC04 à terminer avant données réelles |
+| Notifications RH | Cloche, boîte personnelle, lectures persistantes et notifications d’absences/annotations de pointage/planning publié testées ; trois formats vérifiés | Notifications de dépôt/prise de connaissance documentaire raccordées ; signatures et autres modules à raccorder, push/envois externes non livrés |
 | Calendrier personnel | Flux .ics privé réellement servi : horaires propres publiés et absences validées, droits revérifiés, lien aléatoire haché, renouvellement/révocation/désactivation testés | Création/téléchargement/révocation/désactivation testés dans le navigateur ; abonnement Apple/Google/Outlook et adresse HTTPS stable restent à recetter |
 | Lead, scénarios, modèles, campagnes | Moteurs et simulations existants ; voir contrats et recettes spécialisés | Variables de contexte non raccordées, réentrée/délégations avancées et autres écarts déjà listés dans les contrats ; recette par fonction avant annonce de parité |
 | Emails, SMS, WhatsApp | Préparation/simulation ; pas d’envoi réel validé | Paramétrage dédié, états fournisseurs, oppositions, accusés, échecs et anti-doublons à recetter sans perturber Heitz |
@@ -44,6 +45,7 @@
 - `docs/rh-notifications-recette-2026-11-26.md` : vraie cloche, boîte personnelle, événements d’absence/pointage, navigation, refus et redémarrage.
 - `docs/rh-communication-programmee-recette-2026-11-26.md` : programmation interne, annulation, recontrôle des droits à échéance, refus, atomicité et redémarrage.
 - `docs/rh-planning-notifications-recette-2026-11-26.md` : publication/modification/retrait/réaffectation des horaires et transaction persistante avec alertes.
+- `docs/rh-documents-recette-2026-11-26.md` : fichiers privés persistants, droits, accusés sans signature, sauvegarde à compléter et écarts documentaires explicites.
 - `docs/v1-utilisable-conditions.md` : conditions de réception d’un pilote ; ne pas les remplacer par le nombre de tests.
 
 ## Critère de fin

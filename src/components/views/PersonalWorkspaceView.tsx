@@ -27,6 +27,7 @@ import { useLeadDraftGuard } from '../useLeadDraftGuard';
 import { confirmLeadDraftNavigation } from '../../domain/leadDraftGuard';
 import type { ClubId } from "../../types/cfos";
 
+const HrDocumentsView = lazy(() => import('./HrDocumentsView').then(m => ({default:m.HrDocumentsView})));
 const HrEmployeeDossierView = lazy(() =>
   import("./HrEmployeeDossierView").then((m) => ({
     default: m.HrEmployeeDossierView,
@@ -550,8 +551,10 @@ function PersonalWorkspaceContent({
             </section>
           )}
           {tab === "documents" && (
+            <div className="space-y-4">
+            <Suspense fallback={<p role="status">Chargement des fichiers RH…</p>}><HrDocumentsView actorId={employeeId} clubId={club} personal /></Suspense>
             <section className="cf-card p-4 space-y-3">
-              <h2 className="font-bold">Mes documents</h2>
+              <h2 className="font-bold">Autres documents et signatures</h2>
               <p className="cf-muted text-sm">
                 La signature réelle nécessite un fournisseur configuré. Une
                 simulation ne constitue pas une signature qualifiée.
@@ -624,6 +627,7 @@ function PersonalWorkspaceContent({
                 </article>
               ))}
             </section>
+            </div>
           )}
           {tab === "training" && (
             <section className="cf-card p-4 space-y-3">
