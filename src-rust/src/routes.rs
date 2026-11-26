@@ -237,6 +237,18 @@ pub fn api_router(state: SharedState) -> Router {
             post(crate::lead_automations::post_run_lead_reminders),
         )
         .route(
+            "/api/lead/automations/rebalance-stale",
+            post(crate::lead_automations::post_rebalance_stale_prospects),
+        )
+        .route(
+            "/api/lead/prospects/:prospect_id/transfer",
+            post(crate::lead_automations::post_transfer_prospect),
+        )
+        .route(
+            "/api/lead/stats/conversion",
+            get(crate::lead_automations::get_lead_conversion_stats),
+        )
+        .route(
             "/api/lead/automations/scheduler-status",
             get(crate::lead_automations::get_lead_scheduler_status),
         )
@@ -4223,7 +4235,7 @@ pub(crate) fn resolve_available_commercial_for_club(
     resolve_available_commercial_for_club_at(db, club_id, Utc::now())
 }
 
-fn resolve_available_commercial_for_club_at(
+pub(crate) fn resolve_available_commercial_for_club_at(
     db: &AppDatabaseState,
     club_id: &str,
     now: chrono::DateTime<Utc>,
@@ -4291,7 +4303,8 @@ fn resolve_available_commercial_for_club_at(
             })
         })
         .min_by_key(|emp_id| {
-            db.lead_prospects
+            let active_count = db
+                .lead_prospects
                 .iter()
                 .filter(|prospect| {
                     prospect.club_id == club_id
@@ -4316,7 +4329,21 @@ fn resolve_available_commercial_for_club_at(
                                 | "Froid"
                         )
                 })
-                .count()
+                .count();
+
+            let latest_touch = db
+                .lead_prospects
+                .iter()
+                .filter(|p| {
+                    p.club_id == club_id
+                        && p.assigned_to_id.as_deref() == Some(*emp_id)
+                        && !p.is_archived
+                })
+                .filter_map(|p| p.last_commercial_touch_at.as_deref().or(Some(&p.created_at)))
+                .max()
+                .unwrap_or("");
+
+            (active_count, latest_touch)
         })
         .map(str::to_string)
         .unwrap_or_else(|| format!("file_attente_{}", club_id))
