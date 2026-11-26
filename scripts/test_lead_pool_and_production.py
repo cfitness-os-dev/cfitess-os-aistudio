@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import os
-import secrets
 import subprocess
 import sys
 import tempfile
@@ -24,7 +23,7 @@ def test_preflight_tool() -> None:
         # 1. État incomplet -> doit échouer
         state_file.write_text(json.dumps({"invalid": True}), encoding="utf-8")
         cmd = [sys.executable, "scripts/preflight_production_check.py", str(state_file)]
-        res = subprocess.run(cmd, capture_output=True, text=True)
+        res = subprocess.run(cmd, capture_output=True, text=True, check=False)
         assert res.returncode == 1, f"Incomplete state should fail: {res.stdout}"
 
         # 2. État complet avec admin -> avec env production complet -> doit passer
@@ -51,7 +50,7 @@ def test_preflight_tool() -> None:
             "CFITNESS_SESSION_SECRET": "a" * 32,
             "CFITNESS_HMAC_SECRET": "b" * 32,
         }
-        res2 = subprocess.run(cmd, capture_output=True, text=True, env=env)
+        res2 = subprocess.run(cmd, capture_output=True, text=True, env=env, check=False)
         assert res2.returncode == 0, f"Valid production preflight failed: {res2.stdout}"
         assert "CFITNESS_DEMO_MODE" in res2.stdout
         assert "CFITNESS_STRICT_SESSION" in res2.stdout
@@ -68,15 +67,16 @@ def test_backup_tool_and_rotation() -> None:
                 {
                     "employees": [],
                     "sites": [],
-                    "punchPhotos": [],
-                    "personalWorkspace": {"documents": {"files": []}},
+                    "punch_photos": [],
+                    "personal_workspace": {"documents": {"files": []}},
                 }
             ),
             encoding="utf-8",
         )
 
         backup_dir = tmp_path / "backups"
-        hmac_secret = secrets.token_hex(32)
+        backup_key = "k" * 32
+        env = {**os.environ, "CFITNESS_BACKUP_TEST_KEY": backup_key}
 
         # Exécuter 3 sauvegardes avec max_backups=2 pour tester la rotation
         for i in range(3):
@@ -92,7 +92,7 @@ def test_backup_tool_and_rotation() -> None:
                 "--max-backups",
                 "2",
             ]
-            res = subprocess.run(cmd, capture_output=True, text=True, env={**os.environ, "CFITNESS_BACKUP_TEST_KEY": hmac_secret})
+            res = subprocess.run(cmd, capture_output=True, text=True, env=env, check=False)
             assert res.returncode == 0, f"Backup iteration {i} failed: {res.stderr}\n{res.stdout}"
             out = json.loads(res.stdout)
             assert out["ok"] is True

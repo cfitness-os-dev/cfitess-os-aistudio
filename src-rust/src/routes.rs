@@ -4253,102 +4253,7 @@ pub(crate) fn resolve_available_commercial_for_club_at(
         return format!("file_attente_{}", club_id);
     }
 
-    let site_id = if club_id == "beynost" {
-        "club-beynost"
-    } else {
-        "club-carre-soie"
-    };
-    let Some(timezone) = db
-        .sites
-        .iter()
-        .find(|s| s.id == site_id)
-        .and_then(|s| s.timezone.parse::<chrono_tz::Tz>().ok())
-    else {
-        return format!("file_attente_{}", club_id);
-    };
-    let today = now.with_timezone(&timezone).date_naive();
-    let candidates = if club_id == "beynost" {
-        vec!["emp-chloe", "emp-greg", "emp-sarah"]
-    } else {
-        vec!["emp-maxime", "emp-karim", "emp-sarah"]
-    };
-
-    candidates
-        .into_iter()
-        .filter(|emp_id| {
-            // A demo roster is not proof of a current active account or club access.
-            db.employees.iter().any(|employee| {
-                employee.id == *emp_id
-                    && employee.active
-                    && employee
-                        .site_accesses
-                        .iter()
-                        .any(|access| access.site_id == site_id)
-            }) && !db.leave_requests.iter().any(|lr| {
-                if lr.employee_id != *emp_id
-                    || lr.site_id != site_id
-                    || !matches!(
-                        lr.status.trim().to_lowercase().as_str(),
-                        "approved" | "accepted" | "valide" | "validé"
-                    )
-                {
-                    return false;
-                }
-                match (
-                    chrono::NaiveDate::parse_from_str(&lr.start_date, "%Y-%m-%d"),
-                    chrono::NaiveDate::parse_from_str(&lr.end_date, "%Y-%m-%d"),
-                ) {
-                    (Ok(start), Ok(end)) if start <= end => start <= today && end >= today,
-                    // An approved absence with unknown dates must not be treated as available.
-                    _ => true,
-                }
-            })
-        })
-        .min_by_key(|emp_id| {
-            let active_count = db
-                .lead_prospects
-                .iter()
-                .filter(|prospect| {
-                    prospect.club_id == club_id
-                        && prospect.assigned_to_id.as_deref() == Some(*emp_id)
-                        && !prospect.is_archived
-                        && !matches!(
-                            prospect.stage.as_str(),
-                            "Client"
-                                | "Client enseigne"
-                                | "Perdu"
-                                | "Perdu / Sans suite"
-                                | "Archivé"
-                                | "Froid"
-                        )
-                        && !matches!(
-                            prospect.lead_status.as_str(),
-                            "Client"
-                                | "Client enseigne"
-                                | "Perdu"
-                                | "Perdu / Sans suite"
-                                | "Archivé"
-                                | "Froid"
-                        )
-                })
-                .count();
-
-            let latest_touch = db
-                .lead_prospects
-                .iter()
-                .filter(|p| {
-                    p.club_id == club_id
-                        && p.assigned_to_id.as_deref() == Some(*emp_id)
-                        && !p.is_archived
-                })
-                .filter_map(|p| p.last_commercial_touch_at.as_deref().or(Some(&p.created_at)))
-                .max()
-                .unwrap_or("");
-
-            (active_count, latest_touch)
-        })
-        .map(str::to_string)
-        .unwrap_or_else(|| format!("file_attente_{}", club_id))
+    crate::lead_automations::resolve_best_commercial_for_club(db, club_id, now, None)
 }
 
 async fn get_public_lead_form(
@@ -6789,10 +6694,10 @@ mod tests {
                 comment: "Arrêt maladie".into(),
             });
 
-            // L'assignation pour Carré de Soie doit exclure Maxime et choisir Karim ou file d'attente
+            // L'assignation pour Carré de Soie doit exclure Maxime et choisir Sarah (commerciale habilitée)
             let assigned = resolve_available_commercial_for_club(&db, "carre-de-soie");
             assert_ne!(assigned, "emp-maxime");
-            assert_eq!(assigned, "emp-karim");
+            assert_eq!(assigned, "emp-sarah");
         }
     }
 
