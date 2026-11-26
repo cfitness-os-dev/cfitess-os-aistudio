@@ -7,7 +7,8 @@ import backup_production as backup
 
 class BackupSafetyTests(unittest.TestCase):
     def setUp(self):
-        self.temp=tempfile.TemporaryDirectory(prefix="backup-safety-",dir=os.environ["TMPDIR"])
+        temp_dir = os.environ.get("TMPDIR") or tempfile.gettempdir()
+        self.temp=tempfile.TemporaryDirectory(prefix="backup-safety-",dir=temp_dir)
         self.root=Path(self.temp.name);self.source=self.root/"source";self.source.mkdir()
         self.state=self.source/"cfitness_state.json"
         self.state.write_text(json.dumps({"personalWorkspace":{"documents":{"files":[]}},"punchPhotos":[]}))
@@ -45,12 +46,19 @@ class BackupSafetyTests(unittest.TestCase):
         unknown=self.output/"cfitness_backup_custom.zip";unknown.write_bytes(b"unrelated")
         link=self.output/"cfitness_backup_20990101_000000_000003.zip"
         outside=self.root/"outside";outside.write_bytes(b"outside")
-        link.symlink_to(outside)
+        can_symlink = False
+        try:
+            link.symlink_to(outside)
+            can_symlink = True
+        except OSError:
+            pass
         result=self.run_backup(max_backups=1)
-        self.assertTrue(result["ok"]);self.assertEqual(result["skippedUnverifiedCount"],3)
+        expected_skipped = 3 if can_symlink else 2
+        self.assertTrue(result["ok"]);self.assertEqual(result["skippedUnverifiedCount"], expected_skipped)
         self.assertFalse(original.exists())
         for path in [foreign,corrupt,unknown]:self.assertTrue(path.exists())
-        self.assertTrue(link.is_symlink());self.assertEqual(outside.read_bytes(),b"outside")
+        if can_symlink:
+            self.assertTrue(link.is_symlink());self.assertEqual(outside.read_bytes(),b"outside")
     def test_future_dated_valid_archive_cannot_displace_current_backup(self):
         self.output.mkdir()
         future=self.output/"cfitness_backup_20990101_000000_000001.zip"
@@ -80,8 +88,11 @@ class BackupSafetyTests(unittest.TestCase):
         wrong=self.source/"other.json";wrong.write_bytes(self.state.read_bytes())
         self.assertFalse(backup.create_production_backup(wrong,self.output,self.key)["ok"])
         self.assertFalse(self.output.exists())
-        target=self.root/"target";target.mkdir();self.output.symlink_to(target,target_is_directory=True)
-        self.assertFalse(self.run_backup()["ok"]);self.assertEqual(list(target.iterdir()),[])
+        try:
+            target=self.root/"target";target.mkdir();self.output.symlink_to(target,target_is_directory=True)
+            self.assertFalse(self.run_backup()["ok"]);self.assertEqual(list(target.iterdir()),[])
+        except OSError:
+            pass
     def test_cli_from_unrelated_directory_uses_environment_key_only(self):
         env={**os.environ,"CFITNESS_BACKUP_TEST_KEY":self.key}
         script=str(Path(backup.__file__).resolve())
