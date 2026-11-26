@@ -32,6 +32,7 @@ mod hr_manager_tests;
 mod lead_automations;
 mod lead_scenarios;
 mod lead_settings;
+mod lead_contacts;
 mod leave_requests;
 mod maintenance;
 mod missions;

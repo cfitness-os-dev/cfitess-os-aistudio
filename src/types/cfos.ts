@@ -168,6 +168,8 @@ export type ProspectStage =
   | 'Perdu';
 
 export interface Prospect {
+  serverRevision?: string;
+  canEdit?: boolean;
   id: string;
   firstName: string;
   lastName: string;

@@ -735,6 +735,7 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
     }
 
     AppDatabaseState {
+        lead_contacts: Default::default(),
         lead_scenarios: Default::default(),
         recovery_chat_histories: HashMap::new(),
         employee_counter_history: vec![],
@@ -2048,6 +2049,7 @@ pub fn create_production_initial_state() -> AppDatabaseState {
     preferences_by_employee.insert(admin_id.clone(), prod_prefs);
 
     AppDatabaseState {
+        lead_contacts: Default::default(),
         lead_scenarios: Default::default(),
         recovery_chat_histories: HashMap::new(),
         employee_counter_history: vec![],

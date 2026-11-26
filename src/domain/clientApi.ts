@@ -424,6 +424,11 @@ export const clientApi = {
       }>;
     }>;
     prospects: Array<{
+      revision?: string;
+      canEdit?: boolean;
+      goal?: string;
+      notes?: string;
+      address?: string;
       id: string;
       assignedToId: string | null;
       gender: string;

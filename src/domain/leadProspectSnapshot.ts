@@ -15,8 +15,11 @@ export function validateLeadSnapshot(value:unknown):LeadProspectSnapshot {
       throw new Error('Un contact partagé est incomplet ou appartient à un autre club.');
     return {id:r.id,firstName:r.firstName,lastName:r.lastName,phone:r.phone,email:r.email,clubId:r.clubId,
       source:r.source,stage:r.stage,assignedToId:r.assignedToId??'',rgpdConsent:r.rgpdConsent,
-      bloctelListed:false,smsStopOptOut:false,retryCount:0,goal:typeof r.comment==='string'?r.comment:'',
-      notes:typeof r.comment==='string'?r.comment:'',createdAt:r.createdAt,segments:r.segments,
+      bloctelListed:false,smsStopOptOut:false,retryCount:0,goal:typeof r.goal==='string'?r.goal:typeof r.comment==='string'?r.comment:'',
+      notes:typeof r.notes==='string'?r.notes:typeof r.comment==='string'?r.comment:'',
+      address:typeof r.address==='string'?r.address:undefined,
+      serverRevision:typeof r.revision==='string' && /^[a-f0-9]{64}$/.test(r.revision)?r.revision:undefined,
+      canEdit:typeof r.canEdit==='boolean'?r.canEdit:undefined,createdAt:r.createdAt,segments:r.segments,
       leadStatus:typeof r.leadStatus==='string'?r.leadStatus:'',
       trialDate:typeof r.trialDate==='string'?r.trialDate:undefined,
       gender:typeof r.gender==='string'?r.gender:undefined,street:typeof r.street==='string'?r.street:undefined,

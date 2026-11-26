@@ -152,13 +152,13 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
 
   const commercials = employees.filter((e) => e.role === 'commercial' && allowedClubIds.includes(e.clubId) && (clubFilter === 'all' || e.clubId === clubFilter));
 
-  const handleCreateSubmit = (e: React.FormEvent) => {
+  const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = createProspect({
+    const res = await createProspect({
       firstName,
       lastName,
       phone,
-      email: email || 'contact@prospect-cfitness.fr',
+      email,
       clubId,
       source,
       goal,
@@ -1081,8 +1081,8 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
           >
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-slate-900">
-                Nouveau contact à reprendre
-              </h3><p className="cf-muted text-sm mt-2">Cette saisie reste sur cet appareil. Elle ne rejoint pas encore les prospects partagés et doit être reprise par un responsable.</p>
+                Nouveau prospect
+              </h3><p className="cf-muted text-sm mt-2">Le prospect rejoint la liste partagée du club après confirmation de son enregistrement.</p>
               <button
                 type="button"
                 onClick={() => setShowNewModal(false)}
@@ -1197,7 +1197,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                 type="submit"
                 className="px-4 py-2 rounded-lg bg-[#017737] hover:bg-[#01632d] text-white text-xs font-semibold cursor-pointer"
               >
-                Conserver sur cet appareil
+                Enregistrer le prospect
               </button>
             </div>
           </form>

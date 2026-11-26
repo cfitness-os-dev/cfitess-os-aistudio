@@ -1350,7 +1350,7 @@ export function LeadCommercialHubView({
                                 className="px-2 py-1 rounded bg-slate-900 border border-slate-700"
                               />
                               <select
-                                value={editProspectForm.assignedToId}
+                                disabled title="La répartition des commerciaux se gère depuis les actions de répartition du club." value={editProspectForm.assignedToId}
                                 onChange={(e) => setEditProspectForm((f) => ({ ...f, assignedToId: e.target.value }))}
                                 className="px-2 py-1 rounded bg-slate-900 border border-slate-700"
                               >
@@ -1370,8 +1370,8 @@ export function LeadCommercialHubView({
                             />
                             <button
                               type="button"
-                              onClick={() => {
-                                const res = updateProspect(editingProspectId, editProspectForm);
+                              onClick={async () => {
+                                const res = await updateProspect(editingProspectId, editProspectForm);
                                 setBulkSegmentLog(res.message);
                                 if (res.ok) setEditingProspectId(null);
                               }}
@@ -2121,9 +2121,7 @@ export function LeadCommercialHubView({
                     };
                     setRdvBookings((prev) => [newSlot, ...prev]);
                     if (targetProspect) {
-                      updateProspect(targetProspect.id, {
-                        leadStatus: 'Séance planifiée',
-                      });
+                      // Local booking simulation must not mark a shared prospect as booked.
                       setActivities((prev) => [
                         {
                           id: `act-rdv-${Date.now()}`,
@@ -3082,9 +3080,9 @@ export function LeadCommercialHubView({
                                 </span>
                                 <button
                                   type="button"
-                                  onClick={() => {
+                                  onClick={async () => {
                                     const parts = rep.fullName.split(' ');
-                                    const res = createProspect({
+                                    const res = await createProspect({
                                       firstName: parts[0] || rep.fullName,
                                       lastName: parts.slice(1).join(' ') || 'Formulaire',
                                       phone: rep.phone,
