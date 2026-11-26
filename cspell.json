@@ -178,7 +178,13 @@
     "WINDOWTITLE",
     "github",
     "reduire",
-    "fenetres"
+    "fenetres",
+    "RDONLY",
+    "WRONLY",
+    "CREAT",
+    "fstat",
+    "fsync",
+    "fileno"
   ],
   "ignorePaths": [
     "node_modules/**",
