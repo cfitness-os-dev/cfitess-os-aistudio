@@ -203,6 +203,7 @@ async fn main() {
         .append_index_html_on_directories(true)
         .fallback(ServeFile::new(index_file));
 
+    hr_collaboration::scheduled::spawn_worker(shared.clone());
     lead_automations::spawn_lead_automation_scheduler(shared.clone());
     lead_scenarios::spawn_worker(shared.clone());
     heitz_live::spawn_heitz_live_sync_worker(shared.clone());

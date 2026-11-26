@@ -357,6 +357,8 @@ pub fn api_router(state: SharedState) -> Router {
         .route("/api/me/calendar-link", get(crate::hr_collaboration::calendar_status).post(crate::hr_collaboration::issue_calendar))
         .route("/api/calendar/:token", get(crate::hr_collaboration::calendar_feed))
         .route("/api/hr/communications/:club_id", get(crate::hr_collaboration::get_messages).post(crate::hr_collaboration::publish_message))
+        .route("/api/hr/communications/:club_id/scheduled", get(crate::hr_collaboration::scheduled::get).post(crate::hr_collaboration::scheduled::create))
+        .route("/api/hr/communications/:club_id/scheduled/:id/cancel", post(crate::hr_collaboration::scheduled::cancel))
         .route("/api/me/password", post(post_change_password))
         .route("/api/ollama/status", get(get_ollama_status))
         .route("/api/ollama/chat", post(post_ollama_chat))

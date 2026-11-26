@@ -16,6 +16,9 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeSet, HashMap};
 
+#[path = "rh_scheduled_communications.rs"]
+pub mod scheduled;
+
 type Failure = (StatusCode, Json<Value>);
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -24,6 +27,8 @@ pub struct CollaborationStore {
     pub messages: Vec<Message>,
     #[serde(default)]
     pub calendars: HashMap<String, CalendarGrant>,
+    #[serde(default)]
+    pub scheduled_messages: Vec<scheduled::ScheduledMessage>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -247,6 +252,42 @@ pub async fn publish_message(
     let actor = actor(&state, &headers).await?;
     let mut db = state.db.write().await;
     check_publisher(&db, &actor, &club)?;
+    let mut next = db.clone();
+    if next
+        .personal_workspace
+        .collaboration
+        .scheduled_messages
+        .iter()
+        .any(|r| r.actor_id == actor && r.club_id == club && r.operation_id == command.operation_id)
+    {
+        return Err(err_resp(
+            StatusCode::CONFLICT,
+            "Cette opération correspond à une programmation existante.",
+        ));
+    }
+    let id = deliver_message(&mut next, &actor, &club, command, Utc::now())?;
+    if next.personal_workspace.collaboration.messages.len()
+        != db.personal_workspace.collaboration.messages.len()
+    {
+        persist_state(&state.data_dir, &next).map_err(|_| {
+            err_resp(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Publication non enregistrée. Votre saisie est conservée.",
+            )
+        })?;
+    }
+    *db = next;
+    let mut response = workspace(&db, &actor, &club, None)?;
+    response["publishedMessageId"] = json!(id);
+    Ok(Json(response))
+}
+fn validate_message(
+    db: &AppDatabaseState,
+    actor: &str,
+    club: &str,
+    command: &PublishMessage,
+) -> Result<(String, String, Vec<String>, String), Failure> {
+    check_publisher(db, actor, club)?;
     let subject = command.subject.trim();
     let body = command.body.replace("\r\n", "\n");
     let body = body.trim();
@@ -274,13 +315,14 @@ pub async fn publish_message(
     }
     let ids: Vec<String> = command
         .recipient_ids
-        .into_iter()
+        .iter()
+        .cloned()
         .collect::<BTreeSet<_>>()
         .into_iter()
         .collect();
     if ids
         .iter()
-        .any(|id| !recipient_allowed(&db, &actor, &club, id))
+        .any(|id| !recipient_allowed(db, &actor, &club, id))
     {
         return Err(err_resp(
             StatusCode::FORBIDDEN,
@@ -288,6 +330,16 @@ pub async fn publish_message(
         ));
     }
     let fingerprint = hash(&serde_json::to_string(&(subject, body, &ids)).unwrap());
+    Ok((subject.into(), body.into(), ids, fingerprint))
+}
+fn deliver_message(
+    db: &mut AppDatabaseState,
+    actor: &str,
+    club: &str,
+    command: PublishMessage,
+    now: chrono::DateTime<Utc>,
+) -> Result<String, Failure> {
+    let (subject, body, ids, fingerprint) = validate_message(db, actor, club, &command)?;
     if let Some(previous) = db
         .personal_workspace
         .collaboration
@@ -304,16 +356,14 @@ pub async fn publish_message(
             ));
         }
         let id = previous.id.clone();
-        let mut response = workspace(&db, &actor, &club, None)?;
-        response["publishedMessageId"] = json!(id);
-        return Ok(Json(response));
+        return Ok(id);
     }
-    let now = Utc::now().to_rfc3339();
+    let now = now.to_rfc3339();
     let id = format!("hr-msg-{}", random_token());
     let sender = name(&db, &actor);
-    let mut next = db.clone();
+
     for employee in &ids {
-        let mut personal = crate::personal_workspace::person(&next, employee);
+        let mut personal = crate::personal_workspace::person(db, employee);
         let Some(notifications) = personal["notifications"].as_array_mut() else {
             return Err(err_resp(
                 StatusCode::CONFLICT,
@@ -321,26 +371,23 @@ pub async fn publish_message(
             ));
         };
         notifications.insert(0,json!({"id":id,"rhMessageId":id,"employeeId":employee,"clubId":club,"createdAt":now,"title":subject,"message":body,"senderName":sender,"type":"rh_message","read":false,"readAt":null}));
-        next.personal_workspace
+        db.personal_workspace
             .people
             .insert(employee.clone(), personal);
     }
-    next.personal_workspace
-        .collaboration
-        .messages
-        .push(Message {
-            id: id.clone(),
-            actor_id: actor.clone(),
-            club_id: club.clone(),
-            operation_id: command.operation_id,
-            fingerprint,
-            subject: subject.into(),
-            body: body.into(),
-            recipient_ids: ids.clone(),
-            created_at: now,
-        });
+    db.personal_workspace.collaboration.messages.push(Message {
+        id: id.clone(),
+        actor_id: actor.to_string(),
+        club_id: club.to_string(),
+        operation_id: command.operation_id,
+        fingerprint,
+        subject: subject.into(),
+        body: body.into(),
+        recipient_ids: ids.clone(),
+        created_at: now,
+    });
     append_audit(
-        &mut next,
+        db,
         &actor,
         "Communication RH",
         format!(
@@ -353,16 +400,7 @@ pub async fn publish_message(
         None,
         None,
     );
-    persist_state(&state.data_dir, &next).map_err(|_| {
-        err_resp(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Publication non enregistrée. Votre saisie est conservée.",
-        )
-    })?;
-    *db = next;
-    let mut response = workspace(&db, &actor, &club, None)?;
-    response["publishedMessageId"] = json!(id);
-    Ok(Json(response))
+    Ok(id)
 }
 
 fn calendar_enabled(db: &AppDatabaseState, actor: &str) -> bool {
