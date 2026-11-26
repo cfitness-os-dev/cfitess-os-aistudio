@@ -1,7 +1,8 @@
 import type { ApiAuthContext } from './clientApi';
+export interface RhRecipient { id: string; name: string; teams: {id: string; name: string}[]; fileStatus: string }
 export interface RhMessages {
   actorId: string; clubId: string; channel: 'internal';
-  recipients: { id: string; name: string }[];
+  recipients: RhRecipient[];
   messages: { id: string; subject: string; body: string; createdAt: string; recipientCount: number;
     receipts: { employeeId: string; employeeName: string; read: boolean; readAt: string | null }[] }[];
   nextCursor: string | null;
@@ -15,7 +16,7 @@ const clubs = (x: unknown) => strings(x) && x.every(c => ['beynost', 'carre-de-s
 const dated = (x: unknown) => typeof x === 'string' && Number.isFinite(Date.parse(x));
 export function validateMessages(value: unknown, actor: string, club: string): RhMessages {
   if (!object(value) || value.actorId !== actor || value.clubId !== club || value.channel !== 'internal' ||
-    !Array.isArray(value.recipients) || !value.recipients.every(r => object(r) && typeof r.id === 'string' && typeof r.name === 'string') ||
+    !Array.isArray(value.recipients) || !value.recipients.every(r => object(r) && typeof r.id === 'string' && typeof r.name === 'string' && typeof r.fileStatus === 'string' && Array.isArray(r.teams) && r.teams.every(t => object(t) && typeof t.id === 'string' && typeof t.name === 'string')) ||
     !Array.isArray(value.messages) || !value.messages.every(m => object(m) && ['id','subject','body'].every(k => typeof m[k] === 'string') && dated(m.createdAt) &&
       Number.isSafeInteger(m.recipientCount) && Number(m.recipientCount) > 0 && Array.isArray(m.receipts) && m.receipts.every(r => object(r) &&
         typeof r.employeeId === 'string' && typeof r.employeeName === 'string' && typeof r.read === 'boolean' && (r.readAt === null || dated(r.readAt)))) ||
@@ -48,4 +49,9 @@ export async function requestCalendarStatus(auth: ApiAuthContext, signal?: Abort
 }
 export async function issueCalendarLink(auth: ApiAuthContext, clubIds: string[]) {
   return validateCalendar(await request(auth, '/api/me/calendar-link', {clubIds}), auth.actorId, true) as CalendarLink;
+}
+
+export function filterRhRecipients(recipients: RhRecipient[], search: string, team: string, incomplete: boolean): RhRecipient[] {
+  const needle=search.trim().toLocaleLowerCase('fr-FR');
+  return recipients.filter(r => r.name.toLocaleLowerCase('fr-FR').includes(needle) && (!team || r.teams.some(t => t.id===team)) && (!incomplete || r.fileStatus!=='complete'));
 }

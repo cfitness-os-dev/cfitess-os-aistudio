@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateMessages, validateCalendar } from './hrCollaboration';
-const messages = () => ({actorId:'emp-mario',clubId:'beynost',channel:'internal',recipients:[{id:'emp-chloe',name:'Chloé'}],messages:[{id:'m',subject:'Consigne',body:'Bonjour',createdAt:'2026-11-26T12:00:00Z',recipientCount:1,receipts:[{employeeId:'emp-chloe',employeeName:'Chloé',read:false,readAt:null}]}],nextCursor:null});
+import { validateMessages, validateCalendar, filterRhRecipients } from './hrCollaboration';
+const messages = () => ({actorId:'emp-mario',clubId:'beynost',channel:'internal',recipients:[{id:'emp-chloe',name:'Chloé',teams:[{id:'accueil',name:'Accueil'}],fileStatus:'awaiting_employee'}],messages:[{id:'m',subject:'Consigne',body:'Bonjour',createdAt:'2026-11-26T12:00:00Z',recipientCount:1,receipts:[{employeeId:'emp-chloe',employeeName:'Chloé',read:false,readAt:null}]}],nextCursor:null});
 test('messages: rejects another actor or club before replacing the current screen', () => {
   assert.throws(() => validateMessages(messages(),'emp-chloe','beynost'));
   assert.throws(() => validateMessages(messages(),'emp-mario','carre-de-soie'));
@@ -24,4 +24,16 @@ test('calendar: refuses external URLs and predictable legacy tokens', () => {
   assert.equal(validateCalendar(valid,'emp-chloe',true).actorId,'emp-chloe');
   for(const relativeUrl of ['https://example.com/steal','//example.com/a','/api/calendar/cal-emp-chloe.ics','/api/calendar/'+'a'.repeat(64)+'.ics?leak=1'])
     assert.throws(() => validateCalendar({...valid,relativeUrl},'emp-chloe',true));
+});
+
+test('audience combines team, search and file status without inventing recipients', () => {
+  const recipients=[...messages().recipients,{id:'other',name:'Autre',teams:[{id:'sport',name:'Sport'}],fileStatus:'complete'}];
+  assert.deepEqual(filterRhRecipients(recipients,' ChLoÉ ','accueil',true).map(r=>r.id),['emp-chloe']);
+  assert.deepEqual(filterRhRecipients(recipients,'','sport',true),[]);
+  assert.equal(filterRhRecipients(recipients,'','',false).length,2);
+  assert.equal(recipients.length,2);
+});
+test('audience metadata must be complete before offering group selection', () => {
+  assert.throws(()=>validateMessages({...messages(),recipients:[{id:'x',name:'X'}]},'emp-mario','beynost'));
+  assert.throws(()=>validateMessages({...messages(),recipients:[{...messages().recipients[0],teams:[{id:'x'}]}]},'emp-mario','beynost'));
 });

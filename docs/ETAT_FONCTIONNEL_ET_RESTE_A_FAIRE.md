@@ -1,6 +1,6 @@
 # État fonctionnel et suite du développement
 
-État du 26 novembre 2026, lot local après PR #85 et ajout communication/calendrier. Ce document remplace une estimation globale en pourcentage par des critères vérifiables. Il ne déclare pas l’exhaustivité des logiciels de référence.
+État du 26 novembre 2026, lot local après PR #87, ciblage RH et recontrôles visuels. Ce document remplace une estimation globale en pourcentage par des critères vérifiables. Il ne déclare pas l’exhaustivité des logiciels de référence.
 
 ## Règles à conserver
 
@@ -19,8 +19,8 @@
 | Absences | Parcours navigateur création → validation → retour salarié réussi sur une absence fictive ; statuts historiques reconnus | Cas complexes avec débit/reprise de compteur, migration des statuts historiques et cas après clôture |
 | Compteurs, acquisition, report | Services et contrats déjà développés ; accès propre au salarié vérifié dans ce lot | Confirmer les formules encore non observées dans Skello et réconcilier les soldes historiques ; voir les documents d’acquisition/report existants |
 | Badgeuses, tablettes, photos | Réglages regroupés sous Réglages RH, restrictions serveur recontrôlées | Appairage et recette physique des tablettes, caméra, salle et présence avant cours ; aucun matériel validé par la simple navigation |
-| Communication RH | Publications internes et lectures persistantes, ciblage club/équipes, historique et audit ; recettes Rust/HTTP réussies | Contrôle visuel bloqué par l’outil navigateur ; email, pièces jointes, programmation et autres variantes COM01 non développés dans ce lot |
-| Calendrier personnel | Flux .ics privé réellement servi : horaires propres publiés et absences validées, droits revérifiés, lien aléatoire haché, renouvellement/révocation/désactivation testés | Contrôle visuel et abonnement Apple/Google/Outlook à recetter ; prévoir une adresse HTTPS stable avant abonnement extérieur |
+| Communication RH | Publications internes et lectures persistantes, filtres équipes/dossiers, historique et audit ; parcours responsable/collaborateur exécuté sur ordinateur/mobile/tablette | Cloche globale encore codée en dur ; email, pièces jointes, programmation et autres variantes COM01 restent à développer |
+| Calendrier personnel | Flux .ics privé réellement servi : horaires propres publiés et absences validées, droits revérifiés, lien aléatoire haché, renouvellement/révocation/désactivation testés | Création/téléchargement/révocation/désactivation testés dans le navigateur ; abonnement Apple/Google/Outlook et adresse HTTPS stable restent à recetter |
 | Lead, scénarios, modèles, campagnes | Moteurs et simulations existants ; voir contrats et recettes spécialisés | Variables de contexte non raccordées, réentrée/délégations avancées et autres écarts déjà listés dans les contrats ; recette par fonction avant annonce de parité |
 | Emails, SMS, WhatsApp | Préparation/simulation ; pas d’envoi réel validé | Paramétrage dédié, états fournisseurs, oppositions, accusés, échecs et anti-doublons à recetter sans perturber Heitz |
 | Suivi des campagnes et certaines intégrations | Des tableaux et configurations de démonstration restent présents | Remplacer les exemples par une lecture persistante traçable ou indiquer clairement leur état ; ne pas annoncer un connecteur actif |
@@ -39,6 +39,7 @@
 - `docs/heitz-api-couverture-2026-11-25.md` : état de couverture documentaire Heitz, à distinguer d’un test réel du fournisseur.
 - `docs/demo-coherence-2026-11-25.md`, `docs/lead-navigation-review-2026-11-26.md` et `docs/rh-workspace-recette-2026-11-26.md` : versions, parcours exécutés et limites des dernières reprises d’interface.
 - `docs/rh-communications-calendrier-recette-2026-11-26.md` : contrat, parcours, résultats serveur et blocage visuel du nouveau lot.
+- `docs/rh-audiences-contexte-recette-2026-11-26.md` : recontrôles visuels exécutés après rétablissement du navigateur, ciblage des destinataires, mémorisation du club et écart de la cloche globale.
 - `docs/v1-utilisable-conditions.md` : conditions de réception d’un pilote ; ne pas les remplacer par le nombre de tests.
 
 ## Critère de fin

@@ -51,6 +51,9 @@ def main():
             assert call('GET',path,employee)[0]==403
             assert call('GET','/api/hr/communications/unknown',admin)[0]==400
             checks.append('session and club-specific manager permissions')
+            audience=call('GET',path,admin)[1]['recipients']
+            assert audience and all(isinstance(r.get('fileStatus'),str) and isinstance(r.get('teams'),list) and all(set(t)=={'id','name'} for t in r['teams']) for r in audience)
+            checks.append('authorized recipient team and file-status metadata available for audience filters')
             command={'operationId':secrets.token_hex(16),'subject':'Recette HTTP fictive','body':'Message interne persistant','recipientIds':['emp-chloe']}
             code,published,_=call('POST',path,admin,command);assert code==200
             message_id=published['publishedMessageId']

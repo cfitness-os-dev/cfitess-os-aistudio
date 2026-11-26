@@ -419,41 +419,148 @@ fn calendar_folding_escaping_and_paris_dst_are_valid() {
 
 #[tokio::test]
 async fn managed_teams_limit_recipient_lists_and_atomic_publication() {
-    let s=state(); let h=headers(&s,"emp-sarah").await;
+    let s = state();
+    let h = headers(&s, "emp-sarah").await;
     {
-        let mut db=s.db.write().await;
-        let profile=db.profiles.iter_mut().find(|p|p.id=="planificateur_avance").unwrap();
-        profile.scope_selected="teams".into();
-        for row in &mut profile.rows {row.exposed=true;row.disabled=Some(false);row.checked=Some(true);}
+        let mut db = s.db.write().await;
+        let profile = db
+            .profiles
+            .iter_mut()
+            .find(|p| p.id == "planificateur_avance")
+            .unwrap();
+        profile.scope_selected = "teams".into();
+        for row in &mut profile.rows {
+            row.exposed = true;
+            row.disabled = Some(false);
+            row.checked = Some(true);
+        }
         for e in &mut db.employees {
-            if let Some(a)=e.site_accesses.iter_mut().find(|a|a.site_id=="club-carre-soie") {
+            if let Some(a) = e
+                .site_accesses
+                .iter_mut()
+                .find(|a| a.site_id == "club-carre-soie")
+            {
                 match e.id.as_str() {
-                    "emp-sarah"=>{a.profile_id="planificateur_avance".into();a.team_ids=vec!["other".into()];a.managed_team_ids=vec!["managed".into()];}
-                    "emp-maxime"=>a.team_ids=vec!["managed".into()],
-                    "emp-karim"=>a.team_ids=vec!["other".into()],
-                    _=>{}
+                    "emp-sarah" => {
+                        a.profile_id = "planificateur_avance".into();
+                        a.team_ids = vec!["other".into()];
+                        a.managed_team_ids = vec!["managed".into()];
+                    }
+                    "emp-maxime" => a.team_ids = vec!["managed".into()],
+                    "emp-karim" => a.team_ids = vec!["other".into()],
+                    _ => {}
                 }
             }
         }
     }
-    let data=get_messages(State(s.clone()),Path("carre-de-soie".into()),Query(MessagePage::default()),h.clone()).await.unwrap().0;
-    assert!(data["recipients"].as_array().unwrap().iter().any(|r|r["id"]=="emp-maxime"));
-    assert!(!data["recipients"].as_array().unwrap().iter().any(|r|r["id"]=="emp-karim"));
-    let mut c=command("operation-teams-001");c.recipient_ids=vec!["emp-maxime".into(),"emp-karim".into()];
-    assert_eq!(publish_message(State(s.clone()),Path("carre-de-soie".into()),h,Json(c)).await.unwrap_err().0,StatusCode::FORBIDDEN);
-    assert!(s.db.read().await.personal_workspace.collaboration.messages.is_empty());
+    let data = get_messages(
+        State(s.clone()),
+        Path("carre-de-soie".into()),
+        Query(MessagePage::default()),
+        h.clone(),
+    )
+    .await
+    .unwrap()
+    .0;
+    assert!(data["recipients"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|r| r["id"] == "emp-maxime"));
+    assert!(!data["recipients"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|r| r["id"] == "emp-karim"));
+    let mut c = command("operation-teams-001");
+    c.recipient_ids = vec!["emp-maxime".into(), "emp-karim".into()];
+    assert_eq!(
+        publish_message(State(s.clone()), Path("carre-de-soie".into()), h, Json(c))
+            .await
+            .unwrap_err()
+            .0,
+        StatusCode::FORBIDDEN
+    );
+    assert!(s
+        .db
+        .read()
+        .await
+        .personal_workspace
+        .collaboration
+        .messages
+        .is_empty());
 }
 #[tokio::test]
 async fn history_paginates_only_own_club_messages() {
-    let s=state();let mut db=s.db.write().await;
+    let s = state();
+    let mut db = s.db.write().await;
     for i in 0..53 {
-        db.personal_workspace.collaboration.messages.push(Message{id:format!("page-{i}"),actor_id:"emp-mario".into(),club_id:if i==52 {"carre-de-soie".into()} else {"beynost".into()},operation_id:format!("operation-page-{i}"),fingerprint:"test".into(),subject:"Information".into(),body:"Message".into(),recipient_ids:vec!["emp-chloe".into()],created_at:Utc::now().to_rfc3339()});
+        db.personal_workspace.collaboration.messages.push(Message {
+            id: format!("page-{i}"),
+            actor_id: "emp-mario".into(),
+            club_id: if i == 52 {
+                "carre-de-soie".into()
+            } else {
+                "beynost".into()
+            },
+            operation_id: format!("operation-page-{i}"),
+            fingerprint: "test".into(),
+            subject: "Information".into(),
+            body: "Message".into(),
+            recipient_ids: vec!["emp-chloe".into()],
+            created_at: Utc::now().to_rfc3339(),
+        });
     }
-    let first=workspace(&db,"emp-mario","beynost",None).unwrap();
-    assert_eq!(first["messages"].as_array().unwrap().len(),50);
-    let second=workspace(&db,"emp-mario","beynost",first["nextCursor"].as_str()).unwrap();
-    assert_eq!(second["messages"].as_array().unwrap().len(),2);
+    let first = workspace(&db, "emp-mario", "beynost", None).unwrap();
+    assert_eq!(first["messages"].as_array().unwrap().len(), 50);
+    let second = workspace(&db, "emp-mario", "beynost", first["nextCursor"].as_str()).unwrap();
+    assert_eq!(second["messages"].as_array().unwrap().len(), 2);
     assert!(second["nextCursor"].is_null());
-    assert!(workspace(&db,"emp-mario","beynost",Some("page-52")).is_err());
-    assert!(workspace(&db,"emp-sarah","beynost",Some("page-51")).is_err());
+    assert!(workspace(&db, "emp-mario", "beynost", Some("page-52")).is_err());
+    assert!(workspace(&db, "emp-sarah", "beynost", Some("page-51")).is_err());
+}
+
+#[tokio::test]
+async fn audience_metadata_is_limited_to_the_authorized_club_and_recipients() {
+    let s = state();
+    let mut db = s.db.write().await;
+    db.teams.push(crate::models::Team {
+        id: "test-bey-team".into(),
+        site_id: "club-beynost".into(),
+        name: "Équipe Beynost".into(),
+    });
+    db.teams.push(crate::models::Team {
+        id: "test-cds-team".into(),
+        site_id: "club-carre-soie".into(),
+        name: "Équipe autre club".into(),
+    });
+    let employee = db
+        .employees
+        .iter_mut()
+        .find(|e| e.id == "emp-chloe")
+        .unwrap();
+    employee.hr_file_status = "awaiting_employee".into();
+    employee
+        .site_accesses
+        .iter_mut()
+        .find(|a| a.site_id == "club-beynost")
+        .unwrap()
+        .team_ids = vec!["test-bey-team".into(), "test-cds-team".into()];
+    let data = workspace(&db, "emp-mario", "beynost", None).unwrap();
+    let recipient = data["recipients"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| r["id"] == "emp-chloe")
+        .unwrap();
+    assert_eq!(recipient["fileStatus"], "awaiting_employee");
+    assert_eq!(
+        recipient["teams"],
+        json!([{"id":"test-bey-team","name":"Équipe Beynost"}])
+    );
+    assert!(!data["recipients"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|r| r["id"] == "emp-sarah"));
 }
