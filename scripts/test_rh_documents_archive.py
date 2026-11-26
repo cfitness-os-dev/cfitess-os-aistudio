@@ -68,7 +68,7 @@ class ArchiveTests(unittest.TestCase):
         with self.assertRaises(ValueError):a.create(self.source,self.archive)
         self.state['personalWorkspace']['documents']['files'].append(copy.deepcopy(self.row));self.save_state()
         with self.assertRaises(ValueError):a.create(self.source,self.archive)
-    def test_inspection_reports_orphans_without_deleting_and_photos_are_not_silently_omitted(self):
+    def test_inspection_reports_orphans_without_deleting_and_invalid_photo_registry_is_refused(self):
         orphan=self.source/'rh-documents'/'unreferenced';orphan.write_bytes(b'keep')
         self.assertEqual(a.inspect_source(self.source)['unreferencedEntries'],1)
         a.create(self.source,self.archive);self.assertEqual(orphan.read_bytes(),b'keep')
@@ -101,4 +101,77 @@ class ArchiveTests(unittest.TestCase):
         try:folder.symlink_to(moved,target_is_directory=True)
         except OSError:self.skipTest('Symlink creation not privileged')
         with self.assertRaises(ValueError):a.create(self.source,self.archive)
+    def add_photo(self,number=123,site='club-beynost',consumed=False):
+        import struct,zlib
+        def chunk(kind,data):return struct.pack('!I',len(data))+kind+data+struct.pack('!I',zlib.crc32(kind+data)&0xffffffff)
+        png=b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('!IIBBBBB',1,1,8,2,0,0,0))+chunk(b'IDAT',zlib.compress(b'\x00\x00\x00\x00'))+chunk(b'IEND',b'')
+        row={'id':f'photo-{number}','siteId':site,'terminalId':'fixture-terminal','employeeId':'emp-chloe' if site=='club-beynost' else 'emp-maxime',
+            'contentType':'image/png','fileName':f'photo-{number}.png','byteSize':len(png),'sha256Hex':hashlib.sha256(png).hexdigest(),
+            'capturedAt':'2026-11-26T10:00:00Z','expiresAt':'2099-01-01T00:00:00Z','consumedAt':'2026-11-26T10:01:00Z' if consumed else None,
+            'consumedByEntryId':'fixture-entry' if consumed else None}
+        self.state['punchPhotos'].append(row);self.save_state()
+        folder=self.source/'punch_photos'/site;folder.mkdir(parents=True,exist_ok=True);(folder/row['fileName']).write_bytes(png)
+        return row,png
+    def test_v2_restores_pending_and_linked_synthetic_photos_in_both_clubs(self):
+        rows=[self.add_photo(123),self.add_photo(456,'club-carre-soie',True)]
+        key=b'fictional-unit-key';self.assertEqual(a.create(self.source,self.archive,key)['photos'],2)
+        self.assertEqual(a.verify(self.archive,key)['photos'],2)
+        target=self.root/'with-photos';self.assertEqual(a.restore(self.archive,target,key)['photos'],2)
+        self.assertEqual(json.loads((target/'cfitness_state.json').read_text()),self.state)
+        for row,png in rows:
+            path=target/'punch_photos'/row['siteId']/row['fileName'];self.assertEqual(path.read_bytes(),png)
+            if os.name=='posix':self.assertEqual(path.stat().st_mode&0o777,0o600)
+    def test_photo_corruption_fails_source_export_and_archive_restore(self):
+        row,png=self.add_photo();path=self.source/'punch_photos'/row['siteId']/row['fileName']
+        path.write_bytes(b'wrong')
+        with self.assertRaises(ValueError):a.create(self.source,self.archive)
+        self.assertFalse(self.archive.exists());path.write_bytes(png);a.create(self.source,self.archive)
+        self.rewrite(lambda e:e.update({'punch_photos/'+row['siteId']+'/'+row['fileName']:b'changed'}))
+        target=self.root/'refused'
+        with self.assertRaises(ValueError):a.restore(self.archive,target)
+        self.assertFalse(target.exists())
+    def test_photo_registry_rejects_foreign_paths_types_sizes_and_duplicates(self):
+        row,_=self.add_photo();original=copy.deepcopy(self.state)
+        for patch_data in [{'siteId':'../outside'},{'fileName':'../outside.png'},{'id':'photo-../1'},
+            {'contentType':'text/html'},{'byteSize':a.MAX_PHOTO+1},{'sha256Hex':'invalid'}]:
+            self.state=copy.deepcopy(original);self.state['punchPhotos'][0].update(patch_data);self.save_state()
+            with self.assertRaises(ValueError):a.create(self.source,self.archive)
+        self.state=original;self.state['punchPhotos'].append(copy.deepcopy(row));self.save_state()
+        with self.assertRaises(ValueError):a.create(self.source,self.archive)
+    def test_v1_documents_remain_readable_but_v1_cannot_silently_contain_photos(self):
+        a.create(self.source,self.archive)
+        def legacy(entries):
+            manifest=json.loads(entries['manifest.json']);manifest['format']=a.LEGACY_FORMAT;manifest.pop('punchPhotos')
+            entries['manifest.json']=json.dumps(manifest).encode()
+        self.rewrite(legacy);self.assertEqual(a.verify(self.archive)['photos'],0)
+        target=self.root/'legacy-restored';a.restore(self.archive,target)
+        self.assertEqual((target/'rh-documents'/self.id).read_bytes(),self.raw)
+        row,_=self.add_photo()
+        def inject(entries):
+            state=json.loads(entries['cfitness_state.json']);state['punchPhotos']=[row];raw=json.dumps(state).encode()
+            manifest=json.loads(entries['manifest.json']);manifest['state']['byteLength']=len(raw);manifest['state']['sha256']=hashlib.sha256(raw).hexdigest()
+            entries.update({'cfitness_state.json':raw,'manifest.json':json.dumps(manifest).encode()})
+        self.rewrite(inject)
+        with self.assertRaises(ValueError):a.verify(self.archive)
+    def test_photo_orphans_are_reported_without_deletion_and_symlinks_are_refused(self):
+        row,png=self.add_photo();folder=self.source/'punch_photos'/row['siteId'];orphan=folder/'unreferenced.png';orphan.write_bytes(png)
+        result=a.inspect_source(self.source);self.assertEqual(result['photos'],1);self.assertEqual(result['unreferencedEntries'],1)
+        self.assertTrue(orphan.exists())
+        if hasattr(os,'symlink'):
+            path=folder/row['fileName'];path.unlink();outside=self.root/'external-synthetic';outside.write_bytes(png)
+            try:path.symlink_to(outside)
+            except OSError:return
+            with self.assertRaises(ValueError):a.create(self.source,self.archive)
+            self.assertEqual(outside.read_bytes(),png)
+    def test_photo_purged_during_snapshot_aborts_instead_of_confirming_partial_backup(self):
+        row,_=self.add_photo();original=a.checked_read;purged=False
+        def purge(path,limit):
+            nonlocal purged
+            if Path(path).name==row['fileName'] and not purged:
+                purged=True;Path(path).unlink();self.state['punchPhotos']=[];self.save_state()
+            return original(path,limit)
+        with patch.object(a,'checked_read',side_effect=purge):
+            with self.assertRaises(OSError):a.create(self.source,self.archive)
+        self.assertFalse(self.archive.exists())
+        self.assertEqual(a.create(self.source,self.archive)['photos'],0)
 if __name__=='__main__':unittest.main()

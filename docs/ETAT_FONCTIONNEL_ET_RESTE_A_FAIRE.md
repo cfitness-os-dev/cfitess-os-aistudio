@@ -20,8 +20,8 @@
 | Compteurs, acquisition, report | Services et contrats déjà développés ; accès propre au salarié vérifié dans ce lot | Confirmer les formules encore non observées dans Skello et réconcilier les soldes historiques ; voir les documents d’acquisition/report existants |
 | Badgeuses, tablettes, photos | Réglages regroupés sous Réglages RH, restrictions serveur recontrôlées | Appairage et recette physique des tablettes, caméra, salle et présence avant cours ; aucun matériel validé par la simple navigation |
 | Communication RH | Publications internes immédiates ou programmées, annulation, lectures persistantes, filtres équipes/dossiers, historique et audit ; contrôles ordinateur/mobile/tablette | Email, pièces jointes et autres variantes COM01 restent à développer ; la programmation est une amélioration OS et non une option Skello observée |
-| Documents RH | Import PDF/PNG/JPEG, téléchargement privé, consultation déclarée, archivage/restauration, droits club/équipes et notifications testés | Archive conjointe hors ligne et diagnostic des orphelins développés ; compléter photos privées, automatisation, sécurité des fichiers réels et écarts DOC01/DOC02/DOC04 avant exploitation |
-| Sauvegarde documentaire | Outil direction : archive JSON + octets, vérification SHA/HMAC, restauration vers dossier neuf et redémarrage testés ; export JSON incomplet refusé | Photos de badgeage encore refusées, autres magasins privés et automatisation/interface à compléter ; aucune réplication réelle déclarée |
+| Documents RH | Import PDF/PNG/JPEG, téléchargement privé, consultation déclarée, archivage/restauration, droits club/équipes et notifications testés | Archive conjointe hors ligne et diagnostic des orphelins développés ; photos privées incluses en V2 ; compléter automatisation, sécurité des fichiers réels et écarts DOC01/DOC02/DOC04 avant exploitation |
+| Sauvegarde documentaire | Outil direction : archive JSON + octets, vérification SHA/HMAC, restauration vers dossier neuf et redémarrage testés ; export JSON incomplet refusé | Photos de badgeage incluses en V2 (nouvelle branche à relire), anciens JSON seuls refusés ; autres magasins privés et automatisation/interface à compléter ; aucune réplication réelle déclarée |
 | Notifications RH | Cloche, boîte personnelle, lectures persistantes et notifications d’absences/annotations de pointage/planning publié testées ; trois formats vérifiés | Notifications de dépôt/prise de connaissance documentaire raccordées ; signatures et autres modules à raccorder, push/envois externes non livrés |
 | Calendrier personnel | Flux .ics privé réellement servi : horaires propres publiés et absences validées, droits revérifiés, lien aléatoire haché, renouvellement/révocation/désactivation testés | Création/téléchargement/révocation/désactivation testés dans le navigateur ; abonnement Apple/Google/Outlook et adresse HTTPS stable restent à recetter |
 | Lead, scénarios, modèles, campagnes | Moteurs et simulations existants ; voir contrats et recettes spécialisés | Variables de contexte non raccordées, réentrée/délégations avancées et autres écarts déjà listés dans les contrats ; recette par fonction avant annonce de parité |
@@ -51,6 +51,8 @@
 - `docs/lead-assignment-integration-recette-2026-11-26.md` : recontrôle du main intégré, défauts d’affectation reproduits et restes répartis avec Antigravity.
 - `docs/rh-documents-archives-recette-2026-11-26.md` : archive conjointe vérifiée, restauration neuve testée et périmètre privé encore exclu.
 - `docs/v1-utilisable-conditions.md` : conditions de réception d’un pilote ; ne pas les remplacer par le nombre de tests.
+
+- `docs/rh-photos-archives-recette-2026-11-26.md` : V2 documents + photos synthétiques, compatibilité V1, intégrité de consultation et 8 groupes HTTP ; aucun matériel réel testé.
 
 ## Critère de fin
 
