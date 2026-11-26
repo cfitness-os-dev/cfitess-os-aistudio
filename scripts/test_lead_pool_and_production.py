@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
 import subprocess
 import sys
 import tempfile
@@ -67,15 +68,15 @@ def test_backup_tool_and_rotation() -> None:
                 {
                     "employees": [],
                     "sites": [],
-                    "punch_photos": [],
-                    "personal_workspace": {"documents": {"files": []}},
+                    "punchPhotos": [],
+                    "personalWorkspace": {"documents": {"files": []}},
                 }
             ),
             encoding="utf-8",
         )
 
         backup_dir = tmp_path / "backups"
-        hmac_secret = "secret-hmac-test-12345"
+        hmac_secret = secrets.token_hex(32)
 
         # Exécuter 3 sauvegardes avec max_backups=2 pour tester la rotation
         for i in range(3):
@@ -86,12 +87,12 @@ def test_backup_tool_and_rotation() -> None:
                 str(state_file),
                 "--output-dir",
                 str(backup_dir),
-                "--hmac-secret",
-                hmac_secret,
+                "--key-env",
+                "CFITNESS_BACKUP_TEST_KEY",
                 "--max-backups",
                 "2",
             ]
-            res = subprocess.run(cmd, capture_output=True, text=True)
+            res = subprocess.run(cmd, capture_output=True, text=True, env={**os.environ, "CFITNESS_BACKUP_TEST_KEY": hmac_secret})
             assert res.returncode == 0, f"Backup iteration {i} failed: {res.stderr}\n{res.stdout}"
             out = json.loads(res.stdout)
             assert out["ok"] is True
