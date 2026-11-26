@@ -184,7 +184,10 @@
     "CREAT",
     "fstat",
     "fsync",
-    "fileno"
+    "fileno",
+    "rebalance",
+    "rebalancing",
+    "rebalanced"
   ],
   "ignorePaths": [
     "node_modules/**",

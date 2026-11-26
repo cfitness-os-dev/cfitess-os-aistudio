@@ -310,7 +310,10 @@
     "CREAT",
     "fstat",
     "fsync",
-    "fileno"
+    "fileno",
+    "rebalance",
+    "rebalancing",
+    "rebalanced"
   ],
   "cSpell.ignoreRegExpList": [
     "\\bACCES\\b",
