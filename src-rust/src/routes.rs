@@ -2770,6 +2770,9 @@ async fn get_backup(
             format!("Export sauvegarde refusé (admin système requis) : {}", check.reason),
         ));
     }
+    if !db.personal_workspace.documents.files.is_empty() {
+        return Err(err_resp(StatusCode::CONFLICT, "Des fichiers RH sont présents. Un export JSON seul ne les sauvegarde pas. La direction doit utiliser une archive conjointe des données et des fichiers."));
+    }
     let backup_json = serde_json::to_string_pretty(&*db)
         .map_err(|_| err_resp(StatusCode::INTERNAL_SERVER_ERROR, "Erreur sérialisation JSON."))?;
     let sha256 = compute_sha256_hex(backup_json.as_bytes());
@@ -2851,6 +2854,9 @@ async fn post_restore(
     let parsed: AppDatabaseState = serde_json::from_str(&payload.backup_json)
         .map_err(|_| err_resp(StatusCode::BAD_REQUEST, "JSON de sauvegarde illisible."))?;
 
+    if !db.personal_workspace.documents.files.is_empty() || !parsed.personal_workspace.documents.files.is_empty() {
+        return Err(err_resp(StatusCode::CONFLICT, "La restauration JSON seule ne protège pas les fichiers RH. Utilisez une archive conjointe vers un environnement neuf, hors ligne."));
+    }
     let has_active_admin = parsed.employees.iter().any(|e| {
         e.active
             && e.site_accesses
@@ -6939,6 +6945,34 @@ mod tests {
         .await
         .into_response();
         assert_eq!(chloe_login.status(), StatusCode::OK);
+    }
+
+
+    #[tokio::test]
+    async fn json_backup_and_restore_refuse_to_omit_private_rh_documents() {
+        let _guard = BACKUP_SECURITY_TEST_ENV.lock().await;
+        let state = test_state();
+        let admin = session_headers(&state,"emp-mario","club-carre-soie").await;
+        let baseline = serde_json::to_string(&*state.db.read().await).unwrap();
+        let doc = crate::hr_documents::Document {
+            id:format!("rh-doc-{}", "a".repeat(32)),employee_id:"emp-chloe".into(),club_id:"beynost".into(),
+            actor_id:"emp-mario".into(),operation_id:"backup-document-test".into(),fingerprint:"test".into(),
+            title:"Fichier fictif".into(),category:"Autre".into(),file_name:"notice.pdf".into(),media_type:"application/pdf".into(),
+            byte_length:10,sha256:"0".repeat(64),created_at:Utc::now().to_rfc3339(),acknowledged_at:None,archived_at:None,
+        };
+        state.db.write().await.personal_workspace.documents.files.push(doc);
+        let with_document = serde_json::to_string(&*state.db.read().await).unwrap();
+        assert_eq!(get_backup(State(state.clone()),admin.clone()).await.unwrap_err().0,StatusCode::CONFLICT);
+        let payload = |raw:String| RestoreBackupPayload{
+            hmac_signature:configured_backup_signing_key().map(|key|compute_backup_hmac_hex(raw.as_bytes(),&key)),
+            backup_json:raw,..Default::default()
+        };
+        assert_eq!(post_restore(State(state.clone()),admin.clone(),Json(payload(baseline.clone()))).await.unwrap_err().0,StatusCode::CONFLICT);
+        assert_eq!(serde_json::to_string(&*state.db.read().await).unwrap(),with_document);
+        state.db.write().await.personal_workspace.documents.files.clear();
+        assert_eq!(post_restore(State(state.clone()),admin.clone(),Json(payload(with_document))).await.unwrap_err().0,StatusCode::CONFLICT);
+        assert_eq!(serde_json::to_string(&*state.db.read().await).unwrap(),baseline);
+        assert!(resolve_session_actor(&state,&admin).await.is_ok());
     }
 
     #[tokio::test]
