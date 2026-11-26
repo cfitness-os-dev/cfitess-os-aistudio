@@ -88,4 +88,13 @@ class ArchiveTests(unittest.TestCase):
         with patch.object(a,'read_entry',side_effect=fail_second_pass):
             with self.assertRaises(OSError):a.restore(self.archive,target)
         self.assertFalse(target.exists());self.assertTrue(self.archive.exists())
+    def test_private_source_symlinks_are_refused(self):
+        if not hasattr(os,'symlink'):self.skipTest('Symlinks unavailable')
+        path=self.source/'rh-documents'/self.id
+        path.unlink();outside=self.root/'outside-fictif';outside.write_bytes(self.raw);path.symlink_to(outside)
+        with self.assertRaises(ValueError):a.create(self.source,self.archive)
+        self.assertEqual(outside.read_bytes(),self.raw)
+        path.unlink();path.write_bytes(self.raw)
+        folder=self.source/'rh-documents';moved=self.root/'other-folder';folder.rename(moved);folder.symlink_to(moved,target_is_directory=True)
+        with self.assertRaises(ValueError):a.create(self.source,self.archive)
 if __name__=='__main__':unittest.main()

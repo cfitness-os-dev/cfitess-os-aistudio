@@ -45,6 +45,12 @@ def main():
             code,v=call('POST','/api/hr/documents/beynost',admin,payload);assert code==200;doc_id=v['documentId']
             assert call('POST','/api/me/documents/beynost/'+doc_id+'/ack',owner,{'consent':True})[0]==200
             before=(source/'cfitness_state.json').read_bytes()
+            code,status=call('GET','/api/backup/snapshot',admin)
+            assert code==200 and status['isSimulation'] is True and status['failoverReady'] is False
+            code,simulation=call('POST','/api/backup/snapshot',admin,{'originDevice':'recette locale fictive','checksum':'not-verified'})
+            assert code==200 and simulation['simulated'] is True and simulation['checksumVerified'] is False
+            assert (source/'cfitness_state.json').read_bytes()==before
+            checks.append('Antigravity replica preview reports simulation, no verified checksum or ready failover, and performs no state merge')
             assert call('GET','/api/admin/backup')[0]==401 and call('GET','/api/admin/backup',owner)[0]==403
             assert call('GET','/api/admin/backup',admin)[0]==409
             assert call('POST','/api/admin/restore',admin,{'backupJson':old['backupJson']})[0]==409

@@ -70,6 +70,7 @@ def checked_read(path,limit):
 
 def source_snapshot(source):
     source=Path(source)
+    if (source/'rh-documents').is_symlink():fail('Le dossier documentaire ne doit pas être un lien symbolique.')
     raw=checked_read(source/'cfitness_state.json',MAX_STATE)
     state=decode(raw);rows=documents(state)
     return raw,rows

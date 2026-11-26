@@ -20,7 +20,8 @@
 | Compteurs, acquisition, report | Services et contrats déjà développés ; accès propre au salarié vérifié dans ce lot | Confirmer les formules encore non observées dans Skello et réconcilier les soldes historiques ; voir les documents d’acquisition/report existants |
 | Badgeuses, tablettes, photos | Réglages regroupés sous Réglages RH, restrictions serveur recontrôlées | Appairage et recette physique des tablettes, caméra, salle et présence avant cours ; aucun matériel validé par la simple navigation |
 | Communication RH | Publications internes immédiates ou programmées, annulation, lectures persistantes, filtres équipes/dossiers, historique et audit ; contrôles ordinateur/mobile/tablette | Email, pièces jointes et autres variantes COM01 restent à développer ; la programmation est une amélioration OS et non une option Skello observée |
-| Documents RH | Import PDF/PNG/JPEG, téléchargement privé, consultation déclarée, archivage/restauration, droits club/équipes et notifications testés | Sauvegarde conjointe métadonnées/fichiers, réconciliation après arrêt brutal, sécurité des fichiers réels et écarts DOC01/DOC02/DOC04 à terminer avant données réelles |
+| Documents RH | Import PDF/PNG/JPEG, téléchargement privé, consultation déclarée, archivage/restauration, droits club/équipes et notifications testés | Archive conjointe hors ligne et diagnostic des orphelins développés ; compléter photos privées, automatisation, sécurité des fichiers réels et écarts DOC01/DOC02/DOC04 avant exploitation |
+| Sauvegarde documentaire | Outil direction : archive JSON + octets, vérification SHA/HMAC, restauration vers dossier neuf et redémarrage testés ; export JSON incomplet refusé | Photos de badgeage encore refusées, autres magasins privés et automatisation/interface à compléter ; aucune réplication réelle déclarée |
 | Notifications RH | Cloche, boîte personnelle, lectures persistantes et notifications d’absences/annotations de pointage/planning publié testées ; trois formats vérifiés | Notifications de dépôt/prise de connaissance documentaire raccordées ; signatures et autres modules à raccorder, push/envois externes non livrés |
 | Calendrier personnel | Flux .ics privé réellement servi : horaires propres publiés et absences validées, droits revérifiés, lien aléatoire haché, renouvellement/révocation/désactivation testés | Création/téléchargement/révocation/désactivation testés dans le navigateur ; abonnement Apple/Google/Outlook et adresse HTTPS stable restent à recetter |
 | Lead, scénarios, modèles, campagnes | Moteurs et simulations existants ; voir contrats et recettes spécialisés | Variables de contexte non raccordées, réentrée/délégations avancées et autres écarts déjà listés dans les contrats ; recette par fonction avant annonce de parité |
@@ -29,7 +30,7 @@
 | Suivi des campagnes et certaines intégrations | Des tableaux et configurations de démonstration restent présents | Remplacer les exemples par une lecture persistante traçable ou indiquer clairement leur état ; ne pas annoncer un connecteur actif |
 | Heitz et recouvrement | Collectes et garde de démonstration développées ; pas de connexion réelle autorisée pour la démo | Comparer chaque capacité à la documentation et aux droits fournisseur, puis recette séparée autorisée sur jeux adaptés |
 | Paie, signatures, recrutement | Interfaces et exemples présents, connexion réelle non certifiée dans ce lot | Tester les formats, prestataires et parcours autorisés ; une signature simulée n’est pas un document signé réel |
-| Mise en ligne | PR #83–#91 fusionnées par le développeur sur main c416a6f, constat GitHub ; pas déployées par Codex | Vérifier séparément le commit réellement servi et ses parcours avant le pilote |
+| Mise en ligne | PR #83–#94 intégrées par le développeur sur main 34b1c0a, dont correction de l’aperçu de réplication ; aucun déploiement Codex | Vérifier séparément le commit réellement servi et ses parcours avant le pilote |
 
 ## Références de travail à ne pas perdre
 
@@ -48,6 +49,7 @@
 - `docs/rh-planning-notifications-recette-2026-11-26.md` : publication/modification/retrait/réaffectation des horaires et transaction persistante avec alertes.
 - `docs/rh-documents-recette-2026-11-26.md` : fichiers privés persistants, droits, accusés sans signature, sauvegarde à compléter et écarts documentaires explicites.
 - `docs/lead-assignment-integration-recette-2026-11-26.md` : recontrôle du main intégré, défauts d’affectation reproduits et restes répartis avec Antigravity.
+- `docs/rh-documents-archives-recette-2026-11-26.md` : archive conjointe vérifiée, restauration neuve testée et périmètre privé encore exclu.
 - `docs/v1-utilisable-conditions.md` : conditions de réception d’un pilote ; ne pas les remplacer par le nombre de tests.
 
 ## Critère de fin
