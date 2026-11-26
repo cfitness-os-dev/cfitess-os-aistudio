@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+import { HrWorkspaceNavigation } from '../HrWorkspaceNavigation';
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import {
   Calendar,
@@ -8,6 +10,8 @@ import {
   Home,
   Bell,
   UserCheck,
+  Settings,
+  Calculator,
 } from "lucide-react";
 import { useCfos } from "../../context/CfosContext";
 import {
@@ -33,10 +37,12 @@ const tabs = [
   ["dossier", "Mon dossier", UserCheck],
   ["planning", "Mon planning", Calendar],
   ["leave", "Mes absences", Calendar],
+  ["counters", "Mes compteurs", Calculator],
   ["documents", "Mes documents", FileText],
   ["training", "Mes formations", GraduationCap],
   ["checklists", "Mes contrôles", CheckSquare],
   ["time", "Mes pointages", Clock],
+  ["preferences", "Mes préférences", Settings],
 ] as const;
 type Tab = (typeof tabs)[number][0];
 const punchLabels: Record<string, string> = {
@@ -46,7 +52,7 @@ const punchLabels: Record<string, string> = {
   depart: "Départ",
 };
 
-export function PersonalWorkspaceView() {
+export function PersonalWorkspaceView({ preferencesPanel, initialPage }: { preferencesPanel?: ReactNode; initialPage?: string } = {}) {
   const { currentUser, clubFilter, authorizedClubIds } = useCfos();
   const club = (
     clubFilter === "all" ? authorizedClubIds[0] : clubFilter
@@ -56,6 +62,8 @@ export function PersonalWorkspaceView() {
       key={`${currentUser.id}:${club}`}
       employeeId={currentUser.id}
       club={club}
+      preferencesPanel={preferencesPanel}
+      initialPage={initialPage}
     />
   );
 }
@@ -63,16 +71,20 @@ export function PersonalWorkspaceView() {
 function PersonalWorkspaceContent({
   employeeId,
   club,
+  preferencesPanel,
+  initialPage,
 }: {
   employeeId: string;
   club: ClubId;
+  preferencesPanel?: ReactNode;
+  initialPage?: string;
 }) {
   const { currentUser, setActiveSection } = useCfos();
   const [tab, setTab] = useState<Tab>(() => {
     const requested = new URLSearchParams(window.location.search).get(
       "personalTab",
     );
-    return tabs.find(([key]) => key === requested)?.[0] ?? "home";
+    return tabs.find(([key]) => key === (requested ?? initialPage))?.[0] ?? "home";
   });
   const [data, setData] = useState<PersonalWorkspace | null>(null);
   const [error, setError] = useState("");
@@ -92,7 +104,7 @@ function PersonalWorkspaceContent({
     comment: "",
   });
   const [withdrawals, setWithdrawals] = useState<Record<string, string>>({});
-  useLeadDraftGuard(!!leave.startDate || !!leave.endDate || !!leave.comment || Object.values(withdrawals).some(value=>!!value));
+  useLeadDraftGuard(!!task || !!leave.startDate || !!leave.endDate || !!leave.comment || Object.values(withdrawals).some(value=>!!value));
   useEffect(()=>{
     if(!data)return;
     if(!data.requestMotives.some(m=>m.id===leave.motiveId)) {
@@ -163,6 +175,23 @@ function PersonalWorkspaceContent({
       if (mounted.current) setBusy(false);
     }
   };
+  const navigate = (nextTab: Tab) => {
+    if (nextTab === tab) return;
+    const apply = () => {
+      setTab(nextTab);
+      if (tab === "leave") {
+        setLeave(previous => ({ ...previous, startDate: "", endDate: "", comment: "" }));
+        setWithdrawals({});
+      }
+      if (tab === "home") setTask("");
+      setError("");
+      setSuccess("");
+      const url = new URL(window.location.href);
+      url.searchParams.set("personalTab", nextTab);
+      window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+    };
+    if (confirmLeadDraftNavigation(apply)) apply();
+  };
   const button =
     "cf-brand-gradient text-white px-4 py-2 rounded-xl min-h-[44px] text-sm font-semibold disabled:opacity-50";
   const input = "cf-input w-full min-w-0 min-h-[44px] px-3 py-2 rounded-xl";
@@ -170,7 +199,7 @@ function PersonalWorkspaceContent({
   return (
     <section className="space-y-4 min-w-0" aria-label="Mes outils personnels">
       <header className="cf-card p-4 space-y-1">
-        <h1 className="font-bold text-xl">Mon espace personnel</h1>
+        <h1 className="font-bold text-xl">Mon compte</h1>
         <p>
           {currentUser.firstName} {currentUser.lastName} ·{" "}
           {club === "beynost" ? "Beynost" : "Carré de Soie"}
@@ -181,6 +210,9 @@ function PersonalWorkspaceContent({
           </p>
         )}
       </header>
+      <details className="cf-card p-3">
+        <summary className="cursor-pointer text-sm font-semibold">Outils et export de mon espace</summary>
+        <div className="mt-3 space-y-3">
       <div className="flex flex-wrap gap-2">
         <button type="button" className={button} disabled={busy || loading}
           onClick={() => void reload()}>Actualiser mon espace</button>
@@ -222,28 +254,21 @@ function PersonalWorkspaceContent({
           reste réservée aux responsables.
         </p>
       </details>
-      <nav
-        aria-label="Rubriques de mon espace personnel"
-        className="flex flex-wrap gap-2"
-      >
-        {tabs.map(([key, label, Icon]) => (
-          <button
-            type="button"
-            key={key}
-            aria-current={tab === key ? "page" : undefined}
-            onClick={() => {
-              if(key!==tab && !confirmLeadDraftNavigation(()=>setTab(key)))return;
-              setTab(key);
-              setError("");
-              setSuccess("");
-            }}
-            className={`min-h-[44px] px-3 py-2 rounded-xl flex items-center gap-2 text-sm ${tab === key ? "cf-brand-gradient text-white" : "cf-card"}`}
-          >
-            <Icon className="w-4 h-4" />
-            {label}
-          </button>
-        ))}
-      </nav>
+        </div>
+      </details>
+      <div className="grid grid-cols-1 xl:grid-cols-[220px_minmax(0,1fr)] gap-4 items-start">
+        <HrWorkspaceNavigation
+          label="Rubriques de Mon compte"
+          activeId={tab}
+          onSelect={id => navigate(id as Tab)}
+          items={tabs.map(([id, label, icon]) => ({
+            id, label, icon,
+            group: ['home', 'planning', 'time'].includes(id) ? 'Mon quotidien'
+              : ['dossier', 'counters', 'leave', 'documents'].includes(id) ? 'Mon dossier RH'
+                : 'Mes outils',
+          }))}
+        />
+        <div className="min-w-0 space-y-4">
       {loading && <p role="status">Chargement de votre espace…</p>}
       {error && (
         <div role="alert" className="cf-card p-4 border-red-500 space-y-2">
@@ -266,11 +291,12 @@ function PersonalWorkspaceContent({
       )}
       {data && (
         <>
-          {tab === "dossier" && (
+          {(tab === "dossier" || tab === "counters") && (
             <Suspense fallback={<p role="status">Chargement de votre dossier…</p>}>
-              <HrEmployeeDossierView clubId={club} personalOnly />
+              <HrEmployeeDossierView key={tab} clubId={club} personalOnly initialTab={tab === "counters" ? "counters" : "identity"} />
             </Suspense>
           )}
+          {tab === "preferences" && (preferencesPanel ?? <p role="status">Les préférences ne sont pas disponibles. Actualisez votre espace ou contactez votre responsable.</p>)}
           {tab === "home" && (
             <div className="grid lg:grid-cols-2 gap-4">
               <section className="cf-card p-4 space-y-3">
@@ -401,7 +427,7 @@ function PersonalWorkspaceContent({
                     )}
                   </article>
                 ))}
-                <button className={button} onClick={() => setTab("documents")}>
+                <button className={button} onClick={() => navigate("documents")}>
                   Voir mes documents à consulter
                 </button>
               </section>
@@ -806,6 +832,8 @@ function PersonalWorkspaceContent({
           )}
         </>
       )}
+        </div>
+      </div>
     </section>
   );
 }

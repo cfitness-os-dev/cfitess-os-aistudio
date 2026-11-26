@@ -278,8 +278,12 @@ export function hrFileStatusLabel(status: string): string {
       return 'Incomplet';
     case 'pending':
       return 'En attente de validation';
+    case 'pending_employee':
+      return 'Informations du collaborateur attendues';
+    case 'incomplete_payroll':
+      return 'Informations de paie à compléter';
     default:
-      return status || 'Non renseigné';
+      return status ? 'À vérifier' : 'Non renseigné';
   }
 }
 

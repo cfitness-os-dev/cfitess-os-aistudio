@@ -104,8 +104,7 @@ export function ClockPolicyPanel({
         traite vos propres droits.
       </p>
       <p className="text-sm">
-        L’appairage des appareils reste à développer. L’autorisation d’un
-        terminal ne rend pas la tablette opérationnelle.
+        L’autorisation de pointage et la préparation de la tablette sont deux étapes distinctes. L’appareil doit être appairé et vérifié avant son utilisation au club.
       </p>
       <button
         className="cf-button min-h-[44px] px-3"

@@ -1,3 +1,4 @@
+import { HrWorkspaceNavigation } from '../HrWorkspaceNavigation';
 import { confirmLeadDraftNavigation } from '../../domain/leadDraftGuard';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import {
@@ -330,12 +331,56 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
       : null;
 
   const effectiveClubId = activeSiteId === 'club-beynost' ? 'beynost' : 'carre-de-soie';
-  const effectiveSitesForCanSelect = effectiveDashboard?.sites ?? dashboard?.sites ?? [];
+  const effectiveSitesForCanSelect = effectiveDashboard?.sites ?? [];
+
+  const personalOnlyProfile = effectiveDashboard && !isShellAdmin && !effectiveDashboard.visibleEmployees.some(employee => employee.id !== currentUser.id);
+
+  if ((isPersonalSpace || personalOnlyProfile) && !isTechnicalMode && !planningOnly) {
+    const preferencesPanel = effectiveDashboard && effectiveDashboard.session.visibleSections.includes('MC13')
+      ? <PreferencesView auth={auth} preferences={effectiveDashboard.preferences} onRefreshDashboard={() => refreshAll()} />
+      : <div role={fatalError ? "alert" : "status"} className="cf-card p-4 space-y-2">
+          <p>{fatalError ? 'Impossible de charger vos préférences. Réessayez.' : loading ? 'Chargement de vos préférences…' : 'Vos préférences ne sont pas accessibles avec ce profil.'}</p>
+          {fatalError && <button type="button" className="cf-brand-gradient text-white px-3 py-2 rounded-xl" onClick={() => void refreshAll()}>Réessayer</button>}
+        </div>;
+    const legacyPersonalPages: Partial<Record<McSectionId, string>> = { MC02: 'dossier', MC03: 'planning', MC04: 'leave', MC05: 'time', MC06: 'documents', MC13: 'preferences' };
+    return <PersonalWorkspaceView preferencesPanel={preferencesPanel} initialPage={isPersonalSpace ? undefined : legacyPersonalPages[initialTarget.section]} />;
+  }
+
+  if (!isShellAdmin && !effectiveDashboard && !isTechnicalMode && !planningOnly) {
+    return <div className="cf-card p-4 space-y-3" role={fatalError ? 'alert' : 'status'}>
+      <p>{fatalError ? 'Impossible de vérifier les accès de votre compte. Réessayez.' : 'Chargement de votre espace personnel…'}</p>
+      {fatalError && <button type="button" className="cf-brand-gradient text-white px-3 py-2 rounded-xl" onClick={() => void refreshAll()}>Réessayer</button>}
+    </div>;
+  }
+
+  const managementLabels: Partial<Record<McSectionId, string>> = {
+    MC01: 'Vue d’ensemble RH', MC02: 'Collaborateurs', MC03: 'Planning des équipes',
+    MC04: 'Absences et disponibilités', MC05: 'Pointages et temps de travail',
+    MC06: 'Documents et signatures', MC07: 'Préparation de paie',
+    MC08: 'Pilotage et missions', MC09: 'Communication RH',
+    MC10: 'Réglages RH', MC11: 'Organisation et droits', MC12: 'Recrutement et intégrations',
+    MC13: 'Mes préférences',
+  };
+  const managementItems = (registry?.sections ?? []).filter(section => effectiveDashboard?.session.visibleSections.includes(section.id as McSectionId))
+    .map(section => ({
+      id: section.id, label: managementLabels[section.id as McSectionId] ?? section.label,
+      group: ['MC10', 'MC11', 'MC12', 'MC13'].includes(section.id) ? 'Configuration'
+        : ['MC06', 'MC07', 'MC08', 'MC09'].includes(section.id) ? 'Suivi RH' : 'Gestion des équipes',
+      icon: section.id === 'MC02' ? Users : section.id === 'MC11' ? ShieldCheck
+        : ['MC03', 'MC04'].includes(section.id) ? Calendar : SlidersHorizontal,
+    }));
 
   return (
     <div className="space-y-5">
       {/* Bandeau de sélection de vue unifiée (V1.16 Mon compte <-> Traçabilité <-> Vues GitHub CFOS) */}
-      <div className="cf-card p-3 sm:p-4 space-y-3">
+      {!planningOnly && !isTechnicalMode && <header className="cf-card p-4 flex flex-wrap justify-between items-center gap-3">
+        <div><p className="text-xs cf-muted mb-1">Gestion des équipes</p><h1 className="font-bold text-xl">Collaborateurs et RH</h1><p className="cf-muted text-sm mt-1">Dossiers, horaires et demandes de vos équipes, selon vos droits dans le club sélectionné.</p></div>
+        <button type="button" className="cf-card-secondary min-h-11 px-3 py-2 text-sm font-semibold" onClick={() => {
+          const apply = () => setShellSection('my-day', 'personal');
+          if (confirmLeadDraftNavigation(apply)) apply();
+        }}>Ouvrir Mon compte</button>
+      </header>}
+      {(planningOnly || isTechnicalMode) && <div className="cf-card p-3 sm:p-4 space-y-3">
         {!planningOnly && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -577,8 +622,11 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
             )}
           </div>
         )}
-      </div>
+      </div>}
 
+      <div className={!planningOnly && !isTechnicalMode ? "grid grid-cols-1 xl:grid-cols-[220px_minmax(0,1fr)] gap-4 items-start" : ""}>
+        {!planningOnly && !isTechnicalMode && managementItems.length > 0 && <HrWorkspaceNavigation label="Rubriques de gestion RH" items={managementItems} activeId={activeSection} onSelect={id => void handleNavigateSection(id as McSectionId)} />}
+        <div className="min-w-0 space-y-4">
       {identityMismatchBanner && (
         <div className="p-4 rounded-card bg-amber-950/50 border border-amber-500/50 text-amber-100 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
@@ -661,6 +709,10 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
               {hubTab === 'mon-compte' && activeSection === 'MC01' && effectiveDashboard && (
                 <DashboardView
                   dashboard={effectiveDashboard}
+                  managementOnly={!isTechnicalMode}
+                  onOpenRequests={effectiveDashboard.session.visibleSections.includes('MC04') ? () => void handleNavigateSection('MC04') : undefined}
+                  onOpenTime={effectiveDashboard.session.visibleSections.includes('MC05') ? () => void handleNavigateSection('MC05') : undefined}
+                  onOpenEmployees={effectiveDashboard.session.visibleSections.includes('MC02') ? () => void handleNavigateSection('MC02') : undefined}
                   onOpenPlanning={() => setShellSection('planning-hr', 'planning')}
                   onOpenPreferences={() => void handleNavigateSection('MC13')}
                 />
@@ -673,6 +725,12 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
                     personalOnly={isPersonalSpace}
                     onDossierMutated={() => void refreshAll()}
                   />
+                </Suspense>
+              )}
+
+              {hubTab === 'mon-compte' && activeSection === 'MC03' && effectiveDashboard && !isTechnicalMode && !planningOnly && (
+                <Suspense fallback={<p role="status">Chargement du planning des équipes…</p>}>
+                  <PlanningHrView forcedClubScope={effectiveClubId} personalScopeOnly={!isShellAdmin} scopedEmployeeId={isShellAdmin ? undefined : currentUser.id} />
                 </Suspense>
               )}
 
@@ -765,6 +823,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
 
               {hubTab === 'mon-compte' &&
                 effectiveDashboard &&
+                (activeSection !== 'MC03' || isTechnicalMode || planningOnly) &&
                 activeSection !== 'MC01' &&
                 activeSection !== 'MC02' &&
                 activeSection !== 'MC04' &&
@@ -790,6 +849,8 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
           )}
         </>
       )}
+        </div>
+      </div>
     </div>
   );
 }

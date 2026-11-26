@@ -39,6 +39,7 @@ type DossierTab = 'identity' | 'contract' | 'counters';
 interface HrEmployeeDossierViewProps {
   clubId: ClubId;
   personalOnly?: boolean;
+  initialTab?: DossierTab;
   onDossierMutated?: () => void;
 }
 
@@ -47,10 +48,11 @@ const CONTRACT_TYPES = ['CDI', 'CDD', 'Alternance', 'Apprentissage', 'Stage'] as
 export function HrEmployeeDossierView({
   clubId,
   personalOnly = false,
+  initialTab = 'identity',
   onDossierMutated,
 }: HrEmployeeDossierViewProps) {
   const { currentUser } = useCfos();
-  const [tab, setTab] = useState<DossierTab>('identity');
+  const [tab, setTab] = useState<DossierTab>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string>(currentUser.id);
 

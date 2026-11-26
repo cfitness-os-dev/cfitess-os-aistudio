@@ -13,6 +13,7 @@ import { useCfos } from '../context/CfosContext';
 import { cleanUiTree } from '../domain/cleanModeSanitizer';
 import { ApiClientError, clientApi, type ApiAuthContext } from '../domain/clientApi';
 import type { UserPreferences } from '../domain/types';
+import { useLeadDraftGuard } from '../components/useLeadDraftGuard';
 
 interface PreferencesViewProps {
   auth: ApiAuthContext;
@@ -43,6 +44,7 @@ export function PreferencesView({
   const [draft, setDraft] = useState<UserPreferences>(preferences);
   const [currentSecret, setCurrentSecret] = useState('');
   const [newSecret, setNewSecret] = useState('');
+  useLeadDraftGuard(JSON.stringify(draft) !== JSON.stringify(preferences) || !!currentSecret || !!newSecret);
   const [feedback, setFeedback] = useState<{
     kind: 'ok' | 'err';
     text: string;
@@ -60,7 +62,7 @@ export function PreferencesView({
       await onRefreshDashboard();
       setFeedback({
         kind: 'ok',
-        text: 'Préférences enregistrées côté serveur et tracées (MC13 / TST29).',
+        text: 'Vos préférences sont enregistrées.',
       });
     } catch (e) {
       setFeedback({
@@ -78,7 +80,7 @@ export function PreferencesView({
       await onRefreshDashboard();
       setFeedback({
         kind: 'ok',
-        text: `Ancien lien .ics révoqué. Nouveau jeton actif : ${updated.calendarFeedToken}`,
+        text: 'L’identifiant du calendrier a été renouvelé. La connexion au calendrier reste à finaliser.',
       });
     } catch (e) {
       setFeedback({
@@ -97,7 +99,7 @@ export function PreferencesView({
       await onRefreshDashboard();
       setFeedback({
         kind: 'ok',
-        text: 'Mot de passe renouvelé avec succès côté serveur (UTI05 / OS185).',
+        text: 'Votre mot de passe a été modifié.',
       });
     } catch (e) {
       setFeedback({
@@ -118,12 +120,11 @@ export function PreferencesView({
               MC13 • UTI01–UTI05 • EXT03 • EX32
             </div>
           )}
-          <h1 className="text-xl font-bold mt-0.5">
-            Mes préférences personnelles, calendrier &amp; sécurité
-          </h1>
+          <h2 className="text-xl font-bold mt-0.5">
+            Mes préférences
+          </h2>
           <p className="text-xs cf-muted mt-1">
-            Paramètres individuels : langue (11 choix), canaux de notification,
-            révocation du flux .ics, mot de passe et SSO.
+            Retrouvez vos préférences de notification, de langue et de connexion.
           </p>
         </div>
 
@@ -158,7 +159,7 @@ export function PreferencesView({
         <div className="cf-card p-5 space-y-4">
           <div className="font-semibold text-sm flex items-center gap-2">
             <Globe className="w-4 h-4 text-cyan-400" />
-            Langue d’interface (UTI01 — 11 langues)
+            Langue souhaitée
           </div>
           <select
             value={draft.language}
@@ -177,7 +178,7 @@ export function PreferencesView({
           <div className="pt-2 border-t border-[var(--cf-border)] space-y-3">
             <div className="font-semibold text-sm flex items-center gap-2">
               <Bell className="w-4 h-4 text-violet-400" />
-              Notifications (UTI03 / TST29)
+              Notifications
             </div>
 
             <div className="space-y-2 text-xs">
@@ -285,7 +286,7 @@ export function PreferencesView({
             <div className="flex items-center justify-between">
               <div className="font-semibold text-sm flex items-center gap-2">
                 <CalendarSync className="w-4 h-4 text-emerald-400" />
-                Flux calendrier privé .ics (UTI04 / EX32)
+                Connexion à mon calendrier
               </div>
               <label className="text-xs flex items-center gap-1.5">
                 <input
@@ -299,13 +300,12 @@ export function PreferencesView({
                   }
                   className="accent-violet-500"
                 />
-                Actif
+                Souhaitée
               </label>
             </div>
 
-            <div className="cf-card-secondary p-3 cf-mono text-[11px] break-all text-cyan-300">
-              {calendarUrl}
-            </div>
+            <p className="text-sm cf-muted">La synchronisation du calendrier est à finaliser. Aucun lien d’abonnement opérationnel n’est fourni pour le moment.</p>
+            {isTechnicalMode && <div className="cf-card-secondary p-3 cf-mono text-[11px] break-all text-cyan-300">Exemple non raccordé : {calendarUrl}</div>}
 
             <button
               type="button"
@@ -313,26 +313,28 @@ export function PreferencesView({
               className="cf-card-secondary px-3.5 py-2 text-xs font-semibold text-amber-300 hover:border-amber-500/60 flex items-center gap-1.5"
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              Révoquer et régénérer l’URL .ics (EX32)
+              Renouveler l’identifiant du calendrier
             </button>
           </div>
 
           <div className="cf-card p-5 space-y-3">
             <div className="font-semibold text-sm flex items-center gap-2">
               <KeyRound className="w-4 h-4 text-rose-400" />
-              Changement de mot de passe (UTI05 / OS185)
+              Changer mon mot de passe
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <input
                 type="password"
                 placeholder="Mot de passe actuel"
+                aria-label="Mot de passe actuel"
                 value={currentSecret}
                 onChange={(e) => setCurrentSecret(e.target.value)}
                 className="cf-input px-3 py-2"
               />
               <input
                 type="password"
-                placeholder="Nouveau secret (≥ 12 car.)"
+                placeholder="Nouveau mot de passe (12 caractères minimum)"
+                aria-label="Nouveau mot de passe"
                 value={newSecret}
                 onChange={(e) => setNewSecret(e.target.value)}
                 className="cf-input px-3 py-2"
@@ -350,10 +352,10 @@ export function PreferencesView({
           <div className="cf-card p-5 space-y-2.5 text-xs">
             <div className="font-semibold text-sm flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-violet-400" />
-              Authentification SSO (EXT03 — OIDC / SAML)
+              Connexion avec un compte d’entreprise
             </div>
             <p className="cf-muted">
-              Fournisseur : <span className="cf-mono">{draft.ssoProvider}</span> •
+              {isTechnicalMode && <>Fournisseur : <span className="cf-mono">{draft.ssoProvider}</span> • </>}
               Statut :{' '}
               <span className="cf-mono text-amber-300">
                 {draft.ssoEnabled ? 'Activé' : 'En attente de configuration'}

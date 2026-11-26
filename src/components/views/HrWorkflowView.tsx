@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useCfos } from "../../context/CfosContext";
-import { ClockPolicyPanel } from "./ClockPolicyPanel";
-import { TerminalsManagementPanel } from "./TerminalsManagementPanel";
 import { LeaveDecisionPanel, LeavePolicySummary } from './LeaveDecisionPanel';
 import { confirmLeadDraftNavigation } from '../../domain/leadDraftGuard';
 import { useLeadDraftGuard } from '../useLeadDraftGuard';
@@ -166,20 +164,6 @@ function Workflow({
           : "Pointages enregistrés"
       }
     >
-      {tab === "time" && !personal && (
-        <>
-          <ClockPolicyPanel
-            key={`policy:${actorId}:${club}`}
-            actor={actorId}
-            club={club}
-          />
-          <TerminalsManagementPanel
-            key={`terminals:${actorId}:${club}`}
-            actor={actorId}
-            club={club}
-          />
-        </>
-      )}
       <header className="cf-card p-4 space-y-2">
         <h2 className="text-lg font-bold">
           {personal ? "Mes " : ""}

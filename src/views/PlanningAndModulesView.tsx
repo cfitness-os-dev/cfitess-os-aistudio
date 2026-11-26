@@ -1,3 +1,4 @@
+import { useLeadDraftGuard } from '../components/useLeadDraftGuard';
 import {
   AlertTriangle,
   BookOpen,
@@ -110,6 +111,7 @@ interface CommunicationLogItem {
   channel: string;
   audience: string;
   subject: string;
+  body?: string;
   recipientCount: number;
 }
 
@@ -871,6 +873,7 @@ export function PlanningAndModulesView({
   const [commChannel, setCommChannel] = useState('E-mail + Notification CFitness OS');
   const [commSubject, setCommSubject] = useState('');
   const [commBody, setCommBody] = useState('');
+  useLeadDraftGuard(!!commSubject || !!commBody);
   const [commLogs, setCommLogs] = useState<CommunicationLogItem[]>([
     {
       id: 'com-1',
@@ -5428,7 +5431,7 @@ export function PlanningAndModulesView({
               MC09 • Communication collective & relances équipes (COM01)
             </div>
             <h1 className="text-xl font-bold mt-1">
-              Marketing interne & Communication RH
+              Communication RH
             </h1>
           </div>
           <span className="cf-mono text-xs px-3 py-1 rounded-btn bg-pink-500/15 text-pink-200">
@@ -5439,7 +5442,8 @@ export function PlanningAndModulesView({
         {renderFeedbackBanner()}
 
         <div className="cf-card p-4 space-y-3 text-xs">
-          <h2 className="font-semibold text-sm">Nouvel envoi collectif ciblé (COM01)</h2>
+          <h2 className="font-semibold text-sm">Préparer une communication</h2>
+          <p role="status" className="cf-muted">Aperçu uniquement : aucun message n’est envoyé ni enregistré sur le serveur. La diffusion aux collaborateurs reste à raccorder.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="cf-muted block mb-1">Destinataires autorisés</label>
@@ -5494,40 +5498,40 @@ export function PlanningAndModulesView({
               setCommLogs((p) => [
                 {
                   id: `com-${Date.now()}`,
-                  date: '2026-11-14 (à l’instant)',
+                  date: new Date().toLocaleString('fr-FR'),
                   channel: commChannel,
                   audience: commAudience,
                   subject: commSubject.trim(),
+                  body: commBody.trim(),
                   recipientCount: dashboard.visibleEmployees.length,
                 },
                 ...p,
               ]);
-              setCommSubject('');
-              setCommBody('');
               setModuleFeedback({
                 kind: 'ok',
-                text: `Campagne diffusée en bac à sable vers « ${commAudience} ».`,
+                text: `Aperçu préparé pour « ${commAudience} ». Aucun message envoyé.`,
               });
             }}
             className="cf-brand-gradient text-white px-4 py-2 rounded-btn font-semibold flex items-center gap-1.5"
           >
             <Send className="w-4 h-4" />
-            Diffuser la communication
+            Prévisualiser la communication
           </button>
         </div>
 
         <div className="cf-card p-4 space-y-2.5 text-xs">
-          <h2 className="font-semibold text-sm">Historique des diffusions</h2>
+          <h2 className="font-semibold text-sm">Exemples et aperçus de cette session</h2>
           {commLogs.map((l) => (
             <div key={l.id} className="cf-card-secondary p-3 flex flex-wrap justify-between gap-2">
               <div>
                 <div className="font-semibold">{l.subject}</div>
+                {l.body && <p className="whitespace-pre-wrap mt-2">{l.body}</p>}
                 <div className="cf-muted">
                   {l.date} · {l.channel} · Cible : {l.audience}
                 </div>
               </div>
               <span className="cf-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300">
-                {l.recipientCount} destinataire(s)
+                Destinataires à confirmer
               </span>
             </div>
           ))}
