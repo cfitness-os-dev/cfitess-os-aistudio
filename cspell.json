@@ -172,12 +172,19 @@
     "ratelimit",
     "hdrs",
     "bodypump",
-    "idemp"
+    "idemp",
+    "Arret",
+    "taskkill",
+    "WINDOWTITLE",
+    "github",
+    "reduire",
+    "fenetres"
   ],
   "ignorePaths": [
     "node_modules/**",
     "dist/**",
     "target/**",
-    "public/references/**"
+    "public/references/**",
+    "*.bat"
   ]
 }

@@ -372,6 +372,7 @@ async fn only_approved_absences_in_the_active_club_affect_commercial_assignment(
     let s = state();
     leave(&s, "available", "emp-maxime", "club-carre-soie").await;
     let mut db = s.db.write().await;
+    db.lead_prospects.clear();
     assert_eq!(
         crate::routes::resolve_available_commercial_for_club(&db, "carre-de-soie"),
         "emp-maxime"
