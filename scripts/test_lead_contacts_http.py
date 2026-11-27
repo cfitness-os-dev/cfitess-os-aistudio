@@ -7,7 +7,7 @@ def main():
     with socket.socket() as sock:sock.bind(("127.0.0.1",0));port=sock.getsockname()[1]
     base=f"http://127.0.0.1:{port}"
     with tempfile.TemporaryDirectory(prefix="lead-contacts-http-",dir=os.environ["TMPDIR"]) as folder:
-        env={k:os.environ[k] for k in ("PATH","TMPDIR","HOME","LANG") if k in os.environ}
+        env={k:os.environ[k] for k in ("PATH","TMPDIR","HOME","LANG","SYSTEMROOT","SystemRoot") if k in os.environ}
         env.update(CFITNESS_ENV="demo",CFITNESS_DEMO_MODE="1",CFITNESS_STRICT_SESSION="1",
             CFITNESS_BIND_ADDR=f"127.0.0.1:{port}",CFITNESS_DATA_DIR=folder,
             CFITNESS_HEITZ_LIVE_READS_ENABLED="0",CFITNESS_HEITZ_WORKER="0",CFITNESS_AUTOMATION_SCHEDULER="0",
@@ -58,10 +58,12 @@ def main():
             checks.append("commercial creation, independent admin reread, exact goal/notes, qualified assignment, bearer and cross-club denial")
             bey=command(clubId="beynost",phone="0600000994",email="bey-http@example.invalid")
             assert call("POST","/api/lead/contacts",m,bey)[0]==403
-            assert call("POST","/api/lead/contacts",c,bey)[0]==403
-            code,b=call("POST","/api/lead/contacts",a,bey);assert code==200,("Beynost admin creation",code,b)
+            code,b=call("POST","/api/lead/contacts",c,bey);assert code==200,("Beynost delegated commercial creation",code,b)
+            assert b["contact"]["canEdit"] is True
+            bey_patch={"operationId":secrets.token_hex(16),"expectedRevision":b["contact"]["revision"],"fields":{"notes":"Beynost delegated note"}}
+            assert call("PATCH","/api/lead/contacts/"+b["contact"]["id"],c,bey_patch)[0]==200
             assert b["contact"]["clubId"]=="beynost" and any(r["id"]==b["contact"]["id"] for r in workspace(a))
-            checks.append("Beynost admin creation succeeds; current Chloe employee-standard and Maxime no-write profile remain denied (commercial fixture configuration unresolved)")
+            checks.append("Beynost delegated employee-standard commercial creates/edits own club without RH elevation; Maxime remains denied in Beynost")
 
             assert call("POST","/api/lead/contacts",m,p)[1]["replayed"] is True
             changed={**p,"fields":{**p["fields"],"lastName":"Changed"}}

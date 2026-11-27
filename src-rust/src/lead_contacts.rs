@@ -35,13 +35,20 @@ pub struct Fields {
 pub struct Command { pub operation_id:String,#[serde(default)] pub expected_revision:Option<String>,pub fields:Fields }
 fn bad(message:&str)->Failure {err_resp(StatusCode::BAD_REQUEST,message)}
 fn site(club:&str)->Option<&'static str> {match club {"beynost"=>Some("club-beynost"),"carre-de-soie"=>Some("club-carre-soie"),_=>None}}
-fn write_scope(db:&AppDatabaseState,actor:&str,club:&str)->bool {
+fn write_scope(db:&AppDatabaseState,actor:&str,club:&str,action:&str)->bool {
     let Some(site)=site(club) else{return false;};
     let Some(emp)=db.employees.iter().find(|e|e.id==actor && e.active) else{return false;};
+    // An explicit Lead policy is authoritative, including view-only and other-club policies.
+    // Creating or editing a prospect must never grant RH privileges.
+    if db.module_delegations.iter().any(|d|d.employee_id==actor && d.module.eq_ignore_ascii_case("lead")) {
+      return crate::rbac::can_access_module_action(db,actor,Some(site),"lead",action)
+        || crate::rbac::can_access_module_action(db,actor,Some(site),"lead","write")
+        || crate::rbac::can_access_module_action(db,actor,Some(site),"lead","edit");
+    }
     actor_has_lead_admin_write_on_club(db,actor,club) || emp.site_accesses.iter().any(|a|a.site_id==site && a.profile_id=="planificateur_standard")
 }
 pub fn can_edit(db:&AppDatabaseState,actor:&str,p:&LeadProspectRecord)->bool {
-    write_scope(db,actor,&p.club_id) && (actor_has_lead_admin_write_on_club(db,actor,&p.club_id)
+    write_scope(db,actor,&p.club_id,"update") && (actor_has_lead_admin_write_on_club(db,actor,&p.club_id)
       || p.assigned_to_id.as_deref()==Some(actor)
       || db.lead_contacts.details.get(&p.id).is_some_and(|d|d.created_by==actor))
 }
@@ -125,7 +132,7 @@ pub async fn create(State(s):State<SharedState>,h:HeaderMap,Json(c):Json<Command
     let actor=actor(&s,&h).await?;operation(&c)?;
     let club=c.fields.club_id.as_deref().ok_or_else(||bad("Choisissez un club."))?;
     let mut db=s.db.write().await;
-    if !write_scope(&db,&actor,club){return Err(err_resp(StatusCode::FORBIDDEN,"Vous ne pouvez pas créer de prospect dans ce club."));}
+    if !write_scope(&db,&actor,club,"create"){return Err(err_resp(StatusCode::FORBIDDEN,"Vous ne pouvez pas créer de prospect dans ce club."));}
     let key=format!("{actor}:{}",c.operation_id);let hash=fingerprint("create","",&c);
     if let Some(receipt)=db.lead_contacts.receipts.get(&key) {
       if receipt.fingerprint!=hash{return Err(err_resp(StatusCode::CONFLICT,"Cet enregistrement a déjà été utilisé pour une autre saisie."));}
