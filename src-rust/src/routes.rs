@@ -4204,15 +4204,22 @@ pub(crate) fn actor_has_lead_admin_write_on_club(db: &AppDatabaseState, actor_id
     })
 }
 
-fn actor_has_lead_rdv_write_on_club(db: &AppDatabaseState, actor_id: &str, club_id: &str) -> bool {
+pub(crate) fn actor_has_lead_rdv_write_on_club(db: &AppDatabaseState, actor_id: &str, club_id: &str) -> bool {
     let Some(emp) = db.employees.iter().find(|e| e.id == actor_id) else {
         return false;
     };
     if emp.site_accesses.iter().any(|sa| sa.profile_id == "admin_systeme") {
         return true;
     }
+    let norm_club = site_id_to_club_id(club_id);
+    if crate::rbac::can_access_module_action(db, actor_id, Some(norm_club), "lead", "write")
+        || crate::rbac::can_access_module_action(db, actor_id, Some(norm_club), "lead", "update")
+        || crate::rbac::can_access_module_action(db, actor_id, Some(norm_club), "lead", "*")
+    {
+        return true;
+    }
     emp.site_accesses.iter().any(|sa| {
-        site_id_to_club_id(&sa.site_id) == club_id
+        site_id_to_club_id(&sa.site_id) == norm_club
             && matches!(
                 sa.profile_id.as_str(),
                 "master_avance" | "planificateur_avance" | "planificateur_standard"
@@ -7416,5 +7423,40 @@ mod tests {
         );
 
         server_handle.abort();
+    }
+
+    #[tokio::test]
+    async fn lead_rdv_write_permissions_and_delegation_scope() {
+        let db = crate::seed::create_initial_seed_state();
+
+        // 1. Chloé dispose d'une délégation explicite Lead sur Beynost dans le seed
+        assert!(actor_has_lead_rdv_write_on_club(&db, "emp-chloe", "beynost"));
+        assert!(actor_has_lead_rdv_write_on_club(&db, "emp-chloe", "club-beynost"));
+        // Mais n'a aucun droit d'écriture RDV sur Carré de Soie
+        assert!(!actor_has_lead_rdv_write_on_club(&db, "emp-chloe", "carre-de-soie"));
+        assert!(!actor_has_lead_rdv_write_on_club(&db, "emp-chloe", "club-carre-soie"));
+
+        // 2. Maxime a les droits sur Carré de Soie par son profil planificateur_standard
+        assert!(actor_has_lead_rdv_write_on_club(&db, "emp-maxime", "carre-de-soie"));
+        // Mais n'a pas les droits sur Beynost (employe_standard sans délégation)
+        assert!(!actor_has_lead_rdv_write_on_club(&db, "emp-maxime", "beynost"));
+
+        // 3. Karim (coach employe_standard) n'a pas les droits d'écriture RDV sans délégation
+        assert!(!actor_has_lead_rdv_write_on_club(&db, "emp-karim", "carre-de-soie"));
+        assert!(!actor_has_lead_rdv_write_on_club(&db, "emp-karim", "beynost"));
+        // Greg a le profil master_avance sur les deux clubs et peut donc saisir des RDVs
+        assert!(actor_has_lead_rdv_write_on_club(&db, "emp-greg", "carre-de-soie"));
+        assert!(actor_has_lead_rdv_write_on_club(&db, "emp-greg", "beynost"));
+
+        // 4. Admin a les droits sur tous les clubs
+        assert!(actor_has_lead_rdv_write_on_club(&db, "emp-mario", "carre-de-soie"));
+        assert!(actor_has_lead_rdv_write_on_club(&db, "emp-mario", "beynost"));
+        assert!(actor_has_lead_rdv_write_on_club(&db, "emp-daniel", "carre-de-soie"));
+        assert!(actor_has_lead_rdv_write_on_club(&db, "emp-daniel", "beynost"));
+
+        // 5. Révocation de la délégation -> refus immédiat pour Chloé sur Beynost
+        let mut db_revoked = db.clone();
+        db_revoked.module_delegations.retain(|d| d.employee_id != "emp-chloe");
+        assert!(!actor_has_lead_rdv_write_on_club(&db_revoked, "emp-chloe", "beynost"));
     }
 }
