@@ -224,7 +224,7 @@
       "module": "RH responsable",
       "screen": "Pointages et temps de travail",
       "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
-      "detailVisualReview": "état vide observé ; formulaire annotation dépliable implémenté mais non contrôlé faute de pointages fictifs dans cette copie",
+      "detailVisualReview": "fixture locale : annotation enregistrée/rechargée, heure originale conservée ; mobile390 dernier bouton dégagé après défilement, tablette768 et repli Espace contrôlés ; aucune badgeuse/caméra réelle",
       "functionalParity": "non certifiée par ce lot"
     },
     {
