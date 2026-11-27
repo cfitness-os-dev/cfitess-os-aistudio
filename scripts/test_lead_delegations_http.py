@@ -6,7 +6,7 @@ def main():
     with socket.socket() as sock:sock.bind(("127.0.0.1",0));port=sock.getsockname()[1]
     base=f"http://127.0.0.1:{port}"
     with tempfile.TemporaryDirectory(prefix="lead-delegation-http-",dir=os.environ["TMPDIR"]) as folder:
-        env={k:os.environ[k] for k in ("PATH","HOME","LANG","TMPDIR") if k in os.environ}
+        env={k:os.environ[k] for k in ("PATH","HOME","LANG","TMPDIR","SYSTEMROOT","SystemRoot") if k in os.environ}
         env.update(CFITNESS_ENV="demo",CFITNESS_DEMO_MODE="1",CFITNESS_STRICT_SESSION="1",
             CFITNESS_BIND_ADDR=f"127.0.0.1:{port}",CFITNESS_DATA_DIR=folder,
             CFITNESS_HEITZ_LIVE_READS_ENABLED="0",CFITNESS_HEITZ_WORKER="0",CFITNESS_AUTOMATION_SCHEDULER="0",
