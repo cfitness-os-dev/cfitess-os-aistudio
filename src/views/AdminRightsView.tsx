@@ -52,7 +52,7 @@ type AdminTab =
   | 'audit'
   | 'backup';
 
-type DelegationModuleId = 'finances' | 'reports' | 'recovery' | 'stocks';
+type DelegationModuleId = 'finances' | 'reports' | 'recovery' | 'stocks' | 'lead';
 type DelegationActionId = 'view' | 'edit' | 'export';
 
 interface ModuleDelegationRecord {
@@ -67,6 +67,7 @@ const DELEGATION_MODULES: Array<{ id: DelegationModuleId; label: string }> = [
   { id: 'reports', label: 'Rapports & Exports' },
   { id: 'recovery', label: 'Recouvrement impayés' },
   { id: 'stocks', label: 'Stocks & Achats' },
+  { id: 'lead', label: 'CRM & Prospects Lead' },
 ];
 
 const DELEGATION_ACTIONS: Array<{ id: DelegationActionId; label: string }> = [
