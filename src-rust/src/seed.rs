@@ -2,7 +2,7 @@ use crate::models::{
     AmbiguityRecord, AppDatabaseState, AuditEvent, ContractSummary, Employee, EmployeeCounter,
     EmployeeSiteAccess, LeadActivityRecord, LeadAppointmentRecord, LeadFormFieldRecord,
     LeadFormRecord, LeadFormSampleResponseRecord, LeadProspectRecord, LeaveRequest,
-    NotificationPrefs, OrchestratorDecisionRecord, Organization, Position, PurchaseOrderRecord, RecoveryCaseRecord, RoleProfile, SensitiveBankInfo,
+    ModuleDelegation, NotificationPrefs, OrchestratorDecisionRecord, Organization, Position, PurchaseOrderRecord, RecoveryCaseRecord, RoleProfile, SensitiveBankInfo,
     Shift, Site, SiteHrSettings, SiteKpis, StockItemRecord, MaintenanceTicketRecord, MissionRecord, Team, TimeclockAnomaly, UserPreferences,
 };
 use std::collections::HashMap;
@@ -1973,7 +1973,19 @@ pub fn create_initial_seed_state() -> AppDatabaseState {
         recovery_authorized_employee_ids: vec!["emp-greg".into()],
         stock_authorized_employee_ids: vec![],
         reports_authorized_employee_ids: vec![],
-        module_delegations: vec![],
+        module_delegations: vec![
+            ModuleDelegation {
+                employee_id: "emp-chloe".into(),
+                site_id: "club-beynost".into(),
+                module: "lead".into(),
+                actions: vec![
+                    "create".into(),
+                    "update".into(),
+                    "write".into(),
+                    "view".into(),
+                ],
+            },
+        ],
         password_hashes_by_employee: HashMap::new(),
         recovery_cases: default_demo_recovery_cases(),
         recovery_evidence: Default::default(),
