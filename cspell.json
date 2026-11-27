@@ -187,7 +187,9 @@
     "fileno",
     "rebalance",
     "rebalancing",
-    "rebalanced"
+    "rebalanced",
+    "SYSTEMROOT",
+    "Delegue"
   ],
   "ignorePaths": [
     "node_modules/**",
