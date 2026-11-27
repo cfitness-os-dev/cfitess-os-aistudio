@@ -189,7 +189,9 @@
     "rebalancing",
     "rebalanced",
     "SYSTEMROOT",
-    "Delegue"
+    "Delegue",
+    "clôturables",
+    "réouverte"
   ],
   "ignorePaths": [
     "node_modules/**",
