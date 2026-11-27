@@ -55,7 +55,7 @@ function Documents({actorId,clubId,personal}:{actorId:string;clubId:string;perso
     <button disabled={busy} className={button} onClick={()=>void run(()=>reload())}>Actualiser les documents</button>
     {!data&&!error&&<p role="status">Chargement des documents…</p>}
     {data&&<>
-      {(personal?data.canUpload:data.employees.length>0)&&<section className="cf-card p-4 space-y-3"><h3 className="font-bold flex gap-2 items-center"><Upload size={16}/>Importer un fichier</h3>
+      {(personal?data.canUpload:data.employees.length>0)&&<details className="cf-card p-4 space-y-3"><summary className="cursor-pointer font-semibold"><Upload size={16} className="inline mr-2"/>Ajouter un document</summary>
         <fieldset disabled={busy} className="space-y-3">
           {!personal&&<label className="block text-sm">Collaborateur<select className="cf-input w-full p-3 mt-1" value={employee} onChange={e=>setEmployee(e.target.value)}><option value="">Choisir un collaborateur</option>{data.employees.map(e=><option key={e.id} value={e.id} disabled={!e.canUpload}>{e.name}{!e.canUpload?' (import indisponible)':''}</option>)}</select></label>}
           <label className="block text-sm">Titre du document<input className="cf-input w-full p-3 mt-1" maxLength={160} value={title} onChange={e=>setTitle(e.target.value)}/></label>
@@ -66,7 +66,7 @@ function Documents({actorId,clubId,personal}:{actorId:string;clubId:string;perso
           <button className="cf-brand-gradient text-white p-3 rounded-lg disabled:opacity-50" disabled={!file||!title.trim()||(!personal&&!employee)} onClick={()=>void upload()}>Importer dans le dossier RH</button>
           {(file||title)&&<button className={button+' ml-2'} onClick={()=>{setTitle('');setFile(null);operation.current=null;if(fileInput.current)fileInput.current.value='';}}>Annuler la saisie</button>}
         </fieldset>
-      </section>}
+      </details>}
       <section className="cf-card p-4 space-y-3"><h3 className="font-bold">Documents récents</h3>
         <div className="grid sm:grid-cols-2 gap-3">
           <label className="block text-sm">Rechercher sur cette page<input className="cf-input w-full p-3 mt-1" value={search} onChange={e=>setSearch(e.target.value)}/></label>

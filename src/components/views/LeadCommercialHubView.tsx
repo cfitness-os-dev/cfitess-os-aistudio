@@ -1,6 +1,8 @@
+import { Settings } from 'lucide-react';
+import { WorkspaceNavigation } from '../WorkspaceNavigation';
 import { LeadContactEditor } from '../LeadContactEditor';
 import { validateLeadSnapshot } from '../../domain/leadProspectSnapshot';
-import { LeadWorkspaceNavigation, type LeadWorkspacePage } from '../LeadWorkspaceNavigation';
+import { LeadWorkspaceNavigation, leadWorkspacePageLabel, readLeadWorkspacePage, type LeadWorkspacePage } from '../LeadWorkspaceNavigation';
 import { LeadCommunicationsHistoryView } from "./LeadCommunicationsHistoryView";
 import { LeadCampaignsView } from "./LeadCampaignsView";
 import { confirmLeadDraftNavigation } from "../../domain/leadDraftGuard";
@@ -248,6 +250,11 @@ function mapAppRoleToLeadRole(role: string): LeadRole {
   return 'commercial';
 }
 
+function leadHubDestination(page: LeadWorkspacePage): LeadHubTab {
+  return ['models', 'campaigns', 'utm', 'scenarios', 'logs'].includes(page) ? 'communication'
+    : ['stats', 'sales', 'forms'].includes(page) ? 'analytics_forms' : page as LeadHubTab;
+}
+
 export function LeadCommercialHubView({
   pipelineChildren,
   subTarget,
@@ -418,7 +425,7 @@ export function LeadCommercialHubView({
   const [clubProfileSavedNotice, setClubProfileSavedNotice] = useState<{ text: string; error: boolean } | null>(null);
 
   const [activeTab, setActiveTabState] = useState<LeadHubTab>(() =>
-    subTarget === 'lead-traceability' ? 'traceability' : 'prospects'
+    subTarget === 'lead-traceability' ? 'traceability' : leadHubDestination(readLeadWorkspacePage(window.location.search, isTechnicalMode))
   );
   const setActiveTab = (tab:LeadHubTab) => { if(tab===activeTab || confirmLeadDraftNavigation(()=>setActiveTabState(tab))) setActiveTabState(tab); };
   const [simulatedRole, setSimulatedRole] = useState<LeadRole>(() =>
@@ -593,9 +600,9 @@ export function LeadCommercialHubView({
   const [waExplicitSave, setWaExplicitSave] = useState(false);
 
   // Tab 6 : Communication
-  const [commSubTab, setCommSubTab] = useState<'models' | 'campaigns' | 'utm' | 'scenarios' | 'logs'>('models');
+  const [commSubTab, setCommSubTab] = useState<'models' | 'campaigns' | 'utm' | 'scenarios' | 'logs'>(() => { const page = readLeadWorkspacePage(window.location.search, isTechnicalMode); return ['models', 'campaigns', 'utm', 'scenarios', 'logs'].includes(page) ? page as 'models' | 'campaigns' | 'utm' | 'scenarios' | 'logs' : 'models'; });
   // Tab 7 : Statistiques, Ventes & Formulaires
-  const [analyticsSubTab, setAnalyticsSubTab] = useState<'stats' | 'sales' | 'forms'>('stats');
+  const [analyticsSubTab, setAnalyticsSubTab] = useState<'stats' | 'sales' | 'forms'>(() => { const page = readLeadWorkspacePage(window.location.search, isTechnicalMode); return ['stats', 'sales', 'forms'].includes(page) ? page as 'stats' | 'sales' | 'forms' : 'stats'; });
   const [statsPeriodId, setStatsPeriodId] = useState<string>('current_month');
   const [ignoreArchivedStats, setIgnoreArchivedStats] = useState(true);
   const [compareToPreviousYear, setCompareToPreviousYear] = useState(true);
@@ -628,7 +635,7 @@ export function LeadCommercialHubView({
   const [formAccessMessage, setFormAccessMessage] = useState<string | null>(null);
 
   // Tab 8 : Paramètres (14 rubriques) & Webhook testeur
-  const [selectedSettingsTab, setSelectedSettingsTab] = useState<string>('partners');
+  const [selectedSettingsTab, setSelectedSettingsTab] = useState<string>(() => { const requested = new URLSearchParams(window.location.search).get('leadSetting'); return LEAD_SETTINGS_TABS_14.some(tab => tab.id === requested) ? requested! : 'partners'; });
   const [webhookEmail, setWebhookEmail] = useState('prospect.webhook@exemple.fr');
   const [webhookOffer, setWebhookOffer] = useState('Pass Découverte Biocircuit 7j');
   const [webhookResultText, setWebhookResultText] = useState<string | null>(null);
@@ -862,9 +869,14 @@ export function LeadCommercialHubView({
 
   const activePage: LeadWorkspacePage = activeTab === 'communication' ? commSubTab
     : activeTab === 'analytics_forms' ? analyticsSubTab : activeTab;
-  const destination = (page: LeadWorkspacePage): LeadHubTab =>
-    ['models', 'campaigns', 'utm', 'scenarios', 'logs'].includes(page) ? 'communication'
-      : ['stats', 'sales', 'forms'].includes(page) ? 'analytics_forms' : page as LeadHubTab;
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('leadPage', activePage);
+    if (activePage === 'settings') url.searchParams.set('leadSetting', selectedSettingsTab);
+    else url.searchParams.delete('leadSetting');
+    window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+  }, [activePage, selectedSettingsTab]);
+  const destination = leadHubDestination;
   const selectPage = (page: LeadWorkspacePage) => {
     if (page === activePage) return;
     const apply = () => {
@@ -901,13 +913,13 @@ export function LeadCommercialHubView({
               </div>
             ) : (
               <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
-                Votre espace commercial
+                Prospection – Vente
               </div>
             )}
             <h1 className="text-base sm:text-lg font-extrabold mt-1">
               {isTechnicalMode
                 ? `Prospection – Vente Bi-Club, Communication Multicanal & Traçabilité Lead (${LEAD_AUDIT_META.totalFiles} fichiers)`
-                : 'Prospection'}
+                : leadWorkspacePageLabel(activePage)}
             </h1>
           </div>
 
@@ -3147,31 +3159,17 @@ export function LeadCommercialHubView({
                 <p>Impossible de charger les réglages : {settingsState.error}</p>
                 <button type="button" onClick={() => void settingsEditor.load()} className="px-3 py-2 rounded bg-emerald-700 text-white">Réessayer le chargement</button>
               </div>}
-              <div className="cf-card p-3 flex flex-wrap gap-1.5">
-                <label className="w-full sm:hidden">Rubrique des réglages
-                  <select aria-label="Rubrique des réglages" value={selectedSettingsTab}
-                    onChange={event => setSelectedSettingsTab(event.target.value)}
-                    className="w-full mt-2 p-3 rounded-lg bg-slate-900 border border-slate-700">
-                    {LEAD_SETTINGS_TABS_14.map(tab => <option key={tab.id} value={tab.id}>
-                      {LEAD_SETTINGS_PRESENTATION[tab.id]?.label ?? tab.label}
-                    </option>)}
-                  </select>
-                </label>
-                {LEAD_SETTINGS_TABS_14.map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setSelectedSettingsTab(tab.id)}
-                    className={`hidden sm:inline-flex px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border ${
-                      selectedSettingsTab === tab.id
-                        ? 'bg-emerald-600 text-white border-emerald-400'
-                        : 'bg-slate-900 border-slate-700 text-slate-300'
-                    }`}
-                  >
-                    {isTechnicalMode ? tab.label : LEAD_SETTINGS_PRESENTATION[tab.id]?.label ?? tab.label}
-                  </button>
-                ))}
-              </div>
+              <WorkspaceNavigation label="Rubriques des réglages de prospection"
+                activeId={selectedSettingsTab} onSelect={setSelectedSettingsTab}
+                items={LEAD_SETTINGS_TABS_14.map(tab => ({
+                  id: tab.id,
+                  label: isTechnicalMode ? tab.label : LEAD_SETTINGS_PRESENTATION[tab.id]?.label ?? tab.label,
+                  icon: Settings,
+                  group: ['app-settings', 'marketing', 'users'].includes(tab.id) ? 'Club et accès'
+                    : ['meetings', 'prospects', 'segments', 'script', 'sources', 'exclusions'].includes(tab.id) ? 'Parcours commercial'
+                      : ['sms', 'automation', 'notifications', 'whatsapp'].includes(tab.id) ? 'Messages et alertes'
+                        : 'Connexions',
+                }))} />
 
               <div className="cf-card p-4 space-y-4 text-xs">
                 {(() => {

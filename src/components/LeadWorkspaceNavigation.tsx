@@ -30,6 +30,16 @@ const GROUPS: Array<{ label: string; items: Array<{ id: LeadWorkspacePage; label
   ] },
 ];
 
+export function readLeadWorkspacePage(search: string, technicalMode: boolean): LeadWorkspacePage {
+  const requested = new URLSearchParams(search).get('leadPage');
+  const item = GROUPS.flatMap(group => group.items).find(item => item.id === requested);
+  return item && (technicalMode || !item.technical) ? item.id : 'prospects';
+}
+
+export function leadWorkspacePageLabel(page: LeadWorkspacePage): string {
+  return GROUPS.flatMap(group => group.items).find(item => item.id === page)?.label ?? 'Prospection';
+}
+
 export function LeadWorkspaceNavigation({ activePage, onSelect, canAccess, technicalMode }: {
   activePage: LeadWorkspacePage;
   onSelect: (page: LeadWorkspacePage) => void;

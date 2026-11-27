@@ -1,0 +1,371 @@
+{
+  "date": "2026-11-27",
+  "scope": "écrans métier principaux ; ne couvre pas encore toutes les modales et variantes",
+  "globalStatus": "EN_COURS — aucune déclaration de finition à 100 %",
+  "screens": [
+    {
+      "module": "Lead",
+      "screen": "Prospects",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Lead",
+      "screen": "Activités",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Lead",
+      "screen": "Planning des rendez-vous",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Lead",
+      "screen": "Messagerie",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Lead",
+      "screen": "Modèles de messages",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Lead",
+      "screen": "Campagnes",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Lead",
+      "screen": "Scénarios",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "éditeur desktop observé, brouillon fictif sauvegardé, variable métier insérée puis vérifiée ; options avancées dépliables",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Lead",
+      "screen": "Suivi des campagnes",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Lead",
+      "screen": "Historique des échanges",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Lead",
+      "screen": "Statistiques",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Lead",
+      "screen": "Ventes",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Lead",
+      "screen": "Formulaires",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Lead",
+      "screen": "Paramètres de prospection",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Réglages Lead",
+      "screen": "Préférences",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Réglages Lead",
+      "screen": "Crédits SMS",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Réglages Lead",
+      "screen": "Profil du club",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Réglages Lead",
+      "screen": "Utilisateurs et droits",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Réglages Lead",
+      "screen": "Rendez-vous",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Réglages Lead",
+      "screen": "Messages automatiques",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Réglages Lead",
+      "screen": "Gestion des prospects",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "desktop/mobile observés ; rechargement conserve rubrique ; bouton dégagé du bandeau ; pas de réglage enregistré",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Réglages Lead",
+      "screen": "Segments",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Réglages Lead",
+      "screen": "Argumentaire de vente",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Réglages Lead",
+      "screen": "Sources des prospects",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Réglages Lead",
+      "screen": "Passage au statut client",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Réglages Lead",
+      "screen": "Notifications",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Réglages Lead",
+      "screen": "WhatsApp",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Réglages Lead",
+      "screen": "Connexions partenaires",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "RH responsable",
+      "screen": "Vue d’ensemble RH",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "RH responsable",
+      "screen": "Collaborateurs",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "RH responsable",
+      "screen": "Planning des équipes",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "RH responsable",
+      "screen": "Absences et disponibilités",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "RH responsable",
+      "screen": "Pointages et temps de travail",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "RH responsable",
+      "screen": "Documents et signatures",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "desktop observé ; liste avant saisie ; panneau Ajouter un document ouvert ; aucun fichier importé",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "RH responsable",
+      "screen": "Préparation de paie",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "RH responsable",
+      "screen": "Pilotage et missions",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "RH responsable",
+      "screen": "Communication RH",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "RH responsable",
+      "screen": "Réglages RH",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "RH responsable",
+      "screen": "Organisation et droits",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "RH responsable",
+      "screen": "Recrutement et intégrations",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "RH responsable",
+      "screen": "Mes préférences",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Mon compte",
+      "screen": "Ma journée",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Mon compte",
+      "screen": "Mes notifications",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Mon compte",
+      "screen": "Mon dossier",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Mon compte",
+      "screen": "Mon planning",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Mon compte",
+      "screen": "Mes absences",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Mon compte",
+      "screen": "Mes compteurs",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Mon compte",
+      "screen": "Mes documents",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Mon compte",
+      "screen": "Mes formations",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Mon compte",
+      "screen": "Mes contrôles",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Mon compte",
+      "screen": "Mes pointages",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "Mon compte",
+      "screen": "Mes préférences",
+      "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
+      "detailVisualReview": "à terminer écran par écran",
+      "functionalParity": "non certifiée par ce lot"
+    },
+    {
+      "module": "CRM Heitz",
+      "screen": "Liste et dossier de consultation",
+      "sharedPresentation": "titre et confidentialité simplifiés ; liste puis fiche mobile/tablette avec retour",
+      "detailVisualReview": "exemples fictifs importés localement ; recherche, sélection et retour contrôlés ; aucune opération dans Heitz",
+      "functionalParity": "reste conditionnée à l’API documentée et aux accès web vérifiés"
+    }
+  ]
+}
