@@ -61,3 +61,10 @@
 ## Critère de fin
 
 Pour chaque option retenue : référence source, écran cible, droit/club, lecture/écriture réelle ou simulation, règle de gestion, scénario de réussite, scénario de refus/échec, preuve et version testée. Une option non observée reste à vérifier ; une connexion désactivée volontairement n’est pas annoncée comme opérationnelle. Les comptes, appareils et accords du fournisseur nécessaires aux essais réels restent à obtenir avant le pilote.
+
+
+## Complément du 27 novembre : contacts Lead persistants
+
+Le lot de création/édition/étape/reprise contrôlée est documenté dans docs/lead-contacts-partages-recette-2026-11-27.md. Les nouvelles écritures passent au serveur, avec révision, opération rejouable et refus sans faux succès. La recette HTTP et les formulaires ordinateur/mobile/tablette ont été exercés en environnement fictif. Cela ne rend pas persistants les segments en masse, l’ancien planning simulé ou les autres intégrations.
+
+Écart explicite avant pilote : Chloé est affichée Commerciale mais possède un profil serveur salarié simple à Beynost, sans droit d’écriture Lead selon la règle existante ; refus 403 conservé et signalé à Antigravity. Il faut une habilitation commerciale explicite par salarié/club, sans donner l’administration RH. Le nombre de tests ne remplace pas cette réception métier.

@@ -1,3 +1,4 @@
+import { LeadContactEditor } from '../LeadContactEditor';
 import {LeadProspectScenariosPanel} from './LeadProspectScenariosPanel';
 import {confirmLeadDraftNavigation} from '../../domain/leadDraftGuard';
 import React, { useState } from 'react';
@@ -78,6 +79,9 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStageFilter, setSelectedStageFilter] = useState<ProspectStage | 'ALL'>('ALL');
   const [showNewModal, setShowNewModal] = useState(false);
+  const [editingShared,setEditingShared]=useState<Prospect|null>(null);
+  const [isCreating,setIsCreating]=useState(false);
+  const [createError,setCreateError]=useState('');
   const [convertingProspect, setConvertingProspect] = useState<Prospect | null>(null);
   const [selectedFormula, setSelectedFormula] = useState<string>(CFITNESS_SUBSCRIPTION_FORMULAS[0]);
   const [sponsorMemberId, setSponsorMemberId] = useState<string>('');
@@ -105,12 +109,10 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const allowedClubIds: ClubId[] =
-    currentUser.role === 'admin'
-      ? ['carre-de-soie', 'beynost']
-      : currentUser.siteAssignments?.length
-      ? currentUser.siteAssignments.map((sa) => sa.clubId)
-      : [currentUser.clubId];
+  const allowedClubIds: ClubId[] = React.useMemo(()=>
+    currentUser.role==='admin'?['carre-de-soie','beynost']:
+      currentUser.siteAssignments?.length?currentUser.siteAssignments.map(sa=>sa.clubId):[currentUser.clubId],
+    [currentUser.role,currentUser.siteAssignments,currentUser.clubId]);
 
   const [clubId, setClubId] = useState<ClubId>(() => {
     if (clubFilter !== 'all' && allowedClubIds.includes(clubFilter)) {
@@ -120,12 +122,9 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
   });
 
   React.useEffect(() => {
-    if (clubFilter !== 'all' && allowedClubIds.includes(clubFilter)) {
-      setClubId(clubFilter);
-    } else if (!allowedClubIds.includes(clubId) && allowedClubIds[0]) {
-      setClubId(allowedClubIds[0]);
-    }
-  }, [clubFilter, allowedClubIds, clubId]);
+    setClubId(previous=>clubFilter!=='all' && allowedClubIds.includes(clubFilter)?clubFilter:
+      allowedClubIds.includes(previous)?previous:allowedClubIds[0]??'carre-de-soie');
+  }, [clubFilter, allowedClubIds]);
 
   const [source, setSource] = useState<Prospect['source']>('Tablette accueil');
   const [goal, setGoal] = useState('Remise en forme & Biocircuit Technogym');
@@ -154,6 +153,8 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if(isCreating)return;
+    setIsCreating(true);setCreateError('');
     const res = await createProspect({
       firstName,
       lastName,
@@ -165,7 +166,9 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
       rgpdConsent,
     });
 
+    setIsCreating(false);
     if (!res.ok) {
+      setCreateError(res.message);
       setFeedbackBanner({
         type: 'warn',
         text: res.message,
@@ -242,7 +245,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
       pipelineChildren={
         <div className="space-y-4">
           <LeadConversionStatsBar
-            key={currentUser.id + ':' + clubFilter + ':' + poolRevision}
+            key={currentUser.id + ':' + clubFilter + ':' + poolRevision + ':' + STAGES.map(stage=>prospects.filter(p=>p.stage===stage).length).join(':')}
             clubId={clubFilter}
             employees={employees}
             canRebalance={canManageSelectedClub}
@@ -616,9 +619,9 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
 
 
             {/* HubSpot 3-Column CRM Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 text-xs">
+            <div className="grid grid-cols-1 2xl:grid-cols-12 gap-4 text-xs">
               {/* LEFT PANE (3 cols): "À propos de ce contact" (HubSpot Properties) */}
-              <div className="lg:col-span-3 bg-white border border-slate-300 rounded-lg p-4 space-y-4">
+              <div className="2xl:col-span-3 min-w-0 bg-white border border-slate-300 rounded-lg p-4 space-y-4">
                 <div className="flex items-center gap-3 pb-3 border-b border-slate-200">
                   <div className="w-11 h-11 rounded-full bg-[#FF7A59] text-white font-black text-base flex items-center justify-center shrink-0">
                     {selectedHubspotProspect.firstName[0]}
@@ -667,6 +670,11 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                   </button>
                 </div>
 
+                <button type="button" disabled={selectedHubspotProspect.canEdit!==true || !selectedHubspotProspect.serverRevision}
+                  onClick={()=>setEditingShared({...selectedHubspotProspect})}
+                  className="w-full min-h-11 px-3 py-2 rounded-lg bg-violet-600 text-white font-semibold disabled:opacity-40">
+                  Modifier le prospect
+                </button>
                 {/* HubSpot Property Fields */}
                 <div className="space-y-2.5">
                   <div className="font-extrabold uppercase tracking-wider text-[10px] text-slate-500">
@@ -728,7 +736,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
               </div>
 
               {/* CENTER PANE (5 cols): HubSpot Activity Timeline ("Activités, Appels, SMS & Notes") */}
-              <div className="lg:col-span-5 bg-white border border-slate-300 rounded-lg p-4 space-y-4">
+              <div className="2xl:col-span-5 min-w-0 bg-white border border-slate-300 rounded-lg p-4 space-y-4">
                 <div className="border-b border-slate-200 pb-2.5 flex items-center justify-between">
                   <span className="font-extrabold text-slate-900">
                     Chronologie d&apos;activité &amp; relances
@@ -798,7 +806,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
               </div>
 
               {/* RIGHT PANE (4 cols): HubSpot Deals & Direct Heitz Membership Conversion */}
-              <div className="lg:col-span-4 bg-white border border-slate-300 rounded-lg p-4 space-y-4">
+              <div className="2xl:col-span-4 min-w-0 bg-white border border-slate-300 rounded-lg p-4 space-y-4">
                 <div className="border-b border-slate-200 pb-2.5 font-extrabold text-slate-900">
                   Offres et adhésion
                 </div>
@@ -1062,6 +1070,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
               </button>
               <button
                 type="submit"
+                disabled={isCreating}
                 className="px-4 py-2 rounded-lg bg-[#017737] hover:bg-[#01632d] text-white font-semibold flex items-center gap-1.5 cursor-pointer"
               >
                 <BadgeCheck className="w-4 h-4" />
@@ -1072,17 +1081,18 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
         </div>
       )}
 
+      {editingShared&&<LeadContactEditor key={editingShared.id} prospect={editingShared} onClose={()=>setEditingShared(null)}/>}
       {/* Modal New Prospect */}
       {showNewModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
           <form
             onSubmit={handleCreateSubmit}
-            className="bg-white rounded-xl max-w-lg w-full p-5 border border-slate-200 shadow-lg space-y-4"
+            className="bg-white rounded-xl max-w-lg w-full max-h-[calc(100dvh-2rem)] overflow-y-auto p-5 border border-slate-200 shadow-lg space-y-4"
           >
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-slate-900">
                 Nouveau prospect
-              </h3><p className="cf-muted text-sm mt-2">Le prospect rejoint la liste partagée du club après confirmation de son enregistrement.</p>
+              </h3><p className="cf-muted text-sm order-3 basis-full">Le prospect rejoint la liste partagée du club après confirmation de son enregistrement.</p>
               <button
                 type="button"
                 onClick={() => setShowNewModal(false)}
@@ -1092,6 +1102,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
               </button>
             </div>
 
+            {createError && <p role="alert" className="text-rose-500 text-sm">{createError}</p>}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Prénom *</label>
@@ -1143,8 +1154,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                   onChange={(e) => setClubId(e.target.value as ClubId)}
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
                 >
-                  <option value="carre-de-soie">Carré de Soie (Vaulx-en-Velin)</option>
-                  <option value="beynost">Beynost (ZAC des Baterses)</option>
+                  {allowedClubIds.map(id=><option key={id} value={id}>{id==='beynost'?'Beynost (ZAC des Baterses)':'Carré de Soie (Vaulx-en-Velin)'}</option>)}
                 </select>
               </div>
               <div>
@@ -1197,7 +1207,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
                 type="submit"
                 className="px-4 py-2 rounded-lg bg-[#017737] hover:bg-[#01632d] text-white text-xs font-semibold cursor-pointer"
               >
-                Enregistrer le prospect
+                {isCreating?'Enregistrement…':'Enregistrer le prospect'}
               </button>
             </div>
           </form>

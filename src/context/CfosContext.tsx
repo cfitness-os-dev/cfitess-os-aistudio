@@ -1,5 +1,5 @@
 import { createLeadContactWriter, type LeadContactFields } from '../domain/leadContactWrites';
-import { reconcileLeadSnapshot, type LeadProspectSnapshot } from '../domain/leadProspectSnapshot';
+import { reconcileLeadSnapshot, reconcileConfirmedLeadContact, type LeadProspectSnapshot } from '../domain/leadProspectSnapshot';
 import { clubStorage, authorizedClub, readClubSelection, rememberClubSelection } from '../domain/clubSelection';
 import { clientApi } from '../domain/clientApi';
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -336,6 +336,8 @@ interface CfosContextValue extends PersistedState {
     city?: string;
     birthDate?: string;
     comment?: string;
+    notes?: string;
+    address?: string;
     allowEmptyPhone?: boolean;
   }) => Promise<{ ok: boolean; message: string }>;
   updateProspect: (
@@ -357,7 +359,8 @@ interface CfosContextValue extends PersistedState {
         | 'segments'
       >
     >,
-    confirmation?: 'server-confirmed'
+    confirmation?: 'server-confirmed',
+    expectedRevision?: string
   ) => Promise<{ ok: boolean; message: string }>;
   assignSegmentToProspects: (prospectIds: string[], segmentName: string) => number;
   upsertServerProspects: (actorId:string,snapshot:LeadProspectSnapshot) => void;
@@ -1641,15 +1644,18 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
 
   const applySharedContact=(actorId:string,contact:Prospect)=>{
     if(leadActor.current!==actorId)throw new Error('Le compte a changé. Actualisez la liste avant de continuer.');
-    setState(prev=>leadActor.current!==actorId?prev:{...prev,
-      prospects:prev.prospects.some(p=>p.id===contact.id)?prev.prospects.map(p=>p.id===contact.id?contact:p):[contact,...prev.prospects]});
+    setState(prev=>{
+      if(leadActor.current!==actorId)return prev;
+      const next=reconcileConfirmedLeadContact(prev.prospects,prev.leadLocalContacts??[],contact);
+      return {...prev,prospects:next.prospects,leadLocalContacts:next.history};
+    });
   };
   const createProspect: CfosContextValue['createProspect'] = async (input) => {
     const actorId=currentUserId;
     try {
       const {clubId,allowEmptyPhone:_allowEmptyPhone,...fields}=input;
       const contact=await contactWriter.current!({actorId,siteId:'all'},{
-        clubId,fields:{...fields,notes:input.comment??'',address:[input.street,input.postalCode,input.city].filter(Boolean).join(' ')}});
+        clubId,fields:{...fields,notes:input.notes??input.comment??'',address:input.address??[input.street,input.postalCode,input.city].filter(Boolean).join(' ')}});
       applySharedContact(actorId,contact);
       notify('success','Prospect enregistré et partagé avec le club.');
       return {ok:true,message:'Prospect enregistré et partagé avec le club.'};
@@ -1659,7 +1665,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
       return {ok:false,message};
     }
   };
-  const updateProspect: CfosContextValue['updateProspect'] = async (prospectId, patch, confirmation) => {
+  const updateProspect: CfosContextValue['updateProspect'] = async (prospectId, patch, confirmation, expectedRevision) => {
     const actorId=currentUserId;
     if(confirmation==='server-confirmed'){
       // Verified transfer/rebalance invalidates the old revision until workspace reload.
@@ -1674,7 +1680,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Utilisez les actions de transfert ou de répartition pour changer le club ou le commercial.');
       const {clubId:_clubId,assignedToId:_assignedToId,...fields}=patch;
       const contact=await contactWriter.current!({actorId,siteId:'all'},{
-        clubId:target.clubId,target:{id:target.id,revision:target.serverRevision},fields:fields as LeadContactFields});
+        clubId:target.clubId,target:{id:target.id,revision:expectedRevision??target.serverRevision},fields:fields as LeadContactFields});
       applySharedContact(actorId,contact);
       notify('success','Dossier enregistré et partagé avec le club.');
       return {ok:true,message:'Dossier enregistré et partagé avec le club.'};

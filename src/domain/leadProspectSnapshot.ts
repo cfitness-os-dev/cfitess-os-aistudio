@@ -38,3 +38,11 @@ export function reconcileLeadSnapshot(previous:Prospect[],history:Prospect[],sna
   }
   return {prospects:[...previous.filter(r=>!scope.has(r.clubId)&&!ids.has(r.id)),...snapshot.prospects],history:historical};
 }
+
+/** Apply one confirmed write without treating other contacts in the club as deleted. */
+export function reconcileConfirmedLeadContact(previous:Prospect[],history:Prospect[],contact:Prospect){
+  const old=previous.find(p=>p.id===contact.id),older=old?JSON.stringify(old):null;
+  const keep=old && older!==JSON.stringify(contact) && !history.some(p=>JSON.stringify(p)===older);
+  return {prospects:old?previous.map(p=>p.id===contact.id?contact:p):[contact,...previous],
+    history:keep?[...history,old]:history};
+}

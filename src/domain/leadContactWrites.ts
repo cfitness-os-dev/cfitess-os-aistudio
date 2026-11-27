@@ -13,6 +13,18 @@ export interface LeadContactWrite {
 interface Command { operationId: string; expectedRevision?: string; fields: LeadContactFields & {clubId?: ClubId} }
 const object=(v:unknown):v is Record<string,unknown>=>!!v && typeof v==='object' && !Array.isArray(v);
 const revision=(v:unknown):v is string=>typeof v==='string' && /^[a-f0-9]{64}$/.test(v);
+function confirmedFields(contact:Prospect,fields:Command['fields']):boolean {
+  const normalizedPhone=(value:string)=>value.replace(/[\s.\-()]/g,'').replace(/^\+33/,'0');
+  return Object.entries(fields).every(([key,value])=>{
+    if(key==='clubId')return value===contact.clubId;
+    const actual=(contact as unknown as Record<string,unknown>)[key];
+    if(key==='segments')return Array.isArray(value) && Array.isArray(actual) &&
+      JSON.stringify(Array.from(new Set(value.map(v=>String(v).trim()))).sort())===JSON.stringify([...actual].sort());
+    if(key==='phone')return typeof value==='string' && typeof actual==='string' && normalizedPhone(value)===actual;
+    if(key==='email')return typeof value==='string' && value.trim().toLowerCase()===actual;
+    return typeof value==='string'?value.trim()===actual:value===actual;
+  });
+}
 const allowedFields=new Set(['firstName','lastName','phone','email','source','goal','notes','address','comment','gender','street','postalCode','city','birthDate','rgpdConsent','stage','leadStatus','segments']);
 
 export function validateContactAcknowledgment(value:unknown, actorId:string, clubId:ClubId, operationId:string, targetId?:string):Prospect {
@@ -69,6 +81,7 @@ export function createLeadContactWriter() {
       let value:unknown;try{value=await response.json();}catch{throw new Error('Le serveur n’a pas confirmé l’enregistrement. Votre saisie est conservée.');}
       if(!response.ok)throw new Error(object(value) && typeof value.error==='string'?value.error:'Enregistrement refusé. Votre saisie est conservée.');
       const contact=validateContactAcknowledgment(value,auth.actorId,input.clubId,sent.operationId,targetId);
+      if(!confirmedFields(contact,sent.fields))throw new Error('Le serveur a renvoyé des informations différentes de votre saisie. Vérifiez le dossier avant de réessayer.');
       pending.delete(key);return contact;
     })();
     inFlight.set(key,request);

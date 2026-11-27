@@ -83,3 +83,22 @@ test('missing session missing revision forbidden fields and empty patch never re
   assert.equal(calls,0);
  }finally{globalThis.fetch=original;}
 });
+
+test('a matching envelope with stale changed fields is not a confirmed save',async()=>{
+ const original=globalThis.fetch;
+ try{
+  globalThis.fetch=async(_url,init)=>new Response(JSON.stringify(ack(JSON.parse(String(init?.body)).operationId)));
+  await assert.rejects(createLeadContactWriter()(auth,{clubId,fields:{...fields,notes:'different requested note'}}),/informations différentes/);
+ }finally{globalThis.fetch=original;}
+});
+test('acknowledged normalized phone email and deduplicated segments match the submitted command',async()=>{
+ const original=globalThis.fetch;
+ try{
+  globalThis.fetch=async(_url,init)=>{
+    const body=JSON.parse(String(init?.body));
+    return new Response(JSON.stringify({...ack(body.operationId),contact:{...contact,email:'contact@example.invalid',segments:['Suivi']}}));
+  };
+  const p=await createLeadContactWriter()(auth,{clubId,fields:{...fields,phone:'+33 6 00 00 00 01',email:' CONTACT@EXAMPLE.INVALID ',segments:[' Suivi ','Suivi']}});
+  assert.equal(p.email,'contact@example.invalid');
+ }finally{globalThis.fetch=original;}
+});
