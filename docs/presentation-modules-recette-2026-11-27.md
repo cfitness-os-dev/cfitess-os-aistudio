@@ -36,4 +36,4 @@ La matrice n’est pas un certificat de finition. Campagnes, modèles à 12 bloc
 
 La page de connexion conserve des raccourcis et codes de démonstration existants. Ce lot n’est pas une homologation de l’authentification de production. La sélection d’un scénario individuel n’est pas conservée au rechargement ; sa rubrique et ses données enregistrées le sont. Les usages Heitz hors API disponible restent dans son interface, avec accès à configurer, aucun écran fonctionnel fictivement promis.
 
-Base PR #115 : intégrer et relire cette base avant ce complément. Le lot RH justificatifs privé non validé reste isolé dans sa branche précédente. Aucun déploiement ni fusion réalisé par Codex.
+Base PR #115 intégrée par le mainteneur dans main d8ab0bf ; fusion de main sans changement de code supplémentaire. Le lot RH justificatifs privé non validé reste isolé dans sa branche précédente. Aucun déploiement ni fusion réalisé par Codex.
