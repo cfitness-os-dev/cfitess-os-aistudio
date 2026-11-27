@@ -209,3 +209,15 @@ async fn generic_edit_alias_is_supported_but_read_and_export_do_not_write(){
  let id=v["contact"]["id"].as_str().unwrap();let rev=v["contact"]["revision"].as_str().unwrap();
  assert!(edit(&s,&h,id,patch("delegation-update-001",rev,json!({"notes":"Generic edit alias"}))).await.is_ok());finish(&s);
 }
+
+#[tokio::test]
+async fn multiple_lead_grants_are_order_independent_without_overriding_other_modules(){
+ let s=state();let h=headers(&s,"emp-maxime").await;
+ {let mut db=s.db.write().await;delegate(&mut db,"emp-maxime","carre-de-soie",&["view"]);
+  db.module_delegations.push(crate::models::ModuleDelegation{employee_id:"emp-maxime".into(),site_id:"club-carre-soie".into(),module:"lead".into(),actions:vec!["write".into()]});}
+ let v=send(&s,&h,command("multiple-grants-0001")).await.unwrap().0;assert_eq!(v["contact"]["canEdit"],true);
+ s.db.write().await.module_delegations.reverse();
+ let id=v["contact"]["id"].as_str().unwrap();let rev=v["contact"]["revision"].as_str().unwrap();
+ assert!(edit(&s,&h,id,patch("multiple-grants-0002",rev,json!({"notes":"Same rights after order change"}))).await.is_ok());
+ assert!(send(&s,&h,command("multiple-grants-0001")).await.unwrap().0["replayed"].as_bool().unwrap());finish(&s);
+}

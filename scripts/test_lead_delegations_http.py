@@ -78,6 +78,27 @@ def main():
             code,body=call("PATCH","/api/lead/appointments/"+slot["id"],maxime,{"startTime":"22:00"})
             assert code==403,("Explicit view policy must also refuse appointment writes despite planner fallback",code,body)
             checks.append("explicit readonly policy also revokes planner appointment writes")
+            failures=[]
+            scenarios=[
+                ("create-only",[{"employeeId":"emp-maxime","siteId":"club-carre-soie","module":"lead","actions":["create"]}],200,403),
+                ("other-club",[{"employeeId":"emp-maxime","siteId":"club-beynost","module":"lead","actions":["write"]}],403,403),
+                ("multiple-grants",[
+                    {"employeeId":"emp-maxime","siteId":"club-carre-soie","module":"lead","actions":["view"]},
+                    {"employeeId":"emp-maxime","siteId":"club-carre-soie","module":"lead","actions":["write"]}],200,200)]
+            for n,(label,grants,expected_contact,expected_rdv) in enumerate(scenarios):
+                current=call("GET","/api/admin/delegations",admin)[1]
+                preserved=[d for d in current if not (d["employeeId"]=="emp-maxime" and d["module"]=="lead")]
+                assert call("PUT","/api/admin/delegations",admin,{"delegations":[*preserved,*grants]})[0]==200
+                probe={"operationId":secrets.token_hex(16),"fields":{**command["fields"],"clubId":"carre-de-soie",
+                    "phone":f"060000067{n}","email":f"policy-{n}@example.invalid"}}
+                contact_code=call("POST","/api/lead/contacts",maxime,probe)[0]
+                rdv_code=call("PATCH","/api/lead/appointments/"+slot["id"],maxime,{"startTime":"22:00"})[0]
+                if (contact_code,rdv_code)!=(expected_contact,expected_rdv):
+                    failures.append({"scenario":label,"contactActual":contact_code,"contactExpected":expected_contact,
+                        "appointmentActual":rdv_code,"appointmentExpected":expected_rdv})
+            assert not failures,("Contacts/RDV must use identical canonical action and scope semantics",failures)
+            checks.append("create-only cannot update appointments; other-club policy has no planner fallback; multiple grants use canonical union")
+
 
         finally:
             if proc.poll() is None:proc.terminate();proc.wait(timeout=5)
