@@ -630,7 +630,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
         )}
       </div>}
 
-      <div className={!planningOnly && !isTechnicalMode ? "grid grid-cols-1 xl:grid-cols-[220px_minmax(0,1fr)] gap-4 items-start" : ""}>
+      <div className={!planningOnly && !isTechnicalMode ? "space-y-4 min-w-0" : ""}>
         {!planningOnly && !isTechnicalMode && managementItems.length > 0 && <HrWorkspaceNavigation label="Rubriques de gestion RH" items={managementItems} activeId={activeSection} onSelect={id => void handleNavigateSection(id as McSectionId)} />}
         <div className="min-w-0 space-y-4">
       {identityMismatchBanner && (

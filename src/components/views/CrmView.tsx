@@ -858,7 +858,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
         {/* ===================================================================== */}
         {viewMode === 'TABLE' && (
           <>
-          <div className="md:hidden divide-y divide-slate-700/30">
+          <div className="xl:hidden divide-y divide-slate-700/30">
             {filteredProspects.length === 0 && <p className="p-5 cf-muted text-sm">Aucun prospect ne correspond à votre recherche.</p>}
             {filteredProspects.map(prospect => <article key={prospect.id} className="p-4 space-y-3">
               <div className="flex items-start justify-between gap-3">
@@ -875,7 +875,7 @@ export function CrmView({ subTarget }: { subTarget?: string | null } = {}) {
               </div>
             </article>)}
           </div>
-          <div className="hidden md:block p-4 overflow-x-auto">
+          <div className="hidden xl:block p-4 overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-slate-200 text-[11px] font-semibold uppercase text-slate-500">

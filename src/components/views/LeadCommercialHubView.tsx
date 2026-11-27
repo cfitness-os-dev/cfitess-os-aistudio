@@ -950,7 +950,7 @@ export function LeadCommercialHubView({
 
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[220px_minmax(0,1fr)] gap-4 items-start">
+      <div className="space-y-4 min-w-0">
         <LeadWorkspaceNavigation activePage={activePage} onSelect={selectPage} canAccess={canAccessPage} technicalMode={isTechnicalMode} />
         <div className="min-w-0 space-y-4">
       {/* Contrôle serveur RBAC si la vue active est bloquée */}

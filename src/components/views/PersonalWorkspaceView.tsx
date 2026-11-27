@@ -203,7 +203,8 @@ function PersonalWorkspaceContent({
   return (
     <section className="space-y-4 min-w-0" aria-label="Mes outils personnels">
       <header className="cf-card p-4 space-y-1">
-        <h1 className="font-bold text-xl">Mon compte</h1>
+        <p className="text-xs cf-muted font-semibold">Mon compte</p>
+        <h1 className="font-bold text-xl">{tabs.find(([id]) => id === tab)?.[1]}</h1>
         <p>
           {currentUser.firstName} {currentUser.lastName} ·{" "}
           {club === "beynost" ? "Beynost" : "Carré de Soie"}
@@ -214,53 +215,7 @@ function PersonalWorkspaceContent({
           </p>
         )}
       </header>
-      <details className="cf-card p-3">
-        <summary className="cursor-pointer text-sm font-semibold">Outils et export de mon espace</summary>
-        <div className="mt-3 space-y-3">
-      <div className="flex flex-wrap gap-2">
-        <button type="button" className={button} disabled={busy || loading}
-          onClick={() => void reload()}>Actualiser mon espace</button>
-        <a
-          className={button}
-          href="https://pronext.mywellness.com/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Ouvrir Mywellness
-        </a>
-        <button
-          className={button}
-          disabled={!data || busy}
-          onClick={() => {
-            if (!data) return;
-            const url = URL.createObjectURL(
-              new Blob([JSON.stringify(data, null, 2)], {
-                type: "application/json",
-              }),
-            );
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = `mon-espace-${club}.json`;
-            link.click();
-            URL.revokeObjectURL(url);
-          }}
-        >
-          Exporter mon espace
-        </button>
-      </div>
-      <details className="cf-muted text-sm">
-        <summary className="cursor-pointer">
-          À propos des accès et de l’export
-        </summary>
-        <p>
-          Mywellness ouvre sa page de connexion sans transmettre d’identifiant.
-          L’export contient votre espace du club actif ; la sauvegarde générale
-          reste réservée aux responsables.
-        </p>
-      </details>
-        </div>
-      </details>
-      <div className="grid grid-cols-1 xl:grid-cols-[220px_minmax(0,1fr)] gap-4 items-start">
+      <div className="space-y-4 min-w-0">
         <HrWorkspaceNavigation
           label="Rubriques de Mon compte"
           activeId={tab}
@@ -303,9 +258,19 @@ function PersonalWorkspaceContent({
           {tab === "preferences" && (preferencesPanel ?? <p role="status">Les préférences ne sont pas disponibles. Actualisez votre espace ou contactez votre responsable.</p>)}
           {tab === "notifications" && <PersonalNotifications actor={employeeId} club={club} />}
       {tab === "home" && (
+            <div className="space-y-4">
+              <section aria-label="Mes accès rapides" className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+                {tabs.filter(([id]) => ['planning', 'leave', 'time', 'documents'].includes(id)).map(([id, label, Icon]) =>
+                  <button key={id} type="button" onClick={() => navigate(id)}
+                    className="cf-card p-4 min-h-24 text-left hover:border-violet-500/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400">
+                    <Icon className="w-5 h-5 text-violet-400 mb-3"/><span className="text-sm font-semibold">{label}</span>
+                  </button>)}
+              </section>
             <div className="grid lg:grid-cols-2 gap-4">
               <section className="cf-card p-4 space-y-3">
                 <h2 className="font-bold">Mes tâches</h2>
+                <details className="cf-card-secondary rounded-xl p-3">
+                  <summary className="cursor-pointer text-sm font-semibold min-h-6">Ajouter une tâche</summary>
                 <form
                   onSubmit={async (e) => {
                     e.preventDefault();
@@ -320,7 +285,7 @@ function PersonalWorkspaceContent({
                   }}
                   className="space-y-2"
                 >
-                  <label htmlFor="personal-task">Ajouter une tâche</label>
+                  <label htmlFor="personal-task">Intitulé de la tâche</label>
                   <input
                     id="personal-task"
                     className={input}
@@ -344,7 +309,7 @@ function PersonalWorkspaceContent({
                         "Suivi Mywellness",
                         "RH & Administratif",
                       ].map((category) => (
-                        <option key={category}>{category}</option>
+                        <option key={category} value={category}>{category === "Relance CRM (ex-LEADS)" ? "Relance prospect" : category === "Accueil & TPV" ? "Accueil et vente" : category}</option>
                       ))}
                     </select>
                   </label>
@@ -352,6 +317,7 @@ function PersonalWorkspaceContent({
                     Ajouter ma tâche
                   </button>
                 </form>
+                </details>
 
                 {!data.tasks.length && (
                   <p className="cf-muted">Aucune tâche pour ce club.</p>
@@ -395,7 +361,7 @@ function PersonalWorkspaceContent({
                       <span>
                         {row.title}
                         <small className="block cf-muted">
-                          {row.date} · {row.dueTime} · {row.category}
+                          {[row.date, row.dueTime, row.category === "Relance CRM (ex-LEADS)" ? "Relance prospect" : row.category === "Accueil & TPV" ? "Accueil et vente" : row.category].filter(Boolean).join(" · ")}
                           {row.priority === "Haute" ? " · Urgent" : ""}
                         </small>
                       </span>
@@ -403,6 +369,7 @@ function PersonalWorkspaceContent({
                   ))}
               </section>
               <PersonalNotifications actor={employeeId} club={club} variant="preview" />
+            </div>
             </div>
           )}
           {tab === "planning" && (
@@ -447,7 +414,7 @@ function PersonalWorkspaceContent({
                     e.preventDefault();
                     if(await save(
                       { action: "request_leave", ...leave },
-                      "Demande enregistrée sur le serveur, en attente de validation.",
+                      "Demande envoyée à votre responsable, en attente de validation.",
                     ))setLeave(previous=>({...previous,startDate:'',endDate:'',comment:''}));
                   }}
                 >
@@ -740,8 +707,7 @@ function PersonalWorkspaceContent({
             <section className="cf-card p-4 space-y-3">
               <h2 className="font-bold">Mes pointages</h2>
               <p>
-                Les horaires sont enregistrés par le serveur pour votre compte
-                connecté.
+                Vos pointages sont rattachés à votre dossier dans le club sélectionné.
               </p>
               <p role="status" className="cf-muted">
                 {!data.clockingPolicy.personalAllowed
@@ -779,7 +745,7 @@ function PersonalWorkspaceContent({
                     onClick={() =>
                       void save(
                         { action: "punch", punchType: type },
-                        "Pointage enregistré sur le serveur.",
+                        "Pointage enregistré.",
                       )
                     }
                   >
@@ -809,6 +775,52 @@ function PersonalWorkspaceContent({
       )}
         </div>
       </div>
+      <details className="cf-card p-3">
+        <summary className="cursor-pointer text-sm font-semibold">Outils et export de mon espace</summary>
+        <div className="mt-3 space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className={button} disabled={busy || loading}
+          onClick={() => void reload()}>Actualiser mon espace</button>
+        <a
+          className={button}
+          href="https://pronext.mywellness.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Ouvrir Mywellness
+        </a>
+        <button
+          className={button}
+          disabled={!data || busy}
+          onClick={() => {
+            if (!data) return;
+            const url = URL.createObjectURL(
+              new Blob([JSON.stringify(data, null, 2)], {
+                type: "application/json",
+              }),
+            );
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `mon-espace-${club}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+          }}
+        >
+          Exporter mon espace
+        </button>
+      </div>
+      <details className="cf-muted text-sm">
+        <summary className="cursor-pointer">
+          À propos des accès et de l’export
+        </summary>
+        <p>
+          Mywellness ouvre sa page de connexion sans transmettre d’identifiant.
+          L’export contient votre espace du club actif ; la sauvegarde générale
+          reste réservée aux responsables.
+        </p>
+      </details>
+        </div>
+      </details>
     </section>
   );
 }
