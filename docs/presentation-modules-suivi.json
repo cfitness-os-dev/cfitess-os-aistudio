@@ -35,14 +35,14 @@
       "module": "Lead",
       "screen": "Modèles de messages",
       "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
-      "detailVisualReview": "à terminer écran par écran",
+      "detailVisualReview": "ordinateur/mobile/tablette contrôlés ; palette 12 types conservée ; ajout Bouton mobile explicite ; style et modèle relus après sauvegarde/rechargement ; aperçu email généré ; imports image et tous les types non re-testés ici",
       "functionalParity": "non certifiée par ce lot"
     },
     {
       "module": "Lead",
       "screen": "Campagnes",
       "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
-      "detailVisualReview": "à terminer écran par écran",
+      "detailVisualReview": "mobile : campagne fictive enregistrée avec modèle, ciblage affiché ; raccourci vers modèles testé avec protection de saisie ; aucun lancement/programmation/envoi dans ce lot",
       "functionalParity": "non certifiée par ce lot"
     },
     {
@@ -367,5 +367,6 @@
       "detailVisualReview": "exemples fictifs importés localement ; recherche, sélection et retour contrôlés ; aucune opération dans Heitz",
       "functionalParity": "reste conditionnée à l’API documentée et aux accès web vérifiés"
     }
-  ]
+  ],
+  "latestLot": "Présentation communications, après PR116"
 }

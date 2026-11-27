@@ -2457,7 +2457,7 @@ export function LeadCommercialHubView({
             <div className="space-y-4">
               {commSubTab === 'models' && <LeadMessageTemplatesView key={`${currentUser.id}:${clubFilter}`} actorId={currentUser.id} clubId={clubFilter === 'all' ? null : clubFilter} />}
 
-              {commSubTab === 'campaigns' && <LeadCampaignsView key={`${currentUser.id}:${clubFilter}`} actorId={currentUser.id} clubId={clubFilter === 'all' ? null : clubFilter} />}
+              {commSubTab === 'campaigns' && <LeadCampaignsView key={`${currentUser.id}:${clubFilter}`} actorId={currentUser.id} clubId={clubFilter === 'all' ? null : clubFilter} onOpenModels={()=>selectPage('models')} />}
 
               {commSubTab === 'utm' && (
                 <div className="cf-card p-4 space-y-3 text-xs">
