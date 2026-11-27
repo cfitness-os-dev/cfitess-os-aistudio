@@ -380,7 +380,7 @@ export function MonCompteRhHubView({ subTarget, planningOnly = false }: MonCompt
     <div className="space-y-5">
       {/* Bandeau de sélection de vue unifiée (V1.16 Mon compte <-> Traçabilité <-> Vues GitHub CFOS) */}
       {!planningOnly && !isTechnicalMode && <header className="cf-card p-4 flex flex-wrap justify-between items-center gap-3">
-        <div><p className="text-xs cf-muted mb-1">Gestion des équipes</p><h1 className="font-bold text-xl">Collaborateurs et RH</h1><p className="cf-muted text-sm mt-1">Dossiers, horaires et demandes de vos équipes, selon vos droits dans le club sélectionné.</p></div>
+        <div><p className="text-xs cf-muted mb-1">Collaborateurs et RH</p><h1 className="font-bold text-xl">{managementLabels[activeSection] ?? "Collaborateurs et RH"}</h1><p className="cf-muted text-sm mt-1">Dossiers, horaires et demandes de vos équipes, selon vos droits dans le club sélectionné.</p></div>
         <button type="button" className="cf-card-secondary min-h-11 px-3 py-2 text-sm font-semibold" onClick={() => {
           const apply = () => setShellSection('my-day', 'personal');
           if (confirmLeadDraftNavigation(apply)) apply();

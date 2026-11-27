@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   Activity,
+  ArrowLeft,
   Eye,
   EyeOff,
   ExternalLink,
@@ -118,6 +119,21 @@ export function HeitzMembersPanel() {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<HeitzStatusFilter>('ALL');
   const [selectedId, setSelectedId] = useState('');
+  const [showMember, setShowMember] = useState(false);
+  const detailHeading = useRef<HTMLHeadingElement>(null);
+  const memberList = useRef<HTMLDivElement>(null);
+  const previouslyOpen = useRef(false);
+  useEffect(() => {
+    if (window.matchMedia('(max-width: 1023px)').matches) {
+      if (showMember) {
+        detailHeading.current?.focus({ preventScroll: true });
+        detailHeading.current?.closest('article')?.scrollIntoView({ block: 'start' });
+      } else if (previouslyOpen.current) {
+        memberList.current?.querySelector<HTMLButtonElement>('button[aria-pressed="true"]')?.focus();
+      }
+    }
+    previouslyOpen.current = showMember;
+  }, [showMember]);
   const [revealContactDetails, setRevealContactDetails] = useState(false);
   const [csv, setCsv] = useState('');
   const [importOpen, setImportOpen] = useState(false);
@@ -185,6 +201,7 @@ export function HeitzMembersPanel() {
 
   useEffect(() => {
     setSelectedId('');
+    setShowMember(false);
     setQuery('');
     setStatusFilter('ALL');
     setRevealContactDetails(false);
@@ -247,11 +264,11 @@ export function HeitzMembersPanel() {
             Adhérents – CRM
           </h1>
           <p className="text-sm cf-muted mt-2">
-            {clubName} (Centre Heitz #{centerId}) · Consultation des dossiers synchronisés depuis HeitzSystem.
+            {clubName} · Dossiers de consultation HeitzSystem
           </p>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
-          {webAccess('Ouvrir HeitzSystem')}
+          {webUrl ? webAccess('Ouvrir HeitzSystem') : <span className="text-xs cf-muted">Accès Heitz à configurer</span>}
           {canImport && liveOverview?.configured && (
             <button
               type="button"
@@ -260,7 +277,7 @@ export function HeitzMembersPanel() {
               className="cf-brand-gradient text-white rounded-btn px-3.5 py-2.5 text-sm font-semibold inline-flex items-center gap-2 disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${syncingLive ? 'animate-spin' : ''}`} aria-hidden="true" />
-              {syncingLive ? 'Sync Heitz Cloud…' : 'Synchroniser Heitz Cloud'}
+              {syncingLive ? 'Actualisation en cours…' : 'Actualiser depuis Heitz'}
             </button>
           )}
           <button
@@ -298,13 +315,13 @@ export function HeitzMembersPanel() {
           <Lock className="w-4 h-4 text-violet-400 shrink-0 mt-0.5 sm:mt-0" aria-hidden="true" />
           <div>
             <span className="font-semibold">
-              Protection RGPD active (Art. 5.1.c &amp; Art. 32 — Besoin d’en connaître) :
+              Confidentialité au comptoir :
             </span>{' '}
             <span className="cf-muted">
-              Coordonnées masquées par défaut contre les regards indiscrets au comptoir ·{' '}
+              Coordonnées masquées par défaut ·{' '}
               {canSeeFinancialAmount
-                ? 'Habilitation Direction / Recouvrement : soldes financiers visibles.'
-                : 'Profil Accueil : statut d’accès visible, montants financiers réservés aux responsables.'}
+                ? 'Montants visibles selon vos droits.'
+                : 'Montants financiers masqués selon vos droits.'}
             </span>
           </div>
         </div>
@@ -313,12 +330,12 @@ export function HeitzMembersPanel() {
       {liveOverview?.liveConnected && (
         <section
           className="cf-card p-4 border border-emerald-500/40 space-y-3"
-          aria-label="Télémétrie HeitzSystem Cloud en direct"
+          aria-label="Fréquentation du club"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-sm font-semibold text-emerald-300">
               <ShieldCheck className="w-4 h-4" aria-hidden="true" />
-              Connecté en direct à HeitzSystem Cloud ({liveOverview.baseUrl} · Centre #{centerId} {clubName})
+              Connexion Heitz active · {clubName}
             </div>
             <span className="text-xs cf-muted">
               {clubRows.length} dossier(s) réel(s) sur {clubName}
@@ -327,7 +344,7 @@ export function HeitzMembersPanel() {
           {liveOverview.fmiToday && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
               <div className="cf-card-secondary p-3 rounded-btn">
-                <span className="block text-xs cf-muted">Présents FMI (en direct)</span>
+                <span className="block text-xs cf-muted">Adhérents présents</span>
                 <strong className="text-lg">{liveOverview.fmiToday.currentPresent}</strong>
               </div>
               <div className="cf-card-secondary p-3 rounded-btn">
@@ -405,7 +422,8 @@ export function HeitzMembersPanel() {
           {syncMessage}
         </p>
       )}
-      <div className="cf-card p-4 text-sm cf-muted space-y-2">
+      <details className="cf-card p-4 text-sm cf-muted space-y-2">
+        <summary className="cursor-pointer font-semibold">Consultation dans C.Fitness OS · opérations dans Heitz</summary>
         <p>
           HeitzSystem reste la référence officielle. Création d’adhérent, modification d’abonnement, règlement d’impayé et attribution de badge sont à effectuer dans Heitz.
         </p>
@@ -419,7 +437,7 @@ export function HeitzMembersPanel() {
             L’adresse web est fournie par le club et reste à confirmer avec Heitz. La connexion se fait dans son interface ; aucun mot de passe n’est transmis par ce lien.
           </p>
         )}
-      </div>
+      </details>
       {state.status === 'loading' && (
         <p role="status" className="cf-card p-5">
           Chargement des dossiers de {clubName}…
@@ -444,7 +462,7 @@ export function HeitzMembersPanel() {
       )}
       {state.saved && (
         <p role="status" className="cf-card p-4 text-emerald-300">
-          Export enregistré et dossiers relus sur le serveur C.Fitness OS. Aucun dossier n’a été créé ou modifié dans Heitz.
+          Copie de consultation enregistrée dans C.Fitness OS. Aucun dossier n’a été créé ou modifié dans Heitz.
         </p>
       )}
       {importOpen && canImport && (
@@ -481,7 +499,7 @@ export function HeitzMembersPanel() {
       )}
       {state.status === 'ready' && (
         <section className="grid grid-cols-1 lg:grid-cols-[minmax(300px,1fr)_minmax(0,2fr)] gap-4">
-          <div className="cf-card p-4 space-y-3 min-w-0">
+          <div ref={memberList} className={"cf-card p-4 space-y-3 min-w-0 " + (showMember ? "hidden lg:block" : "")}>
             <label className="block text-sm font-semibold">
               Rechercher un adhérent
               <span className="relative block mt-2">
@@ -570,7 +588,7 @@ export function HeitzMembersPanel() {
                     <button
                       type="button"
                       aria-pressed={selected?.id === member.id}
-                      onClick={() => setSelectedId(member.id)}
+                      onClick={() => { setSelectedId(member.id); setShowMember(true); }}
                       className={`w-full text-left p-3 rounded-btn border focus-visible:ring-2 focus-visible:ring-violet-400 ${
                         selected?.id === member.id
                           ? 'border-violet-400 bg-violet-500/15'
@@ -597,18 +615,22 @@ export function HeitzMembersPanel() {
               })}
             </ul>
           </div>
-          <article className="cf-card p-5 min-w-0 space-y-4" aria-label="Dossier adhérent sélectionné">
+          <article className={"cf-card p-5 min-w-0 space-y-4 " + (!showMember ? "hidden lg:block" : "")} aria-label="Dossier adhérent sélectionné">
+            <button type="button" onClick={() => setShowMember(false)}
+              className="lg:hidden cf-card-secondary min-h-11 px-3 py-2 rounded-xl text-sm flex items-center gap-2">
+              <ArrowLeft className="w-4 h-4"/>Retour aux adhérents
+            </button>
             {!selected || !selectedStatus ? (
               <p className="cf-muted">Sélectionnez un dossier dans les résultats de ce club.</p>
             ) : (
               <>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-lg font-bold break-words">
+                    <h2 ref={detailHeading} tabIndex={-1} className="text-lg font-bold break-words scroll-mt-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400">
                       {selected.firstName} {selected.lastName}
                     </h2>
                     <p className="text-xs cf-muted mt-0.5">
-                      Dossier Heitz #{selected.id} · {clubName}
+                      {clubName} · {selected.badgeCode || 'Référence à compléter'}
                     </p>
                   </div>
                   <button
@@ -651,7 +673,7 @@ export function HeitzMembersPanel() {
                 <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                   {[
                     ['Club de rattachement', clubName],
-                    ['Identifiant Heitz importé', selected.badgeCode || selected.id],
+                    ['Identifiant Heitz', selected.badgeCode || selected.id],
                     [
                       'Téléphone',
                       revealContactDetails
@@ -664,7 +686,7 @@ export function HeitzMembersPanel() {
                         ? selected.email || 'Non renseigné'
                         : maskRgpdEmail(selected.email),
                     ],
-                    ['Abonnement importé', selected.subscriptionName || 'Non renseigné'],
+                    ['Abonnement', selected.subscriptionName || 'Non renseigné'],
                     ['Statut d’accès portillon', selectedStatus.badgeLabel],
                   ].map(([label, value]) => (
                     <div key={label}>
@@ -677,9 +699,13 @@ export function HeitzMembersPanel() {
                   Pour vérifier le statut actuel, modifier l’abonnement, traiter un impayé ou gérer un badge, consultez HeitzSystem.
                 </p>
                 {webAccess('Consulter et agir dans Heitz')}
-                <p className="text-xs cf-muted">
+                {webUrl && <p className="text-xs cf-muted">
                   Le lien ouvre la connexion Heitz, sans sélectionner automatiquement ce dossier.
-                </p>
+                </p>}
+                <details className="text-xs cf-muted">
+                  <summary className="cursor-pointer">Informations de la copie</summary>
+                  <p className="mt-2 break-all">Identifiant de la copie : {selected.id}</p>
+                </details>
               </>
             )}
           </article>

@@ -66,10 +66,10 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
   const getRoleCategoryBadge = (role: string) => {
     if (role === 'admin' || role === 'manager') {
       return {
-        label: 'DIRECTEUR / DIRECTION',
+        label: role === 'admin' ? 'DIRECTION' : 'RESPONSABLE',
         color: 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white',
         permissions:
-          'Accès complet : Pilotage Bi-Club, Téléphonie 12 lignes (Double écoute), RH & Contrat CDI, ATS, Heitz & Gouvernance.',
+          'Les rubriques disponibles dépendent des droits accordés dans chaque club.',
       };
     }
     if (role === 'commercial') {
@@ -77,14 +77,14 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
         label: 'EMPLOYÉ COMMERCIAL',
         color: 'bg-blue-600 text-white',
         permissions:
-          'Accès métier : CRM Prospects & Relances (Clause Art. 4 — Obj. 20 abos/mois), Softphone WebRTC 04/07, Planning & Coffre RH.',
+          'Prospects, rendez-vous et espace personnel, selon les droits attribués dans le club.',
       };
     }
     return {
       label: 'COACH SPORTIF / BPJEPS',
       color: 'bg-emerald-600 text-white',
       permissions:
-        'Accès plateau & santé : Bilans Technogym Checkup & Mywellness (RGPD Art. 9), Technogym Biocircuit, Académie & Livret BPJEPS.',
+        'Planning, suivi sportif, formations et espace personnel, selon les droits attribués.',
     };
   };
 
@@ -240,9 +240,9 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {(
               [
-                { id: 'TOUS', label: 'Tous les profils (7)' },
-                { id: 'DIRECTEUR', label: 'Directeur / Manager' },
-                { id: 'EMPLOYE', label: 'Employé Commercial' },
+                { id: 'TOUS', label: 'Tous (' + nonKioskEmployees.length + ')' },
+                { id: 'DIRECTEUR', label: 'Direction et responsables' },
+                { id: 'EMPLOYE', label: 'Équipe commerciale' },
                 { id: 'COACH', label: 'Coach & BPJEPS' },
               ] as const
             ).map((tab) => (
@@ -271,7 +271,8 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
               return (
                 <div
                   key={emp.id}
-                  onClick={() => handleSelectProfile(emp.id)}
+                  role="group"
+                  aria-label={emp.firstName + ' ' + emp.lastName}
                   className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-3 ${
                     isSelected
                       ? isDark
@@ -295,9 +296,10 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
                     </div>
 
                     <div className="mt-2 font-bold text-sm flex items-center justify-between">
-                      <span>
+                      <button type="button" onClick={() => handleSelectProfile(emp.id)}
+                        aria-pressed={isSelected} className="text-left min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400">
                         {emp.firstName} {emp.lastName}
-                      </span>
+                      </button>
                       <span className="font-mono text-xs text-violet-400">
                         PIN : {emp.pinCode}
                       </span>
@@ -314,7 +316,7 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
                     }`}
                   >
                     <span className="text-[11px] text-emerald-500 font-medium">
-                      {emp.totpEnabled ? 'Accès direction' : 'PIN / Mot de passe local'}
+                      {emp.totpEnabled ? 'Accès direction' : 'Profil de démonstration'}
                     </span>
                     <button
                       type="button"
@@ -324,7 +326,7 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
                       }}
                       className="px-2.5 py-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition-colors"
                     >
-                      <span>Connexion 1-Clic</span>
+                      <span>Essayer ce profil</span>
                       <ArrowRight className="w-3 h-3" />
                     </button>
                   </div>
@@ -334,14 +336,14 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Direct Kiosk / Field Shell Quick Launchers */}
-          <div
+          <details
             className={`pt-3 border-t space-y-2 ${
               isDark ? 'border-slate-800' : 'border-slate-200'
             }`}
           >
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Accès Direct Terminaux Club (Tablette Murale, Smartphone, Softphone) :
-            </div>
+            <summary className="cursor-pointer text-sm font-semibold text-slate-400">
+              Autres interfaces de démonstration
+            </summary>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               <button
                 type="button"
@@ -352,8 +354,8 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
               >
                 <Tablet className="w-4 h-4 text-emerald-500 shrink-0" />
                 <div>
-                  <div className="text-xs font-bold">Tablette Kiosque PIN</div>
-                  <div className="text-[11px] text-slate-400">Badgeuse murale &amp; Essai</div>
+                  <div className="text-xs font-bold">Tablette d’accueil</div>
+                  <div className="text-[11px] text-slate-400">Pointages et séances d’essai</div>
                 </div>
               </button>
               <button
@@ -366,7 +368,7 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
                 <Smartphone className="w-4 h-4 text-violet-400 shrink-0" />
                 <div>
                   <div className="text-xs font-bold">App Mobile &amp; Tablette</div>
-                  <div className="text-[11px] text-slate-400">Planning, Congés &amp; BPJEPS</div>
+                  <div className="text-[11px] text-slate-400">Planning, absences et formations</div>
                 </div>
               </button>
               <button
@@ -378,12 +380,12 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
               >
                 <PhoneCall className="w-4 h-4 text-blue-400 shrink-0" />
                 <div>
-                  <div className="text-xs font-bold">Softphone WebRTC 04/07</div>
-                  <div className="text-[11px] text-slate-400">12 lignes &amp; Rotation 07</div>
+                  <div className="text-xs font-bold">Téléphonie</div>
+                  <div className="text-[11px] text-slate-400">Interface de démonstration</div>
                 </div>
               </button>
             </div>
-          </div>
+          </details>
         </div>
 
         {/* Right Column: Local Credential & PIN Verification Form */}
@@ -436,6 +438,7 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
                 Identifiant
               </label>
               <input
+                id="login-identifier"
                 type="text"
                 readOnly
                 value={selectedEmployee.email}
@@ -449,22 +452,23 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="font-semibold text-slate-400 flex items-center gap-1.5">
+                <label htmlFor="login-secret" className="font-semibold text-slate-400 flex items-center gap-1.5">
                   <KeyRound className="w-3.5 h-3.5 text-violet-400" />
-                  Code PIN 4 chiffres ou Mot de passe local
+                  Code d’accès du profil
                 </label>
                 <span className="font-mono text-[11px] text-violet-400">
                   PIN : {selectedEmployee.pinCode} (ou cfitness2026)
                 </span>
               </div>
               <input
+                id="login-secret"
                 type="password"
                 value={secretInput}
                 onChange={(e) => {
                   setSecretInput(e.target.value);
                   setErrorFeedback(null);
                 }}
-                placeholder="Saisir le code PIN (ex: 1010) ou mot de passe"
+                placeholder="Saisir le code d’accès"
                 className={`w-full px-3.5 py-2.5 rounded-xl border focus:border-violet-500 font-mono text-sm tracking-widest ${
                   isDark
                     ? 'bg-[#0F1420] border-slate-700 text-white'
@@ -526,17 +530,17 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
               </div>
             )}
 
-            <div>
-              <label className="block font-semibold text-slate-400 mb-1.5">
-                Interface à ouvrir après connexion :
-              </label>
+            <details>
+              <summary className="cursor-pointer font-semibold text-slate-400 mb-2">
+                Espace à ouvrir
+              </summary>
               <div className="grid grid-cols-2 gap-2">
                 {(
                   [
-                    { id: 'admin', label: 'Poste Complet (PC/Mac/Tablette)', icon: LayoutDashboard },
-                    { id: 'employe', label: 'App Mobile & Tablette iPad', icon: Smartphone },
-                    { id: 'telephone', label: 'Softphone WebRTC 12 Lignes', icon: PhoneCall },
-                    { id: 'tablette', label: 'Kiosque Accueil Badgeuse PIN', icon: Tablet },
+                    { id: 'admin', label: 'Espace de travail', icon: LayoutDashboard },
+                    { id: 'employe', label: 'Espace collaborateur', icon: Smartphone },
+                    { id: 'telephone', label: 'Téléphonie', icon: PhoneCall },
+                    { id: 'tablette', label: 'Tablette d’accueil', icon: Tablet },
                   ] as const
                 ).map((item) => {
                   const Icon = item.icon;
@@ -559,7 +563,7 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
                   );
                 })}
               </div>
-            </div>
+            </details>
 
             {errorFeedback && (
               <div className="p-3 rounded-xl bg-rose-950/90 border border-rose-700 text-rose-200 text-xs flex items-center justify-between gap-2">
@@ -588,7 +592,7 @@ export function LocalLoginGate({ children }: { children: React.ReactNode }) {
               className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg"
             >
               <Lock className="w-4 h-4" />
-              Ouvrir la Session Locale ({selectedEmployee.firstName} {selectedEmployee.lastName})
+              Se connecter ({selectedEmployee.firstName} {selectedEmployee.lastName})
             </button>
           </form>
         </div>
