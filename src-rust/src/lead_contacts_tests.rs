@@ -129,3 +129,83 @@ async fn same_club_does_not_authorize_editing_a_colleagues_contact(){
 fn details_deserialization_preserves_legacy_entries_without_new_fields(){
  let d:Details=serde_json::from_value(json!({"notes":"legacy note"})).unwrap();assert_eq!(d.notes,"legacy note");assert!(d.goal.is_empty());assert!(d.created_by.is_empty());
 }
+
+fn delegate(db:&mut AppDatabaseState,actor:&str,club:&str,actions:&[&str]){
+ db.module_delegations.retain(|d|d.employee_id!=actor || !d.module.eq_ignore_ascii_case("lead"));
+ db.module_delegations.push(crate::models::ModuleDelegation{employee_id:actor.into(),site_id:club.into(),module:"lead".into(),actions:actions.iter().map(|v|v.to_string()).collect()});
+}
+#[tokio::test]
+async fn explicit_lead_write_allows_employee_contact_work_without_changing_rh_profile(){
+ let s=state();let h=headers(&s,"emp-chloe").await;let mut cmd=command("delegation-create-001");cmd.fields.club_id=Some("beynost".into());
+ s.db.write().await.module_delegations.retain(|d|d.employee_id!="emp-chloe" || d.module!="lead");
+ assert_eq!(send(&s,&h,cmd.clone()).await.unwrap_err().0,StatusCode::FORBIDDEN);
+ let before=serde_json::to_value(&s.db.read().await.employees.iter().find(|e|e.id=="emp-chloe").unwrap().site_accesses).unwrap();
+ {delegate(&mut *s.db.write().await,"emp-chloe","club-beynost",&["write"]);}
+ let created=send(&s,&h,cmd.clone()).await.unwrap().0;assert_eq!(created["contact"]["canEdit"],true);
+ let id=created["contact"]["id"].as_str().unwrap();let rev=created["contact"]["revision"].as_str().unwrap();
+ assert_eq!(edit(&s,&h,id,patch("delegation-update-001",rev,json!({"notes":"Shared delegated note"}))).await.unwrap().0["contact"]["notes"],"Shared delegated note");
+ let db=s.db.read().await;let emp=db.employees.iter().find(|e|e.id=="emp-chloe").unwrap();
+ assert_eq!(before,serde_json::to_value(&emp.site_accesses).unwrap());
+ assert_eq!(emp.site_accesses[0].profile_id,"employe_standard");
+ assert!(!crate::rbac::is_manager_employee(&db,"emp-chloe",Some("club-beynost")));
+ assert!(!crate::hr_organisation::organisation_permission(&db,"emp-chloe","ORG04-31"));
+ assert!(!crate::rbac::can_access_finances(&db,"emp-chloe",Some("club-beynost")));drop(db);finish(&s);
+}
+#[tokio::test]
+async fn view_only_and_other_club_explicit_policies_override_legacy_profile(){
+ let s=state();let h=headers(&s,"emp-maxime").await;
+ for (club,actions) in [("carre-de-soie",vec!["view"]),("beynost",vec!["write"]),("carre-de-soie",Vec::new())]{
+  delegate(&mut *s.db.write().await,"emp-maxime",club,&actions);
+  assert_eq!(send(&s,&h,command("delegation-create-001")).await.unwrap_err().0,StatusCode::FORBIDDEN);
+ }
+ finish(&s);
+}
+#[tokio::test]
+async fn create_and_update_are_independent_and_wildcard_is_scoped(){
+ let s=state();let h=headers(&s,"emp-chloe").await;let mut cmd=command("delegation-create-001");cmd.fields.club_id=Some("beynost".into());
+ delegate(&mut *s.db.write().await,"emp-chloe","beynost",&["create"]);
+ let v=send(&s,&h,cmd.clone()).await.unwrap().0;assert_eq!(v["contact"]["canEdit"],false);
+ let id=v["contact"]["id"].as_str().unwrap();let rev=v["contact"]["revision"].as_str().unwrap();
+ assert_eq!(edit(&s,&h,id,patch("delegation-update-001",rev,json!({"notes":"Denied"}))).await.unwrap_err().0,StatusCode::FORBIDDEN);
+ delegate(&mut *s.db.write().await,"emp-chloe","beynost",&["update"]);
+ assert_eq!(send(&s,&h,cmd.clone()).await.unwrap_err().0,StatusCode::FORBIDDEN);
+ assert!(edit(&s,&h,id,patch("delegation-update-001",rev,json!({"notes":"Allowed"}))).await.is_ok());
+ delegate(&mut *s.db.write().await,"emp-chloe","beynost",&["*"]);
+ let mut other=command("delegation-create-002");other.fields.club_id=Some("carre-de-soie".into());
+ assert_eq!(send(&s,&h,other).await.unwrap_err().0,StatusCode::FORBIDDEN);finish(&s);
+}
+#[tokio::test]
+async fn revoked_rights_reject_receipt_replay_and_workspace_edit_capability(){
+ let s=state();let h=headers(&s,"emp-chloe").await;let mut cmd=command("delegation-create-001");cmd.fields.club_id=Some("beynost".into());
+ delegate(&mut *s.db.write().await,"emp-chloe","beynost",&["write"]);
+ let v=send(&s,&h,cmd.clone()).await.unwrap().0;let id=v["contact"]["id"].as_str().unwrap();let rev=v["contact"]["revision"].as_str().unwrap();
+ let edit_cmd=patch("delegation-update-001",rev,json!({"notes":"Before revocation"}));
+ let _=edit(&s,&h,id,edit_cmd.clone()).await.unwrap();
+ delegate(&mut *s.db.write().await,"emp-chloe","beynost",&["view"]);
+ let before=serde_json::to_vec(&*s.db.read().await).unwrap();
+ assert_eq!(send(&s,&h,cmd).await.unwrap_err().0,StatusCode::FORBIDDEN);
+ assert_eq!(edit(&s,&h,id,edit_cmd).await.unwrap_err().0,StatusCode::FORBIDDEN);
+ let db=s.db.read().await;let p=db.lead_prospects.iter().find(|p|p.id==id).unwrap();assert_eq!(view_for(&db,"emp-chloe",p)["canEdit"],false);
+ assert_eq!(before,serde_json::to_vec(&*db).unwrap());drop(db);finish(&s);
+}
+#[tokio::test]
+async fn lead_delegation_does_not_override_contact_ownership_or_active_account(){
+ let s=state();let h=headers(&s,"emp-maxime").await;let v=send(&s,&h,command("delegation-create-001")).await.unwrap().0;
+ let id=v["contact"]["id"].as_str().unwrap();let rev=v["contact"]["revision"].as_str().unwrap();
+ {let mut db=s.db.write().await;let access=db.employees.iter().find(|e|e.id=="emp-maxime").unwrap().site_accesses.clone();db.employees.iter_mut().find(|e|e.id=="emp-chloe").unwrap().site_accesses=access;delegate(&mut db,"emp-chloe","carre-de-soie",&["write"]);}
+ let chloe=headers(&s,"emp-chloe").await;
+ assert_eq!(edit(&s,&chloe,id,patch("delegation-update-001",rev,json!({"notes":"Forbidden colleague edit"}))).await.unwrap_err().0,StatusCode::FORBIDDEN);
+ s.db.write().await.employees.iter_mut().find(|e|e.id=="emp-chloe").unwrap().active=false;
+ assert_eq!(send(&s,&chloe,command("delegation-create-002")).await.unwrap_err().0,StatusCode::FORBIDDEN);finish(&s);
+}
+
+#[tokio::test]
+async fn generic_edit_alias_is_supported_but_read_and_export_do_not_write(){
+ let s=state();let h=headers(&s,"emp-chloe").await;let mut cmd=command("delegation-create-001");cmd.fields.club_id=Some("beynost".into());
+ delegate(&mut *s.db.write().await,"emp-chloe","beynost",&["view","export"]);
+ assert_eq!(send(&s,&h,cmd.clone()).await.unwrap_err().0,StatusCode::FORBIDDEN);
+ delegate(&mut *s.db.write().await,"emp-chloe","beynost",&["edit"]);
+ let v=send(&s,&h,cmd).await.unwrap().0;assert_eq!(v["contact"]["canEdit"],true);
+ let id=v["contact"]["id"].as_str().unwrap();let rev=v["contact"]["revision"].as_str().unwrap();
+ assert!(edit(&s,&h,id,patch("delegation-update-001",rev,json!({"notes":"Generic edit alias"}))).await.is_ok());finish(&s);
+}
