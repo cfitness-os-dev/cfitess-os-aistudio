@@ -259,7 +259,7 @@
       "module": "RH responsable",
       "screen": "Réglages RH",
       "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
-      "detailVisualReview": "à terminer écran par écran",
+      "detailVisualReview": "navigation7rubriques regroupée ; contrôle desktop/mobile/tablette ; fréquence/pauses regroupées dans Badgeuses ; visible propriétaireMario, absente responsableSarah ; aucun réglage enregistré ; détails autres onglets encore à contrôler",
       "functionalParity": "non certifiée par ce lot"
     },
     {
@@ -368,5 +368,5 @@
       "functionalParity": "reste conditionnée à l’API documentée et aux accès web vérifiés"
     }
   ],
-  "latestLot": "Présentation communications, après PR116"
+  "latestLot": "Présentation RH réglages, après118 intégré"
 }

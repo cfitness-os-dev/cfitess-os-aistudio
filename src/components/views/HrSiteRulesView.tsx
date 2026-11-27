@@ -1,3 +1,4 @@
+import { WorkspaceNavigation } from '../WorkspaceNavigation';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Building2,
@@ -300,7 +301,7 @@ export function HrSiteRulesView({ clubId, onMutated }: HrSiteRulesViewProps) {
         <div role="alert" className="cf-card p-4 border border-red-500/60 bg-red-950/30 text-red-100 text-sm space-y-2">
           <p>{error}</p>
           <button type="button" className={buttonSecondary} onClick={() => void loadRules(false)}>
-            Recharger la version serveur
+            Réessayer le chargement
           </button>
         </div>
       )}
@@ -320,35 +321,93 @@ export function HrSiteRulesView({ clubId, onMutated }: HrSiteRulesViewProps) {
         </div>
       ) : (
         <>
-          <nav aria-label="Rubriques des paramètres de l’établissement" className="flex flex-wrap gap-2">
-            {(
-              [
-                ['rules', 'Règles et alertes'],
-                ['clock', 'Badgeuses et tablettes'],
-                ['counters', 'Compteurs & annualisation'],
-                ['accrual', 'Acquisition et report'],
-                ['carryovers', 'Reports exceptionnels'],
-                ['absences', `Motifs d’absence (${snapshot.motives.length})`],
-                ['needs', `Besoins en personnel (${snapshot.staffingNeeds.length})`],
-              ] as const
-            ).filter(([id]) => id !== 'clock' || snapshot.capabilities.canEditBadgeSettings).map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => { if (id===tab || confirmLeadDraftNavigation(()=>setTab(id))) setTab(id); }}
-                className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer ${
-                  tab === id
-                    ? 'cf-brand-gradient text-white'
-                    : 'cf-card-secondary hover:border-violet-500/50'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </nav>
+          <WorkspaceNavigation label="Rubriques des paramètres de l’établissement"
+            activeId={tab}
+            onSelect={id => {
+              const next = id as RulesTab;
+              if (next === tab) return;
+              const apply = () => setTab(next);
+              if (confirmLeadDraftNavigation(apply)) apply();
+            }}
+            items={[
+              { id: 'rules', label: 'Règles et alertes', group: 'Organisation du travail', icon: SlidersHorizontal },
+              { id: 'needs', label: 'Besoins en personnel (' + snapshot.staffingNeeds.length + ')', group: 'Organisation du travail', icon: Users },
+              { id: 'counters', label: 'Compteurs et annualisation', group: 'Absences et compteurs', icon: CalendarClock },
+              { id: 'accrual', label: 'Acquisition et report', group: 'Absences et compteurs', icon: CalendarClock },
+              { id: 'carryovers', label: 'Reports exceptionnels', group: 'Absences et compteurs', icon: CalendarClock },
+              { id: 'absences', label: 'Motifs d’absence (' + snapshot.motives.length + ')', group: 'Absences et compteurs', icon: CalendarClock },
+              { id: 'clock', label: 'Badgeuses et tablettes', group: 'Badgeuses', icon: ShieldCheck },
+            ].filter(item => item.id !== 'clock' || snapshot.capabilities.canEditBadgeSettings)}
+          />
           {tab === 'clock' && snapshot.capabilities.canEditBadgeSettings && <Suspense fallback={<p role="status">Chargement des réglages de pointage…</p>}>
             <section className="space-y-4" aria-label="Réglages des badgeuses et tablettes">
               <p className="cf-card p-4 text-sm cf-muted">Ces réglages sont réservés au propriétaire ou au super administrateur du club. Le suivi quotidien reste dans Pointages et temps de travail.</p>
+              <div className="cf-card p-4 space-y-3 min-w-0">
+                <h3 className="font-bold flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  <span>Paramètres de badgeuse du club</span>
+                </h3>
+                <p className="text-xs cf-muted">
+                  La modification des règles de badgeage est strictement réservée au propriétaire ou super administrateur de {clubLabel}.
+                </p>
+
+                <div className="cf-card-secondary p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span>Fréquence de badgeage</span>
+                  <button
+                    type="button"
+                    className={buttonSecondary}
+                    disabled={busy || !snapshot.capabilities.canEditBadgeSettings}
+                    onClick={() =>
+                      void sendMutation(
+                        {
+                          action: 'save_badge_settings',
+                          badgeFrequency:
+                            snapshot.settings.badgeFrequency === 'each_shift'
+                              ? 'consecutive_shift_series'
+                              : 'each_shift',
+                          tabletBreakBadging: snapshot.settings.tabletBreakBadging,
+                        },
+                        `Fréquence de badgeage enregistrée pour ${clubLabel}.`,
+                      )
+                    }
+                  >
+                    {snapshot.settings.badgeFrequency === 'each_shift'
+                      ? 'Chaque prise de service'
+                      : 'Services consécutifs'}
+                  </button>
+                </div>
+
+                <div className="cf-card-secondary p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span>Badgeage des pauses sur tablette</span>
+                  <button
+                    type="button"
+                    className={buttonSecondary}
+                    aria-pressed={snapshot.settings.tabletBreakBadging}
+                    disabled={busy || !snapshot.capabilities.canEditBadgeSettings}
+                    onClick={() =>
+                      void sendMutation(
+                        {
+                          action: 'save_badge_settings',
+                          badgeFrequency:
+                            snapshot.settings.badgeFrequency === 'consecutive_shift_series'
+                              ? 'consecutive_shift_series'
+                              : 'each_shift',
+                          tabletBreakBadging: !snapshot.settings.tabletBreakBadging,
+                        },
+                        `Badgeage des pauses mis à jour pour ${clubLabel}.`,
+                      )
+                    }
+                  >
+                    {snapshot.settings.tabletBreakBadging ? 'Activé' : 'Désactivé'}
+                  </button>
+                </div>
+
+                {!snapshot.capabilities.canEditBadgeSettings && (
+                  <p className="text-xs text-amber-300">
+                    Consultation uniquement : seuls le propriétaire ou super administrateur de ce club peuvent modifier la badgeuse.
+                  </p>
+                )}
+              </div>
               <ClockPolicyPanel key={`clock:${currentUser.id}:${clubId}`} actor={currentUser.id} club={clubId} />
               <TerminalsManagementPanel key={`terminals:${currentUser.id}:${clubId}`} actor={currentUser.id} club={clubId} />
             </section>
@@ -359,7 +418,7 @@ export function HrSiteRulesView({ clubId, onMutated }: HrSiteRulesViewProps) {
           {(tab === 'counters' || tab === 'absences') && <LeaveCounterRulesPanel key={`${currentUser.id}:${clubId}`} actorId={currentUser.id} club={clubId} />}
 
           {tab === 'rules' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 min-w-0">
+            <div className="space-y-4 min-w-0">
               <form
                 className="cf-card p-4 space-y-3 min-w-0"
                 onSubmit={(e) => {
@@ -537,72 +596,7 @@ export function HrSiteRulesView({ clubId, onMutated }: HrSiteRulesViewProps) {
                 </fieldset>
               </form>
 
-              <div className="cf-card p-4 space-y-3 min-w-0">
-                <h3 className="font-bold flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  <span>Paramètres de badgeuse du club</span>
-                </h3>
-                <p className="text-xs cf-muted">
-                  La modification des règles de badgeage est strictement réservée au propriétaire ou super administrateur de {clubLabel}.
-                </p>
 
-                <div className="cf-card-secondary p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
-                  <span>Fréquence de badgeage</span>
-                  <button
-                    type="button"
-                    className={buttonSecondary}
-                    disabled={busy || !snapshot.capabilities.canEditBadgeSettings}
-                    onClick={() =>
-                      void sendMutation(
-                        {
-                          action: 'save_badge_settings',
-                          badgeFrequency:
-                            snapshot.settings.badgeFrequency === 'each_shift'
-                              ? 'consecutive_shift_series'
-                              : 'each_shift',
-                          tabletBreakBadging: snapshot.settings.tabletBreakBadging,
-                        },
-                        `Fréquence de badgeage enregistrée pour ${clubLabel}.`,
-                      )
-                    }
-                  >
-                    {snapshot.settings.badgeFrequency === 'each_shift'
-                      ? 'Chaque shift'
-                      : 'Série consécutive'}
-                  </button>
-                </div>
-
-                <div className="cf-card-secondary p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
-                  <span>Badgeage des pauses sur tablette</span>
-                  <button
-                    type="button"
-                    className={buttonSecondary}
-                    aria-pressed={snapshot.settings.tabletBreakBadging}
-                    disabled={busy || !snapshot.capabilities.canEditBadgeSettings}
-                    onClick={() =>
-                      void sendMutation(
-                        {
-                          action: 'save_badge_settings',
-                          badgeFrequency:
-                            snapshot.settings.badgeFrequency === 'consecutive_shift_series'
-                              ? 'consecutive_shift_series'
-                              : 'each_shift',
-                          tabletBreakBadging: !snapshot.settings.tabletBreakBadging,
-                        },
-                        `Badgeage des pauses mis à jour pour ${clubLabel}.`,
-                      )
-                    }
-                  >
-                    {snapshot.settings.tabletBreakBadging ? 'Activé' : 'Désactivé'}
-                  </button>
-                </div>
-
-                {!snapshot.capabilities.canEditBadgeSettings && (
-                  <p className="text-xs text-amber-300">
-                    Consultation uniquement : seuls le propriétaire ou super administrateur de ce club peuvent modifier la badgeuse.
-                  </p>
-                )}
-              </div>
             </div>
           )}
 
