@@ -15,8 +15,11 @@ export function validateLeadSnapshot(value:unknown):LeadProspectSnapshot {
       throw new Error('Un contact partagé est incomplet ou appartient à un autre club.');
     return {id:r.id,firstName:r.firstName,lastName:r.lastName,phone:r.phone,email:r.email,clubId:r.clubId,
       source:r.source,stage:r.stage,assignedToId:r.assignedToId??'',rgpdConsent:r.rgpdConsent,
-      bloctelListed:false,smsStopOptOut:false,retryCount:0,goal:typeof r.comment==='string'?r.comment:'',
-      notes:typeof r.comment==='string'?r.comment:'',createdAt:r.createdAt,segments:r.segments,
+      bloctelListed:false,smsStopOptOut:false,retryCount:0,goal:typeof r.goal==='string'?r.goal:typeof r.comment==='string'?r.comment:'',
+      notes:typeof r.notes==='string'?r.notes:typeof r.comment==='string'?r.comment:'',
+      address:typeof r.address==='string'?r.address:undefined,
+      serverRevision:typeof r.revision==='string' && /^[a-f0-9]{64}$/.test(r.revision)?r.revision:undefined,
+      canEdit:typeof r.canEdit==='boolean'?r.canEdit:undefined,createdAt:r.createdAt,segments:r.segments,
       leadStatus:typeof r.leadStatus==='string'?r.leadStatus:'',
       trialDate:typeof r.trialDate==='string'?r.trialDate:undefined,
       gender:typeof r.gender==='string'?r.gender:undefined,street:typeof r.street==='string'?r.street:undefined,
@@ -34,4 +37,12 @@ export function reconcileLeadSnapshot(previous:Prospect[],history:Prospect[],sna
     if((scope.has(row.clubId)||ids.has(row.id)) && (!incoming || JSON.stringify(incoming)!==key) && !historyKeys.has(key)){historical.push(row);historyKeys.add(key);}
   }
   return {prospects:[...previous.filter(r=>!scope.has(r.clubId)&&!ids.has(r.id)),...snapshot.prospects],history:historical};
+}
+
+/** Apply one confirmed write without treating other contacts in the club as deleted. */
+export function reconcileConfirmedLeadContact(previous:Prospect[],history:Prospect[],contact:Prospect){
+  const old=previous.find(p=>p.id===contact.id),older=old?JSON.stringify(old):null;
+  const keep=old && older!==JSON.stringify(contact) && !history.some(p=>JSON.stringify(p)===older);
+  return {prospects:old?previous.map(p=>p.id===contact.id?contact:p):[contact,...previous],
+    history:keep?[...history,old]:history};
 }

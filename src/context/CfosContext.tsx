@@ -1,4 +1,5 @@
-import { reconcileLeadSnapshot, type LeadProspectSnapshot } from '../domain/leadProspectSnapshot';
+import { createLeadContactWriter, type LeadContactFields } from '../domain/leadContactWrites';
+import { reconcileLeadSnapshot, reconcileConfirmedLeadContact, type LeadProspectSnapshot } from '../domain/leadProspectSnapshot';
 import { clubStorage, authorizedClub, readClubSelection, rememberClubSelection } from '../domain/clubSelection';
 import { clientApi } from '../domain/clientApi';
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -82,7 +83,6 @@ import {
   createInternalElectronicSignatureProof,
   evaluateGatePassage,
   executeTransactionalOnboarding,
-  findDuplicateProspect,
   generateHeitzTrialPassageCode,
   mergeFailoverSnapshot,
   parseRecruitmentEmailPayload,
@@ -336,8 +336,10 @@ interface CfosContextValue extends PersistedState {
     city?: string;
     birthDate?: string;
     comment?: string;
+    notes?: string;
+    address?: string;
     allowEmptyPhone?: boolean;
-  }) => { ok: boolean; message: string };
+  }) => Promise<{ ok: boolean; message: string }>;
   updateProspect: (
     prospectId: string,
     patch: Partial<
@@ -357,8 +359,9 @@ interface CfosContextValue extends PersistedState {
         | 'segments'
       >
     >,
-    confirmation?: 'server-confirmed'
-  ) => { ok: boolean; message: string };
+    confirmation?: 'server-confirmed',
+    expectedRevision?: string
+  ) => Promise<{ ok: boolean; message: string }>;
   assignSegmentToProspects: (prospectIds: string[], segmentName: string) => number;
   upsertServerProspects: (actorId:string,snapshot:LeadProspectSnapshot) => void;
   updateProspectStage: (prospectId: string, stage: ProspectStage) => void;
@@ -521,6 +524,8 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
   });
   const [leadScope,setLeadScope]=useState<{actorId:string;clubs:ClubId[]}|null>(null);
   const leadActor=useRef(currentUserId);leadActor.current=currentUserId;
+  const contactWriter=useRef<ReturnType<typeof createLeadContactWriter>|null>(null);
+  if(!contactWriter.current)contactWriter.current=createLeadContactWriter();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -1637,100 +1642,53 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
-  const createProspect: CfosContextValue['createProspect'] = (input) => {
-    if (!input.firstName.trim() || !input.lastName.trim() || (!input.allowEmptyPhone && !input.phone.trim())) {
-      return { ok: false, message: 'Prénom, nom et téléphone sont obligatoires.' };
-    }
-    const rawPhone = input.phone.trim();
-    if (rawPhone.length > 0) {
-      const digitsOnly = rawPhone.replace(/[\s.\-()]/g, '').replace(/^\+33/, '0');
-      if (!/^0[1-9]\d{8}$/.test(digitsOnly) && !/^\+\d{10,15}$/.test(rawPhone.replace(/[\s.\-()]/g, ''))) {
-        const errMsg = `Numéro de téléphone invalide (« ${rawPhone} ») — saisissez un numéro valide (ex: 06 12 34 56 78).`;
-        notify('warning', errMsg);
-        return { ok: false, message: errMsg };
-      }
-    }
-    const dup = findDuplicateProspect([...state.prospects,...(state.leadLocalContacts??[])], input.phone, input.email);
-    if (dup) {
-      const msg = `Doublon détecté : ${dup.firstName} ${dup.lastName} existe déjà dans le pipeline (${dup.stage}).`;
-      notify('warning', msg);
-      return { ok: false, message: msg };
-    }
-
-    const addressFull = [input.street, input.postalCode, input.city].filter(Boolean).join(' ').trim();
-    const newProspect: Prospect = {
-      id: `pr-${Date.now()}`,
-      firstName: input.firstName.trim(),
-      lastName: input.lastName.trim(),
-      phone: rawPhone,
-      email: input.email.trim(),
-      clubId: input.clubId,
-      source: input.source,
-      stage: 'Nouveau',
-      assignedToId: input.clubId === 'carre-de-soie' ? 'emp-maxime' : 'emp-chloe',
-      rgpdConsent: input.rgpdConsent,
-      bloctelListed: false,
-      smsStopOptOut: false,
-      retryCount: 0,
-      goal: input.goal.trim() || 'Séance découverte & bilan forme',
-      notes: input.comment?.trim() ? input.comment.trim() : `Créé via ${input.source}.`,
-      createdAt: new Date().toISOString().slice(0, 10),
-      address: addressFull || undefined,
-      gender: input.gender?.trim() || undefined,
-      street: input.street?.trim() || undefined,
-      postalCode: input.postalCode?.trim() || undefined,
-      city: input.city?.trim() || undefined,
-      birthDate: input.birthDate?.trim() || undefined,
-      comment: input.comment?.trim() || undefined,
-      pendingSmsDraft: input.rgpdConsent
-        ? `Bonjour ${input.firstName.trim()}, bienvenue chez C.Fitness ! Quand souhaitez-vous planifier votre séance d’essai offerte ? STOP au 36111.`
-        : undefined,
-    };
-
-    setState((prev) => ({
-      ...prev,
-      leadLocalContacts: [newProspect, ...(prev.leadLocalContacts??[])],
-      auditLogs: appendAudit(prev.auditLogs, {
-        clubId: input.clubId,
-        action: 'CREATION_PROSPECT_CRM',
-        target: `${newProspect.firstName} ${newProspect.lastName}`,
-        afterState: `Source: ${input.source} · Consentement RGPD: ${input.rgpdConsent ? 'Oui' : 'Non'}`,
-      }),
-    }));
-
-    notify('warning', 'Contact conservé sur cet appareil. Il reste à importer dans la liste partagée.');
-    return { ok: true, message: 'Contact conservé sur cet appareil uniquement. Un responsable doit l’importer pour le partager.' };
-  };
-
-  const updateProspect: CfosContextValue['updateProspect'] = (prospectId, patch, confirmation) => {
-    if (patch.phone !== undefined) {
-      const rawPhone = patch.phone.trim();
-      const digitsOnly = rawPhone.replace(/[\s.\-()]/g, '').replace(/^\+33/, '0');
-      if (!/^0[1-9]\d{8}$/.test(digitsOnly) && !/^\+\d{10,15}$/.test(rawPhone.replace(/[\s.\-()]/g, ''))) {
-        const errMsg = `Numéro de téléphone invalide (« ${rawPhone} ») — saisissez un numéro valide (ex: 06 12 34 56 78).`;
-        notify('warning', errMsg);
-        return { ok: false, message: errMsg };
-      }
-    }
-    setState((prev) => {
-      const target = prev.prospects.find((p) => p.id === prospectId);
-      if (!target) return prev;
-      return {
-        ...prev,
-        prospects: prev.prospects.map((p) =>
-          p.id === prospectId ? { ...p, ...patch } : p
-        ),
-        auditLogs: appendAudit(prev.auditLogs, {
-          clubId: patch.clubId ?? target.clubId,
-          action: 'EDITION_FICHE_PROSPECT_CRM',
-          target: `${patch.firstName ?? target.firstName} ${patch.lastName ?? target.lastName}`,
-          afterState: `Champs mis à jour : ${Object.keys(patch).join(', ')}`,
-        }),
-      };
+  const applySharedContact=(actorId:string,contact:Prospect)=>{
+    if(leadActor.current!==actorId)throw new Error('Le compte a changé. Actualisez la liste avant de continuer.');
+    setState(prev=>{
+      if(leadActor.current!==actorId)return prev;
+      const next=reconcileConfirmedLeadContact(prev.prospects,prev.leadLocalContacts??[],contact);
+      return {...prev,prospects:next.prospects,leadLocalContacts:next.history};
     });
-    if(confirmation==='server-confirmed')return {ok:true,message:'Modification partagée confirmée.'};
-    notify('warning', 'Modifications conservées sur cet appareil uniquement. Elles ne sont pas encore partagées avec le club.');
-    return { ok: true, message: 'Modifications conservées sur cet appareil uniquement ; elles ne sont pas transmises au club.' };
+  };
+  const createProspect: CfosContextValue['createProspect'] = async (input) => {
+    const actorId=currentUserId;
+    try {
+      const {clubId,allowEmptyPhone:_allowEmptyPhone,...fields}=input;
+      const contact=await contactWriter.current!({actorId,siteId:'all'},{
+        clubId,fields:{...fields,notes:input.notes??input.comment??'',address:input.address??[input.street,input.postalCode,input.city].filter(Boolean).join(' ')}});
+      applySharedContact(actorId,contact);
+      notify('success','Prospect enregistré et partagé avec le club.');
+      return {ok:true,message:'Prospect enregistré et partagé avec le club.'};
+    } catch(error) {
+      const message=error instanceof Error?error.message:'Le prospect n’a pas été enregistré. Votre saisie est conservée.';
+      if(leadActor.current===actorId)notify('warning',message);
+      return {ok:false,message};
+    }
+  };
+  const updateProspect: CfosContextValue['updateProspect'] = async (prospectId, patch, confirmation, expectedRevision) => {
+    const actorId=currentUserId;
+    if(confirmation==='server-confirmed'){
+      // Verified transfer/rebalance invalidates the old revision until workspace reload.
+      setState(prev=>leadActor.current!==actorId?prev:{...prev,prospects:prev.prospects.map(p=>p.id===prospectId?{...p,...patch,serverRevision:undefined}:p)});
+      return {ok:true,message:'Modification partagée confirmée.'};
+    }
+    try {
+      const target=state.prospects.find(p=>p.id===prospectId);
+      if(!target?.serverRevision || target.canEdit!==true)throw new Error('Actualisez le dossier partagé ou demandez l’accès à votre responsable.');
+      if((patch.clubId!==undefined && patch.clubId!==target.clubId) ||
+         (patch.assignedToId!==undefined && patch.assignedToId!==target.assignedToId))
+        throw new Error('Utilisez les actions de transfert ou de répartition pour changer le club ou le commercial.');
+      const {clubId:_clubId,assignedToId:_assignedToId,...fields}=patch;
+      const contact=await contactWriter.current!({actorId,siteId:'all'},{
+        clubId:target.clubId,target:{id:target.id,revision:expectedRevision??target.serverRevision},fields:fields as LeadContactFields});
+      applySharedContact(actorId,contact);
+      notify('success','Dossier enregistré et partagé avec le club.');
+      return {ok:true,message:'Dossier enregistré et partagé avec le club.'};
+    } catch(error) {
+      const message=error instanceof Error?error.message:'Le dossier n’a pas été enregistré. Votre saisie est conservée.';
+      if(leadActor.current===actorId)notify('warning',message);
+      return {ok:false,message};
+    }
   };
 
   const upsertServerProspects = (actorId:string,snapshot:LeadProspectSnapshot) => {
@@ -1767,11 +1725,7 @@ export function CfosProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateProspectStage = (prospectId: string, stage: ProspectStage) => {
-    setState((prev) => ({
-      ...prev,
-      prospects: prev.prospects.map((p) => (p.id === prospectId ? { ...p, stage } : p)),
-    }));
-    notify('warning', `Étape « ${stage} » conservée sur cet appareil uniquement, sans enregistrement partagé.`);
+    void updateProspect(prospectId,{leadStatus:stage});
   };
 
   const scheduleProspectTrial = (prospectId: string, trialDateLabel: string) => {

@@ -1,3 +1,4 @@
+import { reconcileConfirmedLeadContact } from './leadProspectSnapshot';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {validateLeadSnapshot,reconcileLeadSnapshot} from './leadProspectSnapshot';
@@ -57,4 +58,25 @@ test('target-only scope preserves prior transferred version without keeping it i
  assert.equal(result.prospects.length,1);assert.equal(result.prospects[0].clubId,'carre-de-soie');
  assert.equal(result.history.length,1);assert.equal(result.history[0].clubId,'beynost');
  assert.equal(result.history[0].comment,'older local comment');
+});
+
+test('confirmed single-contact edit preserves other contacts and older local notes/segments',()=>{
+ const raw=(id:string)=>({id,firstName:'Contact',lastName:'Fictif',phone:'0600000001',email:'',clubId:'carre-de-soie',source:'Tablette accueil',
+  stage:'Nouveau',createdAt:'2026-11-27',assignedToId:null,rgpdConsent:false,segments:[],comment:''});
+ const base=validateLeadSnapshot({allowedClubs:['carre-de-soie'],prospects:[raw('one'),raw('two')]}).prospects;
+ const old={...base[0],notes:'Local-only note',segments:['Local tag']};
+ const confirmed={...base[0],notes:'Shared note',serverRevision:'b'.repeat(64)};
+ const result=reconcileConfirmedLeadContact([old,base[1]],[],confirmed);
+ assert.equal(result.prospects.length,2);assert.equal(result.prospects[1].id,'two');
+ assert.equal(result.prospects[0].notes,'Shared note');assert.equal(result.history[0].notes,'Local-only note');
+ assert.deepEqual(result.history[0].segments,['Local tag']);
+ const again=reconcileConfirmedLeadContact(result.prospects,result.history,confirmed);
+ assert.equal(again.history.length,1);
+});
+test('confirmed single-contact creation never replaces another ID sharing the email',()=>{
+ const raw=(id:string)=>({id,firstName:'Contact',lastName:'Fictif',phone:'',email:'same@example.invalid',clubId:'carre-de-soie',source:'Tablette accueil',
+  stage:'Nouveau',createdAt:'2026-11-27',assignedToId:null,rgpdConsent:false,segments:[],comment:''});
+ const rows=validateLeadSnapshot({allowedClubs:['carre-de-soie'],prospects:[raw('one'),raw('two')]}).prospects;
+ const result=reconcileConfirmedLeadContact([rows[0]],[],rows[1]);
+ assert.deepEqual(result.prospects.map(p=>p.id),['two','one']);assert.equal(result.history.length,0);
 });

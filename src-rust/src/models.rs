@@ -839,6 +839,8 @@ pub struct SiteStaffingNeed {
 #[serde(rename_all = "camelCase")]
 pub struct AppDatabaseState {
     #[serde(default)]
+    pub lead_contacts: crate::lead_contacts::Store,
+    #[serde(default)]
     pub leave_accrual: crate::hr_leave_accrual::Store,
     #[serde(default)]
     pub leave_policy: crate::hr_leave_policy::Store,

@@ -1,3 +1,4 @@
+import { LeadContactEditor } from '../LeadContactEditor';
 import { validateLeadSnapshot } from '../../domain/leadProspectSnapshot';
 import { LeadWorkspaceNavigation, type LeadWorkspacePage } from '../LeadWorkspaceNavigation';
 import { LeadCommunicationsHistoryView } from "./LeadCommunicationsHistoryView";
@@ -279,6 +280,7 @@ export function LeadCommercialHubView({
   );
 
   const [historyLimit,setHistoryLimit]=useState(50);
+  const [recoveringContact,setRecoveringContact]=useState<Prospect|null>(null);
   const localHistory=(leadLocalContacts??[]).filter(p=>leadServerClubs?.includes(p.clubId)&&(clubFilter==='all'||p.clubId===clubFilter));
   const [workspaceReady,setWorkspaceReady]=useState(false);
   const [workspaceActor,setWorkspaceActor]=useState('');
@@ -973,7 +975,11 @@ export function LeadCommercialHubView({
               {workspaceReady && workspaceActor===currentUser.id && localHistory.length>0 && <details className="cf-card p-4">
                 <summary className="cursor-pointer font-semibold text-sm">Contacts et anciennes versions conservés sur cet appareil</summary>
                 <p className="cf-muted text-sm mt-2">Ces copies ne remplacent pas les données partagées et ne sont pas comptées dans les indicateurs. Elles restent consultables pour reprendre une ancienne saisie, sans import ni suppression automatique.</p>
-                <ul className="space-y-3 mt-3">{localHistory.slice(0,historyLimit).map((p,i)=><li key={p.id+':'+i} className="cf-card-secondary rounded-lg p-3 text-sm break-words"><strong>{p.firstName} {p.lastName}</strong><p>{p.phone} · {p.email}</p><p className="cf-muted">{p.source} · {p.stage}</p>{p.notes&&<p className="whitespace-pre-wrap">{p.notes}</p>}</li>)}</ul>
+                {recoveringContact&&<LeadContactEditor key={recoveringContact.id} prospect={recoveringContact} mode="recover" onClose={()=>setRecoveringContact(null)}/>}
+                <ul className="space-y-3 mt-3">{localHistory.slice(0,historyLimit).map((p,i)=><li key={p.id+':'+i} className="cf-card-secondary rounded-lg p-3 text-sm break-words"><strong>{p.firstName} {p.lastName}</strong><p>{p.phone} · {p.email}</p><p className="cf-muted">{p.source} · {p.stage}</p>{p.notes&&<p className="whitespace-pre-wrap">{p.notes}</p>}
+                  {!authorizedProspects.some(shared=>shared.id===p.id)&&<button type="button" onClick={()=>setRecoveringContact({...p})}
+                    className="mt-3 min-h-11 px-3 rounded-lg bg-violet-600 text-white font-semibold">Reprendre ce contact</button>}
+                </li>)}</ul>
                 {localHistory.length>historyLimit && <button type="button" className="cf-card-secondary rounded-lg p-3 text-sm mt-3" onClick={()=>setHistoryLimit(n=>n+50)}>Afficher les contacts conservés suivants</button>}
               </details>}
               <details className="group cf-card p-4">
@@ -1350,7 +1356,7 @@ export function LeadCommercialHubView({
                                 className="px-2 py-1 rounded bg-slate-900 border border-slate-700"
                               />
                               <select
-                                value={editProspectForm.assignedToId}
+                                disabled title="La répartition des commerciaux se gère depuis les actions de répartition du club." value={editProspectForm.assignedToId}
                                 onChange={(e) => setEditProspectForm((f) => ({ ...f, assignedToId: e.target.value }))}
                                 className="px-2 py-1 rounded bg-slate-900 border border-slate-700"
                               >
@@ -1370,8 +1376,8 @@ export function LeadCommercialHubView({
                             />
                             <button
                               type="button"
-                              onClick={() => {
-                                const res = updateProspect(editingProspectId, editProspectForm);
+                              onClick={async () => {
+                                const res = await updateProspect(editingProspectId, editProspectForm);
                                 setBulkSegmentLog(res.message);
                                 if (res.ok) setEditingProspectId(null);
                               }}
@@ -2121,9 +2127,7 @@ export function LeadCommercialHubView({
                     };
                     setRdvBookings((prev) => [newSlot, ...prev]);
                     if (targetProspect) {
-                      updateProspect(targetProspect.id, {
-                        leadStatus: 'Séance planifiée',
-                      });
+                      // Local booking simulation must not mark a shared prospect as booked.
                       setActivities((prev) => [
                         {
                           id: `act-rdv-${Date.now()}`,
@@ -3082,9 +3086,9 @@ export function LeadCommercialHubView({
                                 </span>
                                 <button
                                   type="button"
-                                  onClick={() => {
+                                  onClick={async () => {
                                     const parts = rep.fullName.split(' ');
-                                    const res = createProspect({
+                                    const res = await createProspect({
                                       firstName: parts[0] || rep.fullName,
                                       lastName: parts.slice(1).join(' ') || 'Formulaire',
                                       phone: rep.phone,

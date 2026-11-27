@@ -257,6 +257,8 @@ pub fn api_router(state: SharedState) -> Router {
             post(crate::lead_automations::post_lead_inbound_reply),
         )
         .route("/api/heitz/sync-sale", post(crate::lead_automations::post_heitz_sync_sale))
+        .route("/api/lead/contacts", post(crate::lead_contacts::create).layer(axum::extract::DefaultBodyLimit::max(65536)))
+        .route("/api/lead/contacts/:id", axum::routing::patch(crate::lead_contacts::update).layer(axum::extract::DefaultBodyLimit::max(65536)))
         .route("/api/lead/workspace", get(get_lead_workspace))
         .route("/api/lead/forms/:form_id", put(put_lead_form))
         .route("/api/lead/prospects/import", post(post_lead_prospects_import))
@@ -4649,7 +4651,7 @@ async fn get_lead_workspace(
         .lead_prospects
         .iter()
         .filter(|p| allowed.contains(&p.club_id))
-        .cloned()
+        .map(|p|crate::lead_contacts::view_for(&db,&actor_id,p))
         .collect();
     let appointments: Vec<_> = db
         .lead_appointments

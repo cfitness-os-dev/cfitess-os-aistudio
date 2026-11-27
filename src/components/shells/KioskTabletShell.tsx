@@ -616,17 +616,17 @@ export function KioskTabletShell() {
     }
   };
 
-  const handleVisitorSubmit = (e: React.FormEvent) => {
+  const handleVisitorSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = createProspect({
+    const res = await createProspect({
       firstName: vFirstName,
       lastName: vLastName,
       phone: vPhone,
-      email: `${vFirstName.toLowerCase()}@visiteur-kiosque.fr`,
+      email: '',
       clubId: resolvedClub,
       source: 'Tablette accueil',
       goal: vGoal,
-      rgpdConsent: true,
+      rgpdConsent: false,
     });
 
     if (!res.ok) {
@@ -637,7 +637,7 @@ export function KioskTabletShell() {
     } else {
       setStatusMessage({
         type: 'ok',
-        text: `Bienvenue chez C.Fitness ${vFirstName} ! Votre séance découverte est enregistrée, un coach vient vous accueillir.`,
+        text: `Bienvenue chez C.Fitness ${vFirstName} ! Votre demande de contact est enregistrée. Présentez-vous à l’accueil pour organiser votre séance.`,
       });
       setVFirstName('');
       setVLastName('');
