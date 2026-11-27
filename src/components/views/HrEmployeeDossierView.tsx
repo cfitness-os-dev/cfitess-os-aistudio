@@ -480,8 +480,8 @@ export function HrEmployeeDossierView({
                                       : 'Réactivation du dossier collaborateur',
                                   }),
                                 selected.active
-                                  ? 'Compte collaborateur archivé sur le serveur.'
-                                  : 'Compte collaborateur réactivé sur le serveur.',
+                                  ? 'Compte collaborateur archivé.'
+                                  : 'Compte collaborateur réactivé.',
                               )
                             }
                           >
@@ -522,7 +522,7 @@ export function HrEmployeeDossierView({
                         );
                         setIdentityOpen(false);
                         return updated;
-                      }, 'Fiche collaborateur enregistrée sur le serveur.');
+                      }, 'Fiche collaborateur enregistrée.');
                     }}
                   >
                     <h4 className="font-semibold text-violet-300">Modifier l’identité du dossier</h4>
@@ -952,7 +952,7 @@ export function HrEmployeeDossierView({
                         );
                         setContractOpen(false);
                         return updated;
-                      }, 'Contrat enregistré sur le serveur.');
+                      }, 'Contrat enregistré.');
                     }}
                   >
                     <h4 className="font-semibold text-violet-300">Mettre à jour le contrat</h4>
@@ -1115,7 +1115,7 @@ export function HrEmployeeDossierView({
 
                     <p className="text-xs cf-muted flex items-center gap-1.5">
                       <CalendarClock className="w-4 h-4 shrink-0 text-cyan-400" />
-                      Les valeurs affichées proviennent du référentiel serveur. Aucune acquisition ou déduction automatique non validée n’est appliquée.
+                      Ces soldes correspondent à votre dossier RH. Seules les acquisitions et déductions validées sont prises en compte.
                     </p>
 
                     {personalOnly && selected.id === currentUser.id && <PersonalCarryPanel key={`${currentUser.id}:${clubId}`} actorId={currentUser.id} club={clubId} />}

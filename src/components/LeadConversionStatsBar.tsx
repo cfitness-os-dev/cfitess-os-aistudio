@@ -44,7 +44,13 @@ export function LeadConversionStatsBar({clubId,canRebalance=false,employees=[],o
     } finally {submitting.current=false;setBusy(false);}
   }
   const name=(id:string)=>{const employee=employees.find(e=>e.id===id);return employee ? employee.firstName+' '+employee.lastName : 'Collaborateur non disponible';};
-  return <section aria-label="Suivi des prospects du club" className="cf-card rounded-2xl min-w-0 p-4 space-y-4">
+  return <section aria-label="Suivi des prospects du club" className="cf-card rounded-2xl min-w-0">
+    <details className="group p-4">
+      <summary className="cursor-pointer min-h-6 flex flex-wrap items-center justify-between gap-2 text-sm font-semibold">
+        <span className="flex items-center gap-2"><TrendingUp size={18}/>Indicateurs commerciaux</span>
+        <span className="cf-muted">{stats ? stats.activeLeads + " actif(s) · " + stats.staleLeads + " sans contact depuis 3 jours" : error ? "Indicateurs indisponibles" : "Chargement…"} <span className="ml-2 text-violet-400 group-open:hidden">Voir le détail</span></span>
+      </summary>
+      <div className="space-y-4 mt-4">
     <div className="flex flex-wrap gap-3 items-start justify-between">
       <h2 className="font-bold flex gap-2 items-center"><TrendingUp size={18}/>Suivi des prospects</h2>
       <button className={button} disabled={loading||busy} onClick={()=>void load()} aria-label="Actualiser les indicateurs"><RefreshCw size={16}/></button>
@@ -73,5 +79,8 @@ export function LeadConversionStatsBar({clubId,canRebalance=false,employees=[],o
       </div>}
     </>}
     {feedback && <p role="status" className="text-emerald-400 text-sm">{feedback}</p>}
+      </div>
+    </details>
+    {error && <p role="alert" className="px-4 pb-4 text-amber-400 text-sm">{error}</p>}
   </section>;
 }
