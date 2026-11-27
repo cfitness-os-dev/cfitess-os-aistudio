@@ -217,14 +217,14 @@
       "module": "RH responsable",
       "screen": "Absences et disponibilités",
       "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
-      "detailVisualReview": "à terminer écran par écran",
+      "detailVisualReview": "cartes/dates/décisions dépliables contrôlées desktop390/768 ; brouillon conservé et garde filtre testée ; aucune décision enregistrée ; variantes compteurs/droits restant à contrôler",
       "functionalParity": "non certifiée par ce lot"
     },
     {
       "module": "RH responsable",
       "screen": "Pointages et temps de travail",
       "sharedPresentation": "navigation groupée et repères de rubrique appliqués",
-      "detailVisualReview": "à terminer écran par écran",
+      "detailVisualReview": "fixture locale : annotation enregistrée/rechargée, heure originale conservée ; mobile390 dernier bouton dégagé après défilement, tablette768 et repli Espace contrôlés ; aucune badgeuse/caméra réelle",
       "functionalParity": "non certifiée par ce lot"
     },
     {
@@ -368,5 +368,5 @@
       "functionalParity": "reste conditionnée à l’API documentée et aux accès web vérifiés"
     }
   ],
-  "latestLot": "Présentation RH réglages, après118 intégré"
+  "latestLot": "Présentation listes absences/pointages — validation partielle"
 }

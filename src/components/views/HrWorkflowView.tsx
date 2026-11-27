@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useCfos } from "../../context/CfosContext";
 import { LeaveDecisionPanel, LeavePolicySummary } from './LeaveDecisionPanel';
 import { confirmLeadDraftNavigation } from '../../domain/leadDraftGuard';
@@ -11,6 +11,27 @@ import {
   HrWorkflowEditor,
   statusLabel,
 } from "../../domain/hrWorkflow";
+
+function ReviewDisclosure({ enabled, label, children }: {
+  enabled: boolean;
+  label: string;
+  children: ReactNode;
+}) {
+  if (!enabled) return <>{children}</>;
+  return (
+    <details className="rounded-xl border border-current/15 p-3">
+      <summary className="min-h-[44px] cursor-pointer py-2 font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+        {label}
+      </summary>
+      <div className="pt-3">{children}</div>
+    </details>
+  );
+}
+
+function displayLeaveDate(value: string) {
+  const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  return parts ? parts[3] + "/" + parts[2] + "/" + parts[1] : value;
+}
 
 export function HrWorkflowView({
   tab,
@@ -88,6 +109,9 @@ function Workflow({
   const button =
     "cf-brand-gradient text-white px-3 py-2 rounded-xl min-h-[44px] text-sm font-semibold disabled:opacity-50";
   const input = "cf-input w-full min-w-0 px-3 py-2 min-h-[44px] rounded-xl";
+  const secondaryButton = "cf-input px-3 py-2 rounded-xl min-h-[44px] text-sm font-semibold disabled:opacity-50";
+  const hasFilters = !!(query || start || end || (tab === "requests" && status !== "all"));
+  const resultCount = tab === "requests" ? requestRows.length : entryRows.length;
   const exportRows = () => {
     const rows =
       tab === "requests"
@@ -177,21 +201,21 @@ function Workflow({
         </p>
         <div className="flex flex-wrap gap-2">
           <button
-            className={button}
+            className={secondaryButton}
             disabled={state.loading || state.saving}
             onClick={() => { const refresh=()=>void editor.load(); if(confirmLeadDraftNavigation(refresh))refresh(); }}
           >
-            Actualiser les données RH
+            Actualiser
           </button>
           <button
-            className={button}
+            className={secondaryButton}
             disabled={!state.data || state.loading || state.saving}
             onClick={exportRows}
           >
-            Exporter la sélection en CSV
+            Exporter la sélection (CSV)
           </button>
           <button
-            className={button}
+            className={secondaryButton}
             onClick={() => {
               setActiveSection("my-day", "personal");
               window.history.replaceState(
@@ -268,23 +292,41 @@ function Workflow({
       )}
       {state.data && (
         <>
-          <p role="status">
-            {tab === "requests" ? requestRows.length : entryRows.length}{" "}
-            résultat(s) dans le périmètre affiché.
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p role="status">{resultCount} résultat(s) dans le périmètre affiché.</p>
+            {hasFilters && (
+              <button className={secondaryButton} disabled={state.loading || state.saving}
+                onClick={() => changeFilter(() => { setQuery(""); setStatus("all"); setStart(""); setEnd(""); })}>
+                Effacer les filtres
+              </button>
+            )}
+          </div>
+          {!state.loading && !state.error && resultCount === 0 && (
+            <div className="cf-card p-5 space-y-2">
+              <h3 className="font-semibold">
+                {hasFilters ? "Aucun résultat avec ces filtres" : tab === "requests" ? "Aucune demande d’absence sur ce périmètre" : "Aucun pointage sur ce périmètre"}
+              </h3>
+              <p className="cf-muted text-sm">
+                {hasFilters ? "Élargissez la période ou effacez les filtres pour retrouver les éléments disponibles." : "Les nouveaux éléments apparaîtront ici après leur enregistrement."}
+              </p>
+            </div>
+          )}
           {tab === "requests"
             ? requestRows.map((row) => (
                 <article className="cf-card p-4 space-y-3" key={`${row.id}:${draftEpoch}`}>
                   <h3 className="font-bold">
                     {row.employeeName} · {row.motive}
                   </h3>
-                  <p>
-                    {row.startDate} → {row.endDate} · {statusLabel(row.status)}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-2 text-sm">
+                    <p>{displayLeaveDate(row.startDate)} → {displayLeaveDate(row.endDate)}</p>
+                    <span className="cf-input rounded-full px-3 py-1 font-semibold">{statusLabel(row.status)}</span>
+                  </div>
                   <p className="whitespace-pre-wrap break-words">
                     {row.comment}
                   </p>
                   {row.policy && <LeavePolicySummary policy={row.policy} />}
+                  <ReviewDisclosure enabled={row.canDecide}
+                    label={statusLabel(row.status) === "En attente" ? "Traiter cette demande" : "Revoir la décision"}>
                   {row.canDecide && row.policy && (row.policy.counterFamily !== 'none' || row.policy.hasActiveSettlement) ? <LeaveDecisionPanel row={row} actorId={actorId} club={club} locked={state.loading||state.saving} onChanged={()=>editor.load(true)} onSimpleDecision={(status,note)=>editor.save({kind:'request',id:row.id,status,expectedStatus:row.status,expectedRevision:row.revision,note})} /> : row.canDecide ? (
                     <div className="space-y-2">
                       <label className="block">
@@ -349,6 +391,7 @@ function Workflow({
                         : "Consultation uniquement. Vos droits ne permettent pas de traiter cette demande."}
                     </p>
                   )}
+                  </ReviewDisclosure>
                 </article>
               ))
             : entryRows.map((row) => (
@@ -374,6 +417,7 @@ function Workflow({
                     </p>
                   )}
                   {row.canReview && (
+                    <ReviewDisclosure enabled label={row.review ? "Modifier la note" : "Annoter ce pointage"}>
                     <form
                       onSubmit={async (e) => {
                         e.preventDefault();
@@ -411,6 +455,7 @@ function Workflow({
                         Enregistrer la note sur {row.employeeName}
                       </button>
                     </form>
+                    </ReviewDisclosure>
                   )}
                 </article>
               ))}
