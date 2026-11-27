@@ -13,6 +13,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useCfos } from '../../context/CfosContext';
+import { confirmLeadDraftNavigation } from '../../domain/leadDraftGuard';
 import { useLeadDraftGuard } from '../useLeadDraftGuard';
 import {
   buildPilotageCsv,
@@ -154,7 +155,7 @@ export function HrPilotageMissionsView({ clubId, onMutated }: HrPilotageMissions
       setError(
         err instanceof Error
           ? err.message
-          : 'Action refusée par le serveur. Aucune modification enregistrée.',
+          : 'Modification non enregistrée. Vérifiez vos droits ou réessayez.',
       );
       return false;
     } finally {
@@ -220,7 +221,6 @@ export function HrPilotageMissionsView({ clubId, onMutated }: HrPilotageMissions
             <Building2 className="w-3.5 h-3.5 inline mr-1 text-cyan-400" />
             Club actif : <strong className="text-slate-200">{clubLabel}</strong>
             {snapshot?.site.siret ? ` · SIRET ${snapshot.site.siret}` : ''}
-            {snapshot?.demoMode ? ' · Environnement de test' : ''}
           </p>
         </div>
 
@@ -259,7 +259,7 @@ export function HrPilotageMissionsView({ clubId, onMutated }: HrPilotageMissions
         >
           <p>{error}</p>
           <button type="button" className={buttonSecondary} onClick={() => void loadPilotage(false)}>
-            Recharger la version serveur
+            Réessayer le chargement
           </button>
         </div>
       )}
@@ -290,14 +290,20 @@ export function HrPilotageMissionsView({ clubId, onMutated }: HrPilotageMissions
           >
             <button
               type="button"
-              onClick={() => setTab('kpis')}
+              onClick={() => {
+                if (tab === 'kpis') return;
+                if (confirmLeadDraftNavigation(() => setTab('kpis'))) setTab('kpis');
+              }}
               className={tab === 'kpis' ? buttonPrimary : buttonSecondary}
             >
               Indicateurs du club
             </button>
             <button
               type="button"
-              onClick={() => setTab('missions')}
+              onClick={() => {
+                if (tab === 'missions') return;
+                if (confirmLeadDraftNavigation(() => setTab('missions'))) setTab('missions');
+              }}
               className={tab === 'missions' ? buttonPrimary : buttonSecondary}
             >
               Missions budgétées ({snapshot.missions.length})
@@ -306,7 +312,7 @@ export function HrPilotageMissionsView({ clubId, onMutated }: HrPilotageMissions
 
           {tab === 'kpis' && (
             <div className="space-y-4">
-              {/* Synthèse opérationnelle issue de la base serveur */}
+              {/* Synthèse opérationnelle */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
                 <div className="cf-card p-3 space-y-1 min-w-0">
                   <div className="cf-muted">Effectif actif du club</div>
@@ -315,7 +321,7 @@ export function HrPilotageMissionsView({ clubId, onMutated }: HrPilotageMissions
                   </div>
                 </div>
                 <div className="cf-card p-3 space-y-1 min-w-0">
-                  <div className="cf-muted">Shifts publiés</div>
+                  <div className="cf-muted">Créneaux publiés</div>
                   <div className="text-lg font-bold">
                     {snapshot.operationalSummary.publishedShiftsCount}
                   </div>
@@ -346,7 +352,7 @@ export function HrPilotageMissionsView({ clubId, onMutated }: HrPilotageMissions
                   {!snapshot.capabilities.canViewFinances && (
                     <span className="text-xs px-2.5 py-1 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-200 inline-flex items-center gap-1.5">
                       <Lock className="w-3.5 h-3.5" />
-                      Données financières masquées (RBAC)
+                      Données financières réservées à la direction
                     </span>
                   )}
                 </div>
@@ -397,9 +403,14 @@ export function HrPilotageMissionsView({ clubId, onMutated }: HrPilotageMissions
                 </div>
               </div>
 
-              {/* Formulaire d'édition des indicateurs */}
+              {/* Formulaire dépliable d'édition des indicateurs */}
+              <details className="cf-card p-4 min-w-0" open={kpiDirty || undefined}>
+                <summary className="cursor-pointer font-bold text-sm flex flex-wrap items-center justify-between gap-2">
+                  <span>Mettre à jour les indicateurs de {clubLabel}</span>
+                  <span className="text-xs font-normal cf-muted">Déplier pour modifier la période ou les chiffres</span>
+                </summary>
               <form
-                className="cf-card p-4 space-y-4 min-w-0"
+                className="mt-4 space-y-4 min-w-0"
                 onSubmit={(e) => {
                   e.preventDefault();
                   const validated = validateKpisForm({
@@ -416,7 +427,6 @@ export function HrPilotageMissionsView({ clubId, onMutated }: HrPilotageMissions
                   );
                 }}
               >
-                <h3 className="font-bold text-sm">Mettre à jour les indicateurs de {clubLabel}</h3>
                 <fieldset
                   disabled={busy || !snapshot.capabilities.canEditOperationalKpis}
                   className="space-y-3"
@@ -541,6 +551,7 @@ export function HrPilotageMissionsView({ clubId, onMutated }: HrPilotageMissions
                   )}
                 </fieldset>
               </form>
+              </details>
             </div>
           )}
 
@@ -560,149 +571,6 @@ export function HrPilotageMissionsView({ clubId, onMutated }: HrPilotageMissions
                   </div>
                 </div>
               )}
-
-              {snapshot.capabilities.canManageMissions &&
-                (snapshot.site.missionsModuleActive || editingMissionId) && (
-                  <form
-                    className="cf-card p-4 space-y-4 min-w-0"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const budgetNum = Number(missionForm.budgetHours);
-                      const loggedNum = Number(missionForm.loggedHours || '0');
-                      const hourlyNum = snapshot.capabilities.canViewFinances
-                        ? Number(missionForm.hourlyBudgetEur || '26')
-                        : undefined;
-                      const errMsg = validateMissionForm({
-                        title: missionForm.title,
-                        budgetHours: budgetNum,
-                        hourlyBudgetEur: hourlyNum,
-                        canViewFinances: snapshot.capabilities.canViewFinances,
-                      });
-                      if (errMsg) {
-                        setError(errMsg);
-                        return;
-                      }
-                      if (editingMissionId) {
-                        void sendMutation(
-                          {
-                            action: 'update_mission',
-                            id: editingMissionId,
-                            title: missionForm.title.trim(),
-                            budgetHours: budgetNum,
-                            loggedHours: Number.isFinite(loggedNum) ? loggedNum : undefined,
-                            hourlyBudgetEur: hourlyNum,
-                          },
-                          `Mission mise à jour pour ${clubLabel}.`,
-                          resetMissionForm,
-                        );
-                      } else {
-                        void sendMutation(
-                          {
-                            action: 'create_mission',
-                            title: missionForm.title.trim(),
-                            budgetHours: budgetNum,
-                            loggedHours: Number.isFinite(loggedNum) ? loggedNum : 0,
-                            hourlyBudgetEur: hourlyNum,
-                          },
-                          `Mission créée sur ${clubLabel}.`,
-                          resetMissionForm,
-                        );
-                      }
-                    }}
-                  >
-                    <h3 className="font-bold flex items-center gap-2 text-sm">
-                      <Plus className="w-4 h-4 text-violet-400" />
-                      <span>
-                        {editingMissionId
-                          ? 'Modifier la mission'
-                          : `Créer une mission sur ${clubLabel}`}
-                      </span>
-                    </h3>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-                      <label className="block space-y-1 sm:col-span-2">
-                        <span>Intitulé de la mission</span>
-                        <input
-                          required
-                          maxLength={120}
-                          className={inputCls}
-                          placeholder="Ex. Audit matériel cardio Q4"
-                          value={missionForm.title}
-                          onChange={(e) =>
-                            setMissionForm((f) => ({ ...f, title: e.target.value }))
-                          }
-                        />
-                      </label>
-                      <label className="block space-y-1">
-                        <span>Budget d’heures</span>
-                        <input
-                          required
-                          type="number"
-                          step="0.5"
-                          min={0.5}
-                          max={2000}
-                          className={inputCls}
-                          value={missionForm.budgetHours}
-                          onChange={(e) =>
-                            setMissionForm((f) => ({ ...f, budgetHours: e.target.value }))
-                          }
-                        />
-                      </label>
-                      <label className="block space-y-1">
-                        <span>Heures réalisées</span>
-                        <input
-                          type="number"
-                          step="0.5"
-                          min={0}
-                          max={6000}
-                          className={inputCls}
-                          value={missionForm.loggedHours}
-                          onChange={(e) =>
-                            setMissionForm((f) => ({ ...f, loggedHours: e.target.value }))
-                          }
-                        />
-                      </label>
-                      {snapshot.capabilities.canViewFinances && (
-                        <label className="block space-y-1">
-                          <span>Taux horaire budgété (€/h)</span>
-                          <input
-                            type="number"
-                            step="0.5"
-                            min={0}
-                            max={500}
-                            className={inputCls}
-                            value={missionForm.hourlyBudgetEur}
-                            onChange={(e) =>
-                              setMissionForm((f) => ({
-                                ...f,
-                                hourlyBudgetEur: e.target.value,
-                              }))
-                            }
-                          />
-                        </label>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="submit"
-                        className={buttonPrimary}
-                        disabled={busy || !missionForm.title.trim()}
-                      >
-                        {editingMissionId ? 'Enregistrer la mission' : 'Créer la mission'}
-                      </button>
-                      {editingMissionId && (
-                        <button
-                          type="button"
-                          className={buttonSecondary}
-                          onClick={resetMissionForm}
-                        >
-                          Annuler
-                        </button>
-                      )}
-                    </div>
-                  </form>
-                )}
 
               <div className="cf-card p-4 space-y-3 min-w-0">
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -833,6 +701,158 @@ export function HrPilotageMissionsView({ clubId, onMutated }: HrPilotageMissions
                   </div>
                 )}
               </div>
+
+              {snapshot.capabilities.canManageMissions &&
+                (snapshot.site.missionsModuleActive || editingMissionId) && (
+                  <details
+                    className="cf-card p-4 min-w-0"
+                    open={Boolean(editingMissionId || missionForm.title.trim()) || undefined}
+                  >
+                    <summary className="cursor-pointer font-bold flex items-center justify-between gap-2 text-sm">
+                      <span className="flex items-center gap-2">
+                        <Plus className="w-4 h-4 text-violet-400" />
+                        <span>
+                          {editingMissionId
+                            ? 'Modifier la mission'
+                            : `Créer une mission sur ${clubLabel}`}
+                        </span>
+                      </span>
+                      <span className="text-xs font-normal cf-muted">
+                        {editingMissionId ? 'Édition en cours' : 'Déplier pour ajouter une mission'}
+                      </span>
+                    </summary>
+                  <form
+                    className="mt-4 space-y-4 min-w-0"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const budgetNum = Number(missionForm.budgetHours);
+                      const loggedNum = Number(missionForm.loggedHours || '0');
+                      const hourlyNum = snapshot.capabilities.canViewFinances
+                        ? Number(missionForm.hourlyBudgetEur || '26')
+                        : undefined;
+                      const errMsg = validateMissionForm({
+                        title: missionForm.title,
+                        budgetHours: budgetNum,
+                        hourlyBudgetEur: hourlyNum,
+                        canViewFinances: snapshot.capabilities.canViewFinances,
+                      });
+                      if (errMsg) {
+                        setError(errMsg);
+                        return;
+                      }
+                      if (editingMissionId) {
+                        void sendMutation(
+                          {
+                            action: 'update_mission',
+                            id: editingMissionId,
+                            title: missionForm.title.trim(),
+                            budgetHours: budgetNum,
+                            loggedHours: Number.isFinite(loggedNum) ? loggedNum : undefined,
+                            hourlyBudgetEur: hourlyNum,
+                          },
+                          `Mission mise à jour pour ${clubLabel}.`,
+                          resetMissionForm,
+                        );
+                      } else {
+                        void sendMutation(
+                          {
+                            action: 'create_mission',
+                            title: missionForm.title.trim(),
+                            budgetHours: budgetNum,
+                            loggedHours: Number.isFinite(loggedNum) ? loggedNum : 0,
+                            hourlyBudgetEur: hourlyNum,
+                          },
+                          `Mission créée sur ${clubLabel}.`,
+                          resetMissionForm,
+                        );
+                      }
+                    }}
+                  >
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                      <label className="block space-y-1 sm:col-span-2">
+                        <span>Intitulé de la mission</span>
+                        <input
+                          required
+                          maxLength={120}
+                          className={inputCls}
+                          placeholder="Ex. Audit matériel cardio Q4"
+                          value={missionForm.title}
+                          onChange={(e) =>
+                            setMissionForm((f) => ({ ...f, title: e.target.value }))
+                          }
+                        />
+                      </label>
+                      <label className="block space-y-1">
+                        <span>Budget d’heures</span>
+                        <input
+                          required
+                          type="number"
+                          step="0.5"
+                          min={0.5}
+                          max={2000}
+                          className={inputCls}
+                          value={missionForm.budgetHours}
+                          onChange={(e) =>
+                            setMissionForm((f) => ({ ...f, budgetHours: e.target.value }))
+                          }
+                        />
+                      </label>
+                      <label className="block space-y-1">
+                        <span>Heures réalisées</span>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min={0}
+                          max={6000}
+                          className={inputCls}
+                          value={missionForm.loggedHours}
+                          onChange={(e) =>
+                            setMissionForm((f) => ({ ...f, loggedHours: e.target.value }))
+                          }
+                        />
+                      </label>
+                      {snapshot.capabilities.canViewFinances && (
+                        <label className="block space-y-1">
+                          <span>Taux horaire budgété (€/h)</span>
+                          <input
+                            type="number"
+                            step="0.5"
+                            min={0}
+                            max={500}
+                            className={inputCls}
+                            value={missionForm.hourlyBudgetEur}
+                            onChange={(e) =>
+                              setMissionForm((f) => ({
+                                ...f,
+                                hourlyBudgetEur: e.target.value,
+                              }))
+                            }
+                          />
+                        </label>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="submit"
+                        className={buttonPrimary}
+                        disabled={busy || !missionForm.title.trim()}
+                      >
+                        {editingMissionId ? 'Enregistrer la mission' : 'Créer la mission'}
+                      </button>
+                      {editingMissionId && (
+                        <button
+                          type="button"
+                          className={buttonSecondary}
+                          onClick={resetMissionForm}
+                        >
+                          Annuler
+                        </button>
+                      )}
+                    </div>
+                  </form>
+                  </details>
+                )}
             </div>
           )}
         </>

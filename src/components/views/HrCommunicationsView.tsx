@@ -74,7 +74,34 @@ export function HrCommunicationsView({ auth, clubId }: {auth: ApiAuthContext; cl
     {error && <div className="cf-card p-4 space-y-2"><p role="alert" className="text-rose-300">{error}</p><button disabled={busy} className={button} onClick={() => void load()}>Réessayer le chargement</button></div>}
     {notice && <p role="status" className="cf-card p-4 text-emerald-300">{notice}</p>}
     {!data && !error && <p role="status">Chargement des messages…</p>}
-    {data && <><section className="cf-card p-5 space-y-4"><h3 className="font-bold">Nouveau message</h3>
+    {data && <><section className="cf-card p-5 space-y-4"><div className="flex flex-wrap gap-3 items-center justify-between"><h3 className="font-bold">Mes messages envoyés dans ce club</h3><button disabled={busy} className={button} onClick={() => void load()}><RefreshCw size={14} className="inline mr-2" />Actualiser les lectures</button></div>
+        {!data.messages.length && <p className="cf-muted">Aucun message envoyé sur cette page.</p>}
+        {data.messages.map(m => <article key={m.id} className="cf-card-secondary rounded-xl p-4 space-y-2 min-w-0"><h4 className="font-bold break-words">{m.subject}</h4><p className="cf-muted text-xs">{new Date(m.createdAt).toLocaleString('fr-FR')} · {m.recipientCount} destinataire(s)</p><p className="whitespace-pre-wrap break-words">{m.body}</p>
+          <details><summary className="cursor-pointer text-sm">Lectures : {m.receipts.filter(r => r.read).length} sur {m.receipts.length} destinataire(s) actuellement consultables</summary><ul className="text-sm mt-2 space-y-1">{m.receipts.map(r => <li key={r.employeeId}>{r.employeeName} — {r.read ? 'Lu' + (r.readAt ? ' le ' + new Date(r.readAt).toLocaleString('fr-FR') : '') : 'Non lu'}</li>)}</ul></details></article>)}
+        {data.nextCursor && <button disabled={busy} className={button} onClick={() => void load(data.nextCursor!)}>Messages plus anciens</button>}
+      </section>
+      <section className="cf-card p-5 space-y-4">
+        <div className="flex flex-wrap gap-3 items-center justify-between"><h3 className="font-bold">Mes publications programmées</h3><button className={button} disabled={busy} onClick={() => void loadSchedules()}>Actualiser les programmations</button></div>
+        {scheduleError && <p role="alert" className="text-rose-300">{scheduleError}</p>}
+        {!schedules && !scheduleError && <p role="status">Chargement des programmations…</p>}
+        {schedules && !schedules.schedulerEnabled && <p className="text-amber-300 text-sm">Publications automatiques suspendues ; les messages en attente sont conservés.</p>}
+        {schedules?.scheduledMessages.length === 0 && <p className="cf-muted">Aucune programmation sur cette page.</p>}
+        {schedules?.scheduledMessages.map(m => <article key={m.id} className="cf-card-secondary rounded-xl p-4 min-w-0 space-y-2">
+          <div className="flex flex-wrap gap-2 justify-between"><h4 className="font-bold break-words">{m.subject}</h4><span className="text-sm">{statusLabel[m.status]}</span></div>
+          <p className="cf-muted text-xs">Prévu le {formatDate(m.scheduledAt)} · {m.recipientCount} destinataire(s)</p>
+          <p className="whitespace-pre-wrap break-words">{m.body}</p>
+          {m.finishedAt && <p className="cf-muted text-xs">Traité le {formatDate(m.finishedAt)}</p>}
+          {m.reason && <p role="status" className="text-amber-300 text-sm">{m.reason}</p>}
+          {m.status === 'scheduled' && (cancelId === m.id ? <div className="space-y-2"><p>Annuler la publication de « {m.subject} » ?</p><div className="flex flex-wrap gap-2"><button disabled={busy} className={button} onClick={() => void cancelSchedule(m.id)}>Confirmer l’annulation</button><button disabled={busy} className={button} onClick={() => setCancelId(null)}>Garder la programmation</button></div></div> : <button disabled={busy} className={button} onClick={() => setCancelId(m.id)}>Annuler la programmation</button>)}
+        </article>)}
+        {schedules?.nextCursor && <button disabled={busy} className={button} onClick={() => void loadSchedules(schedules.nextCursor!)}>Programmations plus anciennes</button>}
+      </section>
+      <details className="cf-card p-5" open={Boolean(subject || body || selected.length || scheduledAt) || undefined}>
+        <summary className="cursor-pointer font-bold flex flex-wrap items-center justify-between gap-2">
+          <span>Nouveau message</span>
+          <span className="text-xs font-normal cf-muted">Déplier pour choisir les destinataires et rédiger</span>
+        </summary>
+        <div className="mt-4 space-y-4">
       <fieldset disabled={busy} className="space-y-3"><legend className="font-semibold text-sm">Destinataires ({selected.length} sélectionné{selected.length > 1 ? 's' : ''})</legend>
         <input aria-label="Rechercher un destinataire" className="cf-input w-full p-2" placeholder="Rechercher un collaborateur" value={search} onChange={e => setSearch(e.target.value)} />
         <label className="block text-sm">Équipe<select className="cf-input w-full p-2 mt-1" value={team} onChange={e => setTeam(e.target.value)}><option value="">Toutes les équipes autorisées</option>{teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
@@ -94,28 +121,6 @@ export function HrCommunicationsView({ auth, clubId }: {auth: ApiAuthContext; cl
           {schedules && !schedules.schedulerEnabled && <p role="alert" className="text-amber-300 text-sm">Les publications programmées sont momentanément suspendues. Vous pouvez enregistrer le message, mais il restera en attente tant que le service n’est pas rétabli.</p>}
         </div>}
         <button disabled={!selected.length || !subject.trim() || !body.trim() || (timing === 'later' && (!scheduledAt || !schedules))} onClick={() => void publish()} className="cf-brand-gradient text-white rounded-lg p-3 flex items-center gap-2 disabled:opacity-50"><Send size={16} />{timing === 'later' ? 'Programmer le message interne' : 'Publier le message interne'}</button>
-      </fieldset></section>
-      <section className="cf-card p-5 space-y-4">
-        <div className="flex flex-wrap gap-3 items-center justify-between"><h3 className="font-bold">Mes publications programmées</h3><button className={button} disabled={busy} onClick={() => void loadSchedules()}>Actualiser les programmations</button></div>
-        {scheduleError && <p role="alert" className="text-rose-300">{scheduleError}</p>}
-        {!schedules && !scheduleError && <p role="status">Chargement des programmations…</p>}
-        {schedules && !schedules.schedulerEnabled && <p className="text-amber-300 text-sm">Publications automatiques suspendues ; les messages en attente sont conservés.</p>}
-        {schedules?.scheduledMessages.length === 0 && <p className="cf-muted">Aucune programmation sur cette page.</p>}
-        {schedules?.scheduledMessages.map(m => <article key={m.id} className="cf-card-secondary rounded-xl p-4 min-w-0 space-y-2">
-          <div className="flex flex-wrap gap-2 justify-between"><h4 className="font-bold break-words">{m.subject}</h4><span className="text-sm">{statusLabel[m.status]}</span></div>
-          <p className="cf-muted text-xs">Prévu le {formatDate(m.scheduledAt)} · {m.recipientCount} destinataire(s)</p>
-          <p className="whitespace-pre-wrap break-words">{m.body}</p>
-          {m.finishedAt && <p className="cf-muted text-xs">Traité le {formatDate(m.finishedAt)}</p>}
-          {m.reason && <p role="status" className="text-amber-300 text-sm">{m.reason}</p>}
-          {m.status === 'scheduled' && (cancelId === m.id ? <div className="space-y-2"><p>Annuler la publication de « {m.subject} » ?</p><div className="flex flex-wrap gap-2"><button disabled={busy} className={button} onClick={() => void cancelSchedule(m.id)}>Confirmer l’annulation</button><button disabled={busy} className={button} onClick={() => setCancelId(null)}>Garder la programmation</button></div></div> : <button disabled={busy} className={button} onClick={() => setCancelId(m.id)}>Annuler la programmation</button>)}
-        </article>)}
-        {schedules?.nextCursor && <button disabled={busy} className={button} onClick={() => void loadSchedules(schedules.nextCursor!)}>Programmations plus anciennes</button>}
-      </section>
-      <section className="cf-card p-5 space-y-4"><div className="flex flex-wrap gap-3 items-center justify-between"><h3 className="font-bold">Mes messages envoyés dans ce club</h3><button disabled={busy} className={button} onClick={() => void load()}><RefreshCw size={14} className="inline mr-2" />Actualiser les lectures</button></div>
-        {!data.messages.length && <p className="cf-muted">Aucun message envoyé sur cette page.</p>}
-        {data.messages.map(m => <article key={m.id} className="cf-card-secondary rounded-xl p-4 space-y-2 min-w-0"><h4 className="font-bold break-words">{m.subject}</h4><p className="cf-muted text-xs">{new Date(m.createdAt).toLocaleString('fr-FR')} · {m.recipientCount} destinataire(s)</p><p className="whitespace-pre-wrap break-words">{m.body}</p>
-          <details><summary className="cursor-pointer text-sm">Lectures : {m.receipts.filter(r => r.read).length} sur {m.receipts.length} destinataire(s) actuellement consultables</summary><ul className="text-sm mt-2 space-y-1">{m.receipts.map(r => <li key={r.employeeId}>{r.employeeName} — {r.read ? 'Lu' + (r.readAt ? ' le ' + new Date(r.readAt).toLocaleString('fr-FR') : '') : 'Non lu'}</li>)}</ul></details></article>)}
-        {data.nextCursor && <button disabled={busy} className={button} onClick={() => void load(data.nextCursor!)}>Messages plus anciens</button>}
-      </section></>}
+      </fieldset></div></details></>}
   </div>;
 }
