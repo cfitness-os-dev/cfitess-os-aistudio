@@ -2452,7 +2452,7 @@ async fn put_admin_delegations(
         let module = del.module.trim().to_ascii_lowercase();
         if !matches!(
             module.as_str(),
-            "finances" | "reports" | "recovery" | "stocks" | "maintenance"
+            "finances" | "reports" | "recovery" | "stocks" | "maintenance" | "lead"
         ) {
             return Err(err_resp(
                 StatusCode::BAD_REQUEST,
@@ -2484,7 +2484,15 @@ async fn put_admin_delegations(
             ));
         }
         for act in &clean_actions {
-            if !matches!(act.as_str(), "view" | "edit" | "export" | "*") {
+            let valid = if module == "lead" {
+                matches!(
+                    act.as_str(),
+                    "view" | "edit" | "export" | "create" | "update" | "write" | "*"
+                )
+            } else {
+                matches!(act.as_str(), "view" | "edit" | "export" | "*")
+            };
+            if !valid {
                 return Err(err_resp(
                     StatusCode::BAD_REQUEST,
                     format!("Action de délégation invalide : {}", act),
@@ -4214,6 +4222,7 @@ pub(crate) fn actor_has_lead_rdv_write_on_club(db: &AppDatabaseState, actor_id: 
     let norm_club = site_id_to_club_id(club_id);
     if crate::rbac::can_access_module_action(db, actor_id, Some(norm_club), "lead", "write")
         || crate::rbac::can_access_module_action(db, actor_id, Some(norm_club), "lead", "update")
+        || crate::rbac::can_access_module_action(db, actor_id, Some(norm_club), "lead", "edit")
         || crate::rbac::can_access_module_action(db, actor_id, Some(norm_club), "lead", "*")
     {
         return true;
@@ -6762,32 +6771,43 @@ mod tests {
         assert!(matches!(bad_action, Err((StatusCode::BAD_REQUEST, _))));
 
         // 3. Délégation Finances en lecture seule pour Greg (bi-club) uniquement à Carré de Soie
+        //    et délégation Lead avec actions d'écriture (create, update, write, view) pour Chloé à Beynost
         let saved = put_admin_delegations(
             State(state.clone()),
             admin_headers.clone(),
             Json(PutModuleDelegationsPayload {
-                delegations: vec![crate::models::ModuleDelegation {
-                    employee_id: "emp-greg".into(),
-                    site_id: "club-carre-soie".into(),
-                    module: "finances".into(),
-                    actions: vec!["view".into()],
-                }],
+                delegations: vec![
+                    crate::models::ModuleDelegation {
+                        employee_id: "emp-greg".into(),
+                        site_id: "club-carre-soie".into(),
+                        module: "finances".into(),
+                        actions: vec!["view".into()],
+                    },
+                    crate::models::ModuleDelegation {
+                        employee_id: "emp-chloe".into(),
+                        site_id: "club-beynost".into(),
+                        module: "lead".into(),
+                        actions: vec!["create".into(), "update".into(), "write".into(), "view".into()],
+                    },
+                ],
             }),
         )
         .await
         .expect("Admin devrait enregistrer la délégation par club")
         .0;
-        assert_eq!(saved.len(), 1);
+        assert_eq!(saved.len(), 2);
 
-        let fetched = get_admin_delegations(State(state.clone()), admin_headers)
+        let fetched = get_admin_delegations(State(state.clone()), admin_headers.clone())
             .await
             .expect("GET délégations OK")
             .0;
-        assert_eq!(fetched.len(), 1);
+        assert_eq!(fetched.len(), 2);
         assert_eq!(fetched[0].site_id, "club-carre-soie");
+        assert_eq!(fetched[1].module, "lead");
+        assert_eq!(fetched[1].employee_id, "emp-chloe");
 
         let db = state.db.read().await;
-        // Lecture autorisée à Carré de Soie, écriture refusée à Carré de Soie, tout refusé à Beynost
+        // Lecture autorisée à Carré de Soie, écriture refusée à Carré de Soie, tout refusé à Beynost pour finances
         assert!(crate::rbac::can_access_module_action(
             &db,
             "emp-greg",
@@ -6810,12 +6830,40 @@ mod tests {
             "view"
         ));
 
+        // Droits Lead pour Chloé à Beynost accordés via PUT, refusés sur Carré de Soie
+        assert!(crate::rbac::can_access_module_action(
+            &db,
+            "emp-chloe",
+            Some("club-beynost"),
+            "lead",
+            "write"
+        ));
+        assert!(actor_has_lead_rdv_write_on_club(&db, "emp-chloe", "club-beynost"));
+        assert!(!actor_has_lead_rdv_write_on_club(&db, "emp-chloe", "club-carre-soie"));
+
         let kpi_cds = filter_kpis_for_actor(&db, "emp-greg", "club-carre-soie");
         assert_eq!(kpi_cds.len(), 1);
         assert!(kpi_cds[0].revenue_eur.is_some());
         let kpi_bey = filter_kpis_for_actor(&db, "emp-greg", "club-beynost");
         assert_eq!(kpi_bey.len(), 1);
         assert!(kpi_bey[0].revenue_eur.is_none());
+        drop(db);
+
+        // Refus de 'write' sur un module standard autre que lead (ex: finances)
+        let bad_finance_write = put_admin_delegations(
+            State(state.clone()),
+            admin_headers,
+            Json(PutModuleDelegationsPayload {
+                delegations: vec![crate::models::ModuleDelegation {
+                    employee_id: "emp-greg".into(),
+                    site_id: "club-carre-soie".into(),
+                    module: "finances".into(),
+                    actions: vec!["write".into()],
+                }],
+            }),
+        )
+        .await;
+        assert!(matches!(bad_finance_write, Err((StatusCode::BAD_REQUEST, _))));
     }
 
     #[tokio::test]
@@ -7458,5 +7506,12 @@ mod tests {
         let mut db_revoked = db.clone();
         db_revoked.module_delegations.retain(|d| d.employee_id != "emp-chloe");
         assert!(!actor_has_lead_rdv_write_on_club(&db_revoked, "emp-chloe", "beynost"));
+
+        // 6. Délégation avec action 'edit' (alias UI d'écriture) accorde également le droit RDV
+        let mut db_edit = db.clone();
+        if let Some(del) = db_edit.module_delegations.iter_mut().find(|d| d.employee_id == "emp-chloe") {
+            del.actions = vec!["edit".into()];
+        }
+        assert!(actor_has_lead_rdv_write_on_club(&db_edit, "emp-chloe", "beynost"));
     }
 }
