@@ -4224,31 +4224,21 @@ pub(crate) fn actor_has_lead_rdv_write_on_club(db: &AppDatabaseState, actor_id: 
     }
     let norm_site = crate::rbac::normalize_site_id(club_id);
 
-    // Priorité stricte aux délégations explicites : si une délégation Lead est configurée
-    // pour ce collaborateur sur ce club (ou "all"), ses actions décident sans repli sur le profil.
-    let explicit_lead_del = db.module_delegations.iter().find(|d| {
-        d.employee_id == actor_id
-            && d.module.eq_ignore_ascii_case("lead")
-            && {
-                let ds = crate::rbac::normalize_site_id(&d.site_id);
-                ds == "all" || ds == norm_site
-            }
+    // Priorité stricte aux délégations explicites : si UNE politique Lead existe pour cet
+    // acteur (quel que soit son club), la liste des clubs et actions habilités est strictement
+    // dictée par les délégations via le moteur RBAC canonique, sans aucun repli sur le profil.
+    let has_any_lead_delegation = db.module_delegations.iter().any(|d| {
+        d.employee_id == actor_id && d.module.eq_ignore_ascii_case("lead")
     });
-    if let Some(del) = explicit_lead_del {
-        if !crate::rbac::can_access_site_scope(db, actor_id, &norm_site) {
-            return false;
-        }
-        return del.actions.iter().any(|a| {
-            let a = a.trim();
-            a == "*"
-                || a.eq_ignore_ascii_case("write")
-                || a.eq_ignore_ascii_case("update")
-                || a.eq_ignore_ascii_case("edit")
-                || a.eq_ignore_ascii_case("create")
-        });
+
+    if has_any_lead_delegation {
+        return crate::rbac::can_access_module_action(db, actor_id, Some(&norm_site), "lead", "update")
+            || crate::rbac::can_access_module_action(db, actor_id, Some(&norm_site), "lead", "write")
+            || crate::rbac::can_access_module_action(db, actor_id, Some(&norm_site), "lead", "edit")
+            || crate::rbac::can_access_module_action(db, actor_id, Some(&norm_site), "lead", "*");
     }
 
-    // Repli legacy sur le profil RH / planification uniquement en l'absence de délégation explicite
+    // Repli legacy sur le profil RH / planification uniquement en l'absence totale de délégation Lead pour cet acteur
     emp.site_accesses.iter().any(|sa| {
         crate::rbac::normalize_site_id(&sa.site_id) == norm_site
             && matches!(
@@ -7553,5 +7543,42 @@ mod tests {
             emp.active = false;
         }
         assert!(!actor_has_lead_rdv_write_on_club(&db_inactive, "emp-maxime", "carre-de-soie"));
+
+        // 9. Cas limite A : Lead create seul sur Carré de Soie ne donne pas droit d'écriture/modification RDV
+        let mut db_create_only = db.clone();
+        db_create_only.module_delegations.push(crate::models::ModuleDelegation {
+            employee_id: "emp-maxime".into(),
+            site_id: "club-carre-soie".into(),
+            module: "lead".into(),
+            actions: vec!["create".into()],
+        });
+        assert!(!actor_has_lead_rdv_write_on_club(&db_create_only, "emp-maxime", "carre-de-soie"));
+
+        // 10. Cas limite B : Lead write uniquement à Beynost pour Maxime -> refus Carré de Soie sans repli planificateur
+        let mut db_bey_only = db.clone();
+        db_bey_only.module_delegations.push(crate::models::ModuleDelegation {
+            employee_id: "emp-maxime".into(),
+            site_id: "club-beynost".into(),
+            module: "lead".into(),
+            actions: vec!["write".into()],
+        });
+        assert!(actor_has_lead_rdv_write_on_club(&db_bey_only, "emp-maxime", "beynost"));
+        assert!(!actor_has_lead_rdv_write_on_club(&db_bey_only, "emp-maxime", "carre-de-soie"));
+
+        // 11. Cas limite C : Deux délégations sur le même club [view] puis [write] -> union des habilitations accorde l'accès
+        let mut db_union = db.clone();
+        db_union.module_delegations.push(crate::models::ModuleDelegation {
+            employee_id: "emp-maxime".into(),
+            site_id: "club-carre-soie".into(),
+            module: "lead".into(),
+            actions: vec!["view".into()],
+        });
+        db_union.module_delegations.push(crate::models::ModuleDelegation {
+            employee_id: "emp-maxime".into(),
+            site_id: "club-carre-soie".into(),
+            module: "lead".into(),
+            actions: vec!["write".into()],
+        });
+        assert!(actor_has_lead_rdv_write_on_club(&db_union, "emp-maxime", "carre-de-soie"));
     }
 }
