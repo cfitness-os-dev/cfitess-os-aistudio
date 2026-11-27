@@ -4216,19 +4216,41 @@ pub(crate) fn actor_has_lead_rdv_write_on_club(db: &AppDatabaseState, actor_id: 
     let Some(emp) = db.employees.iter().find(|e| e.id == actor_id) else {
         return false;
     };
+    if !emp.active {
+        return false;
+    }
     if emp.site_accesses.iter().any(|sa| sa.profile_id == "admin_systeme") {
         return true;
     }
-    let norm_club = site_id_to_club_id(club_id);
-    if crate::rbac::can_access_module_action(db, actor_id, Some(norm_club), "lead", "write")
-        || crate::rbac::can_access_module_action(db, actor_id, Some(norm_club), "lead", "update")
-        || crate::rbac::can_access_module_action(db, actor_id, Some(norm_club), "lead", "edit")
-        || crate::rbac::can_access_module_action(db, actor_id, Some(norm_club), "lead", "*")
-    {
-        return true;
+    let norm_site = crate::rbac::normalize_site_id(club_id);
+
+    // Priorité stricte aux délégations explicites : si une délégation Lead est configurée
+    // pour ce collaborateur sur ce club (ou "all"), ses actions décident sans repli sur le profil.
+    let explicit_lead_del = db.module_delegations.iter().find(|d| {
+        d.employee_id == actor_id
+            && d.module.eq_ignore_ascii_case("lead")
+            && {
+                let ds = crate::rbac::normalize_site_id(&d.site_id);
+                ds == "all" || ds == norm_site
+            }
+    });
+    if let Some(del) = explicit_lead_del {
+        if !crate::rbac::can_access_site_scope(db, actor_id, &norm_site) {
+            return false;
+        }
+        return del.actions.iter().any(|a| {
+            let a = a.trim();
+            a == "*"
+                || a.eq_ignore_ascii_case("write")
+                || a.eq_ignore_ascii_case("update")
+                || a.eq_ignore_ascii_case("edit")
+                || a.eq_ignore_ascii_case("create")
+        });
     }
+
+    // Repli legacy sur le profil RH / planification uniquement en l'absence de délégation explicite
     emp.site_accesses.iter().any(|sa| {
-        site_id_to_club_id(&sa.site_id) == norm_club
+        crate::rbac::normalize_site_id(&sa.site_id) == norm_site
             && matches!(
                 sa.profile_id.as_str(),
                 "master_avance" | "planificateur_avance" | "planificateur_standard"
@@ -7513,5 +7535,23 @@ mod tests {
             del.actions = vec!["edit".into()];
         }
         assert!(actor_has_lead_rdv_write_on_club(&db_edit, "emp-chloe", "beynost"));
+
+        // 7. Priorité stricte délégation sur profil : Maxime avec délégation 'view' explicite
+        //    sur Carré de Soie est REFUSÉ en écriture malgré son profil planificateur_standard
+        let mut db_view_maxime = db.clone();
+        db_view_maxime.module_delegations.push(crate::models::ModuleDelegation {
+            employee_id: "emp-maxime".into(),
+            site_id: "club-carre-soie".into(),
+            module: "lead".into(),
+            actions: vec!["view".into()],
+        });
+        assert!(!actor_has_lead_rdv_write_on_club(&db_view_maxime, "emp-maxime", "carre-de-soie"));
+
+        // 8. Collaborateur inactif est systématiquement refusé
+        let mut db_inactive = db.clone();
+        if let Some(emp) = db_inactive.employees.iter_mut().find(|e| e.id == "emp-maxime") {
+            emp.active = false;
+        }
+        assert!(!actor_has_lead_rdv_write_on_club(&db_inactive, "emp-maxime", "carre-de-soie"));
     }
 }
